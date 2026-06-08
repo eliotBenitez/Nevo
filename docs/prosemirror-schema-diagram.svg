@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#0F172A" flood-opacity="0.08"/>
+    </filter>
+    <filter id="shadow-sm" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#0F172A" flood-opacity="0.05"/>
+    </filter>
+  </defs>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap');
+    .text-title { font-family: 'Inter', system-ui, sans-serif; font-weight: 700; font-size: 42px; fill: #0F172A; letter-spacing: -0.02em; }
+    .text-subtitle { font-family: 'Inter', system-ui, sans-serif; font-weight: 400; font-size: 20px; fill: #64748B; margin-top: 8px; }
+    .card-title { font-family: 'Inter', system-ui, sans-serif; font-weight: 600; font-size: 24px; fill: #1E293B; }
+    .card-desc { font-family: 'Inter', system-ui, sans-serif; font-weight: 400; font-size: 16px; fill: #64748B; }
+    .node-pill { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 18px; fill: #1E293B; }
+    .node-pill-sm { font-family: 'Inter', system-ui, sans-serif; font-weight: 500; font-size: 14px; fill: #64748B; }
+    
+    .connector { stroke: #CBD5E1; stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+
+  <rect width="1920" height="1080" fill="#F8FAFC"/>
+  
+  <text x="120" y="100" class="text-title">Иерархия типов узлов схемы ProseMirror</text>
+  <text x="120" y="140" class="text-subtitle">Категории блоков и инлайн-элементов (Nodes), зарегистрированные в редакторе Nevo</text>
+
+  <!-- Root Doc Node -->
+  <g transform="translate(120, 220)" filter="url(#shadow)">
+    <rect width="260" height="120" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+    <rect x="24" y="24" width="16" height="16" rx="8" fill="#10B981"/>
+    <text x="52" y="38" class="card-title">Корень (Root)</text>
+    
+    <!-- Node Pill -->
+    <rect x="24" y="60" width="80" height="36" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/>
+    <text x="64" y="84" class="node-pill" text-anchor="middle">doc</text>
+  </g>
+
+  <!-- Branches from Root -->
+  <path d="M 250 340 V 420" class="connector"/>
+  
+  <!-- Horizontal Main Bus -->
+  <path d="M 170 420 H 1750" class="connector"/>
+  <circle cx="250" cy="420" r="5" fill="#94A3B8"/>
+
+  <!-- Vertical drops to cards -->
+  <path d="M 170 420 V 480" class="connector"/>
+  <path d="M 486 420 V 480" class="connector"/>
+  <path d="M 802 420 V 480" class="connector"/>
+  <path d="M 1118 420 V 480" class="connector"/>
+  <path d="M 1434 420 V 480" class="connector"/>
+  <path d="M 1750 420 V 480" class="connector"/>
+
+  <!-- Card 1: Базовые и Текстовые (Core & Text) -->
+  <g transform="translate(40, 480)">
+    <rect width="260" height="520" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2" filter="url(#shadow-sm)"/>
+    <rect x="24" y="24" width="16" height="16" rx="8" fill="#3B82F6"/>
+    <text x="52" y="38" class="card-title">Базовые</text>
+    <text x="24" y="68" class="card-desc">Стандартные блоки текста</text>
+    
+    <!-- Pills -->
+    <g transform="translate(24, 100)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">paragraph</text></g>
+    <g transform="translate(24, 156)"><rect width="180" height="40" rx="8" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle" fill="#1D4ED8">text</text></g>
+    <g transform="translate(24, 212)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">heading</text></g>
+    <g transform="translate(24, 268)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">blockquote</text></g>
+    <g transform="translate(24, 324)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">divider</text></g>
+    <g transform="translate(24, 380)"><rect width="180" height="40" rx="8" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle" fill="#1D4ED8">hard_break</text></g>
+  </g>
+
+  <!-- Card 2: Списки (Lists) -->
+  <g transform="translate(356, 480)">
+    <rect width="260" height="520" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2" filter="url(#shadow-sm)"/>
+    <rect x="24" y="24" width="16" height="16" rx="8" fill="#8B5CF6"/>
+    <text x="52" y="38" class="card-title">Списки</text>
+    <text x="24" y="68" class="card-desc">Элементы списков</text>
+    
+    <g transform="translate(24, 100)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">bullet_list</text></g>
+    <g transform="translate(24, 156)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">ordered_list</text></g>
+    <g transform="translate(24, 212)"><rect width="180" height="40" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5" stroke-dasharray="4 4"/><text x="114" y="26" class="node-pill" text-anchor="middle">list_item</text></g>
+    <g transform="translate(24, 268)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">checklist_item</text></g>
+  </g>
+
+  <!-- Card 3: Компоненты (Layout Components) -->
+  <g transform="translate(672, 480)">
+    <rect width="260" height="520" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2" filter="url(#shadow-sm)"/>
+    <rect x="24" y="24" width="16" height="16" rx="8" fill="#F59E0B"/>
+    <text x="52" y="38" class="card-title">Макет</text>
+    <text x="24" y="68" class="card-desc">Структурные компоненты</text>
+    
+    <g transform="translate(24, 100)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">callout</text></g>
+    <g transform="translate(24, 156)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">toggle</text></g>
+    <g transform="translate(24, 212)"><rect width="180" height="40" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5" stroke-dasharray="4 4"/><text x="114" y="26" class="node-pill" text-anchor="middle">toggle_title</text></g>
+    <g transform="translate(24, 280)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">column_list</text></g>
+    <g transform="translate(24, 336)"><rect width="180" height="40" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5" stroke-dasharray="4 4"/><text x="114" y="26" class="node-pill" text-anchor="middle">column</text></g>
+  </g>
+
+  <!-- Card 4: Таблицы (Tables) -->
+  <g transform="translate(988, 480)">
+    <rect width="260" height="520" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2" filter="url(#shadow-sm)"/>
+    <rect x="24" y="24" width="16" height="16" rx="8" fill="#64748B"/>
+    <text x="52" y="38" class="card-title">Таблицы</text>
+    <text x="24" y="68" class="card-desc">Семантика таблиц</text>
+    
+    <g transform="translate(24, 100)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">table</text></g>
+    <g transform="translate(24, 156)"><rect width="180" height="40" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5" stroke-dasharray="4 4"/><text x="114" y="26" class="node-pill" text-anchor="middle">table_row</text></g>
+    <g transform="translate(24, 212)"><rect width="180" height="40" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5" stroke-dasharray="4 4"/><text x="114" y="26" class="node-pill" text-anchor="middle">table_header</text></g>
+    <g transform="translate(24, 268)"><rect width="180" height="40" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5" stroke-dasharray="4 4"/><text x="114" y="26" class="node-pill" text-anchor="middle">table_cell</text></g>
+  </g>
+
+  <!-- Card 5: Рич Контент (Rich Content) -->
+  <g transform="translate(1304, 480)">
+    <rect width="260" height="520" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2" filter="url(#shadow-sm)"/>
+    <rect x="24" y="24" width="16" height="16" rx="8" fill="#EC4899"/>
+    <text x="52" y="38" class="card-title">Код &amp; Графики</text>
+    <text x="24" y="68" class="card-desc">Диаграммы и математика</text>
+    
+    <g transform="translate(24, 100)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">code_block</text></g>
+    <g transform="translate(24, 156)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">math_block</text></g>
+    <g transform="translate(24, 212)"><rect width="180" height="40" rx="8" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle" fill="#1D4ED8">math_inline</text></g>
+    <g transform="translate(24, 268)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">mermaid_block</text></g>
+    <g transform="translate(24, 324)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">markmap_block</text></g>
+    <g transform="translate(24, 380)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">vega_block</text></g>
+  </g>
+
+  <!-- Card 6: Медиа (Media & Embeds) -->
+  <g transform="translate(1620, 480)">
+    <rect width="260" height="520" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2" filter="url(#shadow-sm)"/>
+    <rect x="24" y="24" width="16" height="16" rx="8" fill="#06B6D4"/>
+    <text x="52" y="38" class="card-title">Медиа &amp; Эмбеды</text>
+    <text x="24" y="68" class="card-desc">Внешние ресурсы</text>
+    
+    <g transform="translate(24, 100)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">image_block</text></g>
+    <g transform="translate(24, 156)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">file_block</text></g>
+    <g transform="translate(24, 212)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">media_block</text></g>
+    <g transform="translate(24, 268)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">note_embed</text></g>
+    <g transform="translate(24, 324)"><rect width="180" height="40" rx="8" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1.5"/><text x="114" y="26" class="node-pill" text-anchor="middle">embed_block</text></g>
+  </g>
+
+</svg>

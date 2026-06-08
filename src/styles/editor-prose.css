@@ -1,0 +1,1953 @@
+.doc-editor .nv-prosemirror {
+  --nv-active-block-indicator-offset: 18px;
+  --nv-active-list-block-indicator-offset: 2.05em;
+  --nv-active-toggle-block-indicator-offset: 40px;
+  --nv-active-block-indicator-width: 3px;
+  --nv-active-block-indicator-radius: 999px;
+  --nv-active-block-indicator-color: color-mix(in oklab, var(--accent) 78%, white 10%);
+  --nv-active-block-indicator-glow: color-mix(in oklab, var(--accent) 24%, transparent);
+  min-height: 280px;
+  color: var(--text-2);
+  font-size: var(--workspace-editor-font-size, 15.5px);
+  line-height: 1.75;
+  outline: none;
+  white-space: pre-wrap;
+}
+
+.doc-editor .nv-prosemirror::selection,
+.doc-editor .nv-prosemirror *::selection {
+  background: color-mix(in oklab, var(--accent) 25%, transparent);
+  color: var(--text-1);
+}
+
+.doc-editor .nv-prosemirror .nv-active-block {
+  position: relative;
+}
+
+.doc-editor .nv-prosemirror .nv-active-block::before {
+  content: '';
+  position: absolute;
+  top: 0.22em;
+  bottom: 0.22em;
+  left: calc(var(--nv-active-block-indicator-offset) * -1);
+  width: var(--nv-active-block-indicator-width);
+  border-radius: var(--nv-active-block-indicator-radius);
+  background: var(--nv-active-block-indicator-color);
+  box-shadow: 0 0 14px var(--nv-active-block-indicator-glow);
+  opacity: 0;
+  transform: scaleY(0.84);
+  transform-origin: center;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+  pointer-events: none;
+}
+
+.doc-editor .nv-prosemirror:focus-within .nv-active-block::before {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+.doc-editor .nv-prosemirror li > .nv-active-block::before {
+  left: calc(var(--nv-active-list-block-indicator-offset) * -1);
+}
+
+.doc-editor .nv-prosemirror .nv-toggle .nv-active-block::before {
+  left: calc(var(--nv-active-toggle-block-indicator-offset) * -1);
+}
+
+.doc-editor .nv-prosemirror blockquote.nv-active-block::before,
+.doc-editor .nv-prosemirror .nv-callout.nv-active-block::before,
+.doc-editor .nv-prosemirror .nv-checklist-item.nv-active-block::before {
+  top: 4px;
+  bottom: 4px;
+}
+
+.doc-editor .nv-prosemirror p {
+  margin: 0 0 0.95em;
+}
+
+.doc-editor .nv-prosemirror h1 {
+  margin: 1.08em 0 0.44em;
+  color: var(--text-1);
+  font-family: var(--font-serif);
+  font-size: 40px;
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+
+.doc-editor .nv-prosemirror h2 {
+  margin: 1em 0 0.48em;
+  color: var(--text-1);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.22;
+  letter-spacing: -0.015em;
+}
+
+.doc-editor .nv-prosemirror h3 {
+  margin: 0.92em 0 0.44em;
+  color: var(--text-1);
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.doc-editor .nv-prosemirror h4 {
+  margin: 0.9em 0 0.45em;
+  color: var(--text-1);
+  font-size: 15.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.doc-editor .nv-prosemirror h5 {
+  margin: 0.82em 0 0.4em;
+  color: var(--text-1);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.42;
+  letter-spacing: 0;
+}
+
+.doc-editor .nv-prosemirror h6 {
+  margin: 0.78em 0 0.36em;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: 0;
+}
+
+/* Heading Folding */
+.doc-editor .nv-prosemirror .nv-heading-folded-hidden {
+  display: none !important;
+}
+
+.doc-editor .nv-prosemirror .nv-heading {
+  position: relative;
+}
+
+.doc-editor .nv-prosemirror .nv-heading-toggle {
+  position: absolute;
+  left: -22px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text-3);
+  opacity: 0;
+  transition: opacity 0.2s ease, color 0.2s ease, background 0.2s ease;
+  border-radius: 4px;
+  user-select: none;
+}
+
+.doc-editor .nv-prosemirror .nv-heading:hover .nv-heading-toggle,
+.doc-editor .nv-prosemirror .nv-heading[data-collapsed="true"] .nv-heading-toggle {
+  opacity: 1;
+}
+
+.doc-editor .nv-prosemirror .nv-heading-toggle:hover {
+  background: var(--surface-2, rgba(0, 0, 0, 0.05));
+  color: var(--text-1);
+}
+
+.doc-editor .nv-prosemirror .nv-heading-chevron {
+  display: inline-block;
+  font-size: 12px;
+  line-height: 1;
+  font-family: Inter, sans-serif;
+}
+
+.doc-editor .nv-prosemirror blockquote {
+  border-left: 2px solid var(--accent);
+  margin: 0.95em 0 1.05em;
+  padding: 0.2em 0 0.2em 16px;
+  color: var(--text-2);
+  font-family: var(--font-serif);
+  font-size: 19px;
+  line-height: 1.55;
+  font-style: italic;
+}
+
+.doc-editor .nv-prosemirror ul,
+.doc-editor .nv-prosemirror ol {
+  margin: 0 0 0.9em;
+  padding-left: 1.85em;
+  color: var(--text-2);
+  list-style: none;
+}
+
+.doc-editor .nv-prosemirror li {
+  position: relative;
+  margin: 0 0 0.28em;
+  line-height: 1.72;
+}
+
+.doc-editor .nv-prosemirror li::before {
+  content: attr(data-nevo-list-marker);
+  position: absolute;
+  top: 0;
+  left: -1.75em;
+  min-width: 1.35em;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  pointer-events: none;
+}
+
+.doc-editor .nv-prosemirror li > p {
+  min-height: 1.72em;
+  margin: 0;
+  line-height: inherit;
+}
+
+.doc-editor .nv-prosemirror li > ul,
+.doc-editor .nv-prosemirror li > ol {
+  margin: 0.28em 0 0;
+}
+
+.doc-editor .nv-prosemirror hr[data-nevo-divider] {
+  border: none;
+  height: 2px;
+  margin: 28px 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, var(--line-strong) 18%, var(--accent) 50%, var(--line-strong) 82%, transparent);
+  opacity: 0.82;
+}
+
+.doc-editor .nv-prosemirror hr[data-nevo-divider].ProseMirror-selectednode {
+  background: linear-gradient(90deg, transparent, var(--accent) 16%, var(--accent) 84%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 18%, transparent);
+  opacity: 1;
+}
+
+.doc-editor .nv-prosemirror a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in oklab, var(--accent) 86%, transparent);
+}
+
+.doc-editor .nv-prosemirror code {
+  font: 13px/1.4 var(--font-mono);
+  color: var(--text-1);
+  background: var(--hover-strong);
+  border: 1px solid var(--line-1);
+  border-radius: 5px;
+  padding: 1.5px 6px;
+}
+
+.doc-editor .nv-prosemirror s {
+  text-decoration: line-through;
+}
+
+.doc-editor .nv-prosemirror u {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.doc-editor .nv-prosemirror mark {
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.doc-editor .nv-prosemirror .nv-tag {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-weight: 500;
+  border: 1px solid color-mix(in oklab, var(--accent) 15%, transparent);
+}
+
+.doc-editor .nv-prosemirror sup {
+  font-size: 0.75em;
+  vertical-align: super;
+  line-height: 0;
+}
+
+.doc-editor .nv-prosemirror sub {
+  font-size: 0.75em;
+  vertical-align: sub;
+  line-height: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid oklch(0.66 0.10 258 / 0.22);
+  border-radius: 10px;
+  background: oklch(0.66 0.10 258 / 0.1);
+  margin: 12px 0;
+}
+
+.doc-editor .nv-prosemirror .nv-callout-icon {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  border-radius: 7px;
+  border: none;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-size: 14px;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, transform 0.12s ease;
+}
+
+.doc-editor .nv-prosemirror .nv-callout-icon:hover {
+  background: color-mix(in oklab, var(--accent-soft) 72%, white);
+  transform: translateY(-1px);
+}
+
+.doc-editor .nv-prosemirror .nv-callout-icon:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--accent) 74%, white);
+  outline-offset: 2px;
+}
+
+.doc-editor .nv-prosemirror .nv-callout-content {
+  display: block;
+  min-width: 0;
+  flex: 1;
+  color: var(--text-2);
+  line-height: 1.6;
+}
+
+.doc-editor .nv-prosemirror .nv-callout-content > :first-child {
+  margin-top: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-callout-content > :last-child {
+  margin-bottom: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 6px 0;
+  line-height: 1.55;
+}
+
+.doc-editor .nv-prosemirror .nv-checklist-checkbox {
+  width: 16px;
+  height: 16px;
+  margin-top: 4px;
+  border-radius: 5px;
+  border: 1.5px solid var(--line-strong);
+  background: transparent;
+  color: transparent;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font-size: 0;
+  cursor: pointer;
+}
+
+.doc-editor .nv-prosemirror .nv-checklist-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.doc-editor .nv-prosemirror .nv-checklist-item[data-checked='true'] .nv-checklist-checkbox {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.doc-editor .nv-prosemirror .nv-checklist-item[data-checked='true'] .nv-checklist-checkbox::after {
+  content: '✓';
+  font-size: 11px;
+  line-height: 1;
+}
+
+.doc-editor .nv-prosemirror .nv-checklist-item[data-checked='true'] .nv-checklist-content {
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+
+.doc-editor .nv-prosemirror .nv-math-inline,
+.doc-editor .nv-prosemirror .nv-math-block {
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--hover) 70%, transparent);
+}
+
+.doc-editor .nv-prosemirror .nv-math-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 9px;
+  cursor: pointer;
+}
+
+.doc-editor .nv-prosemirror .nv-math-block {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  margin: 10px 0;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.doc-editor .nv-prosemirror .nv-math-render {
+  min-width: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-math-block .nv-math-render {
+  width: 100%;
+  text-align: center;
+}
+
+.doc-editor .nv-prosemirror .nv-math-inline[data-empty='true'] .nv-math-render,
+.doc-editor .nv-prosemirror .nv-math-block[data-empty='true'] .nv-math-render {
+  opacity: 0.5;
+}
+
+.doc-editor .nv-prosemirror .nv-math-inline[data-error='true'],
+.doc-editor .nv-prosemirror .nv-math-block[data-error='true'] {
+  border-color: color-mix(in oklab, #c84e4e 55%, var(--line-2));
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-block {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  margin: 12px 0;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--surface) 55%, transparent);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-block:hover {
+  border-color: var(--line-1);
+  box-shadow: 0 4px 20px color-mix(in oklab, var(--accent) 6%, transparent),
+              0 1px 4px rgb(0 0 0 / 0.06);
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--line-2);
+  background: color-mix(in oklab, var(--hover) 55%, transparent);
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-header-icon {
+  width: 13px;
+  height: 13px;
+  opacity: 0.65;
+  flex-shrink: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-edit-hint {
+  color: var(--accent);
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-block:hover .nv-mermaid-edit-hint {
+  opacity: 1;
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-render {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  padding: 16px 20px;
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-render svg {
+  max-width: 100%;
+  height: auto;
+  background: transparent !important;
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-block[data-empty='true'] .nv-mermaid-render,
+.doc-editor .nv-prosemirror .nv-mermaid-block[data-error='true'] .nv-mermaid-render {
+  color: var(--text-4);
+  font-size: 13px;
+  font-style: italic;
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-block[data-error='true'] {
+  border-color: color-mix(in oklab, #c84e4e 45%, var(--line-2));
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-block[data-error='true'] .nv-mermaid-header {
+  background: color-mix(in oklab, #c84e4e 7%, transparent);
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-block.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent-soft) 25%, transparent);
+}
+
+.doc-editor .nv-prosemirror .nv-vega-block {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  margin: 12px 0;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--surface) 55%, transparent);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.doc-editor .nv-prosemirror .nv-vega-block:hover {
+  border-color: var(--line-1);
+  box-shadow: 0 4px 20px color-mix(in oklab, var(--accent) 6%, transparent),
+              0 1px 4px rgb(0 0 0 / 0.06);
+}
+
+.doc-editor .nv-prosemirror .nv-vega-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--line-2);
+  background: color-mix(in oklab, var(--hover) 55%, transparent);
+}
+
+.doc-editor .nv-prosemirror .nv-vega-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.doc-editor .nv-prosemirror .nv-vega-header-icon {
+  width: 13px;
+  height: 13px;
+  opacity: 0.65;
+  flex-shrink: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-vega-edit-hint {
+  color: var(--accent);
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.doc-editor .nv-prosemirror .nv-vega-block:hover .nv-vega-edit-hint {
+  opacity: 1;
+}
+
+.doc-editor .nv-prosemirror .nv-vega-render {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  padding: 16px 20px;
+}
+
+.doc-editor .nv-prosemirror .nv-vega-render svg {
+  max-width: 100%;
+  height: auto;
+  background: transparent !important;
+}
+
+.doc-editor .nv-prosemirror .nv-vega-block[data-empty='true'] .nv-vega-render,
+.doc-editor .nv-prosemirror .nv-vega-block[data-error='true'] .nv-vega-render {
+  color: var(--text-4);
+  font-size: 13px;
+  font-style: italic;
+}
+
+.doc-editor .nv-prosemirror .nv-vega-block[data-error='true'] {
+  border-color: color-mix(in oklab, #c84e4e 45%, var(--line-2));
+}
+
+.doc-editor .nv-prosemirror .nv-vega-block[data-error='true'] .nv-vega-header {
+  background: color-mix(in oklab, #c84e4e 7%, transparent);
+}
+
+.doc-editor .nv-prosemirror .nv-vega-block.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent-soft) 25%, transparent);
+}
+
+/* Markmap mind map block */
+.doc-editor .nv-prosemirror .nv-markmap-block {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  margin: 12px 0;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--surface) 55%, transparent);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  /* Atom node edited via popover, not inline. Suppress native selection so the
+     NodeSelection on click doesn't paint the foreignObject label text blue. */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-block:hover {
+  border-color: var(--line-1);
+  box-shadow: 0 4px 20px color-mix(in oklab, var(--accent) 6%, transparent),
+              0 1px 4px rgb(0 0 0 / 0.06);
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--line-2);
+  background: color-mix(in oklab, var(--hover) 55%, transparent);
+  cursor: pointer;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-header-icon {
+  width: 13px;
+  height: 13px;
+  opacity: 0.65;
+  flex-shrink: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-edit-hint {
+  color: var(--accent);
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-block:hover .nv-markmap-edit-hint {
+  opacity: 1;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-render {
+  position: relative;
+  width: 100%;
+  height: 360px;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: var(--text-2);
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign {
+  color: var(--text-2);
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-4);
+  font-size: 13px;
+  font-style: italic;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-block[data-empty='true'] .nv-markmap-svg {
+  display: none;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-block[data-error='true'] {
+  border-color: color-mix(in oklab, #c84e4e 45%, var(--line-2));
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-block[data-error='true'] .nv-markmap-header {
+  background: color-mix(in oklab, #c84e4e 7%, transparent);
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-block.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent-soft) 25%, transparent);
+}
+
+/* Isolate markmap's foreignObject (rich HTML labels) from editor prose styles:
+   the node-view lives inside .nv-prosemirror, so editor table/image rules would
+   otherwise inflate node content to full width and break markmap's layout.
+   Crucially, the editor's `td/th { position: relative }` rule must be reset to
+   static here: WebKitGTK (Tauri's Linux renderer) positions any `position`ed
+   descendant of an SVG <foreignObject> against the SVG root, so a relatively
+   positioned cell collapses the whole table to the map's top-left corner. */
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign table,
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign thead,
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign tbody,
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign tr,
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign th,
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign td {
+  position: static;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign table {
+  width: auto;
+  max-width: 100%;
+  table-layout: auto;
+  margin: 0;
+  font-size: inherit;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign th,
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign td {
+  padding: 1px 6px;
+  transition: none;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign img {
+  display: inline;
+  max-width: 100%;
+  margin: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign .nv-markmap-katex-mathml {
+  position: static;
+  font-size: 1em;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign .nv-markmap-katex-mathml math {
+  display: inline;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign pre,
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign p {
+  margin: 0;
+}
+
+.doc-editor .nv-prosemirror .tableWrapper {
+  max-width: 100%;
+  overflow-x: clip;
+  margin: 12px 0;
+  border-radius: 11px;
+  border: 1px solid var(--line-2);
+  background: var(--glass-2);
+}
+
+.doc-editor .nv-prosemirror table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+  margin: 0;
+}
+
+.doc-editor .nv-prosemirror td,
+.doc-editor .nv-prosemirror th {
+  border-right: 1px solid var(--line-1);
+  border-bottom: 1px solid var(--line-1);
+  padding: 7px 10px;
+  vertical-align: top;
+  min-width: 0;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  position: relative;
+  background: transparent;
+  transition: background 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+}
+
+.doc-editor .nv-prosemirror th {
+  background: var(--hover);
+  color: var(--text-4);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: 600;
+  border-bottom: 1px solid var(--line-2);
+}
+
+.doc-editor .nv-prosemirror td > p,
+.doc-editor .nv-prosemirror th > p {
+  margin: 0;
+}
+
+.doc-editor .nv-prosemirror tr > *:last-child {
+  border-right: none;
+}
+
+.doc-editor .nv-prosemirror tbody tr:last-child > td,
+.doc-editor .nv-prosemirror tbody tr:last-child > th {
+  border-bottom: none;
+}
+
+.doc-editor .nv-prosemirror table colgroup col {
+  width: auto !important;
+}
+
+.doc-editor .nv-prosemirror td[data-align='center'],
+.doc-editor .nv-prosemirror th[data-align='center'] {
+  text-align: center;
+}
+
+.doc-editor .nv-prosemirror td[data-align='right'],
+.doc-editor .nv-prosemirror th[data-align='right'] {
+  text-align: right;
+}
+
+.doc-editor .nv-prosemirror td[data-align='justify'],
+.doc-editor .nv-prosemirror th[data-align='justify'] {
+  text-align: justify;
+}
+
+.doc-editor .nv-prosemirror td.selectedCell,
+.doc-editor .nv-prosemirror th.selectedCell {
+  background: var(--accent-soft);
+  outline: 1.5px solid var(--accent);
+  outline-offset: -1px;
+  z-index: 1;
+  border-color: color-mix(in oklab, var(--accent) 34%, var(--line-1));
+}
+
+.doc-editor .nv-prosemirror th.selectedCell {
+  background: color-mix(in oklab, var(--accent-soft) 82%, var(--hover) 18%);
+}
+
+.doc-editor .nv-prosemirror .column-resize-handle {
+  background-color: color-mix(in oklab, var(--accent) 55%, transparent);
+  width: 3px;
+}
+
+.doc-editor .nv-prosemirror .nv-block-selected {
+  background: color-mix(in oklab, var(--accent) 11%, transparent);
+  border-radius: 6px;
+  outline: 1px solid color-mix(in oklab, var(--accent) 18%, transparent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 9%, transparent);
+}
+
+.doc-editor .nv-prosemirror .nv-block-selection-range::selection,
+.doc-editor .nv-prosemirror .nv-block-selection-range *::selection {
+  background: color-mix(in oklab, var(--accent) 25%, transparent);
+  color: var(--text-1);
+}
+
+.doc-editor .nv-prosemirror .nv-image-block {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin: 12px 0;
+}
+
+.doc-editor .nv-prosemirror .nv-image-block[data-align='left']   { align-items: flex-start; }
+.doc-editor .nv-prosemirror .nv-image-block[data-align='center'] { align-items: center; }
+.doc-editor .nv-prosemirror .nv-image-block[data-align='right']  { align-items: flex-end; }
+
+.doc-editor .nv-prosemirror .nv-image-preview {
+  border-radius: 6px;
+  object-fit: contain;
+  display: block;
+  max-width: 100%;
+  max-height: 600px;
+}
+
+.doc-editor .nv-prosemirror .nv-image-block[data-size-preset='small']  .nv-image-preview { width: 320px; }
+.doc-editor .nv-prosemirror .nv-image-block[data-size-preset='medium'] .nv-image-preview { width: 560px; }
+.doc-editor .nv-prosemirror .nv-image-block[data-size-preset='large']  .nv-image-preview { width: 760px; }
+.doc-editor .nv-prosemirror .nv-image-block[data-size-preset='full']   .nv-image-preview { width: 100%; }
+
+.doc-editor .nv-prosemirror .nv-image-caption {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-3);
+  padding: 6px 0 2px;
+  outline: none;
+  min-width: 40px;
+  max-width: 100%;
+  word-break: break-word;
+}
+
+.doc-editor .nv-prosemirror .nv-image-caption:empty:not(:focus)::before {
+  content: attr(data-placeholder);
+  color: var(--text-4);
+  pointer-events: none;
+}
+
+.doc-editor .nv-prosemirror .nv-image-caption:empty:not(:focus):not([data-force-show]) {
+  display: none;
+}
+
+.doc-editor .nv-prosemirror .nv-image-menu-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  background: var(--glass-2);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  padding: 2px 8px;
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1.4;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.doc-editor .nv-prosemirror .nv-image-menu-btn:hover {
+  background: var(--hover);
+  color: var(--text-1);
+}
+
+.doc-editor .nv-prosemirror .nv-image-block:hover .nv-image-menu-btn,
+.doc-editor .nv-prosemirror .nv-image-block.ProseMirror-selectednode .nv-image-menu-btn {
+  opacity: 1;
+}
+
+.doc-editor .nv-prosemirror .nv-image-placeholder {
+  border: 1px dashed var(--line-2);
+  border-radius: 8px;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--text-3);
+  width: 100%;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.doc-editor .nv-prosemirror .nv-image-placeholder:hover {
+  background: var(--hover);
+  border-color: var(--line-1);
+  color: var(--text-2);
+}
+
+/* ---- File Block ---- */
+.doc-editor .nv-prosemirror .nv-file-block {
+  border: 1px solid var(--line-2);
+  border-radius: 11px;
+  padding: 10px 12px;
+  margin: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--glass-2);
+}
+
+.doc-editor .nv-prosemirror .nv-file-block.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.doc-editor .nv-prosemirror .nv-file-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.doc-editor .nv-prosemirror .nv-file-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 600 9px/1 var(--font-ui);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
+.doc-editor .nv-prosemirror .nv-file-icon[data-category='pdf'] {
+  background: oklch(0.48 0.15 25 / 0.16);
+  color: oklch(0.72 0.12 25);
+}
+
+.doc-editor .nv-prosemirror .nv-file-icon[data-category='audio'] {
+  background: oklch(0.50 0.14 295 / 0.16);
+  color: oklch(0.74 0.11 295);
+}
+
+.doc-editor .nv-prosemirror .nv-file-icon[data-category='video'] {
+  background: oklch(0.50 0.14 155 / 0.16);
+  color: oklch(0.68 0.12 155);
+}
+
+.doc-editor .nv-prosemirror .nv-file-icon[data-category='archive'] {
+  background: oklch(0.50 0.14 65 / 0.16);
+  color: oklch(0.70 0.12 65);
+}
+
+.doc-editor .nv-prosemirror .nv-file-icon[data-category='spreadsheet'] {
+  background: oklch(0.50 0.14 145 / 0.16);
+  color: oklch(0.65 0.14 145);
+}
+
+.doc-editor .nv-prosemirror .nv-file-icon[data-category='slides'] {
+  background: oklch(0.50 0.14 35 / 0.16);
+  color: oklch(0.72 0.13 35);
+}
+
+.doc-editor .nv-prosemirror .nv-file-icon[data-category='image'] {
+  background: oklch(0.50 0.14 220 / 0.16);
+  color: oklch(0.68 0.12 220);
+}
+
+.doc-editor .nv-prosemirror .nv-file-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.doc-editor .nv-prosemirror .nv-file-name {
+  font: 500 13px/1.3 var(--font-ui);
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-editor .nv-prosemirror .nv-file-block[data-has-file='false'] .nv-file-name {
+  color: var(--text-3);
+}
+
+.doc-editor .nv-prosemirror .nv-file-size {
+  font: 11px/1.2 var(--font-ui);
+  color: var(--text-4);
+}
+
+.doc-editor .nv-prosemirror .nv-code-block {
+  border: 1px solid color-mix(in oklab, var(--line-2) 90%, transparent);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 12px 0;
+  background: oklch(0.16 0.012 270 / 0.85);
+  backdrop-filter: blur(18px) saturate(140%);
+  position: relative;
+  z-index: 1;
+  box-shadow: var(--shadow-2);
+}
+
+.doc-editor .nv-prosemirror .nv-code-controls {
+  position: absolute;
+  top: 6px;
+  right: 16px;
+  z-index: 10;
+  opacity: 0.4;
+  transition: opacity 0.16s ease;
+}
+
+.doc-editor .nv-prosemirror .nv-code-block:hover .nv-code-controls {
+  opacity: 1;
+}
+
+/* Style NvSelect trigger to be a minimalist label */
+.doc-editor .nv-prosemirror .nv-code-controls .nv-select__trigger {
+  height: auto;
+  min-height: unset;
+  padding: 3px 6px;
+  background: color-mix(in oklab, var(--canvas-1) 40%, transparent);
+  border: none;
+  border-radius: 4px;
+  box-shadow: none;
+  min-width: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-code-controls .nv-select__trigger:hover {
+  background: color-mix(in oklab, var(--canvas-1) 80%, transparent);
+}
+
+.doc-editor .nv-prosemirror .nv-code-controls .nv-select__value {
+  font: 10px/1 var(--font-mono);
+  color: var(--text-4);
+}
+
+.doc-editor .nv-prosemirror .nv-code-controls .nv-select__trigger:hover .nv-select__value {
+  color: var(--text-2);
+}
+
+.doc-editor .nv-prosemirror .nv-code-controls .nv-select__chevron {
+  display: none;
+}
+
+.doc-editor .nv-prosemirror .nv-code-surface {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-code-editor,
+.doc-editor .nv-prosemirror .nv-code-highlight {
+  margin: 0;
+  padding: 14px 18px 18px;
+  font: 12.8px/1.65 var(--font-mono);
+  overflow-x: auto;
+  white-space: pre;
+  tab-size: 2;
+}
+
+.doc-editor .nv-prosemirror .nv-code-editor {
+  position: relative;
+  z-index: 2;
+  background: transparent;
+  color: transparent;
+  caret-color: oklch(0.9 0 0);
+  padding-left: 54px;
+}
+
+.doc-editor .nv-prosemirror .nv-code-block[data-editing='true'] .nv-code-editor {
+  color: oklch(0.92 0 0);
+}
+
+.doc-editor .nv-prosemirror .nv-code-block[data-editing='true'] .nv-code-line-content {
+  opacity: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-code-highlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: oklch(0.92 0 0);
+  z-index: 1;
+}
+
+.doc-editor .nv-prosemirror .nv-code-highlight code {
+  display: block;
+  min-height: 1.6em;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  line-height: inherit;
+  white-space: inherit;
+  background: transparent;
+}
+
+.doc-editor .nv-prosemirror .nv-code-content {
+  display: block;
+  min-height: 1.6em;
+}
+
+.doc-editor .nv-prosemirror .nv-code-line {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 14px;
+  align-items: baseline;
+  margin-left: -14px;
+  margin-right: -14px;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+.doc-editor .nv-prosemirror .nv-code-line-no {
+  width: 18px;
+  text-align: right;
+  color: var(--text-4);
+  font-size: 12px;
+  opacity: 0.7;
+  user-select: none;
+}
+
+.doc-editor .nv-prosemirror .nv-code-line-content {
+  white-space: pre;
+}
+
+.doc-editor .nv-prosemirror .nv-code-line.is-active {
+  background: oklch(0.66 0.1 258 / 0.08);
+}
+
+.doc-editor .nv-prosemirror .nv-code-line.is-active::before {
+  content: '';
+  position: absolute;
+  left: -18px;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.doc-editor .nv-prosemirror .nv-code-block[data-wrap='true'] .nv-code-editor,
+.doc-editor .nv-prosemirror .nv-code-block[data-wrap='true'] .nv-code-highlight {
+  white-space: pre-wrap;
+}
+
+.doc-editor .nv-prosemirror .nv-code-block[data-wrap='true'] .nv-code-line-content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.doc-editor .nv-prosemirror .nv-code-highlight .hljs-keyword {
+  color: oklch(0.72 0.08 305);
+}
+
+.doc-editor .nv-prosemirror .nv-code-highlight .hljs-string {
+  color: oklch(0.78 0.08 78);
+}
+
+.doc-editor .nv-prosemirror .nv-code-highlight .hljs-number {
+  color: oklch(0.66 0.1 258);
+}
+
+.doc-editor .nv-prosemirror .nv-code-highlight .hljs-title,
+.doc-editor .nv-prosemirror .nv-code-highlight .hljs-function .hljs-title {
+  color: oklch(0.72 0.06 210);
+}
+
+.doc-editor .nv-prosemirror .nv-code-highlight .hljs-type,
+.doc-editor .nv-prosemirror .nv-code-highlight .hljs-built_in {
+  color: oklch(0.72 0.05 155);
+}
+
+.doc-editor .nv-prosemirror .nv-code-highlight .hljs-comment {
+  color: var(--text-4);
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-block {
+  background: oklch(0.90 0.008 270 / 0.88);
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-editor {
+  caret-color: oklch(0.22 0.012 270);
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-block[data-editing='true'] .nv-code-editor {
+  color: oklch(0.22 0.012 270);
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-block[data-editing='true'] .nv-code-line-content {
+  opacity: 0;
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-highlight {
+  color: oklch(0.22 0.012 270);
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-highlight .hljs-keyword {
+  color: oklch(0.46 0.13 305);
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-highlight .hljs-string {
+  color: oklch(0.50 0.10 60);
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-highlight .hljs-number {
+  color: oklch(0.43 0.12 258);
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-highlight .hljs-title,
+.theme-light .doc-editor .nv-prosemirror .nv-code-highlight .hljs-function .hljs-title {
+  color: oklch(0.40 0.09 210);
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-highlight .hljs-type,
+.theme-light .doc-editor .nv-prosemirror .nv-code-highlight .hljs-built_in {
+  color: oklch(0.42 0.08 155);
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-highlight .hljs-comment {
+  color: var(--text-4);
+  font-style: italic;
+}
+
+/* Internal links (wiki-style [[page]] links) */
+.doc-editor .nv-prosemirror .nv-internal-link {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in oklab, var(--accent) 60%, transparent);
+  cursor: pointer;
+  transition: border-color 0.12s ease, opacity 0.12s ease;
+}
+
+.doc-editor .nv-prosemirror .nv-internal-link:hover {
+  border-bottom-color: var(--accent);
+  opacity: 0.85;
+}
+
+/* ---- Shared embed button / input base ---- */
+.doc-editor .nv-prosemirror .nv-embed-btn {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--hover) 84%, transparent);
+  color: var(--text-2);
+  font: 12px/1.2 var(--font-ui);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.14s;
+}
+.doc-editor .nv-prosemirror .nv-embed-btn:hover {
+  background: var(--hover-strong);
+}
+.doc-editor .nv-prosemirror .nv-embed-btn--remove {
+  color: var(--text-3);
+}
+.doc-editor .nv-prosemirror .nv-embed-input {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--hover) 84%, transparent);
+  color: var(--text-2);
+  font: 13px/1.2 var(--font-ui);
+  box-sizing: border-box;
+  min-width: 0;
+  transition: border-color 0.15s, background 0.15s;
+}
+.doc-editor .nv-prosemirror .nv-embed-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent-soft) 60%, transparent);
+}
+.doc-editor .nv-prosemirror .nv-embed-input::placeholder {
+  color: var(--text-4);
+}
+
+/* ---- Note Embed ---- */
+.doc-editor .nv-prosemirror .nv-note-embed-block {
+  margin: 16px 0;
+  border-radius: 12px;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-block.ProseMirror-selectednode .nv-note-embed-card {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-card {
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  padding: 14px;
+  background: var(--glass-2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: default;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+.doc-editor .nv-prosemirror .nv-note-embed-card:hover {
+  background: var(--glass-3);
+  border-color: var(--line-3);
+  box-shadow: var(--shadow-md);
+}
+.doc-editor .nv-prosemirror .nv-note-embed-block[data-has-note='false'] .nv-note-embed-card {
+  border: 1.5px dashed var(--line-strong);
+  background: color-mix(in oklab, var(--glass-1) 40%, transparent);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  padding: 20px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-more-container,
+.doc-editor .nv-prosemirror .nv-media-more-container,
+.doc-editor .nv-prosemirror .nv-file-more-container {
+  margin-left: 4px;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-more-btn,
+.doc-editor .nv-prosemirror .nv-embed-more-btn,
+.doc-editor .nv-prosemirror .nv-media-more-btn,
+.doc-editor .nv-prosemirror .nv-file-more-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-more-btn:hover,
+.doc-editor .nv-prosemirror .nv-embed-more-btn:hover,
+.doc-editor .nv-prosemirror .nv-media-more-btn:hover,
+.doc-editor .nv-prosemirror .nv-file-more-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-1);
+}
+.doc-editor .nv-prosemirror .nv-note-embed-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-block[data-has-note='false'] .nv-note-embed-icon {
+  color: var(--text-4);
+}
+.doc-editor .nv-prosemirror .nv-note-embed-title {
+  flex: 1;
+  min-width: 0;
+  font: 600 14.5px/1.3 var(--font-ui);
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-block[data-has-note='false'] .nv-note-embed-title {
+  color: var(--text-3);
+  font-weight: 500;
+  font-size: 14px;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-divider {
+  height: 1px;
+  background: var(--line-1);
+  margin: 0 -2px;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 0;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-content {
+  max-height: 220px;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+  pointer-events: none;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+.doc-editor .nv-prosemirror .nv-note-embed-content h1,
+.doc-editor .nv-prosemirror .nv-note-embed-content h2,
+.doc-editor .nv-prosemirror .nv-note-embed-content h3,
+.doc-editor .nv-prosemirror .nv-note-embed-content h4,
+.doc-editor .nv-prosemirror .nv-note-embed-content h5,
+.doc-editor .nv-prosemirror .nv-note-embed-content h6 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 3px;
+  line-height: 1.4;
+  color: var(--text-1);
+}
+.doc-editor .nv-prosemirror .nv-note-embed-content p {
+  margin: 0 0 3px;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-content ul,
+.doc-editor .nv-prosemirror .nv-note-embed-content ol {
+  margin: 0 0 3px;
+  padding-left: 18px;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-content pre {
+  font-size: 11.5px;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 0 0 4px;
+  overflow: hidden;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-content blockquote {
+  margin: 0 0 3px;
+  padding-left: 10px;
+  border-left: 2px solid var(--accent);
+}
+.doc-editor .nv-prosemirror .nv-note-embed-content table {
+  font-size: 12px;
+  margin: 0 0 4px;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-content img {
+  max-height: 80px;
+  border-radius: 4px;
+}
+.nv-embed-error {
+  font-size: 12px;
+  color: var(--danger);
+}
+/* ---- Media Block ---- */
+.doc-editor .nv-prosemirror .nv-media-block {
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  margin: 16px 0;
+  background: var(--glass-2);
+  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+.doc-editor .nv-prosemirror .nv-media-block.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.doc-editor .nv-prosemirror .nv-media-block:hover {
+  background: var(--glass-3);
+  border-color: var(--line-3);
+  box-shadow: var(--shadow-md);
+}
+
+.doc-editor .nv-prosemirror .nv-media-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+}
+.doc-editor .nv-prosemirror .nv-media-pick-btn {
+  height: 38px;
+  padding: 0 20px;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--glass-1) 40%, transparent);
+  color: var(--text-3);
+  font: 500 13.5px/1 var(--font-ui);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.doc-editor .nv-prosemirror .nv-media-pick-btn:hover {
+  background: var(--hover-strong);
+  color: var(--text-2);
+  border-color: var(--accent);
+  border-style: solid;
+  transform: translateY(-1px);
+}
+
+.doc-editor .nv-prosemirror .nv-media-player {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.doc-editor .nv-prosemirror .nv-media-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 8px;
+}
+.doc-editor .nv-prosemirror .nv-media-kind-label {
+  padding: 8px 14px 6px;
+  font: 500 10px/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-4);
+}
+.doc-editor .nv-prosemirror .nv-media-block[data-kind='audio'] .nv-media-kind-label {
+  color: oklch(0.74 0.11 295);
+}
+.doc-editor .nv-prosemirror .nv-media-block[data-kind='video'] .nv-media-kind-label {
+  color: oklch(0.68 0.12 155);
+}
+
+.doc-editor .nv-prosemirror .nv-media-audio-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px 10px;
+}
+.doc-editor .nv-prosemirror .nv-media-play-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.14s, transform 0.1s;
+}
+.doc-editor .nv-prosemirror .nv-media-play-btn:hover {
+  background: color-mix(in oklab, var(--accent) 85%, white 15%);
+  transform: scale(1.06);
+}
+.doc-editor .nv-prosemirror .nv-media-play-btn:active {
+  transform: scale(0.94);
+}
+.doc-editor .nv-prosemirror .nv-media-progress {
+  flex: 1;
+  height: 4px;
+  cursor: pointer;
+  accent-color: var(--accent);
+  border-radius: 999px;
+}
+.doc-editor .nv-prosemirror .nv-media-time {
+  flex-shrink: 0;
+  font: 11px/1 var(--font-mono);
+  color: var(--text-4);
+  white-space: nowrap;
+}
+.doc-editor .nv-prosemirror .nv-media-video {
+  width: 100%;
+  display: block;
+  max-height: 420px;
+  background: oklch(0.10 0.008 270);
+  accent-color: var(--accent);
+}
+
+.doc-editor .nv-prosemirror .nv-media-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--line-1);
+}
+.doc-editor .nv-prosemirror .nv-media-name {
+  flex: 1;
+  min-width: 0;
+  font: 500 12.5px/1.3 var(--font-ui);
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.doc-editor .nv-prosemirror .nv-media-size {
+  font: 11px/1 var(--font-ui);
+  color: var(--text-4);
+  flex-shrink: 0;
+}
+
+/* ── Multi-column layout ─────────────────────────────────────────────── */
+.doc-editor .nv-prosemirror .nv-column-list {
+  position: relative;
+  margin: 0.6em 0;
+}
+
+.doc-editor .nv-prosemirror .nv-column-list-row {
+  display: flex;
+  align-items: stretch;
+  gap: 24px;
+}
+
+.doc-editor .nv-prosemirror .nv-column {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.doc-editor .nv-prosemirror .nv-column-content {
+  min-width: 0;
+}
+
+/* Collapse default top/bottom margins at column edges for tidy alignment. */
+.doc-editor .nv-prosemirror .nv-column-content > :first-child {
+  margin-top: 0;
+}
+.doc-editor .nv-prosemirror .nv-column-content > :last-child {
+  margin-bottom: 0;
+}
+
+/* Resize gutter sitting in the gap between two columns. */
+.doc-editor .nv-prosemirror .nv-column-gutter {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  transform: translateX(-50%);
+  cursor: col-resize;
+  display: flex;
+  justify-content: center;
+  z-index: 2;
+  user-select: none;
+}
+
+.doc-editor .nv-prosemirror .nv-column-gutter > span {
+  width: 3px;
+  border-radius: 999px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.doc-editor .nv-prosemirror .nv-column-list:hover .nv-column-gutter > span {
+  background: var(--line-strong, color-mix(in oklab, var(--accent) 18%, transparent));
+}
+
+.doc-editor .nv-prosemirror .nv-column-gutter:hover > span,
+.doc-editor .nv-prosemirror .nv-column-gutter.is-resizing > span {
+  background: var(--accent);
+}
+
+.doc-editor .nv-prosemirror.nv-column-resizing,
+.doc-editor .nv-prosemirror .nv-column-resizing {
+  cursor: col-resize;
+}
+
+/* ── Drop indicators (set by the column-drop plugin) ─────────────────── */
+/* Rendered as inset box-shadows so they hug the target's inner edge and are
+   never clipped by a block's own overflow (e.g. the table's .tableWrapper). */
+.doc-editor .nv-prosemirror .nv-drop-left {
+  box-shadow: inset 3px 0 0 var(--accent), inset 9px 0 9px -6px color-mix(in oklab, var(--accent) 55%, transparent);
+}
+.doc-editor .nv-prosemirror .nv-drop-right {
+  box-shadow: inset -3px 0 0 var(--accent), inset -9px 0 9px -6px color-mix(in oklab, var(--accent) 55%, transparent);
+}
+.doc-editor .nv-prosemirror .nv-drop-top {
+  box-shadow: inset 0 3px 0 var(--accent);
+}
+.doc-editor .nv-prosemirror .nv-drop-bottom {
+  box-shadow: inset 0 -3px 0 var(--accent);
+}
+
+/* ── Toggle Block ──────────────────────────────────────────────────── */
+
+.doc-editor .nv-prosemirror .nv-toggle {
+  position: relative;
+  margin: 0 0 0.4em;
+  padding-left: 26px;
+}
+
+.doc-editor .nv-prosemirror .nv-toggle-chevron {
+  position: absolute;
+  left: 0;
+  top: 3px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-3);
+  font-size: 10px;
+  line-height: 1;
+  background: none;
+  border: none;
+  padding: 0;
+  border-radius: 4px;
+  transition: transform 150ms ease, color 120ms ease, background 120ms ease;
+}
+
+.doc-editor .nv-prosemirror .nv-toggle-chevron:hover {
+  color: var(--text-1);
+  background: var(--surface-hover, color-mix(in oklab, var(--accent) 10%, transparent));
+}
+
+.doc-editor .nv-prosemirror .nv-toggle[data-collapsed='false'] .nv-toggle-chevron {
+  transform: rotate(90deg);
+}
+
+.doc-editor .nv-prosemirror .nv-toggle-content {
+  min-height: 1em;
+}
+
+.doc-editor .nv-prosemirror .nv-toggle-title {
+  font-weight: 500;
+  cursor: default;
+}
+
+.doc-editor .nv-prosemirror .nv-toggle-title-content {
+  min-height: 1em;
+}
+
+.doc-editor .nv-prosemirror .nv-toggle-folded-hidden {
+  display: none !important;
+}
+
+/* ── Embed Block ──────────────────────────────────────────────────── */
+
+.doc-editor .nv-prosemirror .nv-embed-block {
+  margin: 0 0 0.95em;
+}
+
+.doc-editor .nv-prosemirror .nv-embed-block.ProseMirror-selectednode .nv-embed-card {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+
+.doc-editor .nv-prosemirror .nv-embed-card {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-2, color-mix(in oklab, var(--accent) 12%, transparent));
+  background: var(--surface-2);
+  transition: border-color 120ms ease;
+}
+
+.doc-editor .nv-prosemirror .nv-embed-card:hover {
+  border-color: var(--border-strong, color-mix(in oklab, var(--accent) 28%, transparent));
+}
+
+.doc-editor .nv-prosemirror .nv-embed-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: var(--text-3);
+  cursor: pointer;
+  border-radius: 8px;
+  border: 1px dashed var(--border-2, color-mix(in oklab, var(--accent) 18%, transparent));
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.doc-editor .nv-prosemirror .nv-embed-placeholder:hover {
+  border-color: var(--accent);
+  background: var(--surface-hover, color-mix(in oklab, var(--accent) 6%, transparent));
+}
+
+.doc-editor .nv-prosemirror .nv-embed-placeholder-icon {
+  opacity: 0.5;
+}
+
+.doc-editor .nv-prosemirror .nv-embed-placeholder-text {
+  font-size: 13px;
+}
+
+.doc-editor .nv-prosemirror .nv-embed-placeholder-btn {
+  font-size: 13px;
+  color: var(--accent);
+  background: none;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.doc-editor .nv-prosemirror .nv-embed-placeholder-btn:hover {
+  background: var(--accent);
+  color: var(--accent-text, #fff);
+}
+
+.doc-editor .nv-prosemirror .nv-embed-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-2, color-mix(in oklab, var(--accent) 8%, transparent));
+}
+
+.doc-editor .nv-prosemirror .nv-embed-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--text-3);
+}
+
+.doc-editor .nv-prosemirror .nv-embed-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-editor .nv-prosemirror .nv-embed-preview {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%;
+  overflow: hidden;
+  background: var(--surface-1);
+}
+
+.doc-editor .nv-prosemirror .nv-embed-iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.doc-editor .nv-prosemirror .nv-embed-generic-card {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+  overflow: hidden;
+}
+
+.doc-editor .nv-prosemirror .nv-embed-generic-thumbnail {
+  width: 100%;
+  height: 160px;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--surface-2);
+}
+
+.doc-editor .nv-prosemirror .nv-embed-generic-info {
+  padding: 10px 12px;
+}
+
+.doc-editor .nv-prosemirror .nv-embed-generic-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-1);
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-editor .nv-prosemirror .nv-embed-generic-domain {
+  font-size: 12px;
+  color: var(--text-3);
+}

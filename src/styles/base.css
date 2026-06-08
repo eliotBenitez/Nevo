@@ -1,0 +1,156 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #app {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100dvh;
+  min-height: 100%;
+  overflow: hidden;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--accent) 25%, transparent);
+}
+
+body {
+  font-family: var(--font-ui);
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.005em;
+}
+
+.nv-app {
+  font-family: var(--font-ui);
+  color: var(--text-1);
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.nv-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 50% at 18% 12%, var(--wash-a) 0%, transparent 70%),
+    radial-gradient(50% 40% at 95% 95%, var(--wash-b) 0%, transparent 70%),
+    var(--canvas-0);
+}
+
+/* ── Density ────────────────────────────────────────── */
+[data-density="compact"] {
+  --density-factor: 0.8;
+  --panel-padding: 14px 22px;
+  --row-padding: 10px 14px;
+}
+[data-density="comfortable"] {
+  --density-factor: 1;
+  --panel-padding: 22px 30px;
+  --row-padding: 14px 16px;
+}
+
+/* ── Motion ─────────────────────────────────────────── */
+[data-motion="reduce"],
+[data-motion="reduce"] * {
+  transition-duration: 0.01ms !important;
+  animation-duration: 0.01ms !important;
+}
+[data-motion="full"] {
+  --transition-speed: 1.6;
+}
+
+/* ── Scrollbars ──────────────────────────────────────── */
+[data-scrollbars="hidden"] .nv-app,
+[data-scrollbars="hidden"] .nv-app * { scrollbar-width: none; }
+[data-scrollbars="hidden"] .nv-app::-webkit-scrollbar,
+[data-scrollbars="hidden"] .nv-app *::-webkit-scrollbar { display: none; }
+[data-scrollbars="thin"] .nv-app,
+[data-scrollbars="thin"] .nv-app * { scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+[data-scrollbars="system"] .nv-app,
+[data-scrollbars="system"] .nv-app * { scrollbar-width: auto; }
+
+/* ── Focus ring ──────────────────────────────────────── */
+[data-focus-ring="high-contrast"] *:focus-visible {
+  outline: 2px solid var(--text-1);
+  outline-offset: 2px;
+}
+
+/* ── Window chrome ───────────────────────────────────── */
+[data-chrome="immersive"] .nv-titlebar { background: transparent; backdrop-filter: none; }
+[data-chrome="minimal"] .nv-titlebar { height: 0; overflow: hidden; }
+
+/* ── Background scenes ──────────────────────────────── */
+[data-scene="aurora"] .nv-canvas {
+  background:
+    radial-gradient(60% 50% at 18% 12%, var(--wash-a) 0%, transparent 70%),
+    radial-gradient(50% 40% at 95% 95%, var(--wash-b) 0%, transparent 70%),
+    var(--canvas-0);
+}
+[data-scene="paper"] .nv-canvas {
+  background: var(--canvas-0);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='none'/%3E%3Ccircle cx='1' cy='1' r='0.5' fill='%23888' opacity='0.08'/%3E%3C/svg%3E");
+}
+[data-scene="studio"] .nv-canvas {
+  background:
+    radial-gradient(70% 60% at 50% 0%, var(--wash-a) 0%, transparent 60%),
+    var(--canvas-0);
+}
+[data-scene="plain"] .nv-canvas {
+  background: var(--canvas-0);
+}
+
+/* ── Surface styles ─────────────────────────────────── */
+[data-surface="solid"] .nv-glass,
+[data-surface="solid"] .nv-card {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: var(--canvas-1);
+}
+[data-surface="tinted"] .nv-glass,
+[data-surface="tinted"] .nv-card {
+  backdrop-filter: blur(20px) saturate(120%);
+  background: color-mix(in oklab, var(--glass-2), var(--wash-a) 12%);
+}
+
+/* ── Contrast modes ─────────────────────────────────── */
+[data-contrast="soft"] {
+  --line-1: oklch(1 0 0 / 0.04);
+  --line-2: oklch(1 0 0 / 0.07);
+  --text-2: oklch(0.76 0.008 268);
+  --text-3: oklch(0.60 0.010 268);
+}
+[data-contrast="high"] {
+  --line-2: oklch(1 0 0 / 0.18);
+  --line-strong: oklch(1 0 0 / 0.26);
+  --text-2: oklch(0.90 0.005 268);
+  --text-3: oklch(0.76 0.008 268);
+}
+.theme-light[data-contrast="soft"] {
+  --line-1: oklch(0 0 0 / 0.04);
+  --line-2: oklch(0 0 0 / 0.06);
+  --text-2: oklch(0.48 0.010 270);
+  --text-3: oklch(0.62 0.010 270);
+}
+.theme-light[data-contrast="high"] {
+  --line-2: oklch(0 0 0 / 0.14);
+  --line-strong: oklch(0 0 0 / 0.22);
+  --text-2: oklch(0.24 0.012 270);
+  --text-3: oklch(0.38 0.010 270);
+}
+
+/* ── Sidebar styles ─────────────────────────────────── */
+[data-sidebar="solid"] .nv-sidebar {
+  backdrop-filter: none;
+  background: var(--canvas-1);
+}
+[data-sidebar="minimal"] .nv-sidebar {
+  background: transparent;
+  border-right-color: transparent;
+}
+
+/* ── Default scrollbar rule (overridden by data-scrollbars) ─ */
+.nv-app, .nv-app * { scrollbar-width: none; }
+.nv-app::-webkit-scrollbar, .nv-app *::-webkit-scrollbar { display: none; }

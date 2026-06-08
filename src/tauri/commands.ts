@@ -1,0 +1,297 @@
+import { invoke } from '@tauri-apps/api/core'
+import type {
+  AppMetadata,
+  AppConfig,
+  WorkspaceCleanupReport,
+  WorkspaceDiagnostics,
+  WorkspaceManifest,
+  WorkspaceSettings,
+  PluginManifest,
+} from '../types/workspace'
+import type { FolderMeta, ImportedImageAsset, NoteDocument, NoteSnapshotMeta } from '../types/note'
+import type { WorkspaceBlockSearchItem } from '../types/search'
+import type { BacklinkRef, GraphEdge, ExtractedEdge } from '../types/graph'
+import type { KanbanBoard, KanbanCard } from '../types/kanban'
+import type { TemplateDocument, TemplateFieldValues } from '../types/template'
+import { i18n } from '../i18n'
+import { appLogger } from '../utils/logger'
+
+/** A file made available to the Typst compiler: either inline bytes or a workspace-relative path. */
+export interface TypstAsset {
+  name: string
+  bytesBase64?: string
+  relPath?: string
+}
+
+function extractWorkspacePath(args: unknown): string | undefined {
+  if (!args || typeof args !== 'object') return undefined
+  const record = args as Record<string, unknown>
+  const workspacePath = record.workspacePath
+  if (typeof workspacePath === 'string') return workspacePath
+  const path = record.path
+  if (typeof path === 'string') return path
+  return undefined
+}
+
+async function invokeCommand<T>(command: string, args?: Record<string, unknown>) {
+  try {
+    return await invoke<T>(command, args)
+  } catch (error) {
+    await appLogger.error({
+      source: 'frontend.invoke',
+      event: command,
+      message: 'Tauri command failed',
+      workspacePath: extractWorkspacePath(args),
+      error,
+    })
+    throw error
+  }
+}
+
+function activeLocale(): string {
+  const locale = i18n.global.locale.value
+  return typeof locale === 'string' ? locale : 'en'
+}
+
+export const configCommands = {
+  loadAppConfig: () =>
+    invokeCommand<AppConfig>('load_app_config'),
+
+  saveAppConfig: (config: AppConfig) =>
+    invokeCommand<void>('save_app_config', { config }),
+
+  getAppMetadata: () =>
+    invokeCommand<AppMetadata>('get_app_metadata'),
+
+  listSystemFonts: () =>
+    invokeCommand<string[]>('list_system_fonts'),
+}
+
+export const workspaceCommands = {
+  createWorkspace: (args: { path: string; name: string; glyph: string; gradient: string }) =>
+    invokeCommand<WorkspaceManifest>('create_workspace', args),
+
+  openWorkspace: (path: string) =>
+    invokeCommand<WorkspaceManifest>('open_workspace', { path }),
+
+  saveManifest: (path: string, manifest: WorkspaceManifest) =>
+    invokeCommand<void>('save_workspace_manifest', { path, manifest }),
+
+  loadSettings: (workspacePath: string) =>
+    invokeCommand<WorkspaceSettings>('load_workspace_settings', { workspacePath }),
+
+  saveSettings: (workspacePath: string, settings: WorkspaceSettings) =>
+    invokeCommand<void>('save_workspace_settings', { workspacePath, settings }),
+
+  listPlugins: (workspacePath: string) =>
+    invokeCommand<PluginManifest[]>('list_plugins', { workspacePath }),
+
+  validatePluginManifest: (workspacePath: string, pluginId: string) =>
+    invokeCommand<PluginManifest>('validate_plugin_manifest', { workspacePath, pluginId }),
+
+  setPluginEnabled: (workspacePath: string, pluginId: string, enabled: boolean) =>
+    invokeCommand<void>('set_plugin_enabled', { workspacePath, pluginId, enabled }),
+
+  getWorkspaceDiagnostics: (workspacePath: string) =>
+    invokeCommand<WorkspaceDiagnostics>('get_workspace_diagnostics', { workspacePath }),
+
+  pruneWorkspaceSnapshots: (workspacePath: string, keepPerNote: number) =>
+    invokeCommand<WorkspaceCleanupReport>('prune_workspace_snapshots', { workspacePath, keepPerNote }),
+
+  cleanupOrphanedAssets: (workspacePath: string) =>
+    invokeCommand<WorkspaceCleanupReport>('cleanup_orphaned_assets', { workspacePath }),
+}
+
+export const folderCommands = {
+  createFolder: (workspacePath: string, parentId: string | null, title: string, icon: string) =>
+    invokeCommand<FolderMeta>('create_folder', { workspacePath, parentId, title, icon }),
+
+  renameFolder: (workspacePath: string, folderId: string, title: string) =>
+    invokeCommand<void>('rename_folder', { workspacePath, folderId, title }),
+
+  deleteFolder: (workspacePath: string, folderId: string, recursive: boolean) =>
+    invokeCommand<void>('delete_folder', { workspacePath, folderId, recursive }),
+}
+
+export const noteCommands = {
+  createNote: (workspacePath: string, folderId: string | null, title: string, icon: string) =>
+    invokeCommand<NoteDocument>('create_note', { workspacePath, folderId, title, icon }),
+
+  loadNote: (workspacePath: string, noteId: string) =>
+    invokeCommand<NoteDocument>('load_note', { workspacePath, noteId }),
+
+  saveNote: (workspacePath: string, note: NoteDocument) =>
+    invokeCommand<void>('save_note', { workspacePath, note }),
+
+  deleteNote: (workspacePath: string, noteId: string) =>
+    invokeCommand<void>('delete_note', { workspacePath, noteId }),
+
+  moveNote: (workspacePath: string, noteId: string, targetFolderId: string | null) =>
+    invokeCommand<void>('move_note', { workspacePath, noteId, targetFolderId }),
+
+  listNoteSnapshots: (workspacePath: string, noteId: string) =>
+    invokeCommand<NoteSnapshotMeta[]>('list_note_snapshots', { workspacePath, noteId }),
+
+  loadNoteSnapshot: (workspacePath: string, noteId: string, snapshotId: string) =>
+    invokeCommand<NoteDocument>('load_note_snapshot', { workspacePath, noteId, snapshotId }),
+
+  restoreNoteSnapshot: (workspacePath: string, noteId: string, snapshotId: string) =>
+    invokeCommand<NoteDocument>('restore_note_snapshot', { workspacePath, noteId, snapshotId }),
+
+  pruneNoteSnapshots: (workspacePath: string, noteId: string) =>
+    invokeCommand<void>('prune_note_snapshots', { workspacePath, noteId }),
+
+  restoreFromTrash: (workspacePath: string, itemId: string) =>
+    invokeCommand<void>('restore_from_trash', { workspacePath, itemId }),
+
+  permanentlyDeleteFromTrash: (workspacePath: string, itemId: string) =>
+    invokeCommand<void>('permanently_delete_from_trash', { workspacePath, itemId }),
+
+  emptyTrash: (workspacePath: string) =>
+    invokeCommand<void>('empty_trash', { workspacePath }),
+
+  importImageAsset: (workspacePath: string, fileName: string, bytes: number[]) =>
+    invokeCommand<ImportedImageAsset>('import_image_asset', { workspacePath, fileName, bytes }),
+
+  importAssetByPath: (workspacePath: string, sourcePath: string, fileName: string) =>
+    invokeCommand<ImportedImageAsset>('import_asset_by_path', { workspacePath, sourcePath, fileName }),
+
+  deleteUnreferencedAsset: (workspacePath: string, assetSrc: string) =>
+    invokeCommand<boolean>('delete_unreferenced_asset', { workspacePath, assetSrc }),
+
+  getMediaServerInfo: () =>
+    invokeCommand<{ port: number; token: string }>('get_media_server_info'),
+
+  searchWorkspaceBlocks: (workspacePath: string, query: string) =>
+    invokeCommand<WorkspaceBlockSearchItem[]>('search_workspace_blocks', { workspacePath, query }),
+
+  exportNoteMarkdown: (workspacePath: string, exportPath: string, content: string, assetSrcs: string[]) =>
+    invokeCommand<void>('export_note_markdown', { workspacePath, exportPath, content, assetSrcs }),
+
+  exportNoteHtml: (workspacePath: string, exportPath: string, content: string, assetSrcs: string[]) =>
+    invokeCommand<void>('export_note_html', { workspacePath, exportPath, content, assetSrcs }),
+
+  exportNotePdf: (workspacePath: string, exportPath: string, typstSource: string, assets: TypstAsset[]) =>
+    invokeCommand<void>('export_note_pdf', { workspacePath, exportPath, typstSource, assets }),
+
+  exportNoteTypstArchive: (workspacePath: string, exportPath: string, typstSource: string, assets: TypstAsset[]) =>
+    invokeCommand<void>('export_note_typst_archive', { workspacePath, exportPath, typstSource, assets }),
+
+  renderNotePdfPreview: (workspacePath: string, typstSource: string, assets: TypstAsset[]) =>
+    invokeCommand<string[]>('render_note_pdf_preview', { workspacePath, typstSource, assets }),
+
+  readTextFile: (path: string) =>
+    invokeCommand<string>('read_text_file', { path }),
+
+  openFilePath: (path: string) =>
+    invokeCommand<void>('open_file_path', { path }),
+}
+
+export const templateCommands = {
+  listTemplates: (workspacePath: string) =>
+    invokeCommand<TemplateDocument[]>('template_list', { workspacePath, locale: activeLocale() }),
+
+  getTemplate: (workspacePath: string, templateId: string) =>
+    invokeCommand<TemplateDocument>('template_get', { workspacePath, templateId, locale: activeLocale() }),
+
+  createTemplate: (workspacePath: string, template: TemplateDocument) =>
+    invokeCommand<TemplateDocument>('template_create', { workspacePath, template }),
+
+  updateTemplate: (workspacePath: string, templateId: string, template: TemplateDocument) =>
+    invokeCommand<TemplateDocument>('template_update', { workspacePath, templateId, template }),
+
+  deleteTemplate: (workspacePath: string, templateId: string) =>
+    invokeCommand<void>('template_delete', { workspacePath, templateId }),
+
+  createNote: (workspacePath: string, templateId: string, folderId: string | null, title: string, icon: string, fieldValues: TemplateFieldValues) =>
+    invokeCommand<NoteDocument>('template_create_note', { workspacePath, templateId, folderId, title, icon, fieldValues, locale: activeLocale() }),
+}
+
+export interface CollabServerInfo {
+  url: string
+  localIp: string
+  port: number
+}
+
+export const collabCommands = {
+  saveYjsState: (workspacePath: string, noteId: string, bytes: number[]) =>
+    invokeCommand<void>('save_yjs_state', { workspacePath, noteId, bytes }),
+
+  loadYjsState: (workspacePath: string, noteId: string) =>
+    invokeCommand<number[]>('load_yjs_state', { workspacePath, noteId }),
+
+  startServer: (port: number) =>
+    invokeCommand<CollabServerInfo>('start_collab_server', { port }),
+
+  stopServer: () =>
+    invokeCommand<void>('stop_collab_server'),
+
+  getServerInfo: () =>
+    invokeCommand<CollabServerInfo | null>('get_collab_server_info'),
+}
+
+export const kanbanCommands = {
+  listBoards: (workspacePath: string) =>
+    invokeCommand<KanbanBoard[]>('kanban_list_boards', { workspacePath }),
+
+  createBoard: (workspacePath: string, title: string, icon: string, folderId: string | null) =>
+    invokeCommand<KanbanBoard>('kanban_create_board', { workspacePath, title, icon, folderId }),
+
+  updateBoard: (workspacePath: string, boardId: string, updates: {
+    title?: string
+    icon?: string
+    statusPropertyId?: string
+    propertyDefinitions?: unknown
+    viewSettings?: unknown
+  }) => invokeCommand<KanbanBoard>('kanban_update_board', { workspacePath, boardId, ...updates }),
+
+  deleteBoard: (workspacePath: string, boardId: string) =>
+    invokeCommand<void>('kanban_delete_board', { workspacePath, boardId }),
+
+  listCards: (workspacePath: string, boardId: string) =>
+    invokeCommand<KanbanCard[]>('kanban_list_cards', { workspacePath, boardId }),
+
+  createCard: (workspacePath: string, boardId: string, title: string, columnValue: string, statusPropertyId: string, columnOrder: number) =>
+    invokeCommand<KanbanCard>('kanban_create_card', { workspacePath, boardId, title, columnValue, statusPropertyId, columnOrder }),
+
+  updateCard: (workspacePath: string, boardId: string, cardId: string, updates: {
+    title?: string
+    icon?: string
+    content?: unknown
+    properties?: unknown
+    fields?: unknown
+    columnOrder?: number
+    progress?: number
+    priority?: string
+  }) => invokeCommand<KanbanCard>('kanban_update_card', { workspacePath, boardId, cardId, ...updates }),
+
+  deleteCard: (workspacePath: string, boardId: string, cardId: string) =>
+    invokeCommand<void>('kanban_delete_card', { workspacePath, boardId, cardId }),
+
+  moveCard: (workspacePath: string, boardId: string, cardId: string, toColumnOptionId: string, targetIndex: number) =>
+    invokeCommand<KanbanCard[]>('kanban_move_card', { workspacePath, boardId, cardId, toColumnOptionId, targetIndex }),
+
+  saveSchema: (workspacePath: string, boardId: string, propertyDefinitions: unknown, columnRemap?: Record<string, string>) =>
+    invokeCommand<KanbanBoard>('kanban_save_board_schema', { workspacePath, boardId, propertyDefinitions, columnRemap: columnRemap ?? null }),
+}
+
+export const graphCommands = {
+  updateNoteEdges: (workspacePath: string, noteId: string, edges: ExtractedEdge[]) =>
+    invokeCommand<void>('graph_update_note_edges', {
+      workspacePath,
+      noteId,
+      edges: edges.map(e => ({ target: e.target, kind: e.kind, anchor: e.anchor })),
+    }),
+
+  getBacklinks: (workspacePath: string, noteId: string) =>
+    invokeCommand<BacklinkRef[]>('graph_get_backlinks', { workspacePath, noteId }),
+
+  getOutlinks: (workspacePath: string, noteId: string) =>
+    invokeCommand<GraphEdge[]>('graph_get_outlinks', { workspacePath, noteId }),
+
+  removeNote: (workspacePath: string, noteId: string) =>
+    invokeCommand<void>('graph_remove_note', { workspacePath, noteId }),
+
+  getAllEdges: (workspacePath: string) =>
+    invokeCommand<GraphEdge[]>('graph_get_all_edges', { workspacePath }),
+}

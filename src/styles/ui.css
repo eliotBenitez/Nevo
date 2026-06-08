@@ -1,0 +1,396 @@
+@keyframes blob-drift-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(20px, -15px) scale(1.05); }
+}
+@keyframes blob-drift-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-15px, 20px) scale(1.08); }
+}
+@keyframes blob-drift-c {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(10px, 10px) scale(0.95); }
+}
+
+/* src/ui/glass/AmbientBackdrop.vue */
+.ambient-backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+}
+.blob-a {
+  top: -15%; left: 12%;
+  width: 460px; height: 460px;
+  background: radial-gradient(circle, oklch(0.66 0.10 258 / 0.45), transparent 60%);
+  animation: blob-drift-a 18s ease-in-out infinite;
+}
+.blob-b {
+  bottom: -20%; right: 8%;
+  width: 540px; height: 540px;
+  background: radial-gradient(circle, oklch(0.72 0.08 30 / 0.35), transparent 60%);
+  filter: blur(50px);
+  animation: blob-drift-b 22s ease-in-out infinite;
+}
+.blob-c {
+  top: 40%; left: 55%;
+  width: 320px; height: 320px;
+  background: radial-gradient(circle, oklch(0.7 0.08 155 / 0.20), transparent 60%);
+  animation: blob-drift-c 16s ease-in-out infinite;
+}
+
+/* src/ui/primitives/CollabAvatars.vue */
+.collab-avatars {
+  display: flex;
+  align-items: center;
+  gap: -6px;
+}
+
+.collab-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  border: 2px solid var(--surface-1, #1a1a1e);
+  flex-shrink: 0;
+  letter-spacing: 0;
+}
+
+/* src/ui/primitives/NvButton.vue */
+.nv-btn--md { height: 32px; padding: 0 14px; font-size: 13px; }
+
+/* src/ui/primitives/NvIconPicker.vue */
+.nv-icon-picker {
+  width: min(420px, calc(100vw - 24px));
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  background: var(--glass-3);
+  box-shadow: var(--shadow-pop);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nv-icon-picker__tabs {
+  display: inline-flex;
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  overflow: hidden;
+  width: fit-content;
+}
+
+.nv-icon-picker__tab {
+  height: 30px;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  padding: 0 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.nv-icon-picker__tab.is-active {
+  background: var(--accent-soft);
+  color: var(--text-1);
+}
+
+.nv-icon-picker__search {
+  width: 100%;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--line-2);
+  background: var(--glass-2);
+  color: var(--text-1);
+  padding: 0 10px;
+  font-size: 12.5px;
+  outline: none;
+}
+
+.nv-icon-picker__search:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.nv-icon-picker__body {
+  min-height: 180px;
+  max-height: 300px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 2px;
+}
+
+.nv-icon-picker__category {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nv-icon-picker__category-title {
+  margin: 0;
+  color: var(--text-4);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.nv-icon-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.nv-icon-picker__grid--icons {
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+}
+
+.nv-icon-picker__item {
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.nv-icon-picker__item:hover {
+  background: var(--hover);
+}
+
+.nv-icon-picker__item.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text-1);
+}
+
+.nv-icon-picker__item--icon {
+  font-size: 13px;
+}
+
+.nv-icon-picker__empty {
+  margin: auto;
+  color: var(--text-4);
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .nv-icon-picker {
+    width: calc(100vw - 24px);
+  }
+
+  .nv-icon-picker__grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+
+  .nv-icon-picker__grid--icons {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+}
+
+/* src/ui/primitives/NvNoteIcon.vue */
+.nv-note-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+  line-height: 1;
+}
+
+.nv-note-icon__emoji {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1em;
+  line-height: 1;
+}
+
+/* src/ui/primitives/NvSelect.vue */
+.nv-select {
+  min-width: var(--nv-select-min-width);
+}
+
+.nv-select__trigger {
+  width: 100%;
+  height: 30px;
+  padding: 0 10px 0 11px;
+  border-radius: 8px;
+  border: 1px solid var(--line-2);
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--glass-3) 88%, transparent), color-mix(in oklab, var(--hover) 88%, transparent));
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.05),
+    0 1px 2px oklch(0 0 0 / 0.06);
+  color: var(--text-1);
+  font: 500 12.5px var(--font-ui);
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.nv-select__trigger:hover {
+  border-color: color-mix(in oklab, var(--accent) 24%, var(--line-2));
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--glass-3) 94%, transparent), color-mix(in oklab, var(--hover-strong) 90%, transparent));
+}
+
+.nv-select__trigger:focus-visible,
+.nv-select__trigger.is-open {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 3px var(--accent-soft),
+    inset 0 1px 0 oklch(1 0 0 / 0.06);
+}
+
+.nv-select__trigger.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.nv-select__value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.nv-select__value.is-placeholder {
+  color: var(--text-4);
+}
+
+.nv-select__chevron {
+  flex: 0 0 auto;
+  color: var(--text-4);
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.nv-select__trigger:hover .nv-select__chevron,
+.nv-select__trigger.is-open .nv-select__chevron {
+  color: var(--accent);
+}
+
+.nv-select__trigger.is-open .nv-select__chevron {
+  transform: rotate(180deg);
+}
+
+.nv-select__menu {
+  position: fixed;
+  z-index: 400;
+  overflow: auto;
+  min-width: 140px;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--glass-2) 94%, transparent), color-mix(in oklab, var(--glass-1) 96%, transparent));
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  box-shadow: var(--shadow-pop);
+}
+
+.nv-select__menu:focus {
+  outline: none;
+}
+
+.nv-select__option {
+  width: 100%;
+  min-height: 34px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nv-select__option.is-active {
+  background: color-mix(in oklab, var(--accent-soft) 72%, transparent);
+}
+
+.nv-select__option.is-selected .nv-select__option-label {
+  color: var(--text-1);
+}
+
+.nv-select__option-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nv-select__option-label {
+  color: var(--text-2);
+  font: 500 12.5px var(--font-ui);
+}
+
+.nv-select__option-description {
+  color: var(--text-4);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.nv-select__check {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--accent);
+}
+
+/* src/ui/primitives/WindowControls.vue */
+.win-controls {
+  display: flex;
+  align-items: stretch;
+  -webkit-app-region: no-drag;
+  height: 100%;
+}
+
+.wc-btn {
+  width: 46px;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+.wc-btn:hover {
+  background: var(--hover-strong);
+  color: var(--text-1);
+}
+.wc-btn--close:hover {
+  background: #e81123;
+  color: white;
+}

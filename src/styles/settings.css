@@ -1,0 +1,822 @@
+@import './settings-panels.css';
+
+/* src/app/components/WorkspaceSettingsModal.vue */
+.settings-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: oklch(0 0 0 / 0.32);
+  backdrop-filter: blur(6px) saturate(0.7);
+  -webkit-backdrop-filter: blur(6px) saturate(0.7);
+}
+
+.settings-window {
+  width: min(1240px, calc(100vw - 36px));
+  height: min(820px, calc(100vh - 36px));
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  box-shadow:
+    0 40px 100px -20px oklch(0 0 0 / 0.55),
+    0 8px 24px oklch(0 0 0 / 0.35),
+    inset 0 1px 0 oklch(1 0 0 / 0.08);
+  background: var(--glass-2);
+}
+
+.settings-window__titlebar {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-4);
+  background: color-mix(in oklab, var(--glass-titlebar) 92%, transparent);
+  border-bottom: 1px solid var(--line-1);
+  position: relative;
+  padding: 0 40px;
+}
+
+.settings-window__close {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-3);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.settings-shell {
+  display: flex;
+  height: calc(100% - 34px);
+  background:
+    radial-gradient(55% 60% at 0% 0%, color-mix(in oklab, var(--accent-soft) 80%, transparent), transparent 72%),
+    radial-gradient(45% 55% at 100% 100%, color-mix(in oklab, oklch(0.7 0.11 32 / 0.12) 85%, transparent), transparent 72%),
+    var(--glass-2);
+}
+
+.settings-sidebar {
+  width: 208px;
+  flex: 0 0 208px;
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-1);
+  border-right: 1px solid var(--line-1);
+}
+
+.settings-sidebar__head {
+  padding: 16px 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--line-1);
+}
+
+.settings-sidebar__title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.sidebar-icon--muted {
+  color: var(--text-3);
+}
+
+.settings-sidebar__search {
+  padding: 10px 10px 6px;
+}
+
+.settings-sidebar__search .search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--hover);
+  border: 1.5px solid var(--line-1);
+}
+
+.settings-sidebar__search .search-field--active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.settings-sidebar__search .search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-1);
+  font: 500 12.5px var(--font-ui);
+  outline: none;
+}
+
+.settings-sidebar__search .search-input::placeholder {
+  color: var(--text-4);
+}
+
+.settings-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 6px;
+  overflow: auto;
+}
+
+.settings-nav__item {
+  width: 100%;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-3);
+  text-align: left;
+  cursor: pointer;
+}
+
+.settings-nav__item:hover,
+.settings-nav__item.is-active {
+  background: color-mix(in oklab, var(--accent-soft) 88%, transparent);
+  color: var(--text-1);
+}
+
+.settings-nav__icon {
+  flex: 0 0 auto;
+}
+
+.settings-nav__label {
+  flex: 1;
+  font-size: 12.5px;
+}
+
+.settings-nav__count {
+  font-size: 10.5px;
+  color: var(--text-4);
+  font-family: var(--font-mono);
+}
+
+.settings-sidebar__foot {
+  padding: 10px 14px;
+  border-top: 1px solid var(--line-1);
+  font-size: 11px;
+  color: var(--text-4);
+}
+
+.settings-main {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.results-card {
+  background: color-mix(in oklab, var(--glass-2) 92%, transparent);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.result-row {
+  width: 100%;
+  padding: 14px 16px;
+  border: none;
+  border-bottom: 1px solid var(--line-1);
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.result-row:hover {
+  background: color-mix(in oklab, var(--accent-soft) 55%, transparent);
+}
+
+.result-row:last-child {
+  border-bottom: none;
+}
+
+.result-row__meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.result-pill {
+  height: 20px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--hover-strong);
+  color: var(--text-3);
+  font-size: 10.5px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.result-row__title {
+  color: var(--text-1);
+  font-size: 13.5px;
+}
+
+.result-row__desc {
+  margin-top: 2px;
+  color: var(--text-4);
+  font-size: 11.5px;
+}
+
+.result-row__value {
+  color: var(--text-2);
+  font-size: 12px;
+  font-family: var(--font-mono);
+}
+
+.settings-sidebar__head .spacer {
+  flex: 1;
+}
+
+@media (max-width: 980px) {
+  .settings-window {
+    width: min(100vw - 18px, 1240px);
+    height: min(100vh - 18px, 820px);
+  }
+
+  .settings-shell {
+    flex-direction: column;
+  }
+
+  .settings-sidebar {
+    width: 100%;
+    flex: 0 0 auto;
+    border-right: none;
+    border-bottom: 1px solid var(--line-1);
+  }
+
+  .settings-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+  }
+}
+
+@media (max-width: 719px) {
+  .settings-backdrop {
+    padding:
+      max(var(--safe-area-top), 0px)
+      max(var(--safe-area-right), 0px)
+      max(var(--safe-area-bottom), 0px)
+      max(var(--safe-area-left), 0px);
+  }
+
+  .settings-window,
+  .settings-window--fullscreen {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+    border: none;
+  }
+
+  .settings-sidebar__foot {
+    padding-bottom: calc(10px + max(var(--safe-area-bottom), 0px));
+  }
+}
+
+/* src/app/components/settings/SettingsAboutPanel.vue */
+.about-hero {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.about-mark {
+  width: 88px;
+  height: 88px;
+  border-radius: 22px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--accent), oklch(0.55 0.08 290));
+  box-shadow: 0 8px 32px var(--accent-glow), inset 0 1px 0 oklch(1 0 0 / 0.2);
+}
+
+.about-mark em {
+  color: white;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 44px;
+}
+
+.about-copy {
+  flex: 1;
+}
+
+.about-name {
+  color: var(--text-1);
+  font-family: var(--font-serif);
+  font-size: 36px;
+  font-weight: 400;
+}
+
+.about-name em {
+  font-style: italic;
+}
+
+.about-tagline {
+  max-width: 520px;
+  margin: 8px 0 0;
+  color: var(--text-3);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 22px;
+  row-gap: 6px;
+  margin-top: 18px;
+}
+
+.meta-key {
+  color: var(--text-4);
+  font-size: 12px;
+}
+
+.meta-value {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.oss-card {
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--accent-soft) 56%, transparent);
+  border: 1px solid color-mix(in oklab, var(--accent) 24%, var(--line-2));
+}
+
+.oss-card__title {
+  color: var(--text-1);
+  font-size: 13.5px;
+  font-weight: 560;
+}
+
+.oss-card__body {
+  margin-top: 4px;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+@media (max-width: 980px) {
+  .about-hero {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* src/app/components/settings/SettingsAiPanel.vue */
+.inline-status {
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.inline-status--ok {
+  background: oklch(0.72 0.09 150 / 0.14);
+  color: oklch(0.7 0.1 150);
+}
+
+/* src/app/components/settings/SettingsEditorPanel.vue */
+.settings-row--muted {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.preview-card {
+  position: relative;
+  padding: 20px 24px;
+  border-radius: 12px;
+  background: var(--glass-3);
+  border: 1px solid var(--line-2);
+}
+
+.preview-label {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  color: var(--text-4);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.preview-heading {
+  margin: 0 0 8px;
+  color: var(--text-1);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.preview-body {
+  margin: 0;
+  color: var(--text-2);
+  line-height: 1.7;
+}
+
+/* src/app/components/settings/SettingsFilesPanel.vue */
+.number-stepper {
+  position: relative;
+  width: 88px;
+  height: 30px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.number-stepper__input {
+  width: 100%;
+  height: 100%;
+  padding-right: 22px;
+}
+
+.number-stepper__controls {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  width: 18px;
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  overflow: hidden;
+  border-left: 1px solid var(--line-1);
+  border-top-right-radius: 7px;
+  border-bottom-right-radius: 7px;
+  background: color-mix(in oklab, var(--hover-strong) 88%, transparent);
+}
+
+.number-stepper__button {
+  width: 100%;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.number-stepper__button + .number-stepper__button {
+  border-top: 1px solid var(--line-1);
+}
+
+.number-stepper__button:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text-1);
+}
+
+.number-stepper__button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.path-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.path-button {
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--line-2);
+  background: var(--hover);
+  color: var(--text-1);
+  font: 500 12px var(--font-ui);
+  cursor: pointer;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stat-card {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line-1);
+  background: color-mix(in oklab, var(--glass-1) 90%, transparent);
+}
+
+.stat-card span {
+  display: block;
+  color: var(--text-4);
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.stat-card strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--text-1);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+@media (max-width: 980px) {
+  .path-grid,
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* src/app/components/settings/SettingsHotkeysPanel.vue */
+.shortcuts-table {
+  flex: 1;
+  min-height: 0;
+  background: color-mix(in oklab, var(--glass-2) 92%, transparent);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.settings-hotkeys-panel .search-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.search-icon--accent {
+  color: var(--accent);
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line-1);
+}
+
+.shortcut-row:last-child {
+  border-bottom: none;
+}
+
+.shortcut-row--focused {
+  background: color-mix(in oklab, var(--accent-soft) 55%, transparent);
+}
+
+.shortcut-row__copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.shortcut-row__title {
+  color: var(--text-1);
+  font-size: 13px;
+}
+
+.shortcut-row__sub {
+  margin-top: 2px;
+  color: var(--text-4);
+  font-size: 11.5px;
+}
+
+.shortcut-row__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hotkey-input {
+  min-width: 154px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hotkey-chord {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.hotkey-chord__key {
+  min-width: 22px;
+  padding-inline: 7px;
+}
+
+.hotkey-input.is-capturing {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.hotkey-input.is-conflict {
+  border-color: oklch(0.72 0.12 22 / 0.5);
+}
+
+.hotkey-input:disabled,
+.hotkey-input.is-fixed {
+  cursor: default;
+  opacity: 0.62;
+  box-shadow: none;
+}
+
+.shortcut-chip {
+  flex: 0 0 auto;
+  color: var(--text-4);
+}
+
+.conflict-chip {
+  background: oklch(0.72 0.12 22 / 0.16);
+  color: oklch(0.6 0.13 22);
+}
+
+.icon-action {
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--text-4);
+  cursor: pointer;
+}
+
+/* src/app/components/settings/SettingsPluginsPanel.vue */
+.settings-plugins-panel .filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-chip--active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.filter-chip--warning {
+  background: oklch(0.74 0.08 72 / 0.14);
+  color: oklch(0.68 0.09 72);
+}
+
+.plugin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.plugin-card {
+  display: flex;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line-2);
+  background: color-mix(in oklab, var(--glass-2) 92%, transparent);
+}
+
+.plugin-card--issue {
+  border-color: oklch(0.74 0.08 72 / 0.4);
+}
+
+.plugin-card__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: white;
+  background: linear-gradient(135deg, var(--accent), oklch(0.55 0.08 290));
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.25);
+  font-family: var(--font-serif);
+  font-style: italic;
+}
+
+.plugin-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.plugin-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.plugin-card__title {
+  color: var(--text-1);
+  font-size: 13.5px;
+  font-weight: 560;
+}
+
+.plugin-card__version,
+.plugin-card__author {
+  color: var(--text-4);
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.plugin-card__author {
+  margin-top: 2px;
+}
+
+.plugin-card__desc {
+  margin: 8px 0 0;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.plugin-card__footer {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.link-action {
+  border: none;
+  background: transparent;
+  color: var(--text-4);
+  font: 500 11px var(--font-ui);
+  cursor: pointer;
+}
+
+.panel-divider {
+  border: none;
+  border-top: 1px solid var(--line-2);
+  margin: 4px 0;
+}
+
+@media (max-width: 980px) {
+  .plugin-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* src/app/components/settings/SettingsWorkspacePanel.vue */
+.settings-workspace-panel .workspace-inputs {
+  display: grid;
+  grid-template-columns: 1fr 72px;
+  gap: 10px;
+}
+
+.settings-workspace-panel .gradient-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.settings-workspace-panel .gradient-dot {
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.settings-workspace-panel .gradient-dot.is-active {
+  border-color: white;
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.settings-workspace-panel .ui-input--icon {
+  width: 56px;
+  text-align: center;
+  font-size: 18px;
+}
+
+@media (max-width: 980px) {
+  .settings-workspace-panel .workspace-inputs {
+    grid-template-columns: 1fr;
+  }
+}

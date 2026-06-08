@@ -1,0 +1,85 @@
+import { onMounted, onUnmounted, watch } from 'vue'
+import { useNoteStore } from '../stores/note'
+import { useWorkspaceStore } from '../stores/workspace'
+import { storeToRefs } from 'pinia'
+import { matchHotkeyCommand } from '../utils/hotkeys'
+
+const AUTOSAVE_DELAY_MS = 2_000
+
+export function useNotePersistence() {
+  const noteStore = useNoteStore()
+  const workspaceStore = useWorkspaceStore()
+  const { settings } = storeToRefs(workspaceStore)
+  let saveTimer: ReturnType<typeof setTimeout> | null = null
+  let idleSavePending = false
+
+  function scheduleSave() {
+    if (settings.value.editor.autosavePolicy === 'window-idle') {
+      idleSavePending = true
+      return
+    }
+    if (saveTimer) clearTimeout(saveTimer)
+    saveTimer = setTimeout(() => {
+      saveTimer = null
+      void noteStore.saveNote()
+    }, AUTOSAVE_DELAY_MS)
+  }
+
+  async function flushSave() {
+    if (saveTimer) {
+      clearTimeout(saveTimer)
+      saveTimer = null
+    }
+    await noteStore.saveNote()
+    idleSavePending = false
+  }
+
+  function onWindowIdle() {
+    if (idleSavePending && noteStore.isDirty) {
+      void noteStore.saveNote()
+      idleSavePending = false
+    }
+  }
+
+  function onKeydown(e: KeyboardEvent) {
+    if (matchHotkeyCommand(settings.value.hotkeys.bindings, e) === 'workspace.save-note') {
+      e.preventDefault()
+      if (saveTimer) { clearTimeout(saveTimer); saveTimer = null }
+      void noteStore.saveNote()
+      idleSavePending = false
+    }
+  }
+
+  function onBeforeUnload() {
+    void flushSave()
+  }
+
+  onMounted(() => {
+    document.addEventListener('keydown', onKeydown)
+    window.addEventListener('beforeunload', onBeforeUnload)
+    window.addEventListener('blur', onWindowIdle)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') onWindowIdle()
+    })
+  })
+  onUnmounted(() => {
+    document.removeEventListener('keydown', onKeydown)
+    window.removeEventListener('beforeunload', onBeforeUnload)
+    window.removeEventListener('blur', onWindowIdle)
+    void flushSave()
+  })
+
+  watch(() => noteStore.isDirty, (dirty) => {
+    if (dirty) {
+      scheduleSave()
+      return
+    }
+    if (saveTimer) {
+      clearTimeout(saveTimer)
+      saveTimer = null
+    }
+    idleSavePending = false
+  })
+
+  return { flushSave }
+}

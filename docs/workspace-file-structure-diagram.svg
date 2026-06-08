@@ -1,0 +1,197 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="20" stdDeviation="25" flood-color="#0F172A" flood-opacity="0.10"/>
+    </filter>
+    <filter id="shadow-sm" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0F172A" flood-opacity="0.06"/>
+    </filter>
+    <clipPath id="top-clip">
+      <rect x="100" y="200" width="1720" height="60" rx="16"/>
+    </clipPath>
+    <g id="icon-folder">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </g>
+    <g id="icon-file">
+      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <polyline points="13 2 13 9 20 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </g>
+  </defs>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap');
+    .text-title { font-family: 'Inter', system-ui, sans-serif; font-weight: 700; font-size: 42px; fill: #0F172A; letter-spacing: -0.02em; }
+    .text-subtitle { font-family: 'Inter', system-ui, sans-serif; font-weight: 400; font-size: 20px; fill: #64748B; margin-top: 8px; }
+    .text-ui-bold { font-family: 'Inter', system-ui, sans-serif; font-weight: 600; font-size: 19px; fill: #1E293B; }
+    .text-tree { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 23px; fill: #1E293B; letter-spacing: -0.01em; }
+    .text-tree-bold { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 23px; fill: #0F172A; letter-spacing: -0.01em; }
+    .text-card-title { font-family: 'Inter', system-ui, sans-serif; font-weight: 600; font-size: 24px; fill: #0F172A; }
+    .text-card-body { font-family: 'Inter', system-ui, sans-serif; font-weight: 400; font-size: 19px; fill: #475569; }
+    .path-line { stroke: #CBD5E1; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .connector { stroke: #94A3B8; stroke-width: 2; stroke-dasharray: 4 4; stroke-linecap: round; fill: none; }
+  </style>
+
+  <rect width="1920" height="1080" fill="#F8FAFC"/>
+  
+  <text x="100" y="100" class="text-title">Файловая структура рабочего пространства Nevo</text>
+  <text x="100" y="136" class="text-subtitle">Прозрачная и переносимая структура папок, доступная в любом файловом менеджере</text>
+
+  <g filter="url(#shadow)">
+    <rect x="100" y="200" width="1720" height="820" rx="16" fill="#FFFFFF"/>
+    <rect x="100" y="200" width="1720" height="60" fill="#F1F5F9" rx="16" clip-path="url(#top-clip)"/>
+    <path d="M 100 260 L 1820 260" stroke="#E2E8F0" stroke-width="2"/>
+    <path d="M 1050 260 L 1050 1020" stroke="#F8FAFC" stroke-width="2"/>
+
+    <circle cx="135" cy="230" r="6" fill="#EF4444"/>
+    <circle cx="155" cy="230" r="6" fill="#F59E0B"/>
+    <circle cx="175" cy="230" r="6" fill="#10B981"/>
+
+    <rect x="750" y="212" width="420" height="36" rx="8" fill="#E2E8F0"/>
+    <text x="960" y="238" class="text-ui-bold" text-anchor="middle" fill="#64748B" style="font-size: 16px;">~/Documents/Nevo Workspace</text>
+  </g>
+
+  <!-- Tree Lines -->
+  <!-- Vertical lines base -->
+  <path d="M 162 318 V 466" class="path-line"/> <!-- root to .nevo/ -->
+  <path d="M 202 370 V 414" class="path-line"/> <!-- notes/ to file -->
+  <path d="M 202 474 V 886" class="path-line"/> <!-- .nevo/ to index/ -->
+  <path d="M 242 894 V 938" class="path-line"/> <!-- index/ to graph.json -->
+
+  <!-- Horizontal connectors -->
+  <path d="M 162 370 H 182" class="path-line"/>
+  <path d="M 162 474 H 182" class="path-line"/>
+  <path d="M 202 422 H 222" class="path-line"/>
+  <path d="M 202 526 H 222" class="path-line"/>
+  <path d="M 202 578 H 222" class="path-line"/>
+  <path d="M 202 630 H 222" class="path-line"/>
+  <path d="M 202 682 H 222" class="path-line"/>
+  <path d="M 202 734 H 222" class="path-line"/>
+  <path d="M 202 786 H 222" class="path-line"/>
+  <path d="M 202 838 H 222" class="path-line"/>
+  <path d="M 202 890 H 222" class="path-line"/>
+  <path d="M 242 942 H 262" class="path-line"/>
+
+  <!-- Tree Items -->
+  <g transform="translate(150, 290)">
+    <use href="#icon-folder" x="0" y="8" stroke="#3B82F6"/>
+    <text x="34" y="28" class="text-tree-bold">Nevo Workspace/</text>
+  </g>
+
+  <g transform="translate(190, 342)">
+    <use href="#icon-folder" x="0" y="8" stroke="#3B82F6"/>
+    <text x="34" y="28" class="text-tree">notes/</text>
+  </g>
+
+  <g transform="translate(230, 394)">
+    <use href="#icon-file" x="0" y="8" stroke="#8B5CF6"/>
+    <text x="34" y="28" class="text-tree">note-&lt;id&gt;.nevo</text>
+  </g>
+
+  <g transform="translate(190, 446)">
+    <use href="#icon-folder" x="0" y="8" stroke="#94A3B8"/>
+    <text x="34" y="28" class="text-tree">.nevo/</text>
+  </g>
+
+  <g transform="translate(230, 498)">
+    <use href="#icon-file" x="0" y="8" stroke="#10B981"/>
+    <text x="34" y="28" class="text-tree">workspace.json</text>
+  </g>
+
+  <g transform="translate(230, 550)">
+    <use href="#icon-file" x="0" y="8" stroke="#10B981"/>
+    <text x="34" y="28" class="text-tree">settings.json</text>
+  </g>
+
+  <g transform="translate(230, 602)">
+    <use href="#icon-folder" x="0" y="8" stroke="#94A3B8"/>
+    <text x="34" y="28" class="text-tree">assets/</text>
+  </g>
+
+  <g transform="translate(230, 654)">
+    <use href="#icon-folder" x="0" y="8" stroke="#94A3B8"/>
+    <text x="34" y="28" class="text-tree">snapshots/</text>
+  </g>
+
+  <g transform="translate(230, 706)">
+    <use href="#icon-folder" x="0" y="8" stroke="#94A3B8"/>
+    <text x="34" y="28" class="text-tree">boards/</text>
+  </g>
+
+  <g transform="translate(230, 758)">
+    <use href="#icon-folder" x="0" y="8" stroke="#94A3B8"/>
+    <text x="34" y="28" class="text-tree">templates/</text>
+  </g>
+
+  <g transform="translate(230, 810)">
+    <use href="#icon-folder" x="0" y="8" stroke="#94A3B8"/>
+    <text x="34" y="28" class="text-tree">plugins/</text>
+  </g>
+
+  <g transform="translate(230, 862)">
+    <use href="#icon-folder" x="0" y="8" stroke="#94A3B8"/>
+    <text x="34" y="28" class="text-tree">index/</text>
+  </g>
+
+  <g transform="translate(270, 914)">
+    <use href="#icon-file" x="0" y="8" stroke="#F59E0B"/>
+    <text x="34" y="28" class="text-tree">graph.json</text>
+  </g>
+
+  <!-- Connectors -->
+  <path d="M 450 370 C 650 370, 850 365, 1080 335" class="connector"/>
+  <circle cx="1080" cy="335" r="4" fill="#94A3B8"/>
+
+  <path d="M 330 474 C 550 474, 850 485, 1080 465" class="connector"/>
+  <circle cx="1080" cy="465" r="4" fill="#94A3B8"/>
+
+  <path d="M 500 526 C 700 526, 850 625, 1080 595" class="connector"/>
+  <circle cx="1080" cy="595" r="4" fill="#94A3B8"/>
+
+  <path d="M 450 734 C 700 734, 850 778, 1080 735" class="connector"/>
+  <circle cx="1080" cy="735" r="4" fill="#94A3B8"/>
+
+  <path d="M 500 942 C 800 942, 900 935, 1080 905" class="connector"/>
+  <circle cx="1080" cy="905" r="4" fill="#94A3B8"/>
+
+  <!-- Explanation Cards -->
+  <g transform="translate(1080, 280)">
+    <rect width="680" height="110" rx="12" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2" filter="url(#shadow-sm)"/>
+    <rect x="24" y="24" width="16" height="16" rx="8" fill="#3B82F6"/>
+    <text x="56" y="38" class="text-card-title">Пользовательские заметки</text>
+    <text x="24" y="75" class="text-card-body">Основное хранилище. Заметки можно открывать</text>
+    <text x="24" y="100" class="text-card-body">и редактировать в любом стороннем редакторе.</text>
+  </g>
+
+  <g transform="translate(1080, 410)">
+    <rect width="680" height="110" rx="12" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2" filter="url(#shadow-sm)"/>
+    <rect x="24" y="24" width="16" height="16" rx="8" fill="#94A3B8"/>
+    <text x="56" y="38" class="text-card-title">Служебная директория</text>
+    <text x="24" y="75" class="text-card-body">Скрытая папка с настройками и ресурсами.</text>
+    <text x="24" y="100" class="text-card-body">Обеспечивает полную переносимость workspace.</text>
+  </g>
+
+  <g transform="translate(1080, 540)">
+    <rect width="680" height="110" rx="12" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2" filter="url(#shadow-sm)"/>
+    <rect x="24" y="24" width="16" height="16" rx="8" fill="#10B981"/>
+    <text x="56" y="38" class="text-card-title">Манифесты и Настройки</text>
+    <text x="24" y="75" class="text-card-body">Дерево папок, закреплённые вкладки</text>
+    <text x="24" y="100" class="text-card-body">и визуальные предпочтения рабочего пространства.</text>
+  </g>
+
+  <g transform="translate(1080, 670)">
+    <rect width="680" height="140" rx="12" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2" filter="url(#shadow-sm)"/>
+    <rect x="24" y="24" width="16" height="16" rx="8" fill="#8B5CF6"/>
+    <text x="56" y="38" class="text-card-title">Ресурсы, История и Плагины</text>
+    <text x="24" y="75" class="text-card-body">Медиафайлы, история версий (снапшоты)</text>
+    <text x="24" y="100" class="text-card-body">и состояние Kanban-досок.</text>
+    <text x="24" y="125" class="text-card-body">Хранится локально в открытом JSON-формате.</text>
+  </g>
+
+  <g transform="translate(1080, 830)">
+    <rect width="680" height="110" rx="12" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2" filter="url(#shadow-sm)"/>
+    <rect x="24" y="24" width="16" height="16" rx="8" fill="#F59E0B"/>
+    <text x="56" y="38" class="text-card-title">Индексы графа</text>
+    <text x="24" y="75" class="text-card-body">Скомпилированные связи (links/backlinks)</text>
+    <text x="24" y="100" class="text-card-body">для мгновенной визуализации графа связей.</text>
+  </g>
+</svg>

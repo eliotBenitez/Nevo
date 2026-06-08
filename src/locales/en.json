@@ -1,0 +1,1623 @@
+{
+  "onboarding": {
+    "welcome": {
+      "title": "Welcome to",
+      "brand": "Nevo",
+      "subtitle": "A quiet, local-first workspace for thinking, writing, and connecting ideas. Your notes stay on your device — always.",
+      "createWorkspace": "Create a workspace",
+      "createSub": "Start fresh — pick a folder, choose a template.",
+      "openExisting": "Open existing",
+      "openSub": "Point Nevo at any folder on disk.",
+      "recent": "Recent",
+      "pages": "pages",
+      "localFirst": "Local-first · nothing leaves this device"
+    },
+    "create": {
+      "title": "Create your workspace",
+      "subtitle": "Pick a name, a colour, and where to keep it. You can rename or move it later.",
+      "step": "Step {n} of {total}",
+      "steps": {
+        "name": "Name & icon",
+        "location": "Choose location",
+        "template": "Pick a template"
+      },
+      "sideTitle": "A space for your thinking.",
+      "sideBody": "Workspaces are plain folders on disk. You can copy them, sync them with iCloud or Dropbox, and open them in any text editor.",
+      "nameLabel": "Name",
+      "nameHint": "Shown in the sidebar and across the app",
+      "namePlaceholder": "My Workspace",
+      "iconLabel": "Icon & colour",
+      "iconHint": "Swap any time from workspace settings",
+      "locationLabel": "Location",
+      "locationHint": "Where files live on your machine",
+      "locationBrowse": "Browse…",
+      "templateLabel": "Template",
+      "templateHint": "Optional — adds a few starter pages",
+      "templates": {
+        "empty": {
+          "name": "Empty",
+          "sub": "Just a daily page"
+        },
+        "researcher": {
+          "name": "Researcher",
+          "sub": "Lit notes + sources",
+          "starter": {
+            "litReview": "Literature Review",
+            "journals": "Journals",
+            "ideas": "Research Ideas"
+          }
+        },
+        "pm": {
+          "name": "PM",
+          "sub": "Roadmap, OKRs",
+          "starter": {
+            "roadmaps": "Roadmaps",
+            "specs": "Specifications",
+            "notes": "Meeting Notes"
+          }
+        },
+        "writer": {
+          "name": "Writer",
+          "sub": "Drafts, journal",
+          "starter": {
+            "drafts": "Drafts",
+            "characters": "Characters",
+            "ideas": "Plot Ideas"
+          }
+        }
+      },
+      "back": "Back",
+      "encryption": "Encrypted at rest",
+      "create": "Create workspace"
+    },
+    "open": {
+      "title": "Open a workspace",
+      "subtitle": "Pick from recent, browse for a folder, or drop one anywhere in this window.",
+      "browse": "Browse for folder",
+      "new": "New workspace",
+      "filter": "Filter workspaces…",
+      "recent": "Recent",
+      "dropHint": "Drop a folder anywhere in this window to open it.",
+      "open": "Open",
+      "pages": "pages",
+      "unread": "unread",
+      "dropTitle": "Drop to open as workspace",
+      "moreOptions": "More options",
+      "removeRecent": "Remove from recents",
+      "removeRecentConfirm": "Remove \"{name}\" from recents? Files stay on disk.",
+      "deleteStorage": "Delete storage",
+      "deleteStorageConfirm": "Delete \"{name}\"? This action can't be undone.",
+      "deleteFailed": "Could not delete the storage. Please try again."
+    }
+  },
+  "common": {
+    "keyboard": {
+      "esc": "Esc",
+      "ctrlCmdEnter": "Ctrl/Cmd + Enter"
+    }
+  },
+  "workspace": {
+    "back": "Workspaces",
+    "localWorkspace": "Local workspace",
+    "cloudWorkspace": "Cloud storage",
+    "toggleSidebar": "Toggle sidebar",
+    "createNote": "New note",
+    "createFolder": "New folder",
+    "importMd": "Import .md",
+    "actions": {
+      "new": "New",
+      "newNote": "New note",
+      "newFolder": "New folder",
+      "newBoard": "New board",
+      "collapseAll": "Collapse all",
+      "expandAll": "Expand all",
+      "sort": "Sort",
+      "sortManual": "Manual",
+      "sortNameAsc": "Name (A→Z)",
+      "sortNameDesc": "Name (Z→A)",
+      "sortUpdated": "Recently updated"
+    },
+    "rightPanel": {
+      "outline": "Outline",
+      "noHeadings": "No headings yet",
+      "backlinks": "Backlinks",
+      "noBacklinks": "No backlinks",
+      "metadata": "About",
+      "words": "{n} words",
+      "readTime": "{n} min read",
+      "created": "Created",
+      "updated": "Updated",
+      "externalLinks": "External links",
+      "noExternalLinks": "No external links"
+    },
+    "noPages": "No pages yet",
+    "noWorkspace": "No workspace selected",
+    "noPath": "Path is not set",
+    "untitledNote": "Untitled",
+    "newFolderPrompt": "Folder name",
+    "emptyTitle": "Start with your first note",
+    "emptySubtitle": "Create a note or choose one from the sidebar to start writing.",
+    "emptyFolderTitle": "Folder: {folder}",
+    "emptyFolderSubtitle": "This folder has no notes yet. Create one to begin.",
+    "cover": "Cover",
+    "removeCover": "Remove cover",
+    "coverGradients": "Gradients",
+    "coverPastel": "Pastel colors",
+    "coverUpload": "Upload image",
+    "iconPicker": {
+      "tabs": {
+        "emoji": "Emoji",
+        "icons": "Icons"
+      },
+      "searchEmoji": "Search emoji…",
+      "searchIcons": "Search icons…",
+      "noResults": "No results",
+      "categories": {
+        "smileys": "Smileys",
+        "people": "People",
+        "nature": "Nature",
+        "food": "Food",
+        "activities": "Activities",
+        "travel": "Travel",
+        "objects": "Objects",
+        "symbols": "Symbols"
+      }
+    },
+    "titlePlaceholder": "Untitled",
+    "contentPlaceholder": "Write your thoughts here...",
+    "linkUrlLabel": "Link URL",
+    "linkPlaceholder": "https://example.com",
+    "linkApply": "Apply link",
+    "linkUpdate": "Update link",
+    "linkRemove": "Remove link",
+    "linkInvalid": "Enter a valid URL",
+    "inlineMathLabel": "Inline formula",
+    "mathBlockLabel": "Math block",
+    "mathPlaceholder": "\\frac{a}{b}",
+    "mathPopoverHint": "Apply formula",
+    "mathApply": "Apply formula",
+    "mathRemove": "Remove formula",
+    "context": {
+      "rename": "Rename",
+      "delete": "Delete",
+      "search": "Search",
+      "export": "Export",
+      "importIntoNote": "Import .md into note",
+      "importAsNote": "Import .md as note",
+      "renamePrompt": "New name",
+      "deleteConfirm": "Delete this item?",
+      "searchPrompt": "Search by title",
+      "searchNoResults": "Nothing found",
+      "renameModalTitle": "Rename",
+      "renameModalPlaceholder": "Enter a new name",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "cancel": "Cancel",
+      "confirm": "Confirm"
+    },
+    "system": {
+      "graph": "Graph",
+      "history": "History",
+      "trash": "Trash",
+      "plugins": "Plugins",
+      "settings": "Settings"
+    },
+    "trash": {
+      "title": "Trash",
+      "emptyAction": "Empty Trash",
+      "emptyState": "Trash is empty",
+      "deletedAt": "Deleted at: {date}",
+      "restore": "Restore",
+      "deletePermanently": "Delete Permanently",
+      "deletePermanentlyConfirm": "Are you sure you want to permanently delete this note? This action cannot be undone.",
+      "emptyConfirm": "Are you sure you want to empty the trash? All items will be permanently deleted."
+    },
+    "titlebarSearch": {
+      "placeholder": "Search notes, blocks, settings...",
+      "rootLabel": "Workspace root",
+      "loading": "Searching note content across the workspace...",
+      "idleTitle": "Global workspace search",
+      "idleDescription": "Search notes, folders, note blocks, and settings from one field.",
+      "emptyTitle": "No matches found",
+      "emptyDescription": "Try a shorter term or search for a note title, block phrase, or setting name.",
+      "groups": {
+        "entities": "Notes & Folders",
+        "blocks": "Blocks",
+        "settings": "Settings"
+      }
+    },
+    "history": {
+      "title": "File history",
+      "files": "Files",
+      "versions": "Versions",
+      "previewCompare": "Preview / Compare",
+      "preview": "Preview",
+      "compare": "Compare",
+      "searchPlaceholder": "Search notes...",
+      "snapshotCount": "{count} snapshots",
+      "updatedAt": "Updated {value}",
+      "restore": "Restore snapshot",
+      "restoreConfirm": "Restore this snapshot to the live note?",
+      "restoring": "Restoring…",
+      "coverValue": "Cover: {value}",
+      "snapshotVersion": "Snapshot",
+      "currentVersion": "Current note",
+      "fields": {
+        "title": "Title",
+        "icon": "Icon",
+        "cover": "Cover"
+      },
+      "rowKinds": {
+        "added": "Added",
+        "removed": "Removed",
+        "changed": "Changed"
+      },
+      "states": {
+        "loadingFiles": "Loading note history…",
+        "noFiles": "No live notes with history yet.",
+        "noSearchResults": "No notes match that search.",
+        "noFileSelected": "Select a note to browse its history.",
+        "noSnapshots": "This note has no snapshots.",
+        "noSnapshotSelected": "Select a version to preview it.",
+        "loadingPreview": "Loading snapshot…",
+        "emptySnapshot": "This snapshot is empty.",
+        "noDiff": "No visible differences between the current note and this snapshot."
+      },
+      "errors": {
+        "noWorkspace": "Open a workspace to browse history.",
+        "loadFiles": "Failed to load note history.",
+        "loadSnapshot": "Failed to load this snapshot.",
+        "loadCurrent": "Failed to load the current note for comparison.",
+        "restore": "Failed to restore this snapshot."
+      }
+    },
+    "status": {
+      "saved": "Saved",
+      "saving": "Saving…",
+      "unsaved": "Unsaved changes",
+      "error": "Save failed"
+    },
+    "blockMenu": {
+      "turnInto": "Turn into",
+      "paragraph": "Paragraph",
+      "heading1": "Heading 1",
+      "heading2": "Heading 2",
+      "heading3": "Heading 3",
+      "heading4": "Heading 4",
+      "heading5": "Heading 5",
+      "heading6": "Heading 6",
+      "bulletList": "Bullet list",
+      "numberedList": "Numbered list",
+      "codeBlock": "Code Block",
+      "callout": "Callout",
+      "checklist": "Checklist",
+      "duplicate": "Duplicate",
+      "insertAbove": "Insert block above",
+      "insertBelow": "Insert block below",
+      "copyRef": "Copy block ref",
+      "delete": "Delete"
+    }
+  },
+  "templates": {
+    "title": "Templates",
+    "createTitle": "New note from template",
+    "insertTitle": "Insert template",
+    "subtitle": "Choose a preset or workspace template, then fill any fields.",
+    "search": "Search templates...",
+    "newTemplate": "New template",
+    "builtIn": "Built-in",
+    "empty": "No templates found.",
+    "required": "Required",
+    "noFields": "This template has no fields.",
+    "createNote": "Create note",
+    "insert": "Insert",
+    "edit": "Edit",
+    "duplicateEdit": "Duplicate to edit",
+    "duplicate": "Duplicate",
+    "copySuffix": "copy",
+    "delete": "Delete",
+    "deleteConfirm": "Delete template \"{name}\"?",
+    "editorTitle": "Template editor",
+    "editorSubtitle": "Template text supports date, time, note title, workspace name, custom fields, and a cursor marker.",
+    "name": "Name",
+    "id": "Identifier",
+    "icon": "Icon",
+    "description": "Description",
+    "content": "Content",
+    "contentPlaceholder": "Write template content...",
+    "fields": "Fields",
+    "addField": "Add field",
+    "fieldLabel": "Label",
+    "fieldId": "Identifier",
+    "type": "Type",
+    "requiredShort": "Required",
+    "defaultValue": "Default",
+    "options": "Options, one per line",
+    "save": "Save template",
+    "fieldTypes": {
+      "text": "Text",
+      "multiline": "Multiline",
+      "date": "Date",
+      "select": "Select",
+      "checkbox": "Checkbox"
+    },
+    "errors": {
+      "nameRequired": "Template name and identifier are required.",
+      "invalidId": "Use only letters, numbers, hyphens, and underscores in the template identifier.",
+      "templateNameRequired": "Template name is required.",
+      "contentDoc": "Template content must be a document.",
+      "reservedId": "Built-in template identifiers are reserved.",
+      "builtInEdit": "Built-in templates cannot be edited.",
+      "builtInDelete": "Built-in templates cannot be deleted.",
+      "notFound": "Template not found.",
+      "requiredFieldMissing": "Required field \"{field}\" is missing."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "sections": {
+      "general": "General",
+      "appearance": "Appearance",
+      "editor": "Editor",
+      "workspace": "Workspace",
+      "ai": "AI",
+      "plugins": "Plugins",
+      "hotkeys": "Hotkeys",
+      "files": "Files & Storage",
+      "advanced": "Advanced",
+      "about": "About"
+    },
+    "search": {
+      "placeholder": "Search settings...",
+      "resultsTitle": "Results for \"{query}\"",
+      "resultsCount": "{count} settings matched across the catalog.",
+      "emptyTitle": "No settings matched.",
+      "emptyDescription": "Try searching for \"theme\", \"plugin\", \"block\", or \"workspace\"."
+    },
+    "common": {
+      "desktop": "desktop",
+
+      "resetToDefaults": "Reset to defaults",
+      "on": "On",
+      "off": "Off",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "state": {
+      "functional": "Functional",
+      "coming": "Coming later",
+      "info": "Info"
+    },
+    "options": {
+      "theme": {
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System"
+      },
+      "editorFont": {
+        "ui": "UI Sans",
+        "serif": "Serif",
+        "mono": "Mono"
+      },
+      "accent": {
+        "violet": "Quiet Violet",
+        "ember": "Ember",
+        "sage": "Sage",
+        "ocean": "Ocean",
+        "rose": "Rose"
+      },
+      "density": {
+        "compact": "Compact",
+        "comfortable": "Comfortable"
+      },
+      "reducedMotion": {
+        "reduce": "Reduce",
+        "full": "Full"
+      },
+      "lineWidth": {
+        "narrow": "Narrow",
+        "medium": "Medium",
+        "wide": "Wide"
+      },
+      "language": {
+        "ru": "Russian",
+        "en": "English"
+      },
+      "focusMode": {
+        "off": "Off",
+        "soft": "Soft"
+      },
+      "caretAnimation": {
+        "system": "System",
+        "steady": "Steady",
+        "blink": "Blink"
+      },
+      "tabKeyBehavior": {
+        "indent": "Indent",
+        "focus": "Focus"
+      },
+      "autosavePolicy": {
+        "immediate": "Immediate",
+        "window-idle": "On idle"
+      },
+      "pasteBehavior": {
+        "smart": "Smart",
+        "plain-text": "Plain text"
+      },
+      "editorStats": {
+        "off": "Off",
+        "corner": "Corner"
+      },
+      "typewriterPosition": {
+        "upper": "Upper",
+        "center": "Center",
+        "lower": "Lower"
+      },
+      "scrollbarVisibility": {
+        "hidden": "Hidden",
+        "thin": "Thin",
+        "system": "System"
+      },
+      "focusRingStyle": {
+        "accent": "Accent",
+        "high-contrast": "High contrast"
+      },
+      "windowChromeStyle": {
+        "default": "Default",
+        "immersive": "Immersive",
+        "minimal": "Minimal"
+      },
+      "backgroundScene": {
+        "aurora": "Aurora",
+        "paper": "Paper",
+        "studio": "Studio",
+        "plain": "Plain"
+      },
+      "surfaceStyle": {
+        "glass": "Glass",
+        "solid": "Solid",
+        "tinted": "Tinted"
+      },
+      "contrastMode": {
+        "soft": "Soft",
+        "balanced": "Balanced",
+        "high": "High"
+      },
+      "sidebarStyle": {
+        "floating": "Floating",
+        "solid": "Solid",
+        "minimal": "Minimal"
+      },
+      "workspaceType": {
+        "general": "General",
+        "research": "Research",
+        "writing": "Writing",
+        "product": "Product",
+        "knowledge-base": "Knowledge base"
+      },
+      "workspaceStatus": {
+        "active": "Active",
+        "archived": "Archived",
+        "draft": "Draft"
+      },
+      "sidebarDefaultState": {
+        "expanded": "Expanded",
+        "collapsed": "Collapsed"
+      },
+      "itemPlacement": {
+        "current-folder": "Current folder",
+        "root": "Root"
+      },
+      "defaultChildSort": {
+        "manual": "Manual",
+        "title-asc": "Title A–Z",
+        "updated-desc": "Last modified"
+      },
+      "noteTitlePattern": {
+        "untitled": "Untitled",
+        "date": "Date",
+        "date-time": "Date & time"
+      },
+      "noteTemplate": {
+        "blank": "Blank",
+        "meeting": "Meeting",
+        "daily": "Daily note",
+        "research": "Research"
+      },
+      "starterStructure": {
+        "off": "Off",
+        "light": "Light",
+        "structured": "Structured"
+      },
+      "graphEntryMode": {
+        "global": "Global",
+        "from-current-note": "From current note"
+      },
+      "graphScope": {
+        "workspace": "Workspace",
+        "current-folder": "Current folder"
+      },
+      "searchScope": {
+        "workspace": "Workspace",
+        "current-folder": "Current folder"
+      },
+      "historyRange": {
+        "7d": "Last 7 days",
+        "30d": "Last 30 days",
+        "all": "All time"
+      }
+    },
+    "general": {
+      "description": "Workspace defaults and everyday behaviour.",
+      "groups": {
+        "application": "Application",
+        "startup": "Startup"
+      },
+      "language": {
+        "title": "Application language",
+        "description": "Global app language used across onboarding, settings, and the workspace shell"
+      },
+      "startupView": {
+        "title": "Startup view",
+        "description": "The editor is live today. Table, kanban, and graph remain roadmap targets."
+      },
+      "restoreLastContext": {
+        "title": "Restore last context",
+        "description": "Reopen the last folder or note for this workspace"
+      },
+      "deleteConfirmations": {
+        "title": "Delete confirmations",
+        "description": "Require a confirmation prompt for destructive actions",
+        "panelDescription": "Require a prompt before destructive tree actions"
+      }
+    },
+    "appearance": {
+      "description": "Visual shell preferences — app-wide settings and workspace style.",
+      "groups": {
+        "application": "Application",
+        "workspaceStyle": "Workspace Style"
+      },
+      "mode": {
+        "title": "Mode",
+        "description": "Global app preference saved in AppConfig"
+      },
+      "accent": {
+        "title": "Accent colour",
+        "description": "Used for selections, focus rings, and links"
+      },
+      "interfaceDensity": {
+        "title": "Interface density",
+        "description": "Compact or comfortable shell spacing"
+      },
+      "reducedMotion": {
+        "title": "Motion",
+        "description": "Control animation intensity across the shell"
+      },
+      "scrollbarVisibility": {
+        "title": "Scrollbars",
+        "description": "How scrollbars appear across the app"
+      },
+      "focusRingStyle": {
+        "title": "Focus ring",
+        "description": "Keyboard focus indicator style"
+      },
+      "windowChromeStyle": {
+        "title": "Window chrome",
+        "description": "Titlebar and surface presentation style"
+      },
+      "backgroundScene": {
+        "title": "Background scene",
+        "description": "Ambient backdrop for this workspace"
+      },
+      "surfaceStyle": {
+        "title": "Surface style",
+        "description": "How glassy or solid UI panels appear"
+      },
+      "contrastMode": {
+        "title": "Contrast",
+        "description": "Panel and text separation strength"
+      },
+      "sidebarStyle": {
+        "title": "Sidebar style",
+        "description": "Visual weight of navigation chrome"
+      },
+      "editorFont": {
+        "title": "Editor font",
+        "description": "Typeface used for the writing surface"
+      }
+    },
+    "editor": {
+      "description": "Block behaviour, typography rhythm, and writing-flow defaults.",
+      "groups": {
+        "layout": "Layout",
+        "focusFlow": "Focus & Flow",
+        "behaviour": "Behaviour",
+        "workflow": "Editing Workflow"
+      },
+      "preview": {
+        "label": "Live preview",
+        "heading": "A subsection heading",
+        "body": "Long-form body text — the centred reading column you'll spend most of your time in. Adjust a control and this panel reflects the actual editor tone rather than a generic form."
+      },
+      "documentWidth": {
+        "title": "Document width",
+        "description": "Width of the centred reading column",
+        "panelDescription": "Width of the centred reading column"
+      },
+      "fontSize": {
+        "title": "Editor font size",
+        "description": "Typography scale used in the writing surface",
+        "panelDescription": "Current body text scale in pages"
+      },
+      "spellcheck": {
+        "title": "Spellcheck",
+        "description": "Uses native system spellcheck dictionaries when available"
+      },
+      "slashCommands": {
+        "title": "Slash commands",
+        "description": "Enable / command suggestions in the editor",
+        "panelDescription": "Type / to insert blocks"
+      },
+      "smoothScrolling": {
+        "title": "Smooth scrolling",
+        "description": "Controls editor pane scroll behaviour",
+        "panelDescription": "Controls the document scroll behaviour inside the editor pane"
+      },
+      "markdownShortcuts": {
+        "title": "Markdown shortcuts",
+        "description": "Auto-convert markdown patterns to rich blocks"
+      },
+      "focusMode": {
+        "title": "Focus mode",
+        "description": "Soft: gently dims secondary chrome while writing"
+      },
+      "typewriterScrolling": {
+        "title": "Typewriter scrolling",
+        "description": "Keep the active block near the centre of the viewport while typing"
+      },
+      "activeBlockEmphasis": {
+        "title": "Active block emphasis",
+        "description": "Slightly dim adjacent blocks to focus attention on the current one"
+      },
+      "caretAnimation": {
+        "title": "Caret animation",
+        "description": "Controls cursor blinking behaviour inside the editor"
+      },
+      "tabKeyBehavior": {
+        "title": "Tab key",
+        "description": "Indent: tab indents lists and moves table cells. Focus: tab exits the editor"
+      },
+      "autosavePolicy": {
+        "title": "Autosave",
+        "description": "Immediate: save after each change. On idle: save when the window loses focus"
+      },
+      "pasteBehavior": {
+        "title": "Paste behaviour",
+        "description": "Smart: preserve rich formatting. Plain text: strip formatting, keep line breaks"
+      },
+      "slashMenuHints": {
+        "title": "Slash menu hints",
+        "description": "Show category and shortcut hints inside the slash command menu"
+      },
+      "editorStats": {
+        "title": "Word count",
+        "description": "Show word and character count in the bottom-right corner of the editor"
+      },
+      "typewriterPosition": {
+        "title": "Cursor position",
+        "description": "Target viewport position kept in view while typewriter scrolling is active"
+      }
+    },
+    "workspace": {
+      "description": "Workspace identity, structure, and default behaviors.",
+      "descriptionField": {
+        "title": "Description",
+        "description": "Short summary shown on the workspace card",
+        "placeholder": "Describe this workspace…"
+      },
+      "groups": {
+        "identity": "Identity",
+        "navigation": "Navigation",
+        "structure": "Structure",
+        "creationDefaults": "Creation defaults",
+        "systemViews": "System views"
+      },
+      "identity": {
+        "title": "Workspace identity",
+        "description": "Rename the workspace and update its glyph or gradient",
+        "panelDescription": "Rename the workspace and update its glyph or gradient after creation",
+        "namePlaceholder": "Workspace name",
+        "save": "Save identity"
+      },
+      "workspaceType": {
+        "title": "Workspace type",
+        "description": "Categorize this workspace by its primary purpose"
+      },
+      "workspaceStatus": {
+        "title": "Status",
+        "description": "Active, archived, or draft"
+      },
+      "tags": {
+        "title": "Tags",
+        "description": "Labels to help organize workspaces",
+        "placeholder": "Add tag…"
+      },
+      "openLastVisitedSystemView": {
+        "title": "Restore last system view",
+        "description": "Re-open the last visited system view (graph, history, etc.) on launch"
+      },
+      "rememberExpandedFolders": {
+        "title": "Remember expanded folders",
+        "description": "Keep folder expansion state between sessions"
+      },
+      "sidebarDefaultState": {
+        "title": "Sidebar default state",
+        "description": "Whether the sidebar starts expanded or collapsed on launch"
+      },
+      "backlinksVisibility": {
+        "title": "Backlinks visibility",
+        "description": "Show backlinks panel by default when opening a note"
+      },
+      "graphLabels": {
+        "title": "Graph labels",
+        "description": "Show note title labels on graph nodes by default",
+        "panelDescription": "Stored now, but the graph screen itself is still pending"
+      },
+      "rootNotesVisible": {
+        "title": "Show root-level notes",
+        "description": "Display notes in the workspace root in the sidebar"
+      },
+      "newNotePlacement": {
+        "title": "New note placement",
+        "description": "Where new notes are created by default"
+      },
+      "newFolderPlacement": {
+        "title": "New folder placement",
+        "description": "Where new folders are created by default"
+      },
+      "defaultChildSort": {
+        "title": "Default sort order",
+        "description": "How items inside folders are sorted by default"
+      },
+      "showEmptyFolders": {
+        "title": "Show empty folders",
+        "description": "Keep empty folders visible in the sidebar"
+      },
+      "defaultNoteIcon": {
+        "title": "Default note icon",
+        "description": "Emoji or symbol used for new notes"
+      },
+      "defaultFolderIcon": {
+        "title": "Default folder icon",
+        "description": "Emoji or symbol used for new folders"
+      },
+      "defaultNoteTitlePattern": {
+        "title": "Default note title",
+        "description": "Title pattern applied when creating a new note"
+      },
+      "newNoteTemplate": {
+        "title": "New note template",
+        "description": "Starter content for new notes"
+      },
+      "newWorkspaceHomeNote": {
+        "title": "Create home note",
+        "description": "Auto-create a home note when setting up a new workspace"
+      },
+      "autoCreateStarterStructure": {
+        "title": "Starter structure",
+        "description": "Generate an initial folder structure for new workspaces"
+      },
+      "graphEntryMode": {
+        "title": "Graph entry mode",
+        "description": "Where the graph view starts when opened"
+      },
+      "graphScopeDefault": {
+        "title": "Graph scope",
+        "description": "Default scope for the graph view"
+      },
+      "searchStartScope": {
+        "title": "Search scope",
+        "description": "Where search begins by default"
+      },
+      "historyDefaultRange": {
+        "title": "History range",
+        "description": "Default time range shown in the history view"
+      }
+    },
+    "ai": {
+      "description": "Bring your own model. Everything routes locally unless you opt in.",
+      "status": "● Local · ready",
+      "groups": {
+        "provider": "Provider",
+        "inlineBehaviour": "Inline behaviour"
+      },
+      "models": {
+        "llama3": {
+          "label": "Local · llama3",
+          "description": "Default local model for slash commands and inline actions"
+        },
+        "mistral": {
+          "label": "Local · mistral",
+          "description": "Alternative local model profile"
+        },
+        "cloudGpt": {
+          "label": "Cloud · placeholder",
+          "description": "Reserved placeholder until cloud providers are wired in"
+        }
+      },
+      "defaultModel": {
+        "title": "Default model",
+        "description": "Used for slash commands and inline actions"
+      },
+      "privacyMode": {
+        "title": "Privacy mode",
+        "description": "Block all outbound network calls from AI features"
+      },
+      "slashCommands": {
+        "title": "Slash AI commands",
+        "description": "Expose AI commands in the slash menu"
+      },
+      "contextSuggestions": {
+        "title": "Suggest from context",
+        "description": "Surface contextual suggestions on highlighted text"
+      },
+      "streamingOutput": {
+        "title": "Streaming output",
+        "description": "Allow partial streamed completions"
+      },
+      "cloudCredentials": {
+        "title": "Cloud credentials",
+        "description": "Provider secrets stay out of `.nevo/settings.json` until secure storage exists"
+      }
+    },
+    "plugins": {
+      "description": "Extend Nevo without leaving the editor. Plugins run inside the workspace sandbox.",
+      "marketplace": "Marketplace",
+      "rescan": "Rescan plugins",
+      "systemLabel": "System",
+      "builtIn": "Built-in",
+      "kanban": {
+        "title": "Kanban Boards",
+        "description": "Enable Kanban board view. When disabled, boards are hidden but data is preserved."
+      },
+      "templates": {
+        "title": "Templates",
+        "description": "Create notes from reusable workspace templates and insert template content from the editor."
+      },
+      "vega": {
+        "title": "Vega-Lite Charts",
+        "description": "Embed interactive data charts using Vega-Lite specifications directly in notes."
+      },
+      "markmap": {
+        "title": "Mind Maps",
+        "description": "Render interactive mind maps from Markdown outlines directly in notes."
+      },
+      "filters": {
+        "all": "All · {count}",
+        "enabled": "Enabled · {count}",
+        "manifestIssues": "Manifest issues · {count}"
+      },
+      "noDescription": "No description in manifest.",
+      "fallbackDescription": "Workspace plugin manifest",
+      "permissions": "Permissions",
+      "source": "Source",
+      "manifestIssue": "Manifest issue",
+      "manifestValid": "Manifest valid",
+      "emptyTitle": "No plugins found.",
+      "emptyDescription": "Drop plugin folders into `.nevo/plugins` and rescan this workspace."
+    },
+    "hotkeys": {
+      "description": "Editable keyboard commands in Nevo can be recorded here. Editor formatting shortcuts are fixed by the editor engine.",
+      "resetAll": "Reset all",
+      "searchPlaceholder": "Search shortcuts...",
+      "matches": "{count} matches",
+      "conflicts": "Conflicts with {count} binding(s)",
+      "pressKeys": "Press keys…",
+      "fixed": "Fixed",
+      "scope": {
+        "workspace": "workspace",
+        "app": "app"
+      },
+      "keys": {
+        "space": "Space"
+      },
+      "commands": {
+        "undo": "Undo",
+        "redo": "Redo",
+        "bold": "Bold",
+        "italic": "Italic",
+        "strikethrough": "Strikethrough",
+        "underline": "Underline",
+        "kbd": "Keyboard key",
+        "tag": "Tag",
+        "heading1": "Heading 1",
+        "heading2": "Heading 2",
+        "heading3": "Heading 3",
+        "heading4": "Heading 4",
+        "heading5": "Heading 5",
+        "heading6": "Heading 6",
+        "orderedList": "Ordered list",
+        "bulletList": "Bullet list",
+        "blockquote": "Quote",
+        "inlineMath": "Inline math",
+        "newNote": "Create note",
+        "newFolder": "Create folder",
+        "saveNote": "Save note",
+        "searchTitles": "Global search",
+        "toggleSidebar": "Toggle sidebar",
+        "openSettings": "Open settings"
+      }
+    },
+    "files": {
+      "description": "Workspace paths, cleanup operations, and cheap local diagnostics.",
+      "groups": {
+        "paths": "Paths",
+        "retention": "Retention",
+        "diagnostics": "Diagnostics"
+      },
+      "paths": {
+        "title": "Workspace paths",
+        "description": "Jump directly to the workspace root and hidden `.nevo` storage",
+        "revealWorkspace": "Reveal workspace",
+        "openNotes": "Open notes",
+        "openAssets": "Open assets",
+        "openNevo": "Open .nevo"
+      },
+      "snapshotRetention": {
+        "title": "Snapshot retention",
+        "searchDescription": "How many snapshots to keep per note",
+        "description": "Keep {count} snapshots per note",
+        "pruneNow": "Prune now"
+      },
+      "trashRetention": {
+        "title": "Trash retention",
+        "description": "How long to keep deleted notes before permanent deletion",
+        "7days": "7 days",
+        "30days": "30 days",
+        "90days": "90 days",
+        "never": "Never"
+      },
+      "orphanedAssets": {
+        "title": "Orphaned assets cleanup",
+        "description": "Remove `.nevo/assets` files that are no longer referenced by notes",
+        "clean": "Clean assets"
+      },
+      "diagnostics": {
+        "notes": "Notes",
+        "folders": "Folders",
+        "plugins": "Plugins",
+        "snapshots": "Snapshots",
+        "assets": "Assets",
+        "workspaceSize": "Workspace size"
+      }
+    },
+    "advanced": {
+      "description": "Sparse by design: expert toggles, raw files, and schema metadata.",
+      "groups": {
+        "diagnostics": "Diagnostics"
+      },
+      "schemaMetadata": {
+        "title": "Schema metadata",
+        "description": "Current workspace settings schema version"
+      },
+      "experimentalGraphTools": {
+        "title": "Experimental graph tools",
+        "description": "Advanced graph toggles without a separate graph settings section"
+      },
+      "developerLogging": {
+        "title": "Extended diagnostics logging",
+        "description": "Writes warn, info, and debug diagnostics to rotating support logs while errors remain always-on"
+      },
+      "revealLogs": {
+        "title": "Reveal logs",
+        "description": "Open the rotating support logs stored in the app data directory",
+        "action": "Reveal logs"
+      },
+      "rawSettings": {
+        "title": "Open raw settings JSON",
+        "description": "Reveal the workspace settings file directly on disk",
+        "reveal": "Reveal settings.json"
+      },
+      "resetSettings": {
+        "title": "Reset workspace settings",
+        "description": "Replace the current settings file with the v1 defaults",
+        "action": "Reset settings"
+      }
+    },
+    "about": {
+      "description": "Built on Tauri. Local-first by default.",
+      "tagline": "A quiet, local-first workspace for blocks, pages, and the threads between them.",
+      "notAvailable": "Not available",
+      "meta": {
+        "version": "Version",
+        "engine": "Engine",
+        "platform": "Platform",
+        "workspace": "Workspace"
+      },
+      "actions": {
+        "checkUpdates": "Check for updates",
+        "revealConfig": "Reveal config",
+        "openUserFolder": "Open user folder",
+        "acknowledgements": "Acknowledgements"
+      },
+      "openSourceTitle": "Built on open source",
+      "openSourceBody": "Tauri, Rust, ProseMirror, and the local workspace files on your disk. Updater and release note surfaces are still catalog-only in v1."
+    },
+    "feedback": {
+      "workspaceIdentitySaved": "Workspace identity saved.",
+      "snapshotCleanup": "Removed {removedFiles} old snapshot files and freed {bytesFreed}.",
+      "assetCleanup": "Removed {removedFiles} orphaned assets and freed {bytesFreed}.",
+      "logsPathUnavailable": "Logs path is not available yet.",
+      "revealPathOpened": "Opened this path with the system app.",
+      "revealPathFailed": "Could not reveal this path in the system file manager.",
+      "openFolderFailed": "Could not open this folder in the system file manager."
+    }
+  },
+  "editor": {
+    "toolbar": {
+      "bold": "Bold (strong) Mod+B",
+      "italic": "Italic (em) Mod+I",
+      "strikethrough": "Strikethrough (s) Mod+Shift+S",
+      "underline": "Underline (u) Mod+U",
+      "code": "Code (code)",
+      "kbd": "Keyboard key (kbd) Mod+E",
+      "tag": "Tag (span.nv-tag) Mod+Shift+T",
+      "link": "Link (a)",
+      "superscript": "Superscript (sup)",
+      "subscript": "Subscript (sub)",
+      "highlight": "Highlight (mark)",
+      "textColor": "Text color",
+      "math": "Inline math",
+      "image": "Insert image"
+    },
+    "blockHandle": {
+      "drag": "Drag to reorder",
+      "options": "Block options"
+    },
+    "colorPicker": {
+      "none": "None",
+      "color": "Color",
+      "hue": "Hue",
+      "picker": "Color picker",
+      "presets": "Preset colors",
+      "hex": "HEX color",
+      "sv": "Saturation and value",
+      "custom": "Custom color picker"
+    },
+    "table": {
+      "title": "Table formatting",
+      "selection": "{rows}×{cols} selected",
+      "rowAddAbove": "Row + Above",
+      "rowAddBelow": "Row + Below",
+      "colAddLeft": "Col + Left",
+      "colAddRight": "Col + Right",
+      "mergeCells": "Merge Cells",
+      "splitCell": "Split Cell",
+      "toggleHeaderRow": "Toggle Header Row",
+      "toggleHeaderCol": "Toggle Header Col",
+      "alignLeft": "Align Left",
+      "alignCenter": "Align Center",
+      "alignRight": "Align Right",
+      "clearAlignment": "Clear Alignment",
+      "bgWarm": "Bg Warm",
+      "bgCool": "Bg Cool",
+      "clearBackground": "Clear Background",
+      "borderAccent": "Border Accent",
+      "textAccent": "Text Accent",
+      "padding16": "Padding 16px",
+      "deleteRow": "Delete Row",
+      "deleteCol": "Delete Col",
+      "deleteTable": "Delete Table",
+      "categories": {
+        "insert": "Insert",
+        "cells": "Cells",
+        "alignment": "Alignment",
+        "styling": "Styling",
+        "actions": "Actions"
+      }
+    },
+    "mermaid": {
+      "label": "Mermaid diagram",
+      "placeholder": "graph TD\n  A --> B",
+      "applyHint": "to apply",
+      "apply": "Apply",
+      "delete": "Delete"
+    },
+    "vega": {
+      "label": "Vega-Lite chart",
+      "placeholder": "{\n  \"$schema\": \"https://vega.github.io/schema/vega-lite/v5.json\",\n  \"mark\": \"bar\",\n  \"data\": { \"values\": [{\"a\": \"A\", \"b\": 28}] },\n  \"encoding\": { \"x\": { \"field\": \"a\" }, \"y\": { \"field\": \"b\" } }\n}",
+      "applyHint": "to apply",
+      "apply": "Apply",
+      "delete": "Delete"
+    },
+    "markmap": {
+      "label": "Mind map",
+      "placeholder": "# Topic\n## Idea A\n## Idea B",
+      "applyHint": "to apply",
+      "apply": "Apply",
+      "delete": "Delete"
+    }
+  },
+  "version": "v0.9.4 · Tauri",
+  "graph": {
+    "title": "Graph",
+    "localGraph": "Local graph",
+    "showLocalGraph": "Show local graph",
+    "hideLocalGraph": "Hide local graph",
+    "backToEditor": "Back",
+    "loading": "Building graph…",
+    "noConnections": "No connections",
+    "noConnectionsHint": "Link this note to others using [[note name]]",
+    "emptyTitle": "No notes yet",
+    "emptySub": "Create notes and link them with [[note name]] — they'll appear here as a network.",
+    "searchPlaceholder": "Search nodes…",
+    "untitled": "Untitled",
+    "connections": "connections",
+    "nodes": "nodes",
+    "edges": "edges",
+    "showLabels": "Labels",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "resetView": "Reset view",
+    "clearFocus": "Clear focus",
+    "kind": {
+      "link": "Links",
+      "embed": "Embeds",
+      "mention": "Mentions",
+      "parent": "Parent"
+    }
+  },
+  "import": {
+    "openDialogTitle": "Import Markdown",
+    "success": "Imported \"{title}\"",
+    "error": "Failed to import file"
+  },
+  "export": {
+    "buttonTitle": "Export note",
+    "modalTitle": "Export as",
+    "formatMarkdown": "Markdown (.md)",
+    "formatHtml": "HTML (.html)",
+    "formatTypst": "Typst archive (.zip)",
+    "formatPdf": "PDF",
+    "saveDialogTitle": "Export as Markdown",
+    "saveHtmlDialogTitle": "Export as HTML",
+    "saveTypstDialogTitle": "Export as Typst archive",
+    "savePdfDialogTitle": "Export as PDF",
+    "savePdf": "Save PDF",
+    "pdfSavingProgress": "Page {current} / {total}",
+    "printButton": "Export PDF",
+    "pageSize": "Page size",
+    "orientation": "Orientation",
+    "portrait": "Portrait",
+    "landscape": "Landscape",
+    "sections": {
+      "page": "Page",
+      "typography": "Typography",
+      "document": "Document",
+      "preview": "Preview"
+    },
+    "fontSize": "Size",
+    "fontFamily": "Typeface",
+    "fontDefault": "Default",
+    "margins": "Margins",
+    "marginPresets": {
+      "narrow": "Narrow",
+      "normal": "Normal",
+      "wide": "Wide"
+    },
+    "lineSpacing": "Spacing",
+    "lineSpacings": {
+      "compact": "Compact",
+      "normal": "Normal",
+      "relaxed": "Relaxed"
+    },
+    "pageNumbers": "Page numbers",
+    "headingNumbers": "Heading numbers",
+    "tableOfContents": "Table of contents",
+    "titlePage": "Title page",
+    "runningHeader": "Running header",
+    "previewZoom": "Preview zoom",
+    "fitWidth": "Fit width",
+    "pdfGenerating": "Generating PDF…",
+    "pdfGenerateError": "Failed to generate PDF preview.",
+    "pdfSaveError": "Failed to save PDF.",
+    "pdfPreviewTitle": "PDF preview"
+  },
+  "media": {
+    "attachVideo": "Attach video",
+    "attachAudio": "Attach audio",
+    "video": "Video",
+    "audio": "Audio",
+    "replace": "Replace",
+    "remove": "Remove",
+    "videoFile": "Video file",
+    "audioFile": "Audio file",
+    "play": "Play",
+    "pause": "Pause"
+  },
+  "slashMenu": {
+    "categories": {
+      "text": "Text",
+      "lists": "Lists",
+      "code": "Code",
+      "media": "Media",
+      "layout": "Layout"
+    },
+    "items": {
+      "paragraph": "Paragraph",
+      "h1": "Heading 1",
+      "h2": "Heading 2",
+      "h3": "Heading 3",
+      "h4": "Heading 4",
+      "h5": "Heading 5",
+      "h6": "Heading 6",
+      "emoji": "Emoji",
+      "ul": "Bullet List",
+      "ol": "Ordered List",
+      "checklist": "Checklist Item",
+      "toggle": "Toggle",
+      "code": "Code Block",
+      "math": "Math Block",
+      "math_inline": "Inline Math",
+      "image": "Image",
+      "video": "Video",
+      "audio": "Audio",
+      "file": "File Attachment",
+      "table": "Table",
+      "mermaid": "Mermaid Diagram",
+      "markmap": "Mind Map",
+      "chart": "Chart",
+      "note_embed": "Note Embed",
+      "embed": "Embed",
+      "insert_template": "Insert Template",
+      "quote": "Quote",
+      "callout": "Callout",
+      "divider": "Divider"
+    }
+  },
+  "noteEmbed": {
+    "pickNote": "Pick note",
+    "change": "Change",
+    "open": "Open",
+    "remove": "Remove",
+    "noNoteSelected": "No note selected",
+    "untitled": "(untitled)",
+    "searchPlaceholder": "Search notes...",
+    "noNotesFound": "No notes found"
+  },
+  "embed": {
+    "pasteUrl": "Paste URL",
+    "changeUrl": "Change URL",
+    "open": "Open",
+    "remove": "Remove",
+    "loading": "Loading embed…",
+    "error": "Failed to load embed",
+    "unsupported": "Unsupported URL"
+  },
+  "image": {
+    "menu": {
+      "caption": "Caption",
+      "copy": "Copy",
+      "cut": "Cut",
+      "delete": "Delete",
+      "align": "Align",
+      "alignLeft": "Left",
+      "alignCenter": "Center",
+      "alignRight": "Right",
+      "width": "Width"
+    },
+    "size": {
+      "small": "Small",
+      "medium": "Medium",
+      "large": "Large",
+      "full": "Full width"
+    }
+  },
+  "kanban": {
+    "common": {
+      "back": "Back",
+      "close": "Close",
+      "cancel": "Cancel",
+      "clear": "Clear",
+      "save": "Save",
+      "saving": "Saving…",
+      "retry": "Try again",
+      "delete": "Delete"
+    },
+    "view": {
+      "loading": "Loading…",
+      "loadBoardErrorTitle": "Could not load this board.",
+      "loadBoardFallback": "Failed to load board.",
+      "loadCardsFallback": "Failed to load cards.",
+      "boardNotFound": "Board not found.",
+      "boardUnavailable": "Board is unavailable.",
+      "moveFailed": "Move failed: {message}",
+      "cardCount": "{n} items",
+      "openAutomations": "Automations",
+      "emptyTitle": "An empty board.",
+      "emptyHint": "Add your first column and start tracking work, or start from a template.",
+      "openTemplates": "Templates…",
+      "addColumn": "Add column",
+      "renameColumn": "Rename column",
+      "deleteColumn": "Delete column",
+      "newColumn": "New column",
+      "columnMenu": "Column menu",
+      "editingColumn": "Editing",
+      "noResultsTitle": "No matching cards.",
+      "noResultsHint": "Clear search or adjust filters to bring cards back."
+    },
+    "board": {
+      "addCard": "Add card",
+      "newCard": "New card",
+      "quickAdd": "New",
+      "quickAddPlaceholder": "Task name…",
+      "wipCap": "at WIP cap",
+      "dropHere": "Drop here · status →",
+      "dropCard": "Drop a card here",
+      "emptyColumn": "Drop here or create a card",
+      "dragCard": "Drag card"
+    },
+    "card": {
+      "untitled": "Untitled",
+      "unknownCard": "Unknown card",
+      "addField": "Add field",
+      "linkCard": "Link a card",
+      "notes": "Notes",
+      "notesPlaceholder": "Add notes, acceptance criteria, context…",
+      "estimate": "Estimate",
+      "estimatePlaceholder": "e.g. 3d",
+      "sprint": "Sprint",
+      "sprintPlaceholder": "e.g. S-24",
+      "linked": "Linked cards",
+      "linkedEmpty": "No linked cards yet",
+      "blocked": "Blocked by",
+      "blocks": "Blocks",
+      "related": "Related",
+      "searchCards": "Search cards…",
+      "noCardsFound": "No cards found",
+      "properties": "Properties",
+      "checked": "Checked",
+      "unchecked": "Unchecked",
+      "automation": "Automation",
+      "unsavedChanges": "You have unsaved changes. Discard them?",
+      "deleteConfirm": "Delete this card?",
+      "dialogLabel": "Card details",
+      "titlePlaceholder": "Card title",
+      "fieldType": "Field type",
+      "fieldOptions": "Field options",
+      "fieldNamePlaceholder": "Field name",
+      "optionPlaceholder": "Option name",
+      "optionDefault": "Option",
+      "addOption": "Add option",
+      "newField": "New field",
+      "checkboxLabel": "Checked",
+      "askAI": "Ask AI",
+      "share": "Share",
+      "createdAt": "Created",
+      "updatedAt": "Last edited",
+      "saveHint": "Ctrl/Cmd + Enter to save",
+      "progress": "Progress",
+      "progressTasks": "{done} / {total} tasks ({pct}%)",
+      "progressNoTasks": "No tasks",
+      "priority": "Priority",
+      "priorityLevels": {
+        "none": "No priority",
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "urgent": "Urgent"
+      },
+      "fieldTypes": {
+        "text": "Text",
+        "number": "Number",
+        "date": "Date",
+        "checkbox": "Checkbox",
+        "select": "Select",
+        "multiSelect": "Multi-select"
+      }
+    },
+    "modal": {
+      "addCardTitle": "Add card",
+      "titlePlaceholder": "Card title…",
+      "column": "Column",
+      "add": "Add card"
+    },
+    "toolbar": {
+      "filter": "Filter",
+      "sort": "Sort",
+      "search": "Filter cards…",
+      "viewBoard": "Board",
+      "viewTable": "Table",
+      "viewCalendar": "Calendar",
+      "filters": "{n} filters",
+      "display": "Display",
+      "displayProperties": "Card properties",
+      "showPreview": "Show preview",
+      "cardDensity": "Card density",
+      "densityComfortable": "Comfort",
+      "densityCompact": "Compact",
+      "noProperties": "No card properties yet",
+      "boardSettings": "Board settings"
+    },
+    "calendar": {
+      "today": "Today",
+      "month": "Month",
+      "week": "Week",
+      "day": "Day",
+      "chooseField": "Choose field",
+      "pickFirstField": "Use first date field",
+      "noDateProp": "No date field selected",
+      "noDateHint": "Select a local date field from cards to use Calendar view.",
+      "dropReschedule": "Drop to reschedule",
+      "noEvents": "No events",
+      "allDay": "All day"
+    },
+    "automations": {
+      "title": "Automations & templates",
+      "openButton": "Automations",
+      "sectionAutomations": "Automations",
+      "active": "{n} active",
+      "newRule": "New rule",
+      "noAutomations": "No automations yet",
+      "noAutomationsHint": "Rules fire automatically when trigger conditions are met.",
+      "depGraph": "Dependency graph",
+      "noDeps": "No dependencies tracked yet",
+      "noDepsHint": "Link cards as \"blocks\" or \"blocked-by\" in the card modal to build a dependency graph.",
+      "templates": "Card templates",
+      "saveAs": "Save current as…",
+      "insertTemplate": "Insert from template",
+      "runCount": "ran {n}× this week",
+      "triggerPrefix": "When",
+      "action": {
+        "moveTo": "move to {value}",
+        "setProgress": "set progress 100%",
+        "addTag": "tag #{value}",
+        "notify": "notify owner"
+      },
+      "trigger": {
+        "subtasksDone": "all subtasks done",
+        "statusChange": "status → {value}",
+        "dueDateNear": "due date in 3 days"
+      },
+      "templatesData": {
+        "engineeringTicket": {
+          "name": "Engineering ticket",
+          "description": "5 fields · 3-step subtasks"
+        },
+        "designReview": {
+          "name": "Design review",
+          "description": "Cover + critique checklist"
+        },
+        "weeklyRetro": {
+          "name": "Weekly retro",
+          "description": "4 questions · prefilled"
+        },
+        "bugReport": {
+          "name": "Bug report",
+          "description": "Repro + env + severity"
+        }
+      }
+    },
+    "groups": {
+      "status": "Status",
+      "priority": "Priority",
+      "tag": "Tag",
+      "owner": "Owner",
+      "date": "Date",
+      "chooseField": "Choose field",
+      "noFieldSelected": "Select a field to build groups.",
+      "pickFirstField": "Use first matching field",
+      "unassigned": "Unassigned",
+      "untagged": "Untagged",
+      "noPriority": "No priority",
+      "noDate": "No date",
+      "today": "Today",
+      "thisWeek": "This week",
+      "later": "Later",
+      "overdue": "Overdue",
+      "allCards": "All cards"
+    },
+    "table": {
+      "title": "Title",
+      "status": "Status",
+      "chooseFields": "Choose fields",
+      "noFields": "No local fields yet",
+      "noTitle": "Untitled",
+      "items": "{n} items · {g} groups",
+      "avgProgress": "avg {n}%"
+    },
+    "propertyPanel": {
+      "title": "Board properties",
+      "columns": "Columns (Status)",
+      "properties": "Card properties",
+      "addColumn": "Add column",
+      "addProperty": "Add property",
+      "addOption": "Add option",
+      "impactTitle": "Changes will affect existing cards",
+      "impactColumns": "{n} card(s) in deleted column(s) will be moved to the first surviving column.",
+      "impactProperties": "{n} card(s) with values in deleted propert(ies) will lose those values.",
+      "validationMissingStatus": "Status property is missing",
+      "validationNeedColumn": "At least one column is required",
+      "newColumn": "New Column",
+      "newProperty": "New Property",
+      "option": "Option",
+      "types": {
+        "text": "Text",
+        "select": "Select",
+        "multi_select": "Multi-select",
+        "date": "Date",
+        "number": "Number",
+        "checkbox": "Checkbox"
+      }
+    },
+    "boardModal": {
+      "createTitle": "New board",
+      "renameTitle": "Rename board",
+      "deleteTitle": "Delete board",
+      "boardName": "Board name",
+      "boardNamePlaceholder": "Board name",
+      "icon": "Icon",
+      "newBoard": "New Board",
+      "untitled": "Untitled",
+      "thisBoard": "this board",
+      "deleteConfirm": "Delete {title}? All cards will be permanently removed.",
+      "create": "Create"
+    },
+    "embedded": {
+      "cardCount": "{n} cards",
+      "openFullView": "Open full view",
+      "linkedTo": "Linked to {title}",
+      "syncedSeconds": "synced {n}s ago",
+      "syncedMinutes": "synced {n}m ago",
+      "noColumns": "No columns defined",
+      "openFooter": "Open full view ↗"
+    }
+  },
+  "cloud": {
+    "signIn": {
+      "title": "Sign in to Nevo",
+      "subtitle": "Sign in to create and join shared storages with your team. Your personal workspaces stay local.",
+      "google": "Continue with Google",
+      "github": "Continue with GitHub",
+      "serverLabel": "Server URL",
+      "authenticating": "Waiting for browser…",
+      "back": "Back"
+    },
+    "account": {
+      "signedInAs": "Signed in as {name}",
+      "signOut": "Sign out",
+      "signIn": "Sign in"
+    },
+    "storages": {
+      "title": "Shared storages",
+      "empty": "No shared storages yet. Create one to collaborate with your team.",
+      "create": "New shared storage",
+      "namePlaceholder": "Storage name",
+      "createAction": "Create",
+      "open": "Open",
+      "documents": "{n} documents"
+    },
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "editor": "Editor",
+      "viewer": "Viewer"
+    },
+    "members": {
+      "title": "Members",
+      "you": "You",
+      "pending": "Pending key",
+      "approve": "Grant access",
+      "remove": "Remove",
+      "invite": "Invite",
+      "invitePlaceholder": "email{'@'}example.com",
+      "inviteAction": "Send invite",
+      "pendingInvites": "Pending invitations",
+      "approveHint": "This member is waiting for the encryption key. Grant access to let them in."
+    },
+    "errors": {
+      "noKey": "You don't have the key for this storage yet — ask an owner or admin to grant access.",
+      "generic": "Something went wrong. Please try again."
+    }
+  }
+}
