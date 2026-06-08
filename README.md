@@ -57,26 +57,123 @@
 ## 🚀 Быстрый старт
 
 ### Требования
-- Node.js (рекомендуется v20+)
-- [pnpm](https://pnpm.io/)
-- Rust (и зависимости для разработки Tauri)
 
-### Установка
-1. Клонируйте репозиторий:
-   ```bash
-   git clone https://github.com/your-username/nevo.git
-   cd nevo
-   ```
+| Компонент | Версия | Назначение |
+| --- | --- | --- |
+| **Node.js** | v20+ | Сборка фронтенда (Vite) |
+| **pnpm** | актуальная | Менеджер пакетов (в репозитории `pnpm-lock.yaml`) |
+| **Rust** | stable | Бэкенд Tauri v2 |
+| **Системные библиотеки** | см. ниже | WebView-движок и GTK-стек Tauri |
 
-2. Установите зависимости:
-   ```bash
-   pnpm install
-   ```
+Tauri v2 использует **системный WebView** каждой ОС: на Linux — `webkit2gtk-4.1`, на macOS — WKWebView (встроен), на Windows — WebView2. Ниже — установка для каждой платформы.
 
-3. Запустите в режиме разработки:
+### 1. Базовые инструменты (любая ОС)
+
+```bash
+# Rust (rustup) — macOS / Linux
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# pnpm через Corepack (входит в Node.js ≥ 16.10)
+corepack enable && corepack prepare pnpm@latest --activate
+```
+
+На **Windows** Rust ставится установщиком [`rustup-init.exe`](https://rustup.rs) (см. раздел Windows ниже).
+
+---
+
+## 🐧 Linux
+
+Нужен нативный стек **Tauri v2**: `webkit2gtk-4.1` (движок WebView), `libsoup-3.0` (HTTP, тянется зависимостью WebKit), GTK3, `librsvg2`, `openssl`, опциональный трей `libappindicator/ayatana` и build-тулчейн (`gcc`, `make`, `pkg-config`).
+
+### Системные библиотеки по дистрибутивам
+
+**Debian / Ubuntu (apt):**
+```bash
+sudo apt update
+sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
+  libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+```
+
+**Fedora (dnf):**
+```bash
+sudo dnf install -y webkit2gtk4.1-devel openssl-devel curl wget file \
+  libappindicator-gtk3-devel librsvg2-devel
+sudo dnf group install -y "c-development" "development-tools"
+```
+
+**Arch / Manjaro (pacman):**
+```bash
+sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl \
+  appmenu-gtk-module librsvg
+# Трей (опционально) — пакет из AUR:
+# yay -S libappindicator-gtk3
+```
+
+**openSUSE (zypper):**
+```bash
+sudo zypper in -y webkit2gtk3-soup2-devel libopenssl-devel curl wget file \
+  libappindicator3-1 librsvg-devel
+sudo zypper in -t pattern -y devel_basis
+```
+> Если на вашей версии openSUSE пакет не найден, проверьте имя: `zypper se webkit2gtk` (для Tauri v2 нужен вариант с поддержкой soup3, в части релизов он называется `webkit2gtk3-devel`).
+
+### GStreamer — только для сборки AppImage (опционально)
+
+Требуется лишь для `pnpm tauri build` при упаковке в **AppImage** (в `tauri.conf.json` включён `bundleMediaFramework`). Для `pnpm tauri dev` не нужен.
+
+| Дистрибутив | Пакеты |
+| --- | --- |
+| Debian/Ubuntu | `libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav` |
+| Fedora | `gstreamer1-plugins-base gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-ugly-free gstreamer1-libav` |
+| Arch | `gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly gst-libav` |
+| openSUSE | `gstreamer-plugins-base gstreamer-plugins-good gstreamer-plugins-bad gstreamer-plugins-ugly gstreamer-plugins-libav` |
+
+---
+
+## 🍏 macOS
+
+WebView (WKWebView) встроен в систему — отдельный движок ставить не нужно. Нужны только инструменты компиляции.
+
+1. **Xcode Command Line Tools** (компилятор C/clang, линкер):
    ```bash
-   pnpm tauri dev
+   xcode-select --install
    ```
+2. **Node.js v20+** — через [Homebrew](https://brew.sh) или официальный установщик:
+   ```bash
+   brew install node
+   ```
+3. **Rust** и **pnpm** — см. раздел «Базовые инструменты» выше.
+
+> Поддерживаются Apple Silicon (`aarch64`) и Intel (`x86_64`). Для кросс-сборки universal-бинарника установите вторую цель, напр. `rustup target add x86_64-apple-darwin`, и собирайте с `pnpm tauri build --target universal-apple-darwin`.
+
+---
+
+## 🪟 Windows
+
+1. **Microsoft C++ Build Tools** — установите [Build Tools for Visual Studio](https://visualstudio.microsoft.com/visual-cpp-build-tools/) с компонентом **«Desktop development with C++»** (MSVC + Windows SDK).
+2. **WebView2 Runtime** — предустановлен в Windows 11 и актуальных Windows 10. При отсутствии скачайте [Evergreen WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/).
+3. **Rust** — запустите [`rustup-init.exe`](https://rustup.rs) (использует MSVC-тулчейн `stable-x86_64-pc-windows-msvc`).
+4. **Node.js v20+** — официальный установщик или `winget install OpenJS.NodeJS`; затем `corepack enable`.
+
+Команды ниже выполняйте в **PowerShell** или **Windows Terminal**.
+
+> Альтернатива: всё разом через [winget](https://learn.microsoft.com/windows/package-manager/):
+> ```powershell
+> winget install Microsoft.VisualStudio.2022.BuildTools Rustlang.Rustup OpenJS.NodeJS Microsoft.EdgeWebView2Runtime
+> ```
+
+---
+
+## 🧩 Сборка проекта (любая ОС)
+
+```bash
+git clone https://github.com/your-username/nevo.git
+cd nevo
+
+pnpm install        # зависимости фронтенда
+pnpm tauri dev      # запуск в режиме разработки
+pnpm tauri build    # production-сборка (.deb / .rpm / AppImage / .dmg / .msi / .exe)
+```
 
 ## 🏗 Архитектура
 
