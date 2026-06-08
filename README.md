@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/tauri.svg" width="120" alt="Nevo Logo">
+  <img src="public/logo.png" width="120" alt="Nevo Logo">
 </p>
 
 <h1 align="center">Nevo</h1>
