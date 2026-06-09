@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { reactive, watch } from 'vue'
+import { reactive, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { COVER_GRADIENTS } from '../../../utils/workspaceGradients'
 import type { WorkspaceManifest } from '../../../types/workspace'
+import { ACCENT_PRESETS, createDefaultWorkspaceSettings } from '../../../utils/workspace-settings'
 import WorkspaceNavigationGroup from './workspace/WorkspaceNavigationGroup.vue'
 import WorkspaceStructureGroup from './workspace/WorkspaceStructureGroup.vue'
 import WorkspaceCreationGroup from './workspace/WorkspaceCreationGroup.vue'
@@ -12,6 +13,7 @@ import WorkspaceSystemViewsGroup from './workspace/WorkspaceSystemViewsGroup.vue
 
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
+import NvToggle from '../../../ui/primitives/NvToggle.vue'
 import NvColorPicker from '../../../ui/primitives/NvColorPicker.vue'
 
 const { t } = useI18n()
@@ -58,6 +60,56 @@ const statusOptions = ['active', 'archived', 'draft'].map(v => ({
   value: v,
   label: opt('workspaceStatus', v),
 }))
+
+// Appearance Settings
+const accentLabelKeys: Record<string, string> = {
+  violet: 'settings.options.accent.violet',
+  ember: 'settings.options.accent.ember',
+  sage: 'settings.options.accent.sage',
+  ocean: 'settings.options.accent.ocean',
+  rose: 'settings.options.accent.rose',
+}
+
+function accentLabel(preset: string): string {
+  return accentLabelKeys[preset] ? t(accentLabelKeys[preset]) : preset
+}
+
+const backgroundSceneOptions = ['aurora', 'paper', 'studio', 'plain'].map(v => ({ value: v, label: opt('backgroundScene', v) }))
+const surfaceStyleOptions = ['glass', 'solid', 'tinted'].map(v => ({ value: v, label: opt('surfaceStyle', v) }))
+const contrastModeOptions = ['soft', 'balanced', 'high'].map(v => ({ value: v, label: opt('contrastMode', v) }))
+const sidebarStyleOptions = ['floating', 'solid', 'minimal'].map(v => ({ value: v, label: opt('sidebarStyle', v) }))
+
+const accentColors = Object.entries(ACCENT_PRESETS).map(([id, tokens]) => ({
+  color: tokens.accent,
+  label: accentLabel(id),
+  id,
+}))
+
+const currentAccentColor = computed(() => {
+  const preset = ACCENT_PRESETS[settings.value.appearance.accentPreset]
+  return preset ? preset.accent : settings.value.appearance.accentPreset
+})
+
+function onAccentChange(color: string | null) {
+  if (!color) return
+  const preset = accentColors.find(c => c.color === color)
+  workspaceStore.updateSettings(draft => {
+    draft.appearance.accentPreset = preset ? (preset.id as any) : color
+  })
+}
+
+function resetWorkspaceStyle() {
+  const d = createDefaultWorkspaceSettings().appearance
+  workspaceStore.updateSettings(draft => {
+    draft.appearance.accentPreset = d.accentPreset
+    draft.appearance.backgroundScene = d.backgroundScene
+    draft.appearance.surfaceStyle = d.surfaceStyle
+    draft.appearance.contrastMode = d.contrastMode
+    draft.appearance.sidebarStyle = d.sidebarStyle
+  })
+}
+
+
 </script>
 
 <template>
@@ -102,9 +154,8 @@ const statusOptions = ['active', 'archived', 'draft'].map(v => ({
               <NvSelect
                 :model-value="settings.workspace.workspaceType"
                 :options="workspaceTypeOptions"
-                disabled
+                @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.workspaceType = v as any })"
               />
-              <span class="status-chip status-chip--coming">{{ t('settings.state.coming') }}</span>
             </div>
           </div>
 
@@ -117,11 +168,101 @@ const statusOptions = ['active', 'archived', 'draft'].map(v => ({
               <NvSelect
                 :model-value="settings.workspace.status"
                 :options="statusOptions"
-                disabled
+                @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.status = v as any })"
               />
-              <span class="status-chip status-chip--coming">{{ t('settings.state.coming') }}</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- ── Appearance ─────────────────────────────── -->
+      <div class="group">
+        <div class="group-header">
+          <div class="group-label">{{ t('settings.appearance.groups.workspaceStyle') }}</div>
+          <NvButton variant="ghost" size="xs" @click="resetWorkspaceStyle">{{ t('settings.common.resetToDefaults') }}</NvButton>
+        </div>
+        <div class="settings-card">
+          <!-- Accent -->
+          <div class="settings-row settings-row--stack">
+            <div class="row-copy">
+              <div class="row-title">{{ t('settings.appearance.accent.title') }}</div>
+              <div class="row-sub">{{ t('settings.appearance.accent.description') }}</div>
+            </div>
+            <div class="accent-picker">
+              <NvColorPicker
+                :model-value="currentAccentColor"
+                :colors="accentColors"
+                display="inline"
+                @update:model-value="onAccentChange"
+              />
+              <span class="accent-label">{{ accentLabel(settings.appearance.accentPreset) }}</span>
+            </div>
+          </div>
+
+          <!-- Background scene -->
+          <div class="settings-row settings-row--border">
+            <div class="row-copy">
+              <div class="row-title">{{ t('settings.appearance.backgroundScene.title') }}</div>
+              <div class="row-sub">{{ t('settings.appearance.backgroundScene.description') }}</div>
+            </div>
+            <NvSelect
+              :model-value="settings.appearance.backgroundScene"
+              :options="backgroundSceneOptions"
+              @update:model-value="v => workspaceStore.updateSettings(draft => { draft.appearance.backgroundScene = v as any })"
+            />
+          </div>
+
+          <!-- Surface style -->
+          <div class="settings-row settings-row--border">
+            <div class="row-copy">
+              <div class="row-title">{{ t('settings.appearance.surfaceStyle.title') }}</div>
+              <div class="row-sub">{{ t('settings.appearance.surfaceStyle.description') }}</div>
+            </div>
+            <NvSelect
+              :model-value="settings.appearance.surfaceStyle"
+              :options="surfaceStyleOptions"
+              @update:model-value="v => workspaceStore.updateSettings(draft => { draft.appearance.surfaceStyle = v as any })"
+            />
+          </div>
+
+          <!-- Contrast mode -->
+          <div class="settings-row settings-row--border">
+            <div class="row-copy">
+              <div class="row-title">{{ t('settings.appearance.contrastMode.title') }}</div>
+              <div class="row-sub">{{ t('settings.appearance.contrastMode.description') }}</div>
+            </div>
+            <NvSelect
+              :model-value="settings.appearance.contrastMode"
+              :options="contrastModeOptions"
+              @update:model-value="v => workspaceStore.updateSettings(draft => { draft.appearance.contrastMode = v as any })"
+            />
+          </div>
+
+          <!-- Sidebar style -->
+          <div class="settings-row settings-row--border">
+            <div class="row-copy">
+              <div class="row-title">{{ t('settings.appearance.sidebarStyle.title') }}</div>
+              <div class="row-sub">{{ t('settings.appearance.sidebarStyle.description') }}</div>
+            </div>
+            <NvSelect
+              :model-value="settings.appearance.sidebarStyle"
+              :options="sidebarStyleOptions"
+              @update:model-value="v => workspaceStore.updateSettings(draft => { draft.appearance.sidebarStyle = v as any })"
+            />
+          </div>
+
+          <!-- Custom CSS Toggle -->
+          <div class="settings-row settings-row--border">
+            <div class="row-copy">
+              <div class="row-title">{{ t('settings.workspace.customCss.title') }}</div>
+              <div class="row-sub">{{ t('settings.workspace.customCss.description') }}</div>
+            </div>
+            <NvToggle
+              :model-value="settings.appearance.customCssEnabled"
+              @update:model-value="v => workspaceStore.updateSettings(draft => { draft.appearance.customCssEnabled = v })"
+            />
+          </div>
+
         </div>
       </div>
 

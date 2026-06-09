@@ -18,6 +18,9 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   placement: 'bottom-start',
   offset: () => [0, 6],
+  items: undefined,
+  width: undefined,
+  position: undefined,
 })
 
 const emit = defineEmits<{ 'update:open': [value: boolean] }>()
@@ -39,7 +42,10 @@ const { position, reposition } = usePopupPosition({
 })
 
 watch(() => props.open, (val) => {
-  if (val !== undefined) val ? openMenu() : closeMenu(false)
+  if (val !== undefined) {
+    if (val) openMenu()
+    else closeMenu(false)
+  }
 })
 
 watch(() => props.position, (pos) => {
@@ -112,7 +118,8 @@ function closeMenu(restoreFocus = true) {
 
 function toggleMenu() {
   if (props.position !== undefined) return
-  isOpen.value ? closeMenu() : openMenu()
+  if (isOpen.value) closeMenu()
+  else openMenu()
 }
 
 function onDocPointerDown(e: PointerEvent) {

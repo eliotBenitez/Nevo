@@ -111,6 +111,7 @@ describe('editor regression', () => {
     document.body.appendChild(mount)
 
     let view: EditorView
+    // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
     view = new EditorView(mount, {
       state: setup.state,
       dispatchTransaction(transaction) {
@@ -194,6 +195,7 @@ describe('editor regression', () => {
     document.body.appendChild(mount)
 
     let view: EditorView
+    // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
     view = new EditorView(mount, {
       state: setup.state,
       dispatchTransaction(transaction) {
@@ -239,7 +241,9 @@ describe('editor regression', () => {
     const mount = document.createElement('div')
     document.body.appendChild(mount)
 
-    const view = new EditorView(mount, {
+    let view: EditorView
+    // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
+    view = new EditorView(mount, {
       state: setup.state,
       nodeViews: setup.nodeViews,
       dispatchTransaction(transaction) {
@@ -282,7 +286,9 @@ describe('editor regression', () => {
     const mount = document.createElement('div')
     document.body.appendChild(mount)
 
-    const view = new EditorView(mount, {
+    let view: EditorView
+    // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
+    view = new EditorView(mount, {
       state: setup.state,
       dispatchTransaction(transaction) {
         view.updateState(view.state.apply(transaction))
@@ -330,7 +336,9 @@ describe('editor regression', () => {
     const mount = document.createElement('div')
     document.body.appendChild(mount)
 
-    const view = new EditorView(mount, {
+    let view: EditorView
+    // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
+    view = new EditorView(mount, {
       state: setup.state,
       dispatchTransaction(transaction) {
         view.updateState(view.state.apply(transaction))
@@ -376,7 +384,9 @@ describe('editor regression', () => {
     const mount = document.createElement('div')
     document.body.appendChild(mount)
 
-    const view = new EditorView(mount, {
+    let view: EditorView
+    // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
+    view = new EditorView(mount, {
       state: setup.state,
       dispatchTransaction(transaction) {
         view.updateState(view.state.apply(transaction))
@@ -411,7 +421,9 @@ describe('editor regression', () => {
     const mount = document.createElement('div')
     document.body.appendChild(mount)
 
-    const view = new EditorView(mount, {
+    let view: EditorView
+    // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
+    view = new EditorView(mount, {
       state: setup.state,
       dispatchTransaction(transaction) {
         view.updateState(view.state.apply(transaction))
@@ -447,7 +459,9 @@ describe('editor regression', () => {
     const mount = document.createElement('div')
     document.body.appendChild(mount)
 
-    const view = new EditorView(mount, {
+    let view: EditorView
+    // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
+    view = new EditorView(mount, {
       state: setup.state,
       dispatchTransaction(transaction) {
         view.updateState(view.state.apply(transaction))
@@ -481,7 +495,9 @@ describe('editor regression', () => {
     const mount = document.createElement('div')
     document.body.appendChild(mount)
 
-    const view = new EditorView(mount, {
+    let view: EditorView
+    // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
+    view = new EditorView(mount, {
       state: setup.state,
       dispatchTransaction(transaction) {
         view.updateState(view.state.apply(transaction))
@@ -530,7 +546,9 @@ describe('editor regression', () => {
     const mount = document.createElement('div')
     document.body.appendChild(mount)
 
-    const view = new EditorView(mount, {
+    let view: EditorView
+    // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
+    view = new EditorView(mount, {
       state: setup.state,
       dispatchTransaction(transaction) {
         view.updateState(view.state.apply(transaction))
@@ -572,7 +590,9 @@ describe('editor regression', () => {
     const mount = document.createElement('div')
     document.body.appendChild(mount)
 
-    const view = new EditorView(mount, {
+    let view: EditorView
+    // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
+    view = new EditorView(mount, {
       state: setup.state,
       dispatchTransaction(transaction) {
         view.updateState(view.state.apply(transaction))
@@ -618,7 +638,9 @@ describe('editor regression', () => {
     const mount = document.createElement('div')
     document.body.appendChild(mount)
 
-    const view = new EditorView(mount, {
+    let view: EditorView
+    // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
+    view = new EditorView(mount, {
       state: setup.state,
       dispatchTransaction(transaction) {
         view.updateState(view.state.apply(transaction))
@@ -703,7 +725,9 @@ describe('editor regression', () => {
     const mount = document.createElement('div')
     document.body.appendChild(mount)
 
-    const view = new EditorView(mount, {
+    let view: EditorView
+    // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
+    view = new EditorView(mount, {
       state: setup.state,
       dispatchTransaction(transaction) {
         view.updateState(view.state.apply(transaction))
@@ -763,7 +787,9 @@ describe('editor regression', () => {
     const mount = document.createElement('div')
     document.body.appendChild(mount)
 
-    const view = new EditorView(mount, {
+    let view: EditorView
+    // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
+    view = new EditorView(mount, {
       state: setup.state,
       dispatchTransaction(transaction) {
         view.updateState(view.state.apply(transaction))
@@ -816,7 +842,9 @@ describe('editor regression', () => {
       const mount = document.createElement('div')
       document.body.appendChild(mount)
 
-      const view = new EditorView(mount, {
+      let view: EditorView
+    // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
+    view = new EditorView(mount, {
         state: setup.state,
         dispatchTransaction(transaction) {
           view.updateState(view.state.apply(transaction))
@@ -853,7 +881,9 @@ describe('editor regression', () => {
     const mount = document.createElement('div')
     document.body.appendChild(mount)
 
-    const view = new EditorView(mount, {
+    let view: EditorView
+    // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
+    view = new EditorView(mount, {
       state: setup.state,
       dispatchTransaction(transaction) {
         view.updateState(view.state.apply(transaction))
@@ -900,7 +930,9 @@ describe('editor regression', () => {
     const mount = document.createElement('div')
     document.body.appendChild(mount)
 
-    const view = new EditorView(mount, {
+    let view: EditorView
+    // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
+    view = new EditorView(mount, {
       state: setup.state,
       dispatchTransaction(transaction) {
         view.updateState(view.state.apply(transaction))
@@ -948,7 +980,9 @@ describe('editor regression', () => {
     const mount = document.createElement('div')
     document.body.appendChild(mount)
 
-    const view = new EditorView(mount, {
+    let view: EditorView
+    // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
+    view = new EditorView(mount, {
       state: setup.state,
       dispatchTransaction(transaction) {
         view.updateState(view.state.apply(transaction))
@@ -1001,7 +1035,9 @@ describe('editor regression', () => {
     const mount = document.createElement('div')
     document.body.appendChild(mount)
 
-    const view = new EditorView(mount, {
+    let view: EditorView
+    // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
+    view = new EditorView(mount, {
       state: setup.state,
       dispatchTransaction(transaction) {
         view.updateState(view.state.apply(transaction))

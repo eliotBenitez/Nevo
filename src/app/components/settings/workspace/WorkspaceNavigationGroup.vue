@@ -18,7 +18,11 @@ function opt(key: string, value: string): string {
 function resetNavigation() {
   const d = createDefaultWorkspaceSettings().workspace
   workspaceStore.updateSettings(draft => {
+    draft.workspace.rememberExpandedFolders = d.rememberExpandedFolders
+    draft.workspace.sidebarDefaultState = d.sidebarDefaultState
     draft.workspace.rootNotesVisible = d.rootNotesVisible
+    draft.workspace.showBacklinksByDefault = d.showBacklinksByDefault
+    draft.workspace.showGraphLabels = d.showGraphLabels
   })
 }
 
@@ -37,26 +41,13 @@ const sidebarStateOptions = ['expanded', 'collapsed'].map(v => ({
     <div class="settings-card">
       <div class="settings-row">
         <div class="row-copy">
-          <div class="row-title">{{ t('settings.workspace.openLastVisitedSystemView.title') }}</div>
-          <div class="row-sub">{{ t('settings.workspace.openLastVisitedSystemView.description') }}</div>
-        </div>
-        <NvToggle
-          :model-value="settings.workspace.openLastVisitedSystemView"
-          disabled
-        />
-        <span class="status-chip status-chip--coming">{{ t('settings.state.coming') }}</span>
-      </div>
-
-      <div class="settings-row settings-row--border">
-        <div class="row-copy">
           <div class="row-title">{{ t('settings.workspace.rememberExpandedFolders.title') }}</div>
           <div class="row-sub">{{ t('settings.workspace.rememberExpandedFolders.description') }}</div>
         </div>
         <NvToggle
           :model-value="settings.workspace.rememberExpandedFolders"
-          disabled
+          @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.rememberExpandedFolders = v })"
         />
-        <span class="status-chip status-chip--coming">{{ t('settings.state.coming') }}</span>
       </div>
 
       <div class="settings-row settings-row--border">
@@ -68,9 +59,8 @@ const sidebarStateOptions = ['expanded', 'collapsed'].map(v => ({
           <NvSelect
             :model-value="settings.workspace.sidebarDefaultState"
             :options="sidebarStateOptions"
-            disabled
+            @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.sidebarDefaultState = v as any })"
           />
-          <span class="status-chip status-chip--coming">{{ t('settings.state.coming') }}</span>
         </div>
       </div>
 
@@ -92,9 +82,8 @@ const sidebarStateOptions = ['expanded', 'collapsed'].map(v => ({
         </div>
         <NvToggle
           :model-value="settings.workspace.showBacklinksByDefault"
-          disabled
+          @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.showBacklinksByDefault = v })"
         />
-        <span class="status-chip status-chip--coming">{{ t('settings.state.coming') }}</span>
       </div>
 
       <div class="settings-row settings-row--border">
@@ -104,9 +93,8 @@ const sidebarStateOptions = ['expanded', 'collapsed'].map(v => ({
         </div>
         <NvToggle
           :model-value="settings.workspace.showGraphLabels"
-          disabled
+          @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.showGraphLabels = v })"
         />
-        <span class="status-chip status-chip--coming">{{ t('settings.state.coming') }}</span>
       </div>
     </div>
   </div>

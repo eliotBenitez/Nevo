@@ -198,8 +198,20 @@ fn collect_block_matches(
         .collect()
 }
 
+// Offload to a blocking thread: this walks and parses every note file in the
+// workspace, which would otherwise freeze the WebKitGTK UI thread on large
+// workspaces (see AGENTS.md "Platform Gotchas").
 #[tauri::command]
-pub fn search_workspace_blocks(
+pub async fn search_workspace_blocks(
+    workspace_path: String,
+    query: String,
+) -> Result<Vec<WorkspaceBlockSearchResult>, String> {
+    tauri::async_runtime::spawn_blocking(move || search_workspace_blocks_sync(workspace_path, query))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+pub(crate) fn search_workspace_blocks_sync(
     workspace_path: String,
     query: String,
 ) -> Result<Vec<WorkspaceBlockSearchResult>, String> {

@@ -53,7 +53,7 @@ export function detectEmbedProvider(url: string): EmbedProvider | null {
     if (hostMatches(host, 'figma.com')) return 'figma'
     if (hostMatches(host, 'codepen.io')) return 'codepen'
     if (hostMatches(host, 'twitter.com') || hostMatches(host, 'x.com')) return 'twitter'
-  } catch {}
+  } catch { /* unparseable URL */ }
   return null
 }
 

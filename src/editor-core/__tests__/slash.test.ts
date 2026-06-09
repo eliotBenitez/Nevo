@@ -54,8 +54,7 @@ describe('slash plugin state', () => {
         })
         state = state.apply(state.tr.setSelection(Selection.near(state.doc.resolve(4))))
 
-        let view: EditorView
-        view = new EditorView(mount, {
+        const view = new EditorView(mount, {
           state,
           dispatchTransaction(transaction) {
             view.updateState(view.state.apply(transaction))

@@ -49,7 +49,7 @@
 - **Backend:** [Tauri](https://tauri.app/) (Rust)
 - **Frontend:** [Vue 3](https://vuejs.org/) (Composition API)
 - **Язык:** [TypeScript](https://www.typescriptlang.org/)
-- **Стилизация:** [Tailwind CSS v4](https://tailwindcss.com/)
+- **Стилизация:** CSS design tokens и глобальные стили проекта
 - **Редактор:** [ProseMirror](https://prosemirror.net/)
 - **Стейт-менеджер:** [Pinia](https://pinia.vuejs.org/)
 - **Сборка:** [Vite](https://vitejs.dev/)

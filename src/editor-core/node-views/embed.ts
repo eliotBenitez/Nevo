@@ -176,7 +176,7 @@ export function createEmbedNodeView(
       domainEl.className = 'nv-embed-generic-domain'
       domainEl.textContent = domain
       info.appendChild(domainEl)
-    } catch {}
+    } catch { /* invalid URL — skip domain label */ }
 
     cardInner.appendChild(info)
     previewEl.appendChild(cardInner)

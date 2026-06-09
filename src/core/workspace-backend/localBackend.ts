@@ -35,6 +35,12 @@ export class LocalBackend implements WorkspaceBackend {
   saveSettings(settings: WorkspaceSettings): Promise<void> {
     return workspaceCommands.saveSettings(this.path, settings)
   }
+  loadCustomCss(): Promise<string> {
+    return workspaceCommands.loadCustomCss(this.path)
+  }
+  saveCustomCss(css: string): Promise<void> {
+    return workspaceCommands.saveCustomCss(this.path, css)
+  }
   listPlugins(): Promise<PluginManifest[]> {
     return workspaceCommands.listPlugins(this.path)
   }

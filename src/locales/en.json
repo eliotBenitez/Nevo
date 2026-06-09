@@ -742,6 +742,10 @@
         "description": "Labels to help organize workspaces",
         "placeholder": "Add tag…"
       },
+      "customCss": {
+        "title": "Custom Styles",
+        "description": "Enable custom.css file to customize this workspace's design"
+      },
       "openLastVisitedSystemView": {
         "title": "Restore last system view",
         "description": "Re-open the last visited system view (graph, history, etc.) on launch"
@@ -1364,10 +1368,6 @@
       "linkCard": "Link a card",
       "notes": "Notes",
       "notesPlaceholder": "Add notes, acceptance criteria, context…",
-      "estimate": "Estimate",
-      "estimatePlaceholder": "e.g. 3d",
-      "sprint": "Sprint",
-      "sprintPlaceholder": "e.g. S-24",
       "linked": "Linked cards",
       "linkedEmpty": "No linked cards yet",
       "blocked": "Blocked by",

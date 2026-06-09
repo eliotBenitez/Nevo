@@ -86,6 +86,8 @@ export function createDefaultWorkspaceSettings(): WorkspaceSettings {
       editorFontFamily: 'ui',
       editorFontSize: 16,
       editorLineWidth: 'medium',
+      customCssEnabled: false,
+      customCssFileName: 'custom.css',
     },
     editor: {
       spellCheck: false,

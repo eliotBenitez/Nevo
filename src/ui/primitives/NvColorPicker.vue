@@ -32,6 +32,9 @@ const props = withDefaults(
     allowNone: false,
     variant: 'default',
     hideCustom: false,
+    modelValue: undefined,
+    colors: undefined,
+    display: undefined,
   },
 )
 

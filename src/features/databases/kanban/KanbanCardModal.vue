@@ -55,8 +55,6 @@ const {
   hasFieldOptions,
 } = useCardFieldsEditor(props.card, markDirty)
 const localStatusValue = ref(getCardStatusValue(props.card, props.board))
-const localEstimate = ref(props.card.estimate ?? '')
-const localSprint = ref(props.card.sprint ?? '')
 const localPriority = ref<KanbanCardPriority>(props.card.priority ?? 'none')
 const isDirty = ref(false)
 const notesDirty = ref(false)
@@ -70,8 +68,6 @@ watch(() => props.card, card => {
   localContent.value = card.content ?? { type: 'doc', content: [] }
   resetFields(card)
   localStatusValue.value = getCardStatusValue(card, props.board)
-  localEstimate.value = card.estimate ?? ''
-  localSprint.value = card.sprint ?? ''
   localPriority.value = card.priority ?? 'none'
   isDirty.value = false
   notesDirty.value = false
@@ -197,8 +193,6 @@ async function save() {
     content: notesDirty.value ? localContent.value : props.card.content,
     properties: serializeCardProperties(props.board, props.card, localFields.value, localStatusValue.value),
     fields: localFields.value.map((field, index) => ({ ...field, order: index })),
-    estimate: localEstimate.value || undefined,
-    sprint: localSprint.value || undefined,
     progress: taskProgress.value?.pct,
     priority: localPriority.value !== 'none' ? localPriority.value : undefined,
   })
@@ -331,13 +325,13 @@ function onKeydown(event: KeyboardEvent) {
                     />
                     <div class="km-link-results">
                       <button
-                        v-for="card in linkableCards"
-                        :key="card.id"
+                        v-for="linkCard in linkableCards"
+                        :key="linkCard.id"
                         type="button"
                         class="km-link-result"
-                        @click="pickLink(card.id)"
+                        @click="pickLink(linkCard.id)"
                       >
-                        {{ card.title || t('kanban.card.untitled') }}
+                        {{ linkCard.title || t('kanban.card.untitled') }}
                       </button>
                       <div v-if="!linkableCards.length" class="km-link-empty">{{ t('kanban.card.noCardsFound') }}</div>
                     </div>
@@ -372,26 +366,6 @@ function onKeydown(event: KeyboardEvent) {
                     {{ opt.label }}
                   </button>
                 </div>
-              </div>
-
-              <div class="km-prop-row">
-                <span class="km-prop-label">{{ t('kanban.card.estimate') }}</span>
-                <input
-                  class="km-prop-input"
-                  :value="localEstimate"
-                  :placeholder="t('kanban.card.estimatePlaceholder')"
-                  @input="e => { localEstimate = (e.target as HTMLInputElement).value; markDirty() }"
-                />
-              </div>
-
-              <div class="km-prop-row">
-                <span class="km-prop-label">{{ t('kanban.card.sprint') }}</span>
-                <input
-                  class="km-prop-input"
-                  :value="localSprint"
-                  :placeholder="t('kanban.card.sprintPlaceholder')"
-                  @input="e => { localSprint = (e.target as HTMLInputElement).value; markDirty() }"
-                />
               </div>
 
               <div class="km-prop-col">

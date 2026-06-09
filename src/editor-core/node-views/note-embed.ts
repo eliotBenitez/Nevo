@@ -5,6 +5,42 @@ import { ExternalLink, Link, Trash2 } from 'lucide-vue-next'
 import NvPopupMenu from '../../ui/primitives/NvPopupMenu.vue'
 import { resolveNodePosition, getStringAttr, type CoreNodeViewOptions, type NodeViewPosition } from './utils'
 
+const SAFE_URL_RE = /^(https?:|mailto:|tel:|asset:|blob:|data:image\/|#|\/|\.\/|\.\.\/|[^:]*$)/i
+
+/**
+ * Embedded-note previews are rendered read-only via innerHTML. The HTML is
+ * produced by the app's own serializer, but the underlying note content can come
+ * from a collaborator, so neutralize active content before insertion:
+ * drop <script>/<style>, strip `on*` handlers, and reject unsafe href/src URLs
+ * (e.g. `javascript:`). Dependency-free to avoid pulling in a sanitizer lib.
+ */
+function sanitizeEmbedHtml(html: string): string {
+  if (!html) return ''
+  const tpl = document.createElement('template')
+  tpl.innerHTML = html
+  const walker = document.createTreeWalker(tpl.content, NodeFilter.SHOW_ELEMENT)
+  const toRemove: Element[] = []
+  let el = walker.nextNode() as Element | null
+  while (el) {
+    const tag = el.tagName.toLowerCase()
+    if (tag === 'script' || tag === 'style' || tag === 'iframe' || tag === 'object' || tag === 'embed') {
+      toRemove.push(el)
+    } else {
+      for (const attr of Array.from(el.attributes)) {
+        const name = attr.name.toLowerCase()
+        if (name.startsWith('on')) {
+          el.removeAttribute(attr.name)
+        } else if ((name === 'href' || name === 'src' || name === 'xlink:href') && !SAFE_URL_RE.test(attr.value.trim())) {
+          el.removeAttribute(attr.name)
+        }
+      }
+    }
+    el = walker.nextNode() as Element | null
+  }
+  toRemove.forEach((node) => node.remove())
+  return tpl.innerHTML
+}
+
 export function createNoteEmbedNodeView(
   node: PMNode,
   view: EditorView,
@@ -59,7 +95,7 @@ export function createNoteEmbedNodeView(
   let lastLoadedNoteId = ''
 
   const setHtml = (html: string) => {
-    contentEl.innerHTML = html
+    contentEl.innerHTML = sanitizeEmbedHtml(html)
     loadingEl.style.display = 'none'
     contentEl.style.display = html ? '' : 'none'
   }

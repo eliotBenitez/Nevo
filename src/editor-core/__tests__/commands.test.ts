@@ -84,12 +84,6 @@ describe('core commands', () => {
 
     state = EditorState.create({
       schema,
-      doc: schema.node('doc', null, [schema.node('paragraph')]),
-    })
-    state = state.apply(state.tr.setSelection(TextSelection.create(state.doc, 1)))
-
-    state = EditorState.create({
-      schema,
       doc: schema.node('doc', null, [schema.node('paragraph', null, [schema.text('task')])]),
     })
     state = state.apply(state.tr.setSelection(TextSelection.create(state.doc, 2)))

@@ -31,8 +31,8 @@ describe('buildWorkspaceSettingsSearchItems', () => {
   it('marks roadmap settings as coming later', () => {
     const items = buildItems()
 
-    expect(items.find(item => item.id === 'workspace.workspaceType')?.value).toBe('Coming later')
-    expect(items.find(item => item.id === 'workspace.graphEntryMode')?.value).toBe('Coming later')
+    expect(items.find(item => item.id === 'workspace.workspaceType')?.value).toBe('General')
+    expect(items.find(item => item.id === 'workspace.graphEntryMode')?.value).toBe('Global')
     expect(items.find(item => item.id === 'ai.privacyMode')?.value).toBe('Coming later')
   })
 

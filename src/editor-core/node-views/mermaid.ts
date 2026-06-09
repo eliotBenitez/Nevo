@@ -16,7 +16,10 @@ function ensureMermaidTheme() {
   const theme = getMermaidTheme()
   if (theme !== initializedTheme) {
     initializedTheme = theme
-    mermaid.initialize({ startOnLoad: false, theme, securityLevel: 'loose' })
+    // securityLevel 'strict' strips <script>/event handlers and HTML labels from
+    // rendered diagrams. Diagram source may originate from shared/collab notes, so
+    // 'loose' (which permits inline HTML/click handlers) is an XSS vector here.
+    mermaid.initialize({ startOnLoad: false, theme, securityLevel: 'strict' })
   }
 }
 

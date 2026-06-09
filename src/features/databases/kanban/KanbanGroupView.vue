@@ -159,7 +159,7 @@ const groups = computed<Group[]>(() => {
 
 <template>
   <div class="kb-group">
-    <div class="kb-group__controls" v-if="groupBy !== 'status'">
+    <div v-if="groupBy !== 'status'" class="kb-group__controls">
       <span class="kb-group__controls-label">{{ t('kanban.groups.chooseField') }}</span>
       <NvSelect
         :model-value="selectedFieldId"

@@ -12,6 +12,7 @@ export interface LoggerOptions {
   source: string
   event: string
   message: string
+  traceId?: string
   workspacePath?: string | null
   workspaceId?: string | null
   error?: unknown
@@ -19,11 +20,12 @@ export interface LoggerOptions {
   diagnosticsEnabled?: boolean
 }
 
-interface FrontendLogEntry {
+export interface FrontendLogEntry {
   level: LogLevel
   source: string
   event: string
   message: string
+  traceId?: string
   workspacePath?: string
   workspaceId?: string
   error?: LoggerErrorPayload
@@ -73,12 +75,41 @@ function normalizePayload(payload: unknown): unknown {
   }
 }
 
+function fallbackTraceId() {
+  return Math.random().toString(16).slice(2, 10).padEnd(8, '0')
+}
+
+function formatTimestamp(date: Date) {
+  const pad = (value: number, length = 2) => value.toString().padStart(length, '0')
+
+  return [
+    date.getFullYear(),
+    '-',
+    pad(date.getMonth() + 1),
+    '-',
+    pad(date.getDate()),
+    ' ',
+    pad(date.getHours()),
+    ':',
+    pad(date.getMinutes()),
+    ':',
+    pad(date.getSeconds()),
+    '.',
+    pad(date.getMilliseconds(), 3),
+  ].join('')
+}
+
+function sanitizeLogText(value: string) {
+  return value.replace(/\r/g, '\\r').replace(/\n/g, '\\n')
+}
+
 function buildEntry(level: LogLevel, options: LoggerOptions): FrontendLogEntry {
   return {
     level,
     source: options.source,
     event: options.event,
     message: options.message,
+    traceId: options.traceId,
     workspacePath: options.workspacePath ?? undefined,
     workspaceId: options.workspaceId ?? undefined,
     error: normalizeError(options.error),
@@ -94,14 +125,39 @@ function consoleMethod(level: LogLevel) {
   return console.debug
 }
 
+function contextJson(entry: FrontendLogEntry) {
+  const context: Record<string, unknown> = {}
+
+  if (entry.event) context.event = entry.event
+  if (entry.workspacePath) context.workspacePath = entry.workspacePath
+  if (entry.workspaceId) context.workspaceId = entry.workspaceId
+  if (entry.error) context.error = entry.error
+  if (entry.payload != null) context.payload = entry.payload
+
+  if (Object.keys(context).length === 0) return ''
+
+  return JSON.stringify(context)
+}
+
+function formatConsoleLine(level: LogLevel, entry: FrontendLogEntry) {
+  const traceId = entry.traceId ?? fallbackTraceId()
+
+  const base = [
+    `[${formatTimestamp(new Date())}]`,
+    `[${level.toUpperCase()}]`,
+    '[pid:browser/thread:main]',
+    `[${sanitizeLogText(entry.source)}]`,
+    `[${sanitizeLogText(traceId)}]`,
+    `- ${sanitizeLogText(entry.message)}`,
+  ].join(' ')
+  const context = contextJson(entry)
+
+  return context ? `${base} ${context}` : base
+}
+
 function writeConsole(level: LogLevel, options: LoggerOptions) {
   const entry = buildEntry(level, options)
-  consoleMethod(level)(`[${entry.source}] ${entry.event}: ${entry.message}`, {
-    workspacePath: entry.workspacePath,
-    workspaceId: entry.workspaceId,
-    error: entry.error,
-    payload: entry.payload,
-  })
+  consoleMethod(level)(formatConsoleLine(level, entry))
 }
 
 async function dispatch(level: LogLevel, options: LoggerOptions) {

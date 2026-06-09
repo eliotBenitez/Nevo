@@ -114,15 +114,14 @@ export class CloudBackend implements WorkspaceBackend {
 
   private _waitForManifest(timeoutMs: number): Promise<WorkspaceManifest | null> {
     return new Promise((resolve) => {
-      let poll: ReturnType<typeof setInterval> | undefined
+      const poll = setInterval(() => {
+        const snap = readManifest(this.map)
+        if (snap) { clearTimeout(timer); clearInterval(poll); resolve(snap) }
+      }, 50)
       const timer = setTimeout(() => {
         clearInterval(poll)
         resolve(readManifest(this.map))
       }, timeoutMs)
-      poll = setInterval(() => {
-        const snap = readManifest(this.map)
-        if (snap) { clearTimeout(timer); clearInterval(poll); resolve(snap) }
-      }, 50)
     })
   }
 
@@ -146,6 +145,14 @@ export class CloudBackend implements WorkspaceBackend {
   }
   saveSettings(settings: WorkspaceSettings): Promise<void> {
     this.manifestSession.ydoc.getMap('meta').set(SETTINGS_KEY, plainClone(settings))
+    return Promise.resolve()
+  }
+  loadCustomCss(): Promise<string> {
+    const stored = this.manifestSession?.ydoc.getMap('meta').get('custom_css') as string | undefined
+    return Promise.resolve(stored ?? '')
+  }
+  saveCustomCss(css: string): Promise<void> {
+    this.manifestSession.ydoc.getMap('meta').set('custom_css', css)
     return Promise.resolve()
   }
 

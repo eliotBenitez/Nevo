@@ -54,18 +54,21 @@ export function useNotePersistence() {
     void flushSave()
   }
 
+  function onVisibilityChange() {
+    if (document.visibilityState === 'hidden') onWindowIdle()
+  }
+
   onMounted(() => {
     document.addEventListener('keydown', onKeydown)
     window.addEventListener('beforeunload', onBeforeUnload)
     window.addEventListener('blur', onWindowIdle)
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') onWindowIdle()
-    })
+    document.addEventListener('visibilitychange', onVisibilityChange)
   })
   onUnmounted(() => {
     document.removeEventListener('keydown', onKeydown)
     window.removeEventListener('beforeunload', onBeforeUnload)
     window.removeEventListener('blur', onWindowIdle)
+    document.removeEventListener('visibilitychange', onVisibilityChange)
     void flushSave()
   })
 

@@ -115,6 +115,8 @@ pub fn run() {
             workspace::save_workspace_manifest,
             workspace::load_workspace_settings,
             workspace::save_workspace_settings,
+            workspace::load_custom_css,
+            workspace::save_custom_css,
             workspace::list_plugins,
             workspace::validate_plugin_manifest,
             workspace::set_plugin_enabled,

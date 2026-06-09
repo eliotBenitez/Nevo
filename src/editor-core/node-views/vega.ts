@@ -107,7 +107,7 @@ export function createVegaNodeView(node: PMNode, view: EditorView, getPos: NodeV
     try {
       rendered.innerHTML = ''
       const embed = await loadVegaEmbed()
-      const result = await embed(rendered, parsed as any, {
+      const result = await embed(rendered, parsed as Parameters<typeof embed>[1], {
         actions: false,
         renderer: 'svg',
         theme: isDarkTheme() ? 'dark' : undefined,

@@ -23,6 +23,8 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   boardSettings: () => ({ showCardPreview: true, cardDensity: 'comfortable' }),
   cardPropertyOptions: () => [],
+  boardTitle: undefined,
+  cardCount: undefined,
 })
 
 const emit = defineEmits<{

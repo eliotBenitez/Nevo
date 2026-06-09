@@ -228,7 +228,7 @@ onBeforeUnmount(() => {
               <div class="pdf-field">
                 <span class="pdf-field__label">{{ t('export.fontFamily') }}</span>
                 <div class="pdf-select-wrap">
-                  <select class="pdf-select" v-model="fontFamily">
+                  <select v-model="fontFamily" class="pdf-select">
                     <option value="">{{ t('export.fontDefault') }}</option>
                     <option v-for="f in systemFonts" :key="f" :value="f">{{ f }}</option>
                   </select>
@@ -274,7 +274,7 @@ onBeforeUnmount(() => {
               >
                 <span class="pdf-toggle__label">{{ t(toggle.label) }}</span>
                 <span class="toggle">
-                  <input type="checkbox" v-model="toggle.model.value" />
+                  <input v-model="toggle.model.value" type="checkbox" />
                   <span class="toggle-ui" />
                 </span>
               </label>
@@ -299,7 +299,7 @@ onBeforeUnmount(() => {
               <label class="pdf-toggle" :class="{ 'pdf-toggle--active': fitWidth }">
                 <span class="pdf-toggle__label">{{ t('export.fitWidth') }}</span>
                 <span class="toggle">
-                  <input type="checkbox" v-model="fitWidth" />
+                  <input v-model="fitWidth" type="checkbox" />
                   <span class="toggle-ui" />
                 </span>
               </label>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { ArrowLeft, Download, FolderPen, History, Kanban, Network, Plus, Search, Settings, Trash2, Upload } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
@@ -7,7 +7,7 @@ import type { TreeNode } from '../../types/note'
 import type { KanbanBoardMeta } from '../../types/kanban'
 import WorkspaceTreeNode from './WorkspaceTreeNode.vue'
 import SidebarActionBar from './SidebarActionBar.vue'
-import { collectFolderIds, sortTree, type SortMode } from '../composables/useSidebarTree'
+import { collectFolderIds, filterTree, sortTree, type SortMode } from '../composables/useSidebarTree'
 import NvPopupMenu from '../../ui/primitives/NvPopupMenu.vue'
 import type { NvMenuItemDef } from '../../ui/primitives/menu-types'
 import NvMenuItem from '../../ui/primitives/NvMenuItem.vue'
@@ -64,6 +64,57 @@ const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
 
 const collapsedFolders = reactive<Record<string, boolean>>({})
+const isRememberEnabled = computed(() => workspaceStore.settings.workspace.rememberExpandedFolders)
+const storageKey = computed(() => workspaceStore.activePath ? `nevo:collapsed-folders:${workspaceStore.activePath}` : null)
+
+watch(storageKey, (key) => {
+  for (const k of Object.keys(collapsedFolders)) {
+    delete collapsedFolders[k]
+  }
+  if (!key || !isRememberEnabled.value) return
+  try {
+    const saved = localStorage.getItem(key)
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      if (typeof parsed === 'object' && parsed !== null) {
+        Object.assign(collapsedFolders, parsed)
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load collapsed folders state:', e)
+  }
+}, { immediate: true })
+
+watch(collapsedFolders, (nextState) => {
+  const key = storageKey.value
+  if (!key || !isRememberEnabled.value) return
+  try {
+    localStorage.setItem(key, JSON.stringify(nextState))
+  } catch (e) {
+    console.error('Failed to save collapsed folders state:', e)
+  }
+}, { deep: true })
+
+watch(isRememberEnabled, (enabled) => {
+  if (!enabled) {
+    const key = storageKey.value
+    if (key) localStorage.removeItem(key)
+    for (const k of Object.keys(collapsedFolders)) {
+      delete collapsedFolders[k]
+    }
+  } else {
+    const key = storageKey.value
+    if (key) {
+      try {
+        const saved = localStorage.getItem(key)
+        if (saved) {
+          Object.assign(collapsedFolders, JSON.parse(saved))
+        }
+      } catch {}
+    }
+  }
+})
+
 const contextMenu = reactive<{
   open: boolean
   target: TreeMenuTarget | null
@@ -79,7 +130,11 @@ const boardCursorPos = ref({ top: 0, left: 0 })
 const isTreeEmpty = computed(() => !props.tree.length)
 
 const sortMode = computed<SortMode>(() => workspaceStore.settings.workspace.sidebarSortMode)
-const sortedTree = computed(() => sortTree(props.tree, sortMode.value))
+const showEmptyFolders = computed(() => workspaceStore.settings.workspace.showEmptyFolders)
+const sortedTree = computed(() => {
+  const sorted = sortTree(props.tree, sortMode.value)
+  return filterTree(sorted, showEmptyFolders.value)
+})
 const collapseState = computed<'collapsed' | 'expanded'>(() =>
   collectFolderIds(props.tree).some((id) => collapsedFolders[id]) ? 'collapsed' : 'expanded',
 )

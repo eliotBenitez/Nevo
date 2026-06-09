@@ -110,7 +110,7 @@ export function safeYCursorPlugin(
     },
     view(view) {
       const awarenessListener = () => {
-        if ((view as any).docView) {
+        if ((view as unknown as { docView?: unknown }).docView) {
           setMeta(view, yCursorPluginKey, { awarenessUpdated: true })
         }
       }

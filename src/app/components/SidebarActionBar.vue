@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, markRaw, ref } from 'vue'
+import type { Component } from 'vue'
 import {
   ArrowDownAZ, ArrowDownUp, ArrowDownZA, ChevronDown, ChevronsDownUp, ChevronsUpDown,
   Clock, FileText, FolderPlus, Kanban, List, Plus, Upload,
@@ -42,7 +43,7 @@ const newMenuItems = computed<NvMenuItemDef[]>(() => {
   return items
 })
 
-const sortOptions: { mode: SortMode; label: string; icon: any }[] = [
+const sortOptions: { mode: SortMode; label: string; icon: Component }[] = [
   { mode: 'manual', label: 'sortManual', icon: markRaw(List) },
   { mode: 'name-asc', label: 'sortNameAsc', icon: markRaw(ArrowDownAZ) },
   { mode: 'name-desc', label: 'sortNameDesc', icon: markRaw(ArrowDownZA) },

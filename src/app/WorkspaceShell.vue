@@ -318,13 +318,27 @@ watch(
   },
   { immediate: true },
 )
+watch(
+  () => workspaceStore.activePath,
+  (path) => {
+    if (!path) return
+    const defaultState = settings.value.workspace.sidebarDefaultState
+    sidebarOpen.value = defaultState === 'expanded'
+  },
+  { immediate: true },
+)
 watch(() => [workspaceStore.activePath, activeNoteId.value, activeFolderId.value], async ([workspacePath, noteId, folderId]) => {
   if (!workspacePath) return
   await workspaceStore.updateLastContext({ noteId: noteId ? String(noteId) : null, folderId: folderId ? String(folderId) : null })
 })
 watch(activeNoteId, async (noteId) => {
   if (!noteId) { noteStore.clearNote(); return }
-  try { await noteStore.loadNote(noteId) } catch { router.replace('/workspace') }
+  try {
+    await noteStore.loadNote(noteId)
+    if (settings.value.workspace.showBacklinksByDefault) {
+      rightPanelOpen.value = true
+    }
+  } catch { router.replace('/workspace') }
 }, { immediate: true })
 
 watch(activeNote, (note) => {

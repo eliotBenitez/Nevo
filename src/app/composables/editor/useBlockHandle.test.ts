@@ -166,9 +166,7 @@ describe('createDeleteBlockTransaction', () => {
     const mount = document.createElement('div')
     document.body.appendChild(mount)
 
-    let view: EditorView
-    let blockHandle: ReturnType<typeof useBlockHandle> | null = null
-    view = new EditorView(mount, {
+    const view = new EditorView(mount, {
       state: EditorState.create({ schema, doc }),
       dispatchTransaction(transaction) {
         view.updateState(view.state.apply(transaction))
@@ -181,7 +179,7 @@ describe('createDeleteBlockTransaction', () => {
         commandRegistry: new Map(),
         workspacePath: null,
       } as unknown as EditorCore
-      blockHandle = useBlockHandle(core)
+      const blockHandle = useBlockHandle(core)
       const dividerPos = doc.child(0).nodeSize
       blockHandle.blockHandle.hoveredBlockPos = dividerPos
       blockHandle.blockHandle.hoveredBlockNode = doc.child(1)
@@ -223,9 +221,8 @@ describe('useBlockHandle drag', () => {
     const mount = document.createElement('div')
     document.body.appendChild(mount)
 
-    let view: EditorView
     let blockHandle: ReturnType<typeof useBlockHandle> | null = null
-    view = new EditorView(mount, {
+    const view = new EditorView(mount, {
       state: EditorState.create({ schema, doc }),
       dispatchTransaction(transaction) {
         view.updateState(view.state.apply(transaction))

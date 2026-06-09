@@ -88,16 +88,13 @@ export function hsvToHex(h: number, s: number, v: number): string {
   const huePrime = h / 60
   const x = chroma * (1 - Math.abs((huePrime % 2) - 1))
   const m = valueRatio - chroma
-  let red = 0
-  let green = 0
-  let blue = 0
-
-  if (huePrime >= 0 && huePrime < 1) [red, green, blue] = [chroma, x, 0]
-  else if (huePrime < 2) [red, green, blue] = [x, chroma, 0]
-  else if (huePrime < 3) [red, green, blue] = [0, chroma, x]
-  else if (huePrime < 4) [red, green, blue] = [0, x, chroma]
-  else if (huePrime < 5) [red, green, blue] = [x, 0, chroma]
-  else [red, green, blue] = [chroma, 0, x]
+  const [red, green, blue] =
+    huePrime >= 0 && huePrime < 1 ? [chroma, x, 0]
+      : huePrime < 2 ? [x, chroma, 0]
+        : huePrime < 3 ? [0, chroma, x]
+          : huePrime < 4 ? [0, x, chroma]
+            : huePrime < 5 ? [x, 0, chroma]
+              : [chroma, 0, x]
 
   return rgbToHex((red + m) * 255, (green + m) * 255, (blue + m) * 255)
 }

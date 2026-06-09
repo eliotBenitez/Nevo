@@ -43,7 +43,7 @@ export function createCodeBlockNodeView(node: PMNode, view: EditorView, getPos: 
   let currentNode = node
   let highlightFrame: number | null = null
   let isEditing = false
-  let wrapEnabled = false
+  const wrapEnabled = false
   let lastHighlightText: string | null = null
   let lastHighlightLanguage: string | null = null
 

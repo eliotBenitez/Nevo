@@ -67,11 +67,28 @@ pub fn list_plugins(workspace_path: String) -> Result<Vec<PluginManifest>, Strin
     Ok(plugins)
 }
 
+/// Reject plugin ids that could escape the plugins directory via path
+/// separators or traversal segments. Plugin ids are folder names, so only a
+/// conservative `[A-Za-z0-9._-]` set is allowed and `..`/empty is forbidden.
+fn validate_plugin_id(plugin_id: &str) -> Result<(), String> {
+    if plugin_id.is_empty()
+        || plugin_id == "."
+        || plugin_id == ".."
+        || !plugin_id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
+    {
+        return Err("Invalid plugin id".to_string());
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub fn validate_plugin_manifest(
     workspace_path: String,
     plugin_id: String,
 ) -> Result<PluginManifest, String> {
+    validate_plugin_id(&plugin_id)?;
     let logger = crate::logging::logger();
     let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
         let _ = logger.error(
@@ -129,6 +146,7 @@ pub fn set_plugin_enabled(
     plugin_id: String,
     enabled: bool,
 ) -> Result<(), String> {
+    validate_plugin_id(&plugin_id)?;
     let logger = crate::logging::logger();
     let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
         let _ = logger.error(
@@ -200,4 +218,26 @@ pub fn set_plugin_enabled(
         })),
     );
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_plugin_id;
+
+    #[test]
+    fn accepts_plain_plugin_ids() {
+        assert!(validate_plugin_id("my-plugin_1.2").is_ok());
+        assert!(validate_plugin_id("plugin").is_ok());
+    }
+
+    #[test]
+    fn rejects_traversal_and_separators() {
+        assert!(validate_plugin_id("").is_err());
+        assert!(validate_plugin_id("..").is_err());
+        assert!(validate_plugin_id(".").is_err());
+        assert!(validate_plugin_id("../etc").is_err());
+        assert!(validate_plugin_id("a/b").is_err());
+        assert!(validate_plugin_id("a\\b").is_err());
+        assert!(validate_plugin_id("a b").is_err());
+    }
 }

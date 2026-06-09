@@ -16,21 +16,6 @@ const graphEntryOptions = ['global', 'from-current-note'].map(v => ({
   value: v,
   label: opt('graphEntryMode', v),
 }))
-
-const scopeOptions = ['workspace', 'current-folder'].map(v => ({
-  value: v,
-  label: opt('graphScope', v),
-}))
-
-const searchScopeOptions = ['workspace', 'current-folder'].map(v => ({
-  value: v,
-  label: opt('searchScope', v),
-}))
-
-const historyRangeOptions = ['7d', '30d', 'all'].map(v => ({
-  value: v,
-  label: opt('historyRange', v),
-}))
 </script>
 
 <template>
@@ -46,54 +31,8 @@ const historyRangeOptions = ['7d', '30d', 'all'].map(v => ({
           <NvSelect
             :model-value="settings.workspace.graphEntryMode"
             :options="graphEntryOptions"
-            disabled
+            @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.graphEntryMode = v as any })"
           />
-          <span class="status-chip status-chip--coming">{{ t('settings.state.coming') }}</span>
-        </div>
-      </div>
-
-      <div class="settings-row settings-row--border">
-        <div class="row-copy">
-          <div class="row-title">{{ t('settings.workspace.graphScopeDefault.title') }}</div>
-          <div class="row-sub">{{ t('settings.workspace.graphScopeDefault.description') }}</div>
-        </div>
-        <div class="inline-actions">
-          <NvSelect
-            :model-value="settings.workspace.graphScopeDefault"
-            :options="scopeOptions"
-            disabled
-          />
-          <span class="status-chip status-chip--coming">{{ t('settings.state.coming') }}</span>
-        </div>
-      </div>
-
-      <div class="settings-row settings-row--border">
-        <div class="row-copy">
-          <div class="row-title">{{ t('settings.workspace.searchStartScope.title') }}</div>
-          <div class="row-sub">{{ t('settings.workspace.searchStartScope.description') }}</div>
-        </div>
-        <div class="inline-actions">
-          <NvSelect
-            :model-value="settings.workspace.searchStartScope"
-            :options="searchScopeOptions"
-            disabled
-          />
-          <span class="status-chip status-chip--coming">{{ t('settings.state.coming') }}</span>
-        </div>
-      </div>
-
-      <div class="settings-row settings-row--border">
-        <div class="row-copy">
-          <div class="row-title">{{ t('settings.workspace.historyDefaultRange.title') }}</div>
-          <div class="row-sub">{{ t('settings.workspace.historyDefaultRange.description') }}</div>
-        </div>
-        <div class="inline-actions">
-          <NvSelect
-            :model-value="settings.workspace.historyDefaultRange"
-            :options="historyRangeOptions"
-            disabled
-          />
-          <span class="status-chip status-chip--coming">{{ t('settings.state.coming') }}</span>
         </div>
       </div>
     </div>

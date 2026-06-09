@@ -88,8 +88,6 @@ export interface KanbanCard {
   fields: KanbanCardField[]
   columnOrder: number
   links?: KanbanLink[]
-  estimate?: string
-  sprint?: string
   progress?: number
   priority?: KanbanCardPriority
   coverHue?: string

@@ -1,11 +1,12 @@
-use chrono::Utc;
+use chrono::Local;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Map, Value};
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use tauri::Manager;
+use uuid::Uuid;
 
 const LOG_FILE_NAME: &str = "nevo.log";
 const MAX_LOG_FILE_BYTES: u64 = 512 * 1024;
@@ -24,6 +25,15 @@ impl LogLevel {
     fn is_error(&self) -> bool {
         matches!(self, Self::Error)
     }
+
+    fn label(&self) -> &'static str {
+        match self {
+            Self::Error => "ERROR",
+            Self::Warn => "WARN",
+            Self::Info => "INFO",
+            Self::Debug => "DEBUG",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -39,6 +49,8 @@ pub struct LogError {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct LogContext {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub trace_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workspace_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -78,7 +90,10 @@ impl LogContext {
 pub struct LogRecord {
     pub timestamp: String,
     pub level: LogLevel,
+    pub process_id: u32,
+    pub thread: String,
     pub source: String,
+    pub trace_id: String,
     pub event: String,
     pub message: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -96,6 +111,8 @@ pub struct LogRecord {
 pub struct FrontendLogEntry {
     pub level: LogLevel,
     pub source: String,
+    #[serde(default)]
+    pub trace_id: Option<String>,
     pub event: String,
     pub message: String,
     #[serde(default)]
@@ -119,6 +136,79 @@ pub struct AppLogger {
 }
 
 static GLOBAL_LOGGER: OnceLock<AppLogger> = OnceLock::new();
+
+fn generate_trace_id() -> String {
+    Uuid::new_v4().simple().to_string()[..8].to_string()
+}
+
+fn sanitize_log_text(value: &str) -> String {
+    value.replace('\r', "\\r").replace('\n', "\\n")
+}
+
+fn context_json(record: &LogRecord) -> Result<Option<String>, String> {
+    let mut context = Map::new();
+
+    if !record.event.is_empty() {
+        context.insert("event".to_string(), Value::String(record.event.clone()));
+    }
+    if let Some(workspace_path) = record
+        .workspace_path
+        .as_ref()
+        .filter(|value| !value.is_empty())
+    {
+        context.insert(
+            "workspacePath".to_string(),
+            Value::String(workspace_path.clone()),
+        );
+    }
+    if let Some(workspace_id) = record
+        .workspace_id
+        .as_ref()
+        .filter(|value| !value.is_empty())
+    {
+        context.insert(
+            "workspaceId".to_string(),
+            Value::String(workspace_id.clone()),
+        );
+    }
+    if let Some(error) = &record.error {
+        context.insert(
+            "error".to_string(),
+            serde_json::to_value(error).map_err(|error| error.to_string())?,
+        );
+    }
+    if let Some(payload) = &record.payload {
+        if !payload.is_null() {
+            context.insert("payload".to_string(), payload.clone());
+        }
+    }
+
+    if context.is_empty() {
+        return Ok(None);
+    }
+
+    serde_json::to_string(&Value::Object(context))
+        .map(Some)
+        .map_err(|error| error.to_string())
+}
+
+fn format_log_line(record: &LogRecord) -> Result<String, String> {
+    let base = format!(
+        "[{}] [{}] [pid:{}/thread:{}] [{}] [{}] - {}",
+        sanitize_log_text(&record.timestamp),
+        record.level.label(),
+        record.process_id,
+        sanitize_log_text(&record.thread),
+        sanitize_log_text(&record.source),
+        sanitize_log_text(&record.trace_id),
+        sanitize_log_text(&record.message)
+    );
+
+    match context_json(record)? {
+        Some(context) => Ok(format!("{base} {context}")),
+        None => Ok(base),
+    }
+}
 
 pub struct GlobalLogger(Option<&'static AppLogger>);
 
@@ -307,10 +397,18 @@ impl AppLogger {
             return Ok(());
         }
 
+        let current_thread = std::thread::current();
+        let thread = current_thread
+            .name()
+            .map(str::to_string)
+            .unwrap_or_else(|| format!("{:?}", current_thread.id()));
         let record = LogRecord {
-            timestamp: Utc::now().to_rfc3339(),
+            timestamp: Local::now().format("%Y-%m-%d %H:%M:%S%.3f").to_string(),
             level,
+            process_id: std::process::id(),
+            thread,
             source: source.to_string(),
+            trace_id: context.trace_id.unwrap_or_else(generate_trace_id),
             event: event.to_string(),
             message: message.to_string(),
             workspace_path: context.workspace_path,
@@ -330,8 +428,7 @@ impl AppLogger {
         std::fs::create_dir_all(&self.log_dir).map_err(|error| error.to_string())?;
 
         let current_path = self.current_file_path();
-        let serialized = serde_json::to_string(record).map_err(|error| error.to_string())?;
-        let line = format!("{serialized}\n");
+        let line = format!("{}\n", format_log_line(record)?);
         let next_bytes = line.len() as u64;
 
         let current_size = std::fs::metadata(&current_path)
@@ -431,6 +528,7 @@ pub fn log_frontend_event(entry: FrontendLogEntry) -> Result<(), String> {
         &entry.message,
         diagnostics_enabled,
         LogContext {
+            trace_id: entry.trace_id,
             workspace_path: entry.workspace_path,
             workspace_id: entry.workspace_id,
             error: entry.error,
@@ -457,6 +555,42 @@ mod tests {
             .lines()
             .map(str::to_string)
             .collect()
+    }
+
+    fn assert_timestamp_prefix(line: &str) {
+        let timestamp = line
+            .strip_prefix('[')
+            .and_then(|line| line.split_once(']').map(|(timestamp, _)| timestamp))
+            .expect("timestamp prefix");
+
+        assert_eq!(timestamp.len(), 23);
+        assert_eq!(&timestamp[4..5], "-");
+        assert_eq!(&timestamp[7..8], "-");
+        assert_eq!(&timestamp[10..11], " ");
+        assert_eq!(&timestamp[13..14], ":");
+        assert_eq!(&timestamp[16..17], ":");
+        assert_eq!(&timestamp[19..20], ".");
+        assert!(timestamp
+            .chars()
+            .enumerate()
+            .all(
+                |(index, character)| matches!(index, 4 | 7 | 10 | 13 | 16 | 19)
+                    || character.is_ascii_digit()
+            ));
+    }
+
+    fn trace_id_from_line(line: &str) -> &str {
+        line.split("] [")
+            .nth(4)
+            .and_then(|part| part.split(']').next())
+            .expect("trace id")
+    }
+
+    fn context_from_line(line: &str) -> Option<Value> {
+        let context = line
+            .split_once(" {")
+            .map(|(_, context)| format!("{{{context}"))?;
+        serde_json::from_str(&context).ok()
     }
 
     #[test]
@@ -488,9 +622,20 @@ mod tests {
 
         let lines = read_lines(&dir.join(LOG_FILE_NAME));
         assert_eq!(lines.len(), 1);
-        let record: LogRecord = serde_json::from_str(&lines[0]).expect("parse log record");
-        assert_eq!(record.level, LogLevel::Error);
-        assert_eq!(record.event, "open_workspace");
+        let line = &lines[0];
+        assert_timestamp_prefix(line);
+        assert!(line.contains(" [ERROR] "));
+        assert!(line.contains("[pid:"));
+        assert!(line.contains("/thread:"));
+        assert!(line.contains("] [tauri.workspace] ["));
+        assert!(line.contains(" - Failed to open workspace "));
+        assert_eq!(trace_id_from_line(line).len(), 8);
+
+        let context = context_from_line(line).expect("log context");
+        assert_eq!(context["event"], "open_workspace");
+        assert_eq!(context["workspacePath"], "/tmp/workspace");
+        assert_eq!(context["error"]["kind"], "io");
+        assert_eq!(context["error"]["message"], "missing file");
     }
 
     #[test]
@@ -518,6 +663,73 @@ mod tests {
             .expect("skip debug");
 
         assert!(!dir.join(LOG_FILE_NAME).exists());
+    }
+
+    #[test]
+    fn writes_compact_context_json() {
+        let dir = temp_log_dir("context");
+        let logger = AppLogger::new(dir.clone()).expect("create logger");
+        let mut context = LogContext::workspace("/tmp/workspace")
+            .with_workspace_id("workspace-1")
+            .with_error(LogError {
+                kind: Some("plugin".to_string()),
+                message: "invalid plugin".to_string(),
+                details: Some("missing manifest".to_string()),
+            })
+            .with_payload(json!({ "phase": "plugins" }));
+        context.trace_id = Some("trace-123".to_string());
+
+        logger
+            .warn(
+                "frontend.workspace",
+                "load_workspace_plugins",
+                "Plugin metadata changed",
+                true,
+                context,
+            )
+            .expect("write warning");
+
+        let lines = read_lines(&dir.join(LOG_FILE_NAME));
+        assert_eq!(lines.len(), 1);
+        let line = &lines[0];
+
+        assert!(line.contains(" [WARN] "));
+        assert!(line.contains("] [frontend.workspace] [trace-123] - Plugin metadata changed "));
+
+        let context = context_from_line(line).expect("log context");
+        assert_eq!(context["event"], "load_workspace_plugins");
+        assert_eq!(context["workspacePath"], "/tmp/workspace");
+        assert_eq!(context["workspaceId"], "workspace-1");
+        assert_eq!(context["error"]["kind"], "plugin");
+        assert_eq!(context["error"]["message"], "invalid plugin");
+        assert_eq!(context["error"]["details"], "missing manifest");
+        assert_eq!(context["payload"], json!({ "phase": "plugins" }));
+    }
+
+    #[test]
+    fn omits_empty_context_json() {
+        let record = LogRecord {
+            timestamp: "2026-06-09 14:23:45.123".to_string(),
+            level: LogLevel::Info,
+            process_id: 12345,
+            thread: "main".to_string(),
+            source: "tauri.app".to_string(),
+            trace_id: "a1b2c3d4".to_string(),
+            event: String::new(),
+            message: "Started".to_string(),
+            workspace_path: None,
+            workspace_id: None,
+            error: None,
+            payload: None,
+        };
+
+        let line = format_log_line(&record).expect("format line");
+
+        assert_eq!(
+            line,
+            "[2026-06-09 14:23:45.123] [INFO] [pid:12345/thread:main] [tauri.app] [a1b2c3d4] - Started"
+        );
+        assert!(!line.ends_with(" {}"));
     }
 
     #[test]

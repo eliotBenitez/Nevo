@@ -83,6 +83,12 @@ export const workspaceCommands = {
   saveSettings: (workspacePath: string, settings: WorkspaceSettings) =>
     invokeCommand<void>('save_workspace_settings', { workspacePath, settings }),
 
+  loadCustomCss: (workspacePath: string) =>
+    invokeCommand<string>('load_custom_css', { workspacePath }),
+
+  saveCustomCss: (workspacePath: string, css: string) =>
+    invokeCommand<void>('save_custom_css', { workspacePath, css }),
+
   listPlugins: (workspacePath: string) =>
     invokeCommand<PluginManifest[]>('list_plugins', { workspacePath }),
 

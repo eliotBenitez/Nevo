@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { ArrowLeft, Search } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
+import { useWorkspaceStore } from '../../stores/workspace'
 import type { WorkspaceManifest } from '../../types/workspace'
 import type { EdgeKind, GraphSnapshot } from '../../types/graph'
 import GraphCanvas from './components/GraphCanvas.vue'
@@ -48,6 +49,10 @@ onMounted(() => {
     containerWidth.value = containerRef.value.clientWidth
     containerHeight.value = containerRef.value.clientHeight
   }
+  try {
+    const workspaceStore = useWorkspaceStore()
+    showLabels.value = workspaceStore.settings.workspace.showGraphLabels
+  } catch {}
   if (props.workspacePath && props.manifest) loadGraph()
 })
 
@@ -83,6 +88,17 @@ const focusGraph = computed(() => {
   }
 })
 const focus = useGraphFocus(focusGraph)
+
+watch(snapshot, (snap) => {
+  if (snap && props.activeNoteId) {
+    try {
+      const workspaceStore = useWorkspaceStore()
+      if (workspaceStore.settings.workspace.graphEntryMode === 'from-current-note') {
+        focus.focusedNodeId.value = props.activeNoteId
+      }
+    } catch {}
+  }
+}, { immediate: true })
 
 const canvasRef = computed(() => canvasCompRef.value?.canvasRef ?? null)
 

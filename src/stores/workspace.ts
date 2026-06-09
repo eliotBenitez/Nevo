@@ -71,6 +71,10 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     activeHandle.value?.kind === 'local' ? activeHandle.value.path : null)
   const backendKind = computed(() => activeHandle.value?.kind ?? null)
   const isOnboarded = ref(false)
+  const customCss = ref('')
+  // Keeps the injected custom-CSS <style> as the last node so it always wins the
+  // cascade, even when SFC scoped styles are appended later (dev-mode lazy inject).
+  let customCssOrderObserver: MutationObserver | null = null
 
   function _setHandle(handle: WorkspaceHandle | null) {
     // Tear down a previous cloud backend (closes its live Yjs sessions) when
@@ -79,6 +83,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       ;(_cloudBackend.value as CloudBackend).destroy()
       _cloudBackend.value = null
     }
+    applyCustomCssStyle('', false)
+    customCss.value = ''
     activeHandle.value = handle
   }
   const appConfig = ref<AppConfig>(createDefaultAppConfig())
@@ -227,6 +233,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       manifest.value = await cloud.open()
       settings.value = normalizeWorkspaceSettings(await cloud.loadSettings())
       applyWorkspaceStyle(settings.value.appearance)
+      await loadCustomCss()
       plugins.value = []
       diagnostics.value = await cloud.getDiagnostics()
       isOnboarded.value = true
@@ -283,6 +290,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       applyWorkspaceStyle(settings.value.appearance)
       plugins.value = pluginList
       diagnostics.value = workspaceDiagnostics
+      await loadCustomCss()
     } catch (error) {
       await appLogger.error({
         source: 'frontend.workspace',
@@ -349,6 +357,11 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     try {
       settings.value = normalized
       applyWorkspaceStyle(normalized.appearance)
+      if (normalized.appearance.customCssEnabled) {
+        await loadCustomCss()
+      } else {
+        applyCustomCssStyle('', false)
+      }
       await backend.value.saveSettings(normalized)
       await loadDiagnostics()
     } catch (error) {
@@ -371,6 +384,70 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
   async function resetSettings() {
     await saveSettings(createDefaultWorkspaceSettings())
+  }
+
+  function applyCustomCssStyle(css: string, enabled: boolean) {
+    const STYLE_ID = 'nevo-workspace-custom-css'
+    let styleEl = document.getElementById(STYLE_ID) as HTMLStyleElement | null
+    if (!enabled) {
+      if (styleEl) styleEl.remove()
+      customCssOrderObserver?.disconnect()
+      customCssOrderObserver = null
+      return
+    }
+    if (!styleEl) {
+      styleEl = document.createElement('style')
+      styleEl.id = STYLE_ID
+    }
+    styleEl.textContent = css
+    // Inject at the end of <body>: in document order this comes after every <head>
+    // stylesheet (bundled CSS plus lazily-injected SFC/KaTeX/Mermaid styles), so the
+    // user's rules win the cascade by source order without needing !important.
+    if (styleEl.parentNode !== document.body || styleEl.nextSibling) {
+      document.body.appendChild(styleEl)
+    }
+    // Re-assert "last node" whenever something is appended to <body> after it.
+    if (!customCssOrderObserver) {
+      customCssOrderObserver = new MutationObserver(() => {
+        const el = document.getElementById(STYLE_ID)
+        if (el && el.nextSibling) document.body.appendChild(el)
+      })
+      customCssOrderObserver.observe(document.body, { childList: true })
+    }
+  }
+
+  async function loadCustomCss(): Promise<string> {
+    if (!backend.value) return ''
+    try {
+      const css = await backend.value.loadCustomCss()
+      customCss.value = css
+      applyCustomCssStyle(css, settings.value.appearance.customCssEnabled)
+      return css
+    } catch (error) {
+      await appLogger.error({
+        source: 'frontend.workspace',
+        event: 'load_custom_css',
+        message: 'Failed to load custom CSS',
+        error,
+      })
+      return ''
+    }
+  }
+
+  async function saveCustomCss(css: string) {
+    if (!backend.value) return
+    try {
+      customCss.value = css
+      applyCustomCssStyle(css, settings.value.appearance.customCssEnabled)
+      await backend.value.saveCustomCss(css)
+    } catch (error) {
+      await appLogger.error({
+        source: 'frontend.workspace',
+        event: 'save_custom_css',
+        message: 'Failed to save custom CSS',
+        error,
+      })
+    }
   }
 
   async function updateLastContext(context: { noteId: string | null; folderId: string | null }) {
@@ -482,6 +559,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     backend,
     backendKind,
     isOnboarded,
+    customCss,
     appConfig,
     diagnostics,
     appMetadata,
@@ -497,6 +575,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     saveSettings,
     updateSettings,
     resetSettings,
+    loadCustomCss,
+    saveCustomCss,
     updateLastContext,
     saveWorkspaceManifest,
     reloadPlugins,

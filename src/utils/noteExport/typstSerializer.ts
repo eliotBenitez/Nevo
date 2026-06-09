@@ -61,7 +61,7 @@ function quote(value: string): string {
  * like `#strong[..]` or `#raw(..)` is otherwise parsed as an argument list.
  */
 function escapeText(value: string): string {
-  return value.replace(/([\\#$*_`<>@\[\]()])/g, '\\$1')
+  return value.replace(/([\\#$*_`<>@[\]()])/g, '\\$1')
 }
 
 function wrapMarks(text: string, marks: BlockNode['marks']): string {

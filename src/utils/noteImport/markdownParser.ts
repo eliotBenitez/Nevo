@@ -35,7 +35,7 @@ function inlineToContent(nodes: PhrasingContent[], marks: Mark[] = []): BlockNod
         result.push(...inlineToContent(node.children as PhrasingContent[], [...marks, { type: 'em' }]))
         break
       case 'delete':
-        result.push(...inlineToContent((node as any).children as PhrasingContent[], [...marks, { type: 'strike' }]))
+        result.push(...inlineToContent((node as { children: PhrasingContent[] }).children, [...marks, { type: 'strike' }]))
         break
       case 'inlineCode':
         if (node.value) {
@@ -56,8 +56,8 @@ function inlineToContent(nodes: PhrasingContent[], marks: Mark[] = []): BlockNod
         break
       default:
         // inlineMath — remark-math augments the type system at runtime
-        if ((node as any).type === 'inlineMath') {
-          result.push({ type: 'math_inline', attrs: { latex: (node as any).value ?? '', displayMode: false } })
+        if ((node as { type?: string; value?: string }).type === 'inlineMath') {
+          result.push({ type: 'math_inline', attrs: { latex: (node as { type?: string; value?: string }).value ?? '', displayMode: false } })
         }
     }
   }
@@ -132,8 +132,8 @@ function blockToNodes(node: Content): BlockNode[] {
       return [{ type: 'divider' }]
     default: {
       // math block — added by remark-math
-      if ((node as any).type === 'math') {
-        return [{ type: 'math_block', attrs: { latex: (node as any).value ?? '', displayMode: true } }]
+      if ((node as { type?: string; value?: string }).type === 'math') {
+        return [{ type: 'math_block', attrs: { latex: (node as { type?: string; value?: string }).value ?? '', displayMode: true } }]
       }
       return []
     }

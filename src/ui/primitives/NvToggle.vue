@@ -8,6 +8,8 @@ withDefaults(defineProps<{
 }>(), {
   modelValue: false,
   size: 'sm',
+  label: undefined,
+  ariaLabel: undefined,
 })
 
 const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()

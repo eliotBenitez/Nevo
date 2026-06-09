@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { appLogger } from './logger'
 
 const invokeMock = vi.hoisted(() => vi.fn())
@@ -10,27 +10,32 @@ vi.mock('@tauri-apps/api/core', () => ({
 describe('appLogger', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.useRealTimers()
     delete (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__
   })
 
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
   it('falls back to console when tauri runtime is unavailable', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 5, 9, 14, 23, 45, 123))
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     await appLogger.warn({
       source: 'frontend.search',
       event: 'search_workspace_blocks',
       message: 'Search failed',
+      traceId: 'trace-123',
       workspacePath: '/workspace',
       payload: { queryLength: 5 },
     })
 
     expect(invokeMock).not.toHaveBeenCalled()
     expect(warnSpy).toHaveBeenCalledWith(
-      '[frontend.search] search_workspace_blocks: Search failed',
-      expect.objectContaining({
-        workspacePath: '/workspace',
-        payload: { queryLength: 5 },
-      }),
+      '[2026-06-09 14:23:45.123] [WARN] [pid:browser/thread:main] [frontend.search] [trace-123] - Search failed {"event":"search_workspace_blocks","workspacePath":"/workspace","payload":{"queryLength":5}}',
     )
   })
 
@@ -42,6 +47,7 @@ describe('appLogger', () => {
       source: 'frontend.workspace',
       event: 'open_workspace',
       message: 'Failed to open workspace',
+      traceId: 'open-123',
       workspacePath: '/workspace',
       error: new Error('missing manifest'),
     })
@@ -52,6 +58,7 @@ describe('appLogger', () => {
         source: 'frontend.workspace',
         event: 'open_workspace',
         message: 'Failed to open workspace',
+        traceId: 'open-123',
         workspacePath: '/workspace',
         error: expect.objectContaining({
           kind: 'Error',

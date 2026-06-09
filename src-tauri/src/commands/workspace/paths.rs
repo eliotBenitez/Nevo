@@ -6,6 +6,10 @@ pub(crate) fn settings_path(workspace_path: &str) -> PathBuf {
     Path::new(workspace_path).join(".nevo/settings.json")
 }
 
+pub(crate) fn custom_css_path(workspace_path: &str) -> PathBuf {
+    Path::new(workspace_path).join(".nevo/custom.css")
+}
+
 pub(crate) fn plugins_dir_path(workspace_path: &str) -> PathBuf {
     Path::new(workspace_path).join(".nevo/plugins")
 }

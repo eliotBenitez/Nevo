@@ -184,8 +184,6 @@ export const useKanbanStore = defineStore('kanban', () => {
     properties?: Record<string, unknown>
     fields?: KanbanCardField[]
     columnOrder?: number
-    estimate?: string
-    sprint?: string
     progress?: number
     priority?: string
   }) {

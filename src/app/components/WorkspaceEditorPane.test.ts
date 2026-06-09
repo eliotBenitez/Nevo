@@ -297,6 +297,8 @@ const defaultSettings: WorkspaceSettings = {
     editorFontFamily: 'ui',
     editorFontSize: 16,
     editorLineWidth: 'medium',
+    customCssEnabled: false,
+    customCssFileName: 'custom.css',
   },
   editor: {
     spellCheck: true,

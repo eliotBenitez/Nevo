@@ -20,17 +20,13 @@ function resetStructure() {
   workspaceStore.updateSettings(draft => {
     draft.workspace.newNotePlacement = d.newNotePlacement
     draft.workspace.newFolderPlacement = d.newFolderPlacement
+    draft.workspace.showEmptyFolders = d.showEmptyFolders
   })
 }
 
 const placementOptions = ['current-folder', 'root'].map(v => ({
   value: v,
   label: opt('itemPlacement', v),
-}))
-
-const sortOptions = ['manual', 'title-asc', 'updated-desc'].map(v => ({
-  value: v,
-  label: opt('defaultChildSort', v),
 }))
 </script>
 
@@ -67,29 +63,13 @@ const sortOptions = ['manual', 'title-asc', 'updated-desc'].map(v => ({
 
       <div class="settings-row settings-row--border">
         <div class="row-copy">
-          <div class="row-title">{{ t('settings.workspace.defaultChildSort.title') }}</div>
-          <div class="row-sub">{{ t('settings.workspace.defaultChildSort.description') }}</div>
-        </div>
-        <div class="inline-actions">
-          <NvSelect
-            :model-value="settings.workspace.defaultChildSort"
-            :options="sortOptions"
-            disabled
-          />
-          <span class="status-chip status-chip--coming">{{ t('settings.state.coming') }}</span>
-        </div>
-      </div>
-
-      <div class="settings-row settings-row--border">
-        <div class="row-copy">
           <div class="row-title">{{ t('settings.workspace.showEmptyFolders.title') }}</div>
           <div class="row-sub">{{ t('settings.workspace.showEmptyFolders.description') }}</div>
         </div>
         <NvToggle
           :model-value="settings.workspace.showEmptyFolders"
-          disabled
+          @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.showEmptyFolders = v })"
         />
-        <span class="status-chip status-chip--coming">{{ t('settings.state.coming') }}</span>
       </div>
     </div>
   </div>

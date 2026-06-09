@@ -9,6 +9,8 @@ withDefaults(defineProps<{
   type?: 'button' | 'submit' | 'reset'
 }>(), {
   type: 'button',
+  variant: undefined,
+  size: undefined,
 })
 </script>
 

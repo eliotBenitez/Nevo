@@ -182,7 +182,8 @@ fn search_workspace_blocks_finds_matches_across_multiple_notes() {
     save_note(workspace_path.clone(), second_note.clone()).expect("save second note");
 
     let results =
-        search_workspace_blocks(workspace_path, "alpha".to_string()).expect("search blocks");
+        crate::commands::note::search::search_workspace_blocks_sync(workspace_path, "alpha".to_string())
+            .expect("search blocks");
 
     assert_eq!(results.len(), 2);
     assert_eq!(results[0].note_id, first_note.id);
@@ -214,7 +215,8 @@ fn search_workspace_blocks_returns_block_metadata_and_snippet() {
     save_note(workspace_path.clone(), note.clone()).expect("save note");
 
     let results =
-        search_workspace_blocks(workspace_path, "alpha".to_string()).expect("search blocks");
+        crate::commands::note::search::search_workspace_blocks_sync(workspace_path, "alpha".to_string())
+            .expect("search blocks");
     let first = results.first().expect("match");
 
     assert_eq!(first.note_title, "Snippet note");
@@ -246,7 +248,8 @@ fn search_workspace_blocks_skips_malformed_and_empty_note_content() {
     save_note(workspace_path.clone(), empty_note).expect("save empty note");
 
     let results =
-        search_workspace_blocks(workspace_path, "alpha".to_string()).expect("search blocks");
+        crate::commands::note::search::search_workspace_blocks_sync(workspace_path, "alpha".to_string())
+            .expect("search blocks");
 
     assert!(results.is_empty());
 }

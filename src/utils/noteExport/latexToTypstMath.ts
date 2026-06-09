@@ -95,7 +95,7 @@ function mapCommand(name: string): string {
 }
 
 function convert(latex: string): string {
-  let src = latex
+  const src = latex
     .replace(/\\(left|right|big|Big|bigg|Bigg|displaystyle|textstyle|scriptstyle)\s*/g, '')
     .replace(/\\begin\{[^}]*\}|\\end\{[^}]*\}/g, ' ')
     .replace(/\\[,;:!]/g, ' ')

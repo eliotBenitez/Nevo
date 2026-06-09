@@ -49,6 +49,8 @@ export interface WorkspaceBackend {
   saveManifest(manifest: WorkspaceManifest): Promise<void>
   loadSettings(): Promise<WorkspaceSettings>
   saveSettings(settings: WorkspaceSettings): Promise<void>
+  loadCustomCss(): Promise<string>
+  saveCustomCss(css: string): Promise<void>
   listPlugins(): Promise<PluginManifest[]>
   setPluginEnabled(pluginId: string, enabled: boolean): Promise<void>
   getDiagnostics(): Promise<WorkspaceDiagnostics>

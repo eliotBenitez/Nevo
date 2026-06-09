@@ -100,6 +100,12 @@ export function normalizeWorkspaceSettings(input: unknown): WorkspaceSettings {
     : legacy.editorLineWidth === 'narrow' || legacy.editorLineWidth === 'wide'
       ? legacy.editorLineWidth as typeof defaults.appearance.editorLineWidth
       : defaults.appearance.editorLineWidth
+  normalized.appearance.customCssEnabled = typeof appearance.customCssEnabled === 'boolean'
+    ? appearance.customCssEnabled
+    : defaults.appearance.customCssEnabled
+  normalized.appearance.customCssFileName = typeof appearance.customCssFileName === 'string' && appearance.customCssFileName.trim()
+    ? appearance.customCssFileName.trim()
+    : defaults.appearance.customCssFileName
 
   normalized.editor.spellCheck = typeof editor.spellCheck === 'boolean'
     ? editor.spellCheck
@@ -199,10 +205,11 @@ export function normalizeAppConfig(input: unknown): AppConfig {
     theme: raw.theme === 'dark' || raw.theme === 'light' || raw.theme === 'system' ? raw.theme : defaults.theme,
     locale: raw.locale === 'en' || raw.locale === 'ru' ? raw.locale : defaults.locale,
     recents: Array.isArray(raw.recents)
-      ? raw.recents.map((r: any) => {
-          if (!r.storageId && r.path?.startsWith('cloud:')) {
+      ? raw.recents.map((r: { path?: string; storageId?: string; kind?: string }) => {
+          const p = r.path
+          if (!r.storageId && p?.startsWith('cloud:')) {
             r.kind = 'cloud'
-            r.storageId = r.path.replace('cloud:', '')
+            r.storageId = p.replace('cloud:', '')
           }
           return r as RecentWorkspace
         })

@@ -188,7 +188,7 @@ fn parse_range(headers: &str, total: u64) -> Option<(u64, u64)> {
 async fn write_simple(stream: &mut TcpStream, status: &str) {
     let body = status.as_bytes();
     let resp = format!(
-        "HTTP/1.1 {}\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n",
+        "HTTP/1.1 {}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
         status,
         body.len()
     );
@@ -253,11 +253,22 @@ async fn handle(mut stream: TcpStream, token: String) {
         }
     };
 
-    // Only allow asset files; reject traversal.
-    if !path.contains("/.nevo/assets/") || path.contains("/..") {
+    // Only allow asset files; reject traversal. Canonicalize first so symlinks
+    // and `..` segments are resolved before we check that the real path is still
+    // inside a `.nevo/assets` directory.
+    let canonical = match std::fs::canonicalize(&path) {
+        Ok(p) => p,
+        Err(_) => {
+            write_simple(&mut stream, "404 Not Found").await;
+            return;
+        }
+    };
+    let canonical_str = canonical.to_string_lossy().replace('\\', "/");
+    if !canonical_str.contains("/.nevo/assets/") || !canonical.is_file() {
         write_simple(&mut stream, "403 Forbidden").await;
         return;
     }
+    let path = canonical_str;
 
     let mut file = match tokio::fs::File::open(&path).await {
         Ok(f) => f,
@@ -288,7 +299,6 @@ async fn handle(mut stream: TcpStream, token: String) {
          Content-Type: {ctype}\r\n\
          Accept-Ranges: bytes\r\n\
          Content-Length: {length}\r\n\
-         Access-Control-Allow-Origin: *\r\n\
          Cache-Control: no-store\r\n\
          Connection: close\r\n"
     );

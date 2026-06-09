@@ -120,6 +120,8 @@ export interface AppearanceSettings {
   editorFontFamily: EditorFontFamily
   editorFontSize: number
   editorLineWidth: EditorLineWidth
+  customCssEnabled: boolean
+  customCssFileName: string
 }
 
 export interface EditorSettings {

@@ -13,7 +13,7 @@ interface Props {
   maxCols?: number
 }
 
-const props = withDefaults(defineProps<Props>(), { maxCols: 3 })
+const props = withDefaults(defineProps<Props>(), { maxCols: 3, syncedAgo: undefined })
 const emit = defineEmits<{
   'open-full': []
   'open-card': [cardId: string]

@@ -117,6 +117,14 @@ pub struct AppearanceSettings {
     pub editor_font_size: u32,
     #[serde(rename = "editorLineWidth")]
     pub editor_line_width: String,
+    #[serde(rename = "customCssEnabled", default)]
+    pub custom_css_enabled: bool,
+    #[serde(rename = "customCssFileName", default = "default_custom_css_filename")]
+    pub custom_css_filename: String,
+}
+
+fn default_custom_css_filename() -> String {
+    "custom.css".to_string()
 }
 
 impl Default for AppearanceSettings {
@@ -130,6 +138,8 @@ impl Default for AppearanceSettings {
             editor_font_family: "ui".to_string(),
             editor_font_size: 16,
             editor_line_width: "medium".to_string(),
+            custom_css_enabled: false,
+            custom_css_filename: "custom.css".to_string(),
         }
     }
 }

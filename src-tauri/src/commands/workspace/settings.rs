@@ -218,6 +218,15 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
         .filter(|value| matches!(*value, "narrow" | "medium" | "wide"))
         .unwrap_or("medium")
         .to_string();
+    settings.appearance.custom_css_enabled = appearance
+        .get("customCssEnabled")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false);
+    settings.appearance.custom_css_filename = appearance
+        .get("customCssFileName")
+        .and_then(|value| value.as_str())
+        .unwrap_or("custom.css")
+        .to_string();
 
     let editor = object
         .get("editor")
@@ -662,6 +671,84 @@ pub fn save_workspace_settings(
             "schemaVersion": normalized.advanced.schema_version,
         })),
     );
+    Ok(())
+}
+
+#[tauri::command]
+pub fn load_custom_css(workspace_path: String) -> Result<String, String> {
+    let logger = crate::logging::logger();
+    let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
+        let _ = logger.error(
+            "tauri.workspace",
+            "load_custom_css",
+            "Failed to normalize workspace path",
+            LogContext::default().with_error(LogError {
+                kind: Some("path".to_string()),
+                message: message.clone(),
+                details: None,
+            }),
+        );
+        message
+    })?;
+    let workspace_path = workspace_path.to_string_lossy().into_owned();
+    let css_path = super::paths::custom_css_path(&workspace_path);
+    if !css_path.exists() {
+        return Ok(String::new());
+    }
+    std::fs::read_to_string(&css_path).map_err(|error| {
+        let message = error.to_string();
+        let _ = logger.error(
+            "tauri.workspace",
+            "load_custom_css",
+            "Failed to read custom CSS file",
+            workspace_error_context(&workspace_path, "io", message.clone()),
+        );
+        message
+    })
+}
+
+#[tauri::command]
+pub fn save_custom_css(workspace_path: String, css: String) -> Result<(), String> {
+    let logger = crate::logging::logger();
+    let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
+        let _ = logger.error(
+            "tauri.workspace",
+            "save_custom_css",
+            "Failed to normalize workspace path",
+            LogContext::default().with_error(LogError {
+                kind: Some("path".to_string()),
+                message: message.clone(),
+                details: None,
+            }),
+        );
+        message
+    })?;
+    let workspace_path = workspace_path.to_string_lossy().into_owned();
+    let css_path = super::paths::custom_css_path(&workspace_path);
+    
+    if let Some(parent) = css_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|error| {
+            let message = error.to_string();
+            let _ = logger.error(
+                "tauri.workspace",
+                "save_custom_css",
+                "Failed to create workspace directory",
+                workspace_error_context(&workspace_path, "io", message.clone()),
+            );
+            message
+        })?;
+    }
+
+    std::fs::write(&css_path, css).map_err(|error| {
+        let message = error.to_string();
+        let _ = logger.error(
+            "tauri.workspace",
+            "save_custom_css",
+            "Failed to write custom CSS file",
+            workspace_error_context(&workspace_path, "io", message.clone()),
+        );
+        message
+    })?;
     Ok(())
 }
 

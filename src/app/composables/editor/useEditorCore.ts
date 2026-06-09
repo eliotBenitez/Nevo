@@ -264,7 +264,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
 
   function executeStateCommand(command: Command): boolean {
     if (!core.editorView) return false
-    let applied = false
+    let applied: boolean
     try {
       applied = command(core.editorView.state, core.editorView.dispatch.bind(core.editorView))
     } catch (error) {
@@ -356,7 +356,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
       return true
     }
 
-    let applied = false
+    let applied: boolean
     try {
       applied = executeSlashItem(core.editorView, item, currentSlashState)
     } catch (error) {

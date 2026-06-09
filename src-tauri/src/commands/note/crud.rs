@@ -57,7 +57,7 @@ pub fn create_note(
         );
         message
     })?;
-    std::fs::write(&path, content).map_err(|error| {
+    crate::commands::path_utils::write_atomic(&path, content.as_bytes()).map_err(|error| {
         let message = error.to_string();
         let _ = logger.error(
             "tauri.note",
@@ -195,7 +195,7 @@ pub fn save_note(workspace_path: String, note: NoteDocument) -> Result<(), Strin
         );
         message
     })?;
-    std::fs::write(&path, content).map_err(|error| {
+    crate::commands::path_utils::write_atomic(&path, content.as_bytes()).map_err(|error| {
         let message = error.to_string();
         let _ = logger.error(
             "tauri.note",
@@ -424,7 +424,7 @@ pub fn move_note(
             );
             message
         })?;
-        std::fs::write(&path, new_content).map_err(|error| {
+        crate::commands::path_utils::write_atomic(&path, new_content.as_bytes()).map_err(|error| {
             let message = error.to_string();
             let _ = logger.error(
                 "tauri.note",

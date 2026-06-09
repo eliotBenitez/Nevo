@@ -1,5 +1,22 @@
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+/// Write `contents` to `path` atomically: write a temp file in the same
+/// directory, then rename it over the target. Rename is atomic on the same
+/// filesystem, so a crash mid-write cannot leave a half-written (corrupt) file.
+pub fn write_atomic(path: &Path, contents: &[u8]) -> std::io::Result<()> {
+    let dir = path.parent().unwrap_or_else(|| Path::new("."));
+    let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("tmp");
+    let tmp = dir.join(format!(".{}.{}.tmp", file_name, std::process::id()));
+    std::fs::write(&tmp, contents)?;
+    match std::fs::rename(&tmp, path) {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            let _ = std::fs::remove_file(&tmp);
+            Err(e)
+        }
+    }
+}
 
 fn detect_home_dir() -> Option<PathBuf> {
     if let Some(home) = env::var_os("HOME") {
@@ -52,4 +69,30 @@ pub fn normalize_workspace_path(workspace_path: &str) -> Result<PathBuf, String>
     }
 
     Ok(resolved)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::write_atomic;
+
+    #[test]
+    fn write_atomic_writes_and_overwrites_without_leftovers() {
+        let dir = std::env::temp_dir().join(format!("nevo_atomic_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("note.json");
+
+        write_atomic(&path, b"hello").unwrap();
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "hello");
+
+        write_atomic(&path, b"world").unwrap();
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "world");
+
+        let leftover_tmp = std::fs::read_dir(&dir)
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .any(|e| e.file_name().to_string_lossy().ends_with(".tmp"));
+        assert!(!leftover_tmp, "temp file should be renamed away");
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
 }

@@ -75,11 +75,11 @@ const turnIntoItems: TurnIntoItem[] = [
       <NvMenuSeparator />
     </template>
 
-    <NvMenuItem :icon="Copy"            :label="t('workspace.blockMenu.duplicate')"   @select="emit('duplicate')" />
-    <NvMenuItem :icon="ArrowUpToLine"   :label="t('workspace.blockMenu.insertAbove')" @select="emit('insertAbove')" />
+    <NvMenuItem :icon="Copy" :label="t('workspace.blockMenu.duplicate')" @select="emit('duplicate')" />
+    <NvMenuItem :icon="ArrowUpToLine" :label="t('workspace.blockMenu.insertAbove')" @select="emit('insertAbove')" />
     <NvMenuItem :icon="ArrowDownToLine" :label="t('workspace.blockMenu.insertBelow')" @select="emit('insertBelow')" />
-    <NvMenuItem :icon="Link"            :label="t('workspace.blockMenu.copyRef')"     @select="emit('copyRef')" />
+    <NvMenuItem :icon="Link" :label="t('workspace.blockMenu.copyRef')" @select="emit('copyRef')" />
     <NvMenuSeparator />
-    <NvMenuItem :icon="Trash2"          :label="t('workspace.blockMenu.delete')" danger @select="emit('delete')" />
+    <NvMenuItem :icon="Trash2" :label="t('workspace.blockMenu.delete')" danger @select="emit('delete')" />
   </div>
 </template>

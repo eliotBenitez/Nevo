@@ -316,8 +316,8 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
     <!-- Toolbar -->
     <KanbanToolbar
       v-model:view="activeView"
-      v-model:groupBy="groupBy"
-      v-model:searchQuery="searchQuery"
+      v-model:group-by="groupBy"
+      v-model:search-query="searchQuery"
       :filter-count="filterCount"
       :board-title="board.title"
       :card-count="boardCards.length"

@@ -19,7 +19,7 @@ type SimLink = SimulationLinkDatum<SimNode>
 export function useGraphSimulation(snapshot: Ref<GraphSnapshot | null>, width: Ref<number>, height: Ref<number>) {
   const simNodes = shallowRef<SimNode[]>([])
   let simulation: ReturnType<typeof forceSimulation<SimNode>> | null = null
-  let rafId = 0
+  const rafId = 0
 
   function buildNodes(nodes: GraphNode[], cx: number, cy: number): SimNode[] {
     const existing = new Map(simNodes.value.map(n => [n.id, n]))

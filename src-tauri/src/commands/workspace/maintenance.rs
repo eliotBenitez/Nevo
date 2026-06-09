@@ -153,8 +153,19 @@ fn collect_referenced_assets(workspace_path: &str) -> Result<HashSet<String>, St
     Ok(refs)
 }
 
+// Offload to a blocking thread: recursively scans assets/snapshots/collab and
+// computes directory sizes, which would otherwise freeze the UI thread on large
+// workspaces (see AGENTS.md "Platform Gotchas").
 #[tauri::command]
-pub fn get_workspace_diagnostics(workspace_path: String) -> Result<WorkspaceDiagnostics, String> {
+pub async fn get_workspace_diagnostics(
+    workspace_path: String,
+) -> Result<WorkspaceDiagnostics, String> {
+    tauri::async_runtime::spawn_blocking(move || get_workspace_diagnostics_sync(workspace_path))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+fn get_workspace_diagnostics_sync(workspace_path: String) -> Result<WorkspaceDiagnostics, String> {
     let logger = crate::logging::logger();
     let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
         let _ = logger.error(

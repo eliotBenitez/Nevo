@@ -90,10 +90,21 @@ fn export_note_with_assets(
             );
             message
         })?;
+        // Asset sources come from the note and must stay inside the workspace.
+        // Without this check a crafted note could copy arbitrary files (e.g.
+        // "../../.ssh/id_rsa") next to the exported document.
+        let canonical_ws = ws.canonicalize().unwrap_or_else(|_| ws.clone());
         for src in asset_srcs {
             let abs_src = ws.join(&src);
-            if let Some(filename) = abs_src.file_name() {
-                let _ = std::fs::copy(&abs_src, assets_dir.join(filename));
+            let canonical_src = match abs_src.canonicalize() {
+                Ok(p) => p,
+                Err(_) => continue,
+            };
+            if !canonical_src.starts_with(&canonical_ws) || !canonical_src.is_file() {
+                continue;
+            }
+            if let Some(filename) = canonical_src.file_name() {
+                let _ = std::fs::copy(&canonical_src, assets_dir.join(filename));
             }
         }
     }

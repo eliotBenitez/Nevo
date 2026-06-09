@@ -57,3 +57,38 @@ export function collectFolderIds(nodes: TreeNode[]): string[] {
   walk(nodes.filter((n): n is Extract<TreeNode, { kind: 'folder' }> => n.kind === 'folder').map((n) => n.meta))
   return ids
 }
+
+/** Recursively filters out empty folders from the tree if showEmpty is false. */
+export function filterTree(nodes: TreeNode[], showEmpty: boolean): TreeNode[] {
+  if (showEmpty) return nodes
+
+  function hasNotesOrSubnotes(folder: FolderMeta): boolean {
+    if (folder.notes.length > 0) return true
+    return folder.children.some(hasNotesOrSubnotes)
+  }
+
+  function filterFolders(folders: FolderMeta[]): FolderMeta[] {
+    return folders
+      .filter(hasNotesOrSubnotes)
+      .map(folder => ({
+        ...folder,
+        children: filterFolders(folder.children),
+      }))
+  }
+
+  const result: TreeNode[] = []
+  for (const node of nodes) {
+    if (node.kind === 'folder') {
+      if (hasNotesOrSubnotes(node.meta)) {
+        const clonedFolder = {
+          ...node.meta,
+          children: filterFolders(node.meta.children),
+        }
+        result.push({ kind: 'folder', meta: clonedFolder })
+      }
+    } else {
+      result.push(node)
+    }
+  }
+  return result
+}

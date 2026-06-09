@@ -13,7 +13,7 @@ defineOptions({ name: 'NvMenuItem' })
 const NvMenuItemSelf: Component = markRaw(getCurrentInstance()!.type as Component)
 
 interface Props {
-  icon?: any
+  icon?: Component
   label?: string
   shortcut?: string
   danger?: boolean

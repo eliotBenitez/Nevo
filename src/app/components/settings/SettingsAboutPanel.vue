@@ -30,7 +30,7 @@ async function openFolder(path: string | undefined) {
   try {
     await openPath(path)
   } catch (error) {
-    try { await revealItemInDir(path); return } catch {}
+    try { await revealItemInDir(path); return } catch { /* fall through to logging */ }
     await appLogger.warn({ source: 'frontend.settings', event: 'open_folder', message: 'Failed to open folder', workspacePath: activePath.value, error, payload: { path } })
   }
 }

@@ -17,6 +17,8 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false,
   placeholder: '0',
   size: 'sm',
+  min: undefined,
+  max: undefined,
 })
 
 const emit = defineEmits<{ 'update:modelValue': [value: number] }>()

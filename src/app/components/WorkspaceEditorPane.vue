@@ -71,6 +71,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   workspaceName: '',
+  pendingBlockTarget: undefined,
 })
 const emit = defineEmits<{
   'update:title': [value: string]
@@ -519,7 +520,7 @@ async function openFileAsset(src: string) {
     try {
       // First attempt using standard Tauri opener plugin
       await openPath(fullPath)
-    } catch (error) {
+    } catch {
       // If blocked by security scope (common in Tauri v2), fall back to custom Rust command
       await noteCommands.openFilePath(fullPath)
     }
@@ -1068,7 +1069,8 @@ const isFolderEmptyState = computed(() => props.containerKind === 'folder')
 
 const noteIcon = computed(() => normalizeIcon(props.note?.icon ?? '📄'))
 const noteCoverStyle = computed(() => {
-  cloudAssetRefreshToken.value
+  // Touch the refresh token so the cover style recomputes when cloud assets reload.
+  void cloudAssetRefreshToken.value
   const resolvedCover = resolveCoverSource(props.note?.cover, resolveWorkspaceAssetSrc)
   return resolveCoverStyle(resolvedCover ?? undefined)
 })
@@ -1346,13 +1348,13 @@ defineExpose({ editorRoot, flushPendingContent })
       />
       <ul class="note-embed-picker__list">
         <li
-          v-for="note in noteEmbedFilteredNotes"
-          :key="note.id"
+          v-for="embedNote in noteEmbedFilteredNotes"
+          :key="embedNote.id"
           class="note-embed-picker__item"
-          @mousedown.prevent="selectNoteForEmbed(note.id, note.title, note.icon)"
+          @mousedown.prevent="selectNoteForEmbed(embedNote.id, embedNote.title, embedNote.icon)"
         >
-          <NvNoteIcon :value="note.icon || '📄'" :size="16" class="note-embed-picker__icon" />
-          <span class="note-embed-picker__title">{{ note.title || $t('noteEmbed.untitled') }}</span>
+          <NvNoteIcon :value="embedNote.icon || '📄'" :size="16" class="note-embed-picker__icon" />
+          <span class="note-embed-picker__title">{{ embedNote.title || $t('noteEmbed.untitled') }}</span>
         </li>
         <li v-if="!noteEmbedFilteredNotes.length" class="note-embed-picker__empty">{{ $t('noteEmbed.noNotesFound') }}</li>
       </ul>

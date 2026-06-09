@@ -11,6 +11,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   modelValue: false,
   size: 'sm',
+  label: undefined,
 })
 
 const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
