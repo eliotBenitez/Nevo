@@ -365,6 +365,10 @@
   font-size: 12px;
 }
 
+.about-actions {
+  margin-top: 20px;
+}
+
 .oss-card {
   padding: 16px 20px;
   border-radius: 12px;

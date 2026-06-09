@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, History, Menu, PanelLeft, Settings2, X } from 'lucide-vue-next'
@@ -14,6 +14,7 @@ import WorkspaceTrashBin from './components/WorkspaceTrashBin.vue'
 import PdfPreviewModal from './components/PdfPreviewModal.vue'
 import WorkspaceSettingsModal from './components/WorkspaceSettingsModal.vue'
 import WorkspaceRenameModal from './components/WorkspaceRenameModal.vue'
+import UpdateDialog from './components/UpdateDialog.vue'
 import TemplatePickerModal from './components/templates/TemplatePickerModal.vue'
 import TitleBarSearch from './components/TitleBarSearch.vue'
 import TitleBarTabs from './components/TitleBarTabs.vue'
@@ -39,6 +40,7 @@ import { buildWorkspaceSettingsSearchItems } from './search/settings'
 import { useNoteExport } from '../composables/useNoteExport'
 import { useMarkdownImport } from '../composables/useMarkdownImport'
 import { useDeviceLayout } from '../composables/useDeviceLayout'
+import { useAppUpdater } from '../composables/useAppUpdater'
 import { templateCommands } from '../tauri/commands'
 
 const router = useRouter()
@@ -53,6 +55,14 @@ const noteStore = useNoteStore()
 const themeStore = useThemeStore()
 const { exportAsMarkdown, exportAsHtml, exportAsTypst, exportAsPdf, pdfPreview, closePdfPreview } = useNoteExport()
 const { importMarkdownFile, importMarkdownIntoNote } = useMarkdownImport()
+
+const appUpdater = useAppUpdater()
+
+// Silently check for updates once the workspace shell mounts; the dialog only
+// appears when a newer version is actually available.
+onMounted(() => {
+  void appUpdater.check({ silent: true })
+})
 
 const { manifest, settings, appConfig, plugins } = storeToRefs(workspaceStore)
 const { tree, folderById } = storeToRefs(treeStore)
@@ -469,6 +479,8 @@ function consumePendingBlockTarget() { pendingBlockTarget.value = null }
     @submit="submitRename"
     @close="closeRenameModal"
   />
+
+  <UpdateDialog />
 </template>
 
 <style scoped>

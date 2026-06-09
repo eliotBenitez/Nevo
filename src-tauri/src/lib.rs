@@ -83,6 +83,10 @@ pub fn run() {
             app.handle()
                 .plugin(tauri_plugin_global_shortcut::Builder::new().build())?;
 
+            #[cfg(desktop)]
+            app.handle()
+                .plugin(tauri_plugin_updater::Builder::new().build())?;
+
             // Start the localhost media streaming server (for <video> playback).
             if let Err(error) = media_server::ensure_started() {
                 let _ = logger.error(
@@ -101,6 +105,7 @@ pub fn run() {
         })
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
             logging::log_frontend_event,
             auth::start_oauth_loopback,

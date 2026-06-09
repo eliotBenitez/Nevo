@@ -1,4 +1,21 @@
 {
+  "updater": {
+    "availableTitle": "Version {version} available",
+    "whatsNew": "What's new",
+    "update": "Update",
+    "later": "Later",
+    "downloading": "Downloading… {percent}%",
+    "readyTitle": "Update installed",
+    "readyBody": "Restart the app to apply the update.",
+    "restart": "Restart",
+    "upToDateTitle": "You're up to date",
+    "upToDateBody": "You have the latest version of Nevo.",
+    "errorTitle": "Update failed",
+    "errorBody": "Couldn't check or install the update. Please try again later.",
+    "retry": "Retry",
+    "close": "Close",
+    "checking": "Checking…"
+  },
   "onboarding": {
     "welcome": {
       "title": "Welcome to",
@@ -1045,7 +1062,7 @@
         "acknowledgements": "Acknowledgements"
       },
       "openSourceTitle": "Built on open source",
-      "openSourceBody": "Tauri, Rust, ProseMirror, and the local workspace files on your disk. Updater and release note surfaces are still catalog-only in v1."
+      "openSourceBody": "Tauri, Rust, ProseMirror, and the local workspace files on your disk. The app checks for updates and installs them once you confirm."
     },
     "feedback": {
       "workspaceIdentitySaved": "Workspace identity saved.",

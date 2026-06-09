@@ -2,8 +2,10 @@
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { openPath, openUrl, revealItemInDir } from '@tauri-apps/plugin-opener'
+import { computed } from 'vue'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { useDeviceLayout } from '../../../composables/useDeviceLayout'
+import { useAppUpdater } from '../../../composables/useAppUpdater'
 import { appLogger } from '../../../utils/logger'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 
@@ -11,6 +13,13 @@ const { t } = useI18n()
 const { runtime } = useDeviceLayout()
 const workspaceStore = useWorkspaceStore()
 const { manifest, appMetadata, diagnostics, activePath } = storeToRefs(workspaceStore)
+
+const { status: updaterStatus, check: checkForUpdates } = useAppUpdater()
+const isChecking = computed(() => updaterStatus.value === 'checking')
+
+async function onCheckUpdates() {
+  await checkForUpdates({ silent: false })
+}
 
 async function revealPath(path: string | undefined) {
   if (!path) return
@@ -72,7 +81,7 @@ async function openExternalUrl(url: string) {
           </div>
 
           <div class="about-actions">
-            <NvButton variant="primary" disabled>{{ t('settings.about.actions.checkUpdates') }}</NvButton>
+            <NvButton variant="primary" :loading="isChecking" :disabled="isChecking" @click="onCheckUpdates">{{ isChecking ? t('updater.checking') : t('settings.about.actions.checkUpdates') }}</NvButton>
             <NvButton @click="revealPath(appMetadata?.configPath)">{{ t('settings.about.actions.revealConfig') }}</NvButton>
             <NvButton @click="openFolder(appMetadata?.appDataDir)">{{ t('settings.about.actions.openUserFolder') }}</NvButton>
             <NvButton @click="openExternalUrl('https://tauri.app')">{{ t('settings.about.actions.acknowledgements') }}</NvButton>
