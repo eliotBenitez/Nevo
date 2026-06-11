@@ -77,10 +77,11 @@ fn empty_doc() -> Value {
     serde_json::json!({ "type": "doc", "content": [] })
 }
 
-fn note_path(workspace_path: &str, note_id: &str) -> std::path::PathBuf {
-    Path::new(workspace_path)
+fn note_path(workspace_path: &str, note_id: &str) -> Result<std::path::PathBuf, String> {
+    crate::commands::path_utils::validate_id(note_id)?;
+    Ok(Path::new(workspace_path)
         .join("notes")
-        .join(format!("note-{}.nevo", note_id))
+        .join(format!("note-{}.nevo", note_id)))
 }
 
 fn assets_dir_path(workspace_path: &str) -> std::path::PathBuf {

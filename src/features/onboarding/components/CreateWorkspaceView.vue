@@ -303,14 +303,14 @@ async function create() {
   display: flex;
   gap: 0.4rem;
   padding: 0.3rem;
-  border-radius: 14px;
+  border-radius: calc(14px * var(--radius-scale, 1));
   background: var(--glass-1);
   border: 1px solid var(--line-1);
 }
 .storage-type__btn {
   flex: 1;
   padding: 0.45rem 1rem;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--radius-scale, 1));
   border: 1px solid transparent;
   background: transparent;
   color: var(--text-3);

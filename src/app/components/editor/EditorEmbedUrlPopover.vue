@@ -117,7 +117,7 @@ async function handleSubmit() {
   padding: 8px 12px;
   font-size: 14px;
   border: 1px solid var(--border-2, color-mix(in oklab, var(--accent) 20%, transparent));
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background: var(--surface-1);
   color: var(--text-1);
   outline: none;

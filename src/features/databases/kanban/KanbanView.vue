@@ -625,7 +625,7 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
   width: 210px;
   flex-shrink: 0;
   padding: 9px 12px;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   border: 1px dashed var(--line-strong, var(--border-muted));
   color: var(--text-4, var(--text-muted));
   font-size: 12px;
@@ -663,7 +663,7 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
 .kb-view__empty-icon {
   width: 44px;
   height: 44px;
-  border-radius: 11px;
+  border-radius: calc(11px * var(--radius-scale, 1));
   background: var(--accent-soft, oklch(0.66 0.10 258 / 0.12));
   color: var(--accent);
   display: grid;

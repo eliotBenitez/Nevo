@@ -259,7 +259,7 @@ function getStatusOption(card: KanbanCard) {
   gap: 6px;
   height: 30px;
   padding: 0 12px;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   border: 1px solid var(--line-2, var(--border-subtle));
   background: var(--glass-3, var(--surface-1));
   color: var(--text-2, var(--text-secondary));
@@ -299,7 +299,7 @@ function getStatusOption(card: KanbanCard) {
   border-collapse: collapse;
   background: var(--glass-2, var(--surface-1));
   border: 1px solid var(--line-2, var(--border-subtle));
-  border-radius: 12px;
+  border-radius: calc(12px * var(--radius-scale, 1));
   overflow: hidden;
 }
 
@@ -454,7 +454,7 @@ function getStatusOption(card: KanbanCard) {
   width: 1.5px;
   height: 14px;
   background: var(--accent);
-  border-radius: 1px;
+  border-radius: calc(1px * var(--radius-scale, 1));
   animation: kb-blink 1s step-start infinite;
 }
 

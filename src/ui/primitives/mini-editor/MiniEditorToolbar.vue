@@ -121,7 +121,7 @@ const emit = defineEmits<{
   align-items: center;
   gap: 1px;
   padding: 3px;
-  border-radius: 9px;
+  border-radius: calc(9px * var(--radius-scale, 1));
   border: 1px solid var(--line-2, var(--border-subtle));
   background: var(--glass-2, var(--surface-1));
   backdrop-filter: blur(18px) saturate(160%);
@@ -133,7 +133,7 @@ const emit = defineEmits<{
   place-items: center;
   width: 26px;
   height: 26px;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   border: none;
   background: none;
   color: var(--text-3, var(--text-secondary));

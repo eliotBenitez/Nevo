@@ -213,7 +213,7 @@ const selectedTemplate = ref<string | null>(null)
   flex-direction: column;
   background: var(--glass-3, var(--surface-1));
   border: 1px solid var(--line-strong, var(--border-subtle));
-  border-radius: 14px;
+  border-radius: calc(14px * var(--radius-scale, 1));
   box-shadow: 0 32px 80px -12px oklch(0 0 0 / 0.5);
   overflow: hidden;
   animation: ka-in 0.16s ease;
@@ -262,7 +262,7 @@ const selectedTemplate = ref<string | null>(null)
   gap: 8px;
   background: var(--glass-2, var(--surface-1));
   border: 1px solid var(--line-2, var(--border-subtle));
-  border-radius: 12px;
+  border-radius: calc(12px * var(--radius-scale, 1));
   overflow: hidden;
 }
 
@@ -421,7 +421,7 @@ const selectedTemplate = ref<string | null>(null)
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 9px;
+  border-radius: calc(9px * var(--radius-scale, 1));
   background: var(--glass-3, var(--surface-2));
   border: 1px solid var(--line-1, var(--border-subtle));
   cursor: pointer;
@@ -438,7 +438,7 @@ const selectedTemplate = ref<string | null>(null)
 .ka-template__icon {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   background: var(--hover-strong, var(--surface-2));
   display: grid;
   place-items: center;
@@ -472,7 +472,7 @@ const selectedTemplate = ref<string | null>(null)
   color: var(--text-4, var(--text-muted));
   background: var(--hover-strong, var(--surface-2));
   border: 1px solid var(--line-2, var(--border-subtle));
-  border-radius: 4px;
+  border-radius: calc(4px * var(--radius-scale, 1));
   padding: 1px 4px;
   font-family: var(--font-mono, monospace);
   flex-shrink: 0;

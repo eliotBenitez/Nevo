@@ -2,11 +2,12 @@ use std::path::Path;
 
 use crate::commands::path_utils::normalize_workspace_path;
 
-fn yjs_state_path(workspace_path: &str, note_id: &str) -> std::path::PathBuf {
-    Path::new(workspace_path)
+fn yjs_state_path(workspace_path: &str, note_id: &str) -> Result<std::path::PathBuf, String> {
+    crate::commands::path_utils::validate_id(note_id)?;
+    Ok(Path::new(workspace_path)
         .join(".nevo")
         .join("collab")
-        .join(format!("{}.yjs", note_id))
+        .join(format!("{}.yjs", note_id)))
 }
 
 #[tauri::command]
@@ -19,7 +20,7 @@ pub fn save_yjs_state(
         .map_err(|e| e.to_string())?
         .to_string_lossy()
         .into_owned();
-    let path = yjs_state_path(&workspace_path, &note_id);
+    let path = yjs_state_path(&workspace_path, &note_id)?;
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
@@ -32,7 +33,7 @@ pub fn load_yjs_state(workspace_path: String, note_id: String) -> Result<Vec<u8>
         .map_err(|e| e.to_string())?
         .to_string_lossy()
         .into_owned();
-    let path = yjs_state_path(&workspace_path, &note_id);
+    let path = yjs_state_path(&workspace_path, &note_id)?;
     if !path.exists() {
         return Ok(Vec::new());
     }

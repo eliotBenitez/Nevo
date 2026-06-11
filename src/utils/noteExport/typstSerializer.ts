@@ -1,4 +1,6 @@
 import type { BlockNode, NoteDocument } from '../../types/note'
+import { getPluginNodeSerializer } from '../../editor-core/plugin-host/active-serialization'
+import type { NevoSerializableNode } from '../../types/editor-plugin'
 import {
   DEFAULT_PDF_OPTIONS,
   FALLBACK_FONT,
@@ -205,6 +207,12 @@ function nodeToTypst(node: BlockNode, ctx: SerializeCtx): string {
     case 'hard_break':
       return '#linebreak()'
     default: {
+      const pluginSerializer = getPluginNodeSerializer(node.type)?.typst
+      if (pluginSerializer) {
+        return pluginSerializer(node as NevoSerializableNode, {
+          serializeChildren: () => blockChildren(node, ctx),
+        })
+      }
       const text = inlineContent(node, ctx)
       if (text) return text
       return blockChildren(node, ctx)

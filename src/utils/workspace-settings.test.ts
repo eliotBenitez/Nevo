@@ -66,6 +66,10 @@ describe('normalizeWorkspaceSettings', () => {
     expect(settings.hotkeys.bindings.find(binding => binding.commandId === 'core.math.inline.insert')?.defaultChord).toBe('Ctrl+M')
     expect(settings.hotkeys.bindings.find(binding => binding.commandId === 'workspace.save-note')?.defaultChord).toBe('Ctrl+S')
     expect(settings.hotkeys.bindings.find(binding => binding.commandId === 'workspace.toggle-sidebar')?.defaultChord).toBe('Ctrl+\\')
+    expect(settings.hotkeys.bindings.find(binding => binding.commandId === 'workspace.toggle-right-panel')?.defaultChord).toBe('Ctrl+Alt+\\')
+    expect(settings.hotkeys.bindings.find(binding => binding.commandId === 'workspace.open-graph')?.defaultChord).toBe('Ctrl+Alt+G')
+    expect(settings.hotkeys.bindings.find(binding => binding.commandId === 'workspace.open-history')?.defaultChord).toBe('Ctrl+Alt+H')
+    expect(settings.hotkeys.bindings.find(binding => binding.commandId === 'workspace.open-trash')?.defaultChord).toBe('Ctrl+Alt+T')
   })
 
   it('preserves custom note template ids and normalizes templates feature flag', () => {

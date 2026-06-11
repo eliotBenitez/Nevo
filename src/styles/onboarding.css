@@ -163,13 +163,13 @@
   background: var(--glass-3);
   border: 1.5px solid var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
-  border-radius: 9px;
+  border-radius: calc(9px * var(--radius-scale, 1));
 }
 
 .name-icon {
   width: 24px;
   height: 24px;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   font-family: var(--font-serif);
   font-style: italic;
   font-size: 14px;
@@ -198,7 +198,7 @@
 .glyph-btn {
   width: 28px;
   height: 28px;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   display: grid;
   place-items: center;
   background: transparent;
@@ -231,7 +231,7 @@
   padding: 10px 12px;
   background: var(--hover);
   border: 1px solid var(--line-2);
-  border-radius: 9px;
+  border-radius: calc(9px * var(--radius-scale, 1));
 }
 .location-icon { color: var(--text-3); flex-shrink: 0; }
 .location-base { font-size: 13px; color: var(--text-2); font-family: var(--font-mono); }
@@ -245,7 +245,7 @@
 
 .template-card {
   padding: 12px 12px 10px;
-  border-radius: 9px;
+  border-radius: calc(9px * var(--radius-scale, 1));
   background: var(--glass-3);
   border: 1px solid var(--line-2);
   cursor: pointer;
@@ -409,7 +409,7 @@
   padding: 0 12px;
   background: var(--hover);
   border: 1px solid var(--line-2);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
 }
 .open-root .search-icon { color: var(--text-3); flex-shrink: 0; }
 .open-root .search-input {
@@ -435,7 +435,7 @@
   backdrop-filter: blur(24px) saturate(150%);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
   border: 1px solid var(--line-2);
-  border-radius: 14px;
+  border-radius: calc(14px * var(--radius-scale, 1));
   overflow: hidden;
   box-shadow: var(--shadow-1);
 }
@@ -457,7 +457,7 @@
 .ws-icon {
   width: 36px;
   height: 36px;
-  border-radius: 9px;
+  border-radius: calc(9px * var(--radius-scale, 1));
   flex: 0 0 auto;
   font-size: 17px;
   font-weight: 600;
@@ -492,7 +492,7 @@
 .drop-target {
   position: absolute;
   inset: 20px;
-  border-radius: 18px;
+  border-radius: calc(18px * var(--radius-scale, 1));
   border: 2px dashed var(--accent);
   background: oklch(0.66 0.10 258 / 0.06);
   box-shadow: inset 0 0 40px oklch(0.66 0.10 258 / 0.15);
@@ -509,13 +509,13 @@
   background: var(--glass-3);
   backdrop-filter: blur(32px) saturate(160%);
   border: 1px solid oklch(0.66 0.10 258 / 0.4);
-  border-radius: 14px;
+  border-radius: calc(14px * var(--radius-scale, 1));
   box-shadow: var(--shadow-pop), 0 0 0 4px oklch(0.66 0.10 258 / 0.15);
 }
 .drop-icon {
   width: 56px;
   height: 56px;
-  border-radius: 14px;
+  border-radius: calc(14px * var(--radius-scale, 1));
   background: oklch(0.66 0.10 258 / 0.14);
   color: var(--accent);
   display: grid;
@@ -710,7 +710,7 @@
   background: var(--glass-3);
   backdrop-filter: blur(28px) saturate(160%);
   border: 1px solid var(--line-2);
-  border-radius: 12px;
+  border-radius: calc(12px * var(--radius-scale, 1));
   cursor: pointer;
   text-align: left;
   box-shadow: var(--shadow-1);
@@ -737,7 +737,7 @@
 .action-icon {
   width: 34px;
   height: 34px;
-  border-radius: 9px;
+  border-radius: calc(9px * var(--radius-scale, 1));
   background: var(--hover-strong);
   color: var(--text-2);
   display: grid;
@@ -786,7 +786,7 @@
   font-family: var(--font-mono);
   background: transparent;
   border: 1px solid var(--line-2);
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   padding: 3px 8px;
   cursor: pointer;
   transition: color 0.12s, border-color 0.12s, background 0.12s;

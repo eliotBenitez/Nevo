@@ -24,6 +24,10 @@ export const DEFAULT_HOTKEY_BINDINGS: HotkeyBinding[] = [
   { commandId: 'workspace.save-note', label: 'workspace.save-note', defaultChord: 'Ctrl+S', customChord: null, scope: 'workspace' },
   { commandId: 'workspace.search', label: 'workspace.search', defaultChord: 'Ctrl+P', customChord: null, scope: 'workspace' },
   { commandId: 'workspace.toggle-sidebar', label: 'workspace.toggle-sidebar', defaultChord: 'Ctrl+\\', customChord: null, scope: 'workspace' },
+  { commandId: 'workspace.toggle-right-panel', label: 'workspace.toggle-right-panel', defaultChord: 'Ctrl+Alt+\\', customChord: null, scope: 'workspace' },
+  { commandId: 'workspace.open-graph', label: 'workspace.open-graph', defaultChord: 'Ctrl+Alt+G', customChord: null, scope: 'workspace' },
+  { commandId: 'workspace.open-history', label: 'workspace.open-history', defaultChord: 'Ctrl+Alt+H', customChord: null, scope: 'workspace' },
+  { commandId: 'workspace.open-trash', label: 'workspace.open-trash', defaultChord: 'Ctrl+Alt+T', customChord: null, scope: 'workspace' },
   { commandId: 'app.open-settings', label: 'app.open-settings', defaultChord: 'Ctrl+,', customChord: null, scope: 'app' },
 ]
 
@@ -65,6 +69,10 @@ export function createDefaultAppConfig(): AppConfig {
     scrollbarVisibility: 'hidden',
     focusRingStyle: 'accent',
     windowChromeStyle: 'default',
+    interfaceZoom: 100,
+    reduceTransparency: false,
+    interfaceRoundness: 'default',
+    themeSchedule: { enabled: false, lightTime: '07:00', darkTime: '20:00' },
   }
 }
 
@@ -107,7 +115,7 @@ export function createDefaultWorkspaceSettings(): WorkspaceSettings {
     },
     workspace: {
       defaultLandingView: 'editor',
-      showBacklinksByDefault: false,
+      showBacklinksByDefault: true,
       showGraphLabels: false,
       folderCreateBehavior: 'current-folder',
       rootNotesVisible: true,

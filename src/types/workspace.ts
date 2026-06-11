@@ -10,6 +10,13 @@ export type ReducedMotionMode = 'system' | 'reduce' | 'full'
 export type ScrollbarVisibility = 'hidden' | 'thin' | 'system'
 export type FocusRingStyle = 'accent' | 'high-contrast'
 export type WindowChromeStyle = 'default' | 'immersive' | 'minimal'
+export type InterfaceRoundness = 'sharp' | 'default' | 'soft'
+
+export interface ThemeSchedule {
+  enabled: boolean
+  lightTime: string
+  darkTime: string
+}
 export type BackgroundScene = 'aurora' | 'paper' | 'studio' | 'plain'
 export type SurfaceStyle = 'glass' | 'solid' | 'tinted'
 export type ContrastMode = 'soft' | 'balanced' | 'high'
@@ -262,6 +269,10 @@ export interface AppConfig {
   scrollbarVisibility: ScrollbarVisibility
   focusRingStyle: FocusRingStyle
   windowChromeStyle: WindowChromeStyle
+  interfaceZoom: number
+  reduceTransparency: boolean
+  interfaceRoundness: InterfaceRoundness
+  themeSchedule: ThemeSchedule
 }
 
 export interface WorkspaceDiagnostics {

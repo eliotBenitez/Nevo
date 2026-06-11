@@ -127,4 +127,21 @@ describe('slash plugin state', () => {
     expect(reopenedState.query).toBe('h1')
     expect(reopenedState.itemIds[0]).toBe('h1')
   })
+
+  it('groups items by categories in the correct order', () => {
+    const state = createSlashState('/')
+    const slashState = getSlashMenuState(state)
+    const items = slashState.itemIds
+
+    const indexH1 = items.indexOf('h1')
+    const indexUl = items.indexOf('ul')
+    const indexCode = items.indexOf('code')
+
+    if (indexH1 !== -1 && indexUl !== -1) {
+      expect(indexH1).toBeLessThan(indexUl)
+    }
+    if (indexUl !== -1 && indexCode !== -1) {
+      expect(indexUl).toBeLessThan(indexCode)
+    }
+  })
 })

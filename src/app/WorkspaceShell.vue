@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, History, Menu, PanelLeft, Settings2, X } from 'lucide-vue-next'
+import { ArrowLeft, History, Menu, PanelLeft, PanelRight, Settings2, X } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import WindowControls from '../ui/primitives/WindowControls.vue'
 import WorkspaceRightPanel from './components/WorkspaceRightPanel.vue'
@@ -295,7 +295,7 @@ const { renameModal, onTreeAction, handleRequestExport, submitRename, closeRenam
   { openHistory, runSearch: async (seed) => { await runWorkspaceSearch(seed) }, navigateToWorkspaceRoot: async () => { await router.push('/workspace') }, exportAsMarkdown, exportAsHtml, exportAsTypst, exportAsPdf },
 )
 
-useWorkspaceKeymap(settings, { createNote, createFolder, saveNote: flushSave, runSearch: () => runWorkspaceSearch(), toggleSidebar: () => uiStore.toggleSidebar(), openSettings: () => openSettings() })
+useWorkspaceKeymap(settings, { createNote, createFolder, saveNote: flushSave, runSearch: () => runWorkspaceSearch(), toggleSidebar: () => uiStore.toggleSidebar(), toggleRightPanel: () => uiStore.toggleRightPanel(), openGraph: () => openGraph(), openHistory: () => openHistory(), openTrash: () => openTrash(), openSettings: () => openSettings() })
 
 watch(manifest, (workspace) => {
   if (!workspace) { router.replace('/onboarding'); return }
@@ -345,9 +345,6 @@ watch(activeNoteId, async (noteId) => {
   if (!noteId) { noteStore.clearNote(); return }
   try {
     await noteStore.loadNote(noteId)
-    if (settings.value.workspace.showBacklinksByDefault) {
-      rightPanelOpen.value = true
-    }
   } catch { router.replace('/workspace') }
 }, { immediate: true })
 
@@ -374,6 +371,26 @@ function handleTitleBarSearchSelect(result: TitleBarSearchResult) {
   openNote(result.noteId)
 }
 function consumePendingBlockTarget() { pendingBlockTarget.value = null }
+
+function onTrashWindowKeydown(event: KeyboardEvent) {
+  if (!trashModalOpen.value || event.key !== 'Escape') return
+  event.preventDefault()
+  event.stopPropagation()
+  trashModalOpen.value = false
+}
+
+function toggleTrashEscapeListener(enabled: boolean) {
+  window.removeEventListener('keydown', onTrashWindowKeydown, true)
+  if (enabled) window.addEventListener('keydown', onTrashWindowKeydown, true)
+}
+
+watch(trashModalOpen, (open) => {
+  toggleTrashEscapeListener(open)
+})
+
+onBeforeUnmount(() => {
+  toggleTrashEscapeListener(false)
+})
 </script>
 
 <template>
@@ -391,6 +408,16 @@ function consumePendingBlockTarget() { pendingBlockTarget.value = null }
           <button type="button" class="nv-btn titlebar-action-btn" :title="t('workspace.system.history')" @click="openHistory()"><History :size="13" /><span class="titlebar-action-label">{{ t('workspace.system.history') }}</span></button>
           <button type="button" class="nv-btn titlebar-action-btn" :title="t('workspace.system.settings')" @click="openSettings()"><Settings2 :size="13" /><span class="titlebar-action-label">{{ t('workspace.system.settings') }}</span></button>
         </div>
+        <button
+          v-if="!isGraphView && !isKanbanView && !useDrawerNavigation"
+          type="button"
+          class="nv-btn workspace-sidebar-toggle"
+          :title="t('workspace.toggleRightPanel')"
+          :class="{ 'workspace-sidebar-toggle--collapsed': !rightPanelOpen }"
+          @click="uiStore.toggleRightPanel()"
+        >
+          <PanelRight :size="15" />
+        </button>
         <TitleBarSearch ref="titleBarSearchRef" :manifest="manifest" :workspace-path="workspaceStore.activePath" :settings-items="settingsSearchItems" :search-shortcut="workspaceSearchShortcut" @select-result="handleTitleBarSearchSelect" />
       </div>
       <WindowControls v-if="runtime.supportsWindowControls" />

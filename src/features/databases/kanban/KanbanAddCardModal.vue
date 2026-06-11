@@ -116,7 +116,7 @@ function onKeydown(e: KeyboardEvent) {
   max-width: 100%;
   background: var(--glass-3, var(--surface-1));
   border: 1px solid var(--line-strong, var(--border-subtle));
-  border-radius: 12px;
+  border-radius: calc(12px * var(--radius-scale, 1));
   box-shadow: 0 24px 64px -12px oklch(0 0 0 / 0.45);
   display: flex;
   flex-direction: column;
@@ -149,7 +149,7 @@ function onKeydown(e: KeyboardEvent) {
   place-items: center;
   width: 22px;
   height: 22px;
-  border-radius: 5px;
+  border-radius: calc(5px * var(--radius-scale, 1));
   border: none;
   background: none;
   color: var(--text-3, var(--text-secondary));
@@ -169,7 +169,7 @@ function onKeydown(e: KeyboardEvent) {
   width: 100%;
   height: 36px;
   padding: 0 10px;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   border: 1px solid var(--line-2, var(--border-subtle));
   background: var(--glass-3, var(--surface-1));
   color: var(--text-1, var(--text-primary));
@@ -210,7 +210,7 @@ function onKeydown(e: KeyboardEvent) {
   gap: 5px;
   height: 30px;
   padding: 0 12px;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   border: 1px solid var(--line-2, var(--border-subtle));
   background: var(--glass-3, var(--surface-1));
   color: var(--text-2, var(--text-secondary));

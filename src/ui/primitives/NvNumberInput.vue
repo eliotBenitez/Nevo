@@ -104,7 +104,7 @@ function onKeydown(event: KeyboardEvent) {
 .nni-root {
   display: inline-flex;
   align-items: center;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   border: 1px solid var(--line-2);
   background: var(--glass-3, var(--surface-1));
   transition: border-color 0.12s, box-shadow 0.12s;

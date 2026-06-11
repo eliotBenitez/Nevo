@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { X } from 'lucide-vue-next'
 import type { NoteDocument } from '../../types/note'
@@ -28,7 +28,26 @@ const { t } = useI18n()
 
 const dialogRef = ref<HTMLElement | null>(null)
 const { activate, deactivate } = useFocusTrap(dialogRef, computed(() => props.open))
-watch(() => props.open, (open) => { if (open) nextTick(activate); else deactivate() })
+
+function onWindowKeydown(event: KeyboardEvent) {
+  if (!props.open || event.key !== 'Escape') return
+  event.preventDefault()
+  event.stopPropagation()
+  emit('close')
+}
+
+function toggleEscapeListener(enabled: boolean) {
+  window.removeEventListener('keydown', onWindowKeydown, true)
+  if (enabled) window.addEventListener('keydown', onWindowKeydown, true)
+}
+
+watch(() => props.open, (open) => {
+  toggleEscapeListener(open)
+  if (open) nextTick(activate)
+  else deactivate()
+})
+
+onBeforeUnmount(() => { toggleEscapeListener(false) })
 
 const {
   searchQuery, selectedNoteId, selectedSnapshotId, paneMode,

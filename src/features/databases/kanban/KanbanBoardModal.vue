@@ -156,7 +156,7 @@ function onKeydown(e: KeyboardEvent) {
   width: 360px;
   background: var(--surface-1);
   border: 1px solid var(--border-subtle);
-  border-radius: 12px;
+  border-radius: calc(12px * var(--radius-scale, 1));
   box-shadow: 0 16px 48px var(--shadow-strong);
   overflow: hidden;
   animation: kb-bm-in 0.15s ease;
@@ -205,7 +205,7 @@ function onKeydown(e: KeyboardEvent) {
 .kb-bm__input {
   background: var(--surface-2);
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   padding: 8px 10px;
   font-size: 13px;
   color: var(--text-primary);
@@ -226,7 +226,7 @@ function onKeydown(e: KeyboardEvent) {
 .kb-bm__icon-btn {
   width: 32px;
   height: 32px;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   border: 1px solid transparent;
   background: var(--surface-2);
   font-size: 16px;

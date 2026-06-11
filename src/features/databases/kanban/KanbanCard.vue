@@ -237,7 +237,7 @@ const progressValue = computed(() => taskProgress.value?.pct ?? null)
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   background: color-mix(in oklab, var(--glass-3, var(--surface-1)) 92%, transparent);
   border: 1px solid var(--line-2, var(--border-subtle));
   cursor: pointer;
@@ -443,7 +443,7 @@ const progressValue = computed(() => taskProgress.value?.pct ?? null)
   justify-self: start;
   max-width: 100%;
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: calc(4px * var(--radius-scale, 1));
   color: var(--text-2, var(--text-secondary));
   background: var(--hover, var(--surface-1));
 }

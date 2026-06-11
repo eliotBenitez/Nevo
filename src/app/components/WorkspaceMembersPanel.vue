@@ -56,7 +56,7 @@ watch([open, storageId], async ([isOpen, id]) => {
   color: var(--text-muted, #9a9aa8);
   cursor: pointer;
   font-size: 0.78rem;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
 }
 .ws-members__head:hover { background: var(--surface-2, rgba(255, 255, 255, 0.04)); color: inherit; }
 .ws-members__chevron { transition: transform 0.15s ease; }
@@ -65,7 +65,7 @@ watch([open, storageId], async ([isOpen, id]) => {
 .ws-members__count {
   font-size: 0.7rem;
   padding: 0.05rem 0.35rem;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background: var(--surface-3, rgba(255, 255, 255, 0.06));
 }
 .ws-members__body { padding: 0.5rem 0.4rem 0.25rem; }

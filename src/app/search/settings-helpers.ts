@@ -34,6 +34,10 @@ export const hotkeyLabelKeys: Record<string, string> = {
   'workspace.save-note': 'settings.hotkeys.commands.saveNote',
   'workspace.search': 'settings.hotkeys.commands.searchTitles',
   'workspace.toggle-sidebar': 'settings.hotkeys.commands.toggleSidebar',
+  'workspace.toggle-right-panel': 'settings.hotkeys.commands.toggleRightPanel',
+  'workspace.open-graph': 'settings.hotkeys.commands.openGraph',
+  'workspace.open-history': 'settings.hotkeys.commands.openHistory',
+  'workspace.open-trash': 'settings.hotkeys.commands.openTrash',
   'app.open-settings': 'settings.hotkeys.commands.openSettings',
 }
 

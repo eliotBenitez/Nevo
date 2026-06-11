@@ -53,6 +53,83 @@ export interface NevoToolbarAction {
   run: (ctx: { view: EditorView; state: EditorState; dispatch: (tr: Transaction) => void }) => void
 }
 
+/**
+ * Лёгкое представление ноды для сериализации/импорта. Структурно совместимо с
+ * BlockNode из ../types/note, но не зависит от него, чтобы плагины могли
+ * импортировать только publichный SDK.
+ */
+export interface NevoSerializableNode {
+  type: string
+  attrs?: Record<string, unknown>
+  content?: NevoSerializableNode[]
+  text?: string
+  marks?: Array<{ type: string; attrs?: Record<string, unknown> }>
+}
+
+export interface NevoNodeSerializerHelpers {
+  /** Сериализовать дочерние ноды текущей ноды в том же формате. */
+  serializeChildren: () => string
+}
+
+export interface NevoNodeHtmlSerializerHelpers extends NevoNodeSerializerHelpers {
+  escapeHtml: (value: string) => string
+}
+
+/** Хуки сериализации плагинной ноды во все форматы экспорта. */
+export interface NevoNodeSerializer {
+  markdown?: (node: NevoSerializableNode, helpers: NevoNodeSerializerHelpers) => string
+  html?: (node: NevoSerializableNode, helpers: NevoNodeHtmlSerializerHelpers) => string
+  typst?: (node: NevoSerializableNode, helpers: NevoNodeSerializerHelpers) => string
+}
+
+/** Импорт плагинной ноды из fenced code block Markdown по языку. */
+export interface NevoNodeImporter {
+  fencedLang: string
+  fromFenced: (code: string) => NevoSerializableNode | null
+}
+
+export type NevoNodePopoverFieldType = 'text' | 'textarea' | 'select' | 'number' | 'checkbox' | 'color'
+
+export interface NevoNodePopoverField {
+  /** Ключ attr ноды (если не переопределены read/apply). */
+  key: string
+  type?: NevoNodePopoverFieldType
+  label?: string
+  placeholder?: string
+  rows?: number
+  options?: Array<{ value: string; label: string }>
+  min?: number
+  max?: number
+  step?: number
+}
+
+export interface NevoNodePopoverConfig {
+  title?: string
+  fields: NevoNodePopoverField[]
+  /** Показывать кнопку удаления ноды (по умолчанию true). */
+  removable?: boolean
+  /** Прочитать значения полей из attrs ноды (по умолчанию — сами attrs). */
+  read?: (attrs: Record<string, unknown>) => Record<string, unknown>
+  /** Преобразовать значения полей в патч attrs (по умолчанию — сами значения). */
+  apply?: (values: Record<string, unknown>) => Record<string, unknown>
+}
+
+/** Высокоуровневое описание кастомного блока «всё в одном». */
+export interface NevoBlockTypeConfig {
+  name: string
+  schema: NodeSpec
+  /** Отрисовка содержимого ноды. requestEdit открывает поповер редактирования. */
+  render: (
+    node: NevoSerializableNode,
+    helpers: { requestEdit: (anchorRect?: DOMRect) => void },
+  ) => HTMLElement
+  popover?: NevoNodePopoverConfig
+  serialize?: NevoNodeSerializer
+  importer?: NevoNodeImporter
+  /** Пункт slash-меню для вставки ноды (run генерируется автоматически). */
+  slashItem?: Omit<NevoSlashItem, 'run'> & { defaultAttrs?: Record<string, unknown> }
+}
+
 export interface NevoTableContext {
   inTable: boolean
   tablePos: number
@@ -109,6 +186,13 @@ export interface NevoEditorContext {
   registerNodeView(nodeName: string, nodeView: NodeViewConstructor): void
   registerDecorationProvider(id: string, provider: (state: EditorState) => Decoration[] | DecorationSet): void
   registerToolbarAction(action: NevoToolbarAction): void
+  registerNodeSerializer(nodeName: string, serializer: NevoNodeSerializer): void
+  registerNodeImporter(importer: NevoNodeImporter): void
+  registerNodePopover(nodeName: string, config: NevoNodePopoverConfig): void
+  /** Открыть поповер редактирования для ноды на позиции position. */
+  requestNodeEdit(view: EditorView, position: number, anchorRect?: DOMRect): void
+  /** Зарегистрировать кастомный блок одним вызовом (нода + view + поповер + сериализация). */
+  registerBlockType(config: NevoBlockTypeConfig): void
   eventBus: NevoEditorEventBus
   storage: NevoEditorStorage
 }
@@ -141,5 +225,8 @@ export interface NevoEditorRegistries {
   decorationProviders: Map<string, (state: EditorState) => Decoration[] | DecorationSet>
   nodes: Map<string, NodeSpec>
   marks: Map<string, MarkSpec>
+  nodeSerializers: Map<string, NevoNodeSerializer>
+  nodeImporters: Map<string, NevoNodeImporter>
+  nodePopovers: Map<string, NevoNodePopoverConfig>
   extraPlugins: PMPlugin[]
 }

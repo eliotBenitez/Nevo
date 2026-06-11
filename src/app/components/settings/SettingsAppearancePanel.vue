@@ -8,6 +8,7 @@ import type { ThemeMode } from '../../../types/workspace'
 import { createDefaultAppConfig } from '../../../utils/workspace-settings'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
+import NvToggle from '../../../ui/primitives/NvToggle.vue'
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
@@ -31,6 +32,10 @@ function resetAppGlobal() {
   themeStore.setScrollbarVisibility(d.scrollbarVisibility)
   themeStore.setFocusRingStyle(d.focusRingStyle)
   themeStore.setWindowChromeStyle(d.windowChromeStyle)
+  themeStore.setInterfaceZoom(d.interfaceZoom)
+  themeStore.setReduceTransparency(d.reduceTransparency)
+  themeStore.setInterfaceRoundness(d.interfaceRoundness)
+  themeStore.setThemeSchedule(d.themeSchedule)
 }
 
 const densityOptions = ['compact', 'comfortable'].map(v => ({ value: v, label: opt('density', v) }))
@@ -41,6 +46,7 @@ const motionOptions = ['system', 'reduce', 'full'].map(v => ({
 const scrollbarOptions = ['hidden', 'thin', 'system'].map(v => ({ value: v, label: opt('scrollbarVisibility', v) }))
 const focusRingOptions = ['accent', 'high-contrast'].map(v => ({ value: v, label: opt('focusRingStyle', v) }))
 const windowChromeOptions = ['default', 'immersive', 'minimal'].map(v => ({ value: v, label: opt('windowChromeStyle', v) }))
+const roundnessOptions = ['sharp', 'default', 'soft'].map(v => ({ value: v, label: opt('roundness', v) }))
 </script>
 
 <template>
@@ -79,6 +85,46 @@ const windowChromeOptions = ['default', 'immersive', 'minimal'].map(v => ({ valu
                 <span class="mode-card__label">{{ mode.label }}</span>
               </button>
             </div>
+          </div>
+
+          <!-- Theme schedule -->
+          <div class="settings-row settings-row--border">
+            <div class="row-copy">
+              <div class="row-title">{{ t('settings.appearance.themeSchedule.title') }}</div>
+              <div class="row-sub">{{ t('settings.appearance.themeSchedule.description') }}</div>
+            </div>
+            <NvToggle
+              :model-value="appConfig.themeSchedule.enabled"
+              @update:model-value="v => themeStore.setThemeSchedule({ enabled: v })"
+            />
+          </div>
+          <div
+            v-if="appConfig.themeSchedule.enabled"
+            class="settings-row settings-row--border"
+          >
+            <div class="row-copy">
+              <div class="row-title">{{ t('settings.appearance.themeSchedule.lightLabel') }}</div>
+            </div>
+            <input
+              class="ui-input ui-input--time"
+              type="time"
+              :value="appConfig.themeSchedule.lightTime"
+              @change="themeStore.setThemeSchedule({ lightTime: ($event.target as HTMLInputElement).value })"
+            >
+          </div>
+          <div
+            v-if="appConfig.themeSchedule.enabled"
+            class="settings-row settings-row--border"
+          >
+            <div class="row-copy">
+              <div class="row-title">{{ t('settings.appearance.themeSchedule.darkLabel') }}</div>
+            </div>
+            <input
+              class="ui-input ui-input--time"
+              type="time"
+              :value="appConfig.themeSchedule.darkTime"
+              @change="themeStore.setThemeSchedule({ darkTime: ($event.target as HTMLInputElement).value })"
+            >
           </div>
 
           <!-- Density -->
@@ -143,6 +189,59 @@ const windowChromeOptions = ['default', 'immersive', 'minimal'].map(v => ({ valu
               :model-value="appConfig.windowChromeStyle"
               :options="windowChromeOptions"
               @update:model-value="v => themeStore.setWindowChromeStyle(v as any)"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Comfort & accessibility group ─────────── -->
+      <div class="group">
+        <div class="group-header">
+          <div class="group-label">{{ t('settings.appearance.groups.comfort') }}</div>
+        </div>
+        <div class="settings-card">
+          <!-- Interface zoom -->
+          <div class="settings-row">
+            <div class="row-copy">
+              <div class="row-title">{{ t('settings.appearance.interfaceZoom.title') }}</div>
+              <div class="row-sub">{{ t('settings.appearance.interfaceZoom.description') }}</div>
+            </div>
+            <div class="slider-wrap">
+              <input
+                class="ui-range"
+                type="range"
+                min="80"
+                max="120"
+                step="5"
+                :value="appConfig.interfaceZoom"
+                @input="themeStore.setInterfaceZoom(Number(($event.target as HTMLInputElement).value))"
+              >
+              <span class="slider-value">{{ appConfig.interfaceZoom }} %</span>
+            </div>
+          </div>
+
+          <!-- Reduce transparency -->
+          <div class="settings-row settings-row--border">
+            <div class="row-copy">
+              <div class="row-title">{{ t('settings.appearance.reduceTransparency.title') }}</div>
+              <div class="row-sub">{{ t('settings.appearance.reduceTransparency.description') }}</div>
+            </div>
+            <NvToggle
+              :model-value="appConfig.reduceTransparency"
+              @update:model-value="v => themeStore.setReduceTransparency(v)"
+            />
+          </div>
+
+          <!-- Roundness -->
+          <div class="settings-row settings-row--border">
+            <div class="row-copy">
+              <div class="row-title">{{ t('settings.appearance.interfaceRoundness.title') }}</div>
+              <div class="row-sub">{{ t('settings.appearance.interfaceRoundness.description') }}</div>
+            </div>
+            <NvSelect
+              :model-value="appConfig.interfaceRoundness"
+              :options="roundnessOptions"
+              @update:model-value="v => themeStore.setInterfaceRoundness(v as any)"
             />
           </div>
         </div>

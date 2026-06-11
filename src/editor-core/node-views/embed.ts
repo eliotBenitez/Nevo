@@ -14,7 +14,12 @@ interface EmbedIframeAttrs {
   referrerPolicy: string
 }
 
-const EMBED_IFRAME_SANDBOX = 'allow-scripts allow-same-origin allow-presentation allow-popups allow-forms'
+// Untrusted third-party embed HTML (from oembed providers) is rendered via
+// `srcdoc`. We intentionally omit `allow-same-origin`: combined with
+// `allow-scripts` it would grant the framed content the app's own origin,
+// letting provider scripts reach app storage and Tauri IPC. Without it the
+// iframe gets a unique opaque origin — widget scripts still run, but isolated.
+const EMBED_IFRAME_SANDBOX = 'allow-scripts allow-presentation allow-popups allow-forms'
 const DEFAULT_EMBED_ALLOW = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen'
 const EMBED_FALLBACK_SANDBOX = `${EMBED_IFRAME_SANDBOX} allow-popups-to-escape-sandbox`
 

@@ -1,4 +1,6 @@
 import type { BlockNode, NoteDocument } from '../../types/note'
+import { getPluginNodeSerializer } from '../../editor-core/plugin-host/active-serialization'
+import type { NevoSerializableNode } from '../../types/editor-plugin'
 import { renderKatexToString } from '../katex'
 import { renderMermaidToSvg } from './mermaidToSvg'
 import { renderMarkmapToSvg } from './markmapToSvg'
@@ -385,6 +387,11 @@ export async function blockNode(node: BlockNode, ctx: SerializeCtx): Promise<str
     case 'hard_break':
       return '<br>'
     default: {
+      const pluginSerializer = getPluginNodeSerializer(node.type)?.html
+      if (pluginSerializer) {
+        const childrenHtml = await blockChildren(node, ctx)
+        return pluginSerializer(node as NevoSerializableNode, { serializeChildren: () => childrenHtml, escapeHtml })
+      }
       const inline = inlineContent(node, ctx)
       if (inline) return inline
       return blockChildren(node, ctx)

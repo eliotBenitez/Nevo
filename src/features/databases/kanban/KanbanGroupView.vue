@@ -269,7 +269,7 @@ const groups = computed<Group[]>(() => {
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   background: var(--glass-2, var(--surface-1));
   border: 1px solid var(--line-2, var(--border-subtle));
   font-size: 11.5px;
@@ -307,7 +307,7 @@ const groups = computed<Group[]>(() => {
   justify-content: center;
   width: 18px;
   height: 18px;
-  border-radius: 4px;
+  border-radius: calc(4px * var(--radius-scale, 1));
   border: none;
   background: none;
   color: var(--text-4, var(--text-muted));

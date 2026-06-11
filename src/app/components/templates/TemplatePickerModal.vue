@@ -373,7 +373,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   background: var(--surface-1);
   color: var(--text-primary);
   box-shadow: var(--shadow-lg);
@@ -420,7 +420,7 @@ onBeforeUnmount(() => {
   height: 34px;
   padding: 0 10px;
   border: 1px solid var(--border-subtle);
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   background: var(--surface-2);
 }
 
@@ -430,7 +430,7 @@ onBeforeUnmount(() => {
 .template-field select {
   width: 100%;
   border: 1px solid var(--border-subtle);
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background: var(--surface-2);
   color: var(--text-primary);
   padding: 7px 9px;
@@ -465,7 +465,7 @@ onBeforeUnmount(() => {
   gap: 10px;
   padding: 10px;
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   background: transparent;
   color: inherit;
   text-align: left;
@@ -484,7 +484,7 @@ onBeforeUnmount(() => {
   place-items: center;
   width: 32px;
   height: 32px;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   background: var(--accent-soft);
 }
 
@@ -575,7 +575,7 @@ onBeforeUnmount(() => {
   width: 28px;
   height: 28px;
   border: 1px solid var(--border-subtle);
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background: var(--surface-2);
   color: var(--text-secondary);
   cursor: pointer;

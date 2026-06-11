@@ -292,7 +292,7 @@ watch(() => props.template, (newTpl) => {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   background: var(--surface-1);
   color: var(--text-primary);
   box-shadow: var(--shadow-2xl);
@@ -361,7 +361,7 @@ watch(() => props.template, (newTpl) => {
   padding: 16px;
   padding-right: 48px;
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   background: var(--surface-2);
 }
 
@@ -406,7 +406,7 @@ watch(() => props.template, (newTpl) => {
 .template-field-group textarea {
   width: 100%;
   border: 1px solid var(--border-subtle);
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background: var(--surface-2);
   color: var(--text-primary);
   padding: 7px 9px;
@@ -442,7 +442,7 @@ watch(() => props.template, (newTpl) => {
   width: 28px;
   height: 28px;
   border: 1px solid var(--border-subtle);
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background: var(--surface-2);
   color: var(--text-secondary);
   cursor: pointer;
@@ -464,7 +464,7 @@ watch(() => props.template, (newTpl) => {
   width: 100%;
   height: 34px;
   border: 1px solid var(--border-subtle);
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background: var(--surface-2);
   color: var(--text-primary);
   font-size: 16px;
@@ -477,7 +477,7 @@ watch(() => props.template, (newTpl) => {
   width: 320px;
   height: 400px;
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   background: var(--surface-1);
   box-shadow: var(--shadow-xl);
   overflow: hidden;

@@ -39,11 +39,14 @@ const i18n = createI18n({
 })
 
 const SidebarStub = defineComponent({
-  emits: ['tree-action'],
+  emits: ['tree-action', 'open-trash'],
   template: `
     <div class="sidebar-stub">
       <button class="emit-search" @click="$emit('tree-action', { action: 'search', target: { kind: 'note', id: 'note-1', title: 'Seeded title', folderId: null } })">
         Search
+      </button>
+      <button class="emit-open-trash" @click="$emit('open-trash')">
+        Open Trash
       </button>
     </div>
   `,
@@ -498,6 +501,27 @@ describe('WorkspaceShell', () => {
     const editor = wrapper.get('.editor-pane-stub')
     expect(editor.attributes('data-container-kind')).toBe('folder')
     expect(editor.attributes('data-container-items')).toBe('note:note-9')
+
+    wrapper.unmount()
+  })
+
+  it('opens and closes the trash modal via Escape key', async () => {
+    const { wrapper } = await mountShell()
+
+    expect(document.body.querySelector('.trash-modal')).toBeNull()
+
+    // Open trash
+    await wrapper.find('.emit-open-trash').trigger('click')
+    await flushUi()
+
+    expect(document.body.querySelector('.trash-modal')).not.toBeNull()
+
+    // Press Escape on window
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+    window.dispatchEvent(event)
+    await flushUi()
+
+    expect(document.body.querySelector('.trash-modal')).toBeNull()
 
     wrapper.unmount()
   })

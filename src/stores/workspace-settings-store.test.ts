@@ -94,7 +94,7 @@ describe('useWorkspaceStore settings integration', () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
 
-    vi.mocked(configCommands.loadAppConfig).mockResolvedValue({ version: '1', theme: 'system', locale: 'ru', recents: [], interfaceDensity: 'comfortable', reducedMotion: 'system', scrollbarVisibility: 'hidden', focusRingStyle: 'accent', windowChromeStyle: 'default' })
+    vi.mocked(configCommands.loadAppConfig).mockResolvedValue({ version: '1', theme: 'system', locale: 'ru', recents: [], interfaceDensity: 'comfortable', reducedMotion: 'system', scrollbarVisibility: 'hidden', focusRingStyle: 'accent', windowChromeStyle: 'default', interfaceZoom: 100, reduceTransparency: false, interfaceRoundness: 'default', themeSchedule: { enabled: false, lightTime: '07:00', darkTime: '20:00' } })
     vi.mocked(configCommands.getAppMetadata).mockResolvedValue({
       version: '0.1.0',
       engine: 'Tauri 2',

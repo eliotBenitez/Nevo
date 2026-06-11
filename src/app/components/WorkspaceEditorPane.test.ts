@@ -180,6 +180,7 @@ vi.mock('../composables/editor/useEditorOverlays', () => ({
     mermaidPopover: { open: false, code: '', position: { top: 0, left: 0 }, nodePos: null },
     markmapPopover: { open: false, markdown: '', position: { top: 0, left: 0 }, nodePos: null },
     vegaPopover: { open: false, spec: '', position: { top: 0, left: 0 }, nodePos: null },
+    pluginNodePopover: { open: false, nodeName: null, title: '', fields: [], values: {}, removable: true, position: { top: 0, left: 0 }, nodePos: null },
     linkPickerOverlay: { open: false, query: '', activeIndex: 0, position: { top: 0, left: 0 } },
     activeMarkNames: new Set<string>(),
     closeOverlays: overlayMocks.closeOverlays,
@@ -318,7 +319,6 @@ const defaultSettings: WorkspaceSettings = {
   },
   workspace: {
     defaultLandingView: 'editor',
-    showBacklinksByDefault: false,
     showGraphLabels: true,
     folderCreateBehavior: 'current-folder',
     rootNotesVisible: true,
@@ -345,6 +345,7 @@ const defaultSettings: WorkspaceSettings = {
     graphScopeDefault: 'workspace',
     searchStartScope: 'workspace',
     historyDefaultRange: '30d',
+    showBacklinksByDefault: true,
   },
   ai: {
     enabled: false,

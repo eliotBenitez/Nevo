@@ -18,6 +18,27 @@ pub fn write_atomic(path: &Path, contents: &[u8]) -> std::io::Result<()> {
     }
 }
 
+/// Reject identifiers that could escape their intended directory when used as a
+/// path component (e.g. `note-{id}.nevo`, `{id}.yjs`, `{snapshot_id}.json`).
+/// Note/snapshot ids are app-generated UUIDs or `timestamp-uuid`, so the only
+/// legitimate characters are ASCII alphanumerics, `-` and `_`. This blocks path
+/// traversal (`..`, `/`, `\\`) and absolute/drive-letter injection.
+pub fn validate_id(id: &str) -> Result<(), String> {
+    if id.is_empty() {
+        return Err("Identifier is empty".to_string());
+    }
+    if id.len() > 128 {
+        return Err("Identifier is too long".to_string());
+    }
+    if !id
+        .bytes()
+        .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+    {
+        return Err(format!("Identifier contains invalid characters: {id}"));
+    }
+    Ok(())
+}
+
 fn detect_home_dir() -> Option<PathBuf> {
     if let Some(home) = env::var_os("HOME") {
         if !home.is_empty() {
@@ -73,7 +94,21 @@ pub fn normalize_workspace_path(workspace_path: &str) -> Result<PathBuf, String>
 
 #[cfg(test)]
 mod tests {
-    use super::write_atomic;
+    use super::{validate_id, write_atomic};
+
+    #[test]
+    fn validate_id_accepts_uuids_and_rejects_traversal() {
+        assert!(validate_id("550e8400-e29b-41d4-a716-446655440000").is_ok());
+        assert!(validate_id("20240101120000123-abc_DEF").is_ok());
+
+        assert!(validate_id("").is_err());
+        assert!(validate_id("../../etc/passwd").is_err());
+        assert!(validate_id("note/../secret").is_err());
+        assert!(validate_id("a\\b").is_err());
+        assert!(validate_id("foo.bar").is_err());
+        assert!(validate_id("with space").is_err());
+        assert!(validate_id(&"x".repeat(200)).is_err());
+    }
 
     #[test]
     fn write_atomic_writes_and_overwrites_without_leftovers() {

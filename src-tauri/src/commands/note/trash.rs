@@ -62,14 +62,16 @@ pub fn permanently_delete_from_trash(
     if let Some(pos) = manifest.trash.iter().position(|i| i.id == item_id) {
         let item = manifest.trash.remove(pos);
         if item.item_type == "note" {
-            let path = note_path(&workspace_path, &item.id);
-            if path.exists() {
-                let _ = std::fs::remove_file(path);
+            if let Ok(path) = note_path(&workspace_path, &item.id) {
+                if path.exists() {
+                    let _ = std::fs::remove_file(path);
+                }
             }
             // Also remove snapshots
-            let snap_dir = snapshot_dir_path(&workspace_path, &item.id);
-            if snap_dir.exists() {
-                let _ = std::fs::remove_dir_all(snap_dir);
+            if let Ok(snap_dir) = snapshot_dir_path(&workspace_path, &item.id) {
+                if snap_dir.exists() {
+                    let _ = std::fs::remove_dir_all(snap_dir);
+                }
             }
         }
 
@@ -97,13 +99,15 @@ pub fn empty_trash(workspace_path: String) -> Result<(), String> {
 
     for item in &manifest.trash {
         if item.item_type == "note" {
-            let path = note_path(&workspace_path, &item.id);
-            if path.exists() {
-                let _ = std::fs::remove_file(path);
+            if let Ok(path) = note_path(&workspace_path, &item.id) {
+                if path.exists() {
+                    let _ = std::fs::remove_file(path);
+                }
             }
-            let snap_dir = snapshot_dir_path(&workspace_path, &item.id);
-            if snap_dir.exists() {
-                let _ = std::fs::remove_dir_all(snap_dir);
+            if let Ok(snap_dir) = snapshot_dir_path(&workspace_path, &item.id) {
+                if snap_dir.exists() {
+                    let _ = std::fs::remove_dir_all(snap_dir);
+                }
             }
         }
     }

@@ -24,6 +24,7 @@ import { CloudBackend, CLOUD_ASSET_SCHEME } from '../../core/workspace-backend'
 import { useEditorOverlays } from '../composables/editor/useEditorOverlays'
 import { useMathEditor } from '../composables/editor/useMathEditor'
 import { useMermaidEditor } from '../composables/editor/useMermaidEditor'
+import { usePluginNodePopover } from '../composables/editor/usePluginNodePopover'
 import { useMarkmapEditor } from '../composables/editor/useMarkmapEditor'
 import { useVegaEditor } from '../composables/editor/useVegaEditor'
 import { useLinkEditor } from '../composables/editor/useLinkEditor'
@@ -104,6 +105,8 @@ interface OverlayContainerInstance {
   markmapPopoverComp: { focusInput: () => void } | null
   vegaPopoverEl: HTMLElement | null
   vegaPopoverComp: { focusInput: () => void } | null
+  pluginNodePopoverEl: HTMLElement | null
+  pluginNodePopoverComp: { focusInput: () => void } | null
   embedUrlPopoverEl: HTMLElement | null
   embedUrlPopoverComp: { focusInput: () => void } | null
   linkPickerComp: { menuRef: HTMLDivElement | null; selectActive: () => boolean } | null
@@ -179,7 +182,7 @@ const overlays = useEditorOverlays(core, {
   getTableMenuEl: () => overlayContainerRef.value?.tableMenuEl ?? null,
   getLinkPickerEl: () => overlayContainerRef.value?.linkPickerEl ?? null,
 })
-const { slashOverlay, toolbarOverlay, tableMenuOverlay, linkPopover, highlightPicker, textColorPicker, mathPopover, mermaidPopover, markmapPopover, vegaPopover, linkPickerOverlay, activeMarkNames } = overlays
+const { slashOverlay, toolbarOverlay, tableMenuOverlay, linkPopover, highlightPicker, textColorPicker, mathPopover, mermaidPopover, markmapPopover, vegaPopover, pluginNodePopover, linkPickerOverlay, activeMarkNames } = overlays
 
 const { imageCtxMenu, imageMenuItems, openImageContextMenu } = useImageContextMenu(() => props.workspacePath)
 
@@ -275,6 +278,17 @@ const vegaEditor = useVegaEditor(
   {
     getVegaPopoverEl: () => overlayContainerRef.value?.vegaPopoverEl ?? null,
     onFocusInput: () => overlayContainerRef.value?.vegaPopoverComp?.focusInput(),
+  },
+  overlays.updateOverlays,
+  overlays.clampOverlayPosition,
+)
+
+const pluginNodeEditor = usePluginNodePopover(
+  core,
+  pluginNodePopover,
+  {
+    getPopoverEl: () => overlayContainerRef.value?.pluginNodePopoverEl ?? null,
+    onFocusInput: () => overlayContainerRef.value?.pluginNodePopoverComp?.focusInput(),
   },
   overlays.updateOverlays,
   overlays.clampOverlayPosition,
@@ -416,6 +430,7 @@ const editorSetup = useEditorCore(core, {
   },
   onMathEditRequest: (pos, rect) => mathEditor.openMathPopoverForNode(pos, rect),
   onMermaidEditRequest: (pos, rect) => mermaidEditor.openMermaidPopoverForNode(pos, rect),
+  onPluginNodeEditRequest: (pos, nodeName, rect) => pluginNodeEditor.openForNode(pos, nodeName, rect),
   onMarkmapEditRequest: (pos, rect) => markmapEditor.openMarkmapPopoverForNode(pos, rect),
   onVegaEditRequest: (pos, rect) => vegaEditor.openVegaPopoverForNode(pos, rect),
   onLinkPickerEnter: () => overlayContainerRef.value?.linkPickerComp?.selectActive() ?? false,
@@ -711,6 +726,10 @@ function onDocumentMouseDown(event: MouseEvent) {
     const insidePopover = c?.vegaPopoverEl?.contains(target) ?? false
     if (!insidePopover) vegaEditor.closeVegaPopover()
   }
+  if (pluginNodePopover.open) {
+    const insidePopover = c?.pluginNodePopoverEl?.contains(target) ?? false
+    if (!insidePopover) pluginNodeEditor.close()
+  }
   if (embedUrlPopover.open) {
     const insidePopover = c?.embedUrlPopoverEl?.contains(target) ?? false
     const insideSlashMenu = c?.slashMenuEl?.contains(target) ?? false
@@ -788,6 +807,7 @@ const handleEditorScroll = () => {
   mermaidEditor.repositionMermaidPopover()
   markmapEditor.repositionMarkmapPopover()
   vegaEditor.repositionVegaPopover()
+  pluginNodeEditor.reposition()
 }
 
 // Overlay handlers wired from composables and local functions
@@ -833,6 +853,10 @@ const overlayHandlers: OverlayHandlers = {
   applyVega: vegaEditor.applyVegaFromPopover,
   removeVega: vegaEditor.removeVegaFromPopover,
   onVegaInputKeyDown: vegaEditor.onVegaInputKeyDown,
+  updatePluginNodeValue: ({ key, value }) => pluginNodeEditor.setValue(key, value),
+  applyPluginNode: pluginNodeEditor.apply,
+  removePluginNode: pluginNodeEditor.remove,
+  onPluginNodeKeyDown: pluginNodeEditor.onKeyDown,
   confirmEmbedUrl,
   cancelEmbedUrl,
   onEmbedUrlInputKeyDown,
@@ -1373,6 +1397,7 @@ defineExpose({ editorRoot, flushPendingContent })
     :mermaid-popover="mermaidPopover"
     :markmap-popover="markmapPopover"
     :vega-popover="vegaPopover"
+    :plugin-node-popover="pluginNodePopover"
     :embed-url-popover="embedUrlPopover"
     :link-picker-overlay="linkPickerOverlay"
     :callout-icon-picker="calloutIconPicker"

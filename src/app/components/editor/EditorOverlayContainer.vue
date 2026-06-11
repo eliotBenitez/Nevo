@@ -5,7 +5,7 @@ import { HIGHLIGHT_COLORS, TEXT_COLORS } from '../../../utils/editorColors'
 import type {
   SlashOverlayState, ToolbarOverlayState, TableMenuOverlayState,
   LinkPopoverState, MathPopoverState, MermaidPopoverState, MarkmapPopoverState, VegaPopoverState,
-  ColorPickerState, LinkPickerOverlayState,
+  ColorPickerState, LinkPickerOverlayState, PluginNodePopoverState,
 } from '../../composables/editor/useEditorOverlays'
 import type { BlockHandleState } from '../../composables/editor/useBlockHandle'
 import EditorSlashMenu from './EditorSlashMenu.vue'
@@ -17,6 +17,7 @@ import EditorMathPopover from './EditorMathPopover.vue'
 import EditorMermaidPopover from './EditorMermaidPopover.vue'
 import EditorMarkmapPopover from './EditorMarkmapPopover.vue'
 import EditorVegaPopover from './EditorVegaPopover.vue'
+import EditorPluginNodePopover from './EditorPluginNodePopover.vue'
 import EditorEmbedUrlPopover from './EditorEmbedUrlPopover.vue'
 import EditorLinkPicker from './EditorLinkPicker.vue'
 import EditorBlockHandle from './EditorBlockHandle.vue'
@@ -71,6 +72,10 @@ export interface OverlayHandlers {
   applyVega: () => void
   removeVega: () => void
   onVegaInputKeyDown: (e: KeyboardEvent) => void
+  updatePluginNodeValue: (payload: { key: string; value: unknown }) => void
+  applyPluginNode: () => void
+  removePluginNode: () => void
+  onPluginNodeKeyDown: (e: KeyboardEvent) => void
   confirmEmbedUrl: (result: { url: string; embedType: string; embedHtml: string; title: string; thumbnailUrl: string }) => void
   cancelEmbedUrl: () => void
   onEmbedUrlInputKeyDown: (e: KeyboardEvent) => void
@@ -108,6 +113,7 @@ interface Props {
   mermaidPopover: MermaidPopoverState
   markmapPopover: MarkmapPopoverState
   vegaPopover: VegaPopoverState
+  pluginNodePopover: PluginNodePopoverState
   embedUrlPopover: EmbedUrlPopoverState
   linkPickerOverlay: LinkPickerOverlayState
   calloutIconPicker: CalloutIconPickerState
@@ -130,6 +136,7 @@ const mathPopoverElRef = ref<HTMLElement | null>(null)
 const mermaidPopoverElRef = ref<HTMLElement | null>(null)
 const markmapPopoverElRef = ref<HTMLElement | null>(null)
 const vegaPopoverElRef = ref<HTMLElement | null>(null)
+const pluginNodePopoverElRef = ref<HTMLElement | null>(null)
 const embedUrlPopoverElRef = ref<HTMLElement | null>(null)
 const linkPickerElRef = ref<HTMLElement | null>(null)
 const calloutIconPickerElRef = ref<HTMLElement | null>(null)
@@ -140,6 +147,7 @@ const mathPopoverCompRef = ref<{ focusInput: () => void } | null>(null)
 const mermaidPopoverCompRef = ref<{ focusInput: () => void } | null>(null)
 const markmapPopoverCompRef = ref<{ focusInput: () => void } | null>(null)
 const vegaPopoverCompRef = ref<{ focusInput: () => void } | null>(null)
+const pluginNodePopoverCompRef = ref<{ focusInput: () => void } | null>(null)
 const embedUrlPopoverCompRef = ref<{ focusInput: () => void } | null>(null)
 const linkPickerCompRef = ref<{ menuRef: HTMLDivElement | null; selectActive: () => boolean } | null>(null)
 
@@ -165,6 +173,7 @@ const mathPopoverStyle = computed(() => ({ top: `${props.mathPopover.position.to
 const mermaidPopoverStyle = computed(() => ({ top: `${props.mermaidPopover.position.top}px`, left: `${props.mermaidPopover.position.left}px` }))
 const markmapPopoverStyle = computed(() => ({ top: `${props.markmapPopover.position.top}px`, left: `${props.markmapPopover.position.left}px` }))
 const vegaPopoverStyle = computed(() => ({ top: `${props.vegaPopover.position.top}px`, left: `${props.vegaPopover.position.left}px` }))
+const pluginNodePopoverStyle = computed(() => ({ top: `${props.pluginNodePopover.position.top}px`, left: `${props.pluginNodePopover.position.left}px` }))
 const highlightPickerStyle = computed(() => ({ top: `${props.highlightPicker.position.top}px`, left: `${props.highlightPicker.position.left}px` }))
 const textColorPickerStyle = computed(() => ({ top: `${props.textColorPicker.position.top}px`, left: `${props.textColorPicker.position.left}px` }))
 const linkPickerStyle = computed(() => ({ top: `${props.linkPickerOverlay.position.top}px`, left: `${props.linkPickerOverlay.position.left}px` }))
@@ -186,6 +195,8 @@ defineExpose({
   markmapPopoverComp: markmapPopoverCompRef,
   vegaPopoverEl: vegaPopoverElRef,
   vegaPopoverComp: vegaPopoverCompRef,
+  pluginNodePopoverEl: pluginNodePopoverElRef,
+  pluginNodePopoverComp: pluginNodePopoverCompRef,
   embedUrlPopoverEl: embedUrlPopoverElRef,
   embedUrlPopoverComp: embedUrlPopoverCompRef,
   linkPickerComp: linkPickerCompRef,
@@ -321,6 +332,22 @@ defineExpose({
         @apply="handlers.applyVega"
         @remove="handlers.removeVega"
         @keydown="handlers.onVegaInputKeyDown"
+      />
+    </div>
+
+    <div v-if="pluginNodePopover.open" ref="pluginNodePopoverElRef" class="teleport-anchor">
+      <EditorPluginNodePopover
+        ref="pluginNodePopoverCompRef"
+        :open="pluginNodePopover.open"
+        :title="pluginNodePopover.title"
+        :fields="pluginNodePopover.fields"
+        :values="pluginNodePopover.values"
+        :removable="pluginNodePopover.removable"
+        :popover-style="pluginNodePopoverStyle"
+        @update:value="handlers.updatePluginNodeValue"
+        @apply="handlers.applyPluginNode"
+        @remove="handlers.removePluginNode"
+        @keydown="handlers.onPluginNodeKeyDown"
       />
     </div>
 

@@ -9,6 +9,10 @@ export const GLOBAL_SHORTCUT_COMMAND_IDS = new Set([
   'workspace.new-folder',
   'workspace.search',
   'workspace.toggle-sidebar',
+  'workspace.toggle-right-panel',
+  'workspace.open-graph',
+  'workspace.open-history',
+  'workspace.open-trash',
   'app.open-settings',
 ])
 

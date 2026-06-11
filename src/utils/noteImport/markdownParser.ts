@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import type { Root, Content, PhrasingContent, ListItem } from 'mdast'
 import type { BlockNode } from '../../types/note'
+import { getPluginNodeImporter } from '../../editor-core/plugin-host/active-serialization'
 
 export interface ParsedMarkdown {
   title: string
@@ -101,6 +102,11 @@ function blockToNodes(node: Content): BlockNode[] {
     case 'code': {
       if (node.lang === 'mermaid') {
         return [{ type: 'mermaid_block', attrs: { code: node.value } }]
+      }
+      if (node.lang) {
+        const importer = getPluginNodeImporter(node.lang)
+        const imported = importer?.fromFenced(node.value)
+        if (imported) return [imported as BlockNode]
       }
       const content = node.value ? [{ type: 'text', text: node.value }] : []
       return [{ type: 'code_block', attrs: { language: node.lang ?? null }, content }]

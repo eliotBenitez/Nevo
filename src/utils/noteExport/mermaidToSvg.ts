@@ -1,24 +1,34 @@
-import mermaid from 'mermaid'
 import { FALLBACK_FONT } from './pdfOptions'
 
 let renderSeq = 0
 let initialized = false
 
-function ensureInitialized(): void {
-  if (initialized) return
-  initialized = true
-  mermaid.initialize({
-    startOnLoad: false,
-    // `neutral` keeps diagrams legible on the white PDF page regardless of app theme.
-    theme: 'neutral',
-    securityLevel: 'loose',
-    // Emit node/edge labels as native SVG <text> instead of HTML wrapped in
-    // <foreignObject>. Typst's usvg rasteriser (and image rasterisers in general)
-    // ignore <foreignObject>, so the default flowchart output loses every label in
-    // a PDF. SVG text renders correctly in both the browser (HTML export) and usvg.
-    htmlLabels: false,
-    flowchart: { htmlLabels: false },
-  })
+// Mermaid (~500 KB) is only needed when a note containing a diagram is exported,
+// so it's loaded on demand and kept out of the initial bundle. Shares the same
+// lazily-loaded chunk as the editor's Mermaid node view.
+let mermaidModulePromise: Promise<typeof import('mermaid')['default']> | null = null
+
+async function ensureMermaid(): Promise<typeof import('mermaid')['default']> {
+  if (!mermaidModulePromise) {
+    mermaidModulePromise = import('mermaid').then((mod) => mod.default)
+  }
+  const mermaid = await mermaidModulePromise
+  if (!initialized) {
+    initialized = true
+    mermaid.initialize({
+      startOnLoad: false,
+      // `neutral` keeps diagrams legible on the white PDF page regardless of app theme.
+      theme: 'neutral',
+      securityLevel: 'loose',
+      // Emit node/edge labels as native SVG <text> instead of HTML wrapped in
+      // <foreignObject>. Typst's usvg rasteriser (and image rasterisers in general)
+      // ignore <foreignObject>, so the default flowchart output loses every label in
+      // a PDF. SVG text renders correctly in both the browser (HTML export) and usvg.
+      htmlLabels: false,
+      flowchart: { htmlLabels: false },
+    })
+  }
+  return mermaid
 }
 
 /**
@@ -27,8 +37,8 @@ function ensureInitialized(): void {
  */
 export async function renderMermaidToSvg(code: string): Promise<string | null> {
   if (!code.trim()) return null
-  ensureInitialized()
   try {
+    const mermaid = await ensureMermaid()
     const { svg } = await mermaid.render(`nv-export-mermaid-${++renderSeq}`, code)
     return svg
   } catch {

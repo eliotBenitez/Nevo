@@ -2,7 +2,7 @@ import { convertFileSrc } from '@tauri-apps/api/core'
 import { Plugin } from 'prosemirror-state'
 import type { Transaction, Command } from 'prosemirror-state'
 import { DecorationSet } from 'prosemirror-view'
-import type { Decoration } from 'prosemirror-view'
+import type { Decoration, EditorView } from 'prosemirror-view'
 import type { EditorState } from 'prosemirror-state'
 import type {
   NevoEditorContext,
@@ -38,8 +38,15 @@ export class EditorPluginHost {
     decorationProviders: new Map(),
     nodes: new Map(),
     marks: new Map(),
+    nodeSerializers: new Map(),
+    nodeImporters: new Map(),
+    nodePopovers: new Map(),
     extraPlugins: [],
   }
+
+  private nodeEditRequestHandler:
+    | ((view: EditorView, position: number, nodeName: string, anchorRect?: DOMRect) => void)
+    | null = null
 
   constructor(options: EditorPluginHostOptions) {
     this.workspacePath = options.workspacePath
@@ -94,6 +101,19 @@ export class EditorPluginHost {
 
   listSlashItems(): NevoSlashItem[] {
     return Array.from(this.registries.slashItems.values())
+  }
+
+  /** Подключить обработчик, открывающий поповер редактирования плагинной ноды. */
+  setNodeEditRequestHandler(
+    handler: ((view: EditorView, position: number, nodeName: string, anchorRect?: DOMRect) => void) | null,
+  ): void {
+    this.nodeEditRequestHandler = handler
+  }
+
+  private invokeNodeEditRequest(view: EditorView, position: number, anchorRect?: DOMRect): void {
+    const nodeName = view.state.doc.nodeAt(position)?.type.name
+    if (!nodeName) return
+    this.nodeEditRequestHandler?.(view, position, nodeName, anchorRect)
   }
 
   getOrderedKeymaps(): Array<{ priority: number; bindings: Record<string, Command>; pluginId: string }> {
@@ -172,7 +192,14 @@ export class EditorPluginHost {
       validateManifest(manifest, this.nevoVersion)
       const pluginModule = await this.loadPluginModule(manifest)
       const instance = this.resolvePluginInstance(pluginModule)
-      const context = buildPluginContext(manifest, this.storage, this.registries, this.emit.bind(this), this.on.bind(this))
+      const context = buildPluginContext(
+        manifest,
+        this.storage,
+        this.registries,
+        this.emit.bind(this),
+        this.on.bind(this),
+        this.invokeNodeEditRequest.bind(this),
+      )
 
       await instance.onRegister?.(context)
       this.runtimePlugins.set(manifest.id, { manifest, instance })

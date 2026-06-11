@@ -1,4 +1,4 @@
-import type { AppConfig, HotkeyBinding, HotkeyScope, RecentWorkspace, WorkspaceSettings, WorkspaceView } from '../../types/workspace'
+import type { AppConfig, HotkeyBinding, HotkeyScope, RecentWorkspace, ThemeSchedule, WorkspaceSettings, WorkspaceView } from '../../types/workspace'
 import { normalizeHotkeyChord } from '../hotkey-chords'
 import { DEFAULT_HOTKEY_BINDINGS, createDefaultAppConfig, createDefaultWorkspaceSettings } from './defaults'
 
@@ -50,6 +50,25 @@ function clampPositiveInt(value: unknown, fallback: number, min: number, max: nu
 
 function normalizeView(value: unknown): WorkspaceView {
   return value === 'table' || value === 'kanban' || value === 'graph' ? value : 'editor'
+}
+
+function clampZoom(value: unknown): number {
+  const numeric = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(numeric)) return 100
+  return Math.max(80, Math.min(120, Math.round(numeric / 5) * 5))
+}
+
+function normalizeTime(value: unknown, fallback: string): string {
+  return typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value) ? value : fallback
+}
+
+function normalizeThemeSchedule(value: unknown, fallback: ThemeSchedule): ThemeSchedule {
+  const raw = value && typeof value === 'object' ? value as Partial<ThemeSchedule> : {}
+  return {
+    enabled: raw.enabled === true,
+    lightTime: normalizeTime(raw.lightTime, fallback.lightTime),
+    darkTime: normalizeTime(raw.darkTime, fallback.darkTime),
+  }
 }
 
 export function normalizeWorkspaceSettings(input: unknown): WorkspaceSettings {
@@ -126,8 +145,7 @@ export function normalizeWorkspaceSettings(input: unknown): WorkspaceSettings {
   normalized.editor.typewriterPosition = editor.typewriterPosition === 'upper' || editor.typewriterPosition === 'center' ? editor.typewriterPosition : defaults.editor.typewriterPosition
 
   normalized.workspace.defaultLandingView = normalizeView(workspace.defaultLandingView ?? normalized.general.defaultStartupView)
-  normalized.workspace.showBacklinksByDefault = typeof workspace.showBacklinksByDefault === 'boolean'
-    ? workspace.showBacklinksByDefault : defaults.workspace.showBacklinksByDefault
+  normalized.workspace.showBacklinksByDefault = typeof workspace.showBacklinksByDefault === 'boolean' ? workspace.showBacklinksByDefault : defaults.workspace.showBacklinksByDefault
   normalized.workspace.showGraphLabels = typeof workspace.showGraphLabels === 'boolean' ? workspace.showGraphLabels : defaults.workspace.showGraphLabels
   normalized.workspace.folderCreateBehavior = 'current-folder'
   normalized.workspace.rootNotesVisible = typeof workspace.rootNotesVisible === 'boolean' ? workspace.rootNotesVisible : defaults.workspace.rootNotesVisible
@@ -219,5 +237,9 @@ export function normalizeAppConfig(input: unknown): AppConfig {
     scrollbarVisibility: raw.scrollbarVisibility === 'thin' || raw.scrollbarVisibility === 'system' ? raw.scrollbarVisibility : defaults.scrollbarVisibility,
     focusRingStyle: raw.focusRingStyle === 'high-contrast' ? 'high-contrast' : defaults.focusRingStyle,
     windowChromeStyle: raw.windowChromeStyle === 'immersive' || raw.windowChromeStyle === 'minimal' ? raw.windowChromeStyle : defaults.windowChromeStyle,
+    interfaceZoom: clampZoom(raw.interfaceZoom ?? defaults.interfaceZoom),
+    reduceTransparency: raw.reduceTransparency === true,
+    interfaceRoundness: raw.interfaceRoundness === 'sharp' || raw.interfaceRoundness === 'soft' ? raw.interfaceRoundness : defaults.interfaceRoundness,
+    themeSchedule: normalizeThemeSchedule(raw.themeSchedule, defaults.themeSchedule),
   }
 }

@@ -62,6 +62,7 @@ function createCallbacks() {
     onMermaidEditRequest: vi.fn(),
     onMarkmapEditRequest: vi.fn(),
     onVegaEditRequest: vi.fn(),
+    onPluginNodeEditRequest: vi.fn(),
     onCalloutIconPickRequest: vi.fn(),
     onMediaPickerRequest: vi.fn(),
     onNoteEmbedPickRequest: vi.fn(),

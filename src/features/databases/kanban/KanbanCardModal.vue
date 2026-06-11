@@ -581,7 +581,7 @@ function onKeydown(event: KeyboardEvent) {
   max-height: calc(100vh - 40px);
   background: color-mix(in oklab, var(--glass-3, var(--surface-1)) 94%, transparent);
   border: 1px solid var(--line-strong, var(--border-subtle));
-  border-radius: 12px;
+  border-radius: calc(12px * var(--radius-scale, 1));
   box-shadow:
     0 40px 100px -16px oklch(0 0 0 / 0.55),
     0 0 0 1px oklch(1 0 0 / 0.04) inset;
@@ -692,7 +692,7 @@ function onKeydown(event: KeyboardEvent) {
   border: 1px solid var(--line-2, var(--border-subtle));
   background: var(--glass-3, var(--surface-1));
   color: var(--text-1, var(--text-primary));
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   outline: none;
   box-sizing: border-box;
 }
@@ -792,7 +792,7 @@ function onKeydown(event: KeyboardEvent) {
   border: 1px solid var(--line-2, var(--border-subtle));
   background: var(--glass-3, var(--surface-1));
   color: var(--text-2, var(--text-secondary));
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   cursor: pointer;
 }
 
@@ -826,7 +826,7 @@ function onKeydown(event: KeyboardEvent) {
   flex-direction: column;
   gap: 8px;
   padding: 10px;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--radius-scale, 1));
   border: 1px solid var(--line-1, var(--border-subtle));
   background: color-mix(in oklab, var(--glass-3, var(--surface-1)) 82%, transparent);
 }

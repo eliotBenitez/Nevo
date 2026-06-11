@@ -199,4 +199,31 @@ describe('WorkspaceHistoryModal', () => {
     expect(noteCommands.restoreNoteSnapshot).not.toHaveBeenCalled()
     wrapper.unmount()
   })
+
+  it('emits close event when Escape key is pressed', async () => {
+    const wrapper = mount(WorkspaceHistoryModal, {
+      attachTo: document.body,
+      global: {
+        plugins: [i18n],
+      },
+      props: {
+        open: false,
+        workspacePath: '/workspace',
+        manifest,
+        activeNoteId: 'note-2',
+        activeNote: createNote('note-2', 'Current Two', 'current-note-2'),
+        preselectedNoteId: 'note-2',
+      },
+    })
+
+    await wrapper.setProps({ open: true })
+    await flushHistoryModal()
+
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+    window.dispatchEvent(event)
+    await nextTick()
+
+    expect(wrapper.emitted('close')).toBeTruthy()
+    wrapper.unmount()
+  })
 })

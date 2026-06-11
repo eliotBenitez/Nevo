@@ -12,44 +12,45 @@ function getOrderedStart(parent: PMNode): number {
   return Number.isFinite(order) ? order : 1
 }
 
-function getListDepth(doc: PMNode, pos: number, listTypeName: string): number {
-  const $pos = doc.resolve(pos)
-  let depth = 0
-
-  for (let index = 1; index <= $pos.depth; index += 1) {
-    if ($pos.node(index).type.name === listTypeName) depth += 1
-  }
-
-  return Math.max(depth, 1)
+function getBulletMarker(bulletDepth: number): string {
+  return bulletMarkers[(Math.max(bulletDepth, 1) - 1) % bulletMarkers.length]
 }
 
-function getBulletMarker(doc: PMNode, pos: number, listTypeName: string): string {
-  const depth = getListDepth(doc, pos, listTypeName)
-  return bulletMarkers[(depth - 1) % bulletMarkers.length]
+/**
+ * Manual descent that carries the current bullet-list nesting depth, so we never
+ * call `doc.resolve(pos)` per list item (which allocated a ResolvedPos and walked
+ * the ancestor chain on every item, every keystroke). `parentPos` is the document
+ * position immediately inside `parent` (i.e. before its first child).
+ */
+function collect(parent: PMNode, parentPos: number, bulletDepth: number, decorations: Decoration[]): void {
+  const orderedStart = parent.type.name === 'ordered_list' ? getOrderedStart(parent) : 0
+  let offset = 0
+  parent.forEach((child, _childOffset, index) => {
+    const absPos = parentPos + offset
+    offset += child.nodeSize
+
+    if (child.type.name === 'list_item') {
+      if (parent.type.name === 'bullet_list') {
+        decorations.push(Decoration.node(absPos, absPos + child.nodeSize, {
+          'data-nevo-list-marker': getBulletMarker(bulletDepth),
+        }))
+      } else if (parent.type.name === 'ordered_list') {
+        decorations.push(Decoration.node(absPos, absPos + child.nodeSize, {
+          'data-nevo-list-marker': `${orderedStart + index}.`,
+        }))
+      }
+    }
+
+    if (child.childCount > 0) {
+      const nextBulletDepth = child.type.name === 'bullet_list' ? bulletDepth + 1 : bulletDepth
+      collect(child, absPos + 1, nextBulletDepth, decorations)
+    }
+  })
 }
 
 function buildDecorations(state: EditorState): DecorationSet {
   const decorations: Decoration[] = []
-
-  state.doc.descendants((node, pos, parent, index) => {
-    if (node.type.name !== 'list_item' || !parent) return true
-
-    if (parent.type.name === 'bullet_list') {
-      decorations.push(Decoration.node(pos, pos + node.nodeSize, {
-        'data-nevo-list-marker': getBulletMarker(state.doc, pos, parent.type.name),
-      }))
-      return true
-    }
-
-    if (parent.type.name === 'ordered_list') {
-      decorations.push(Decoration.node(pos, pos + node.nodeSize, {
-        'data-nevo-list-marker': `${getOrderedStart(parent) + index}.`,
-      }))
-    }
-
-    return true
-  })
-
+  collect(state.doc, 0, 0, decorations)
   return DecorationSet.create(state.doc, decorations)
 }
 

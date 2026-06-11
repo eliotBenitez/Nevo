@@ -3,7 +3,7 @@ import type { EditorView } from 'prosemirror-view'
 import { NodeSelection } from 'prosemirror-state'
 import { CellSelection } from 'prosemirror-tables'
 import { getSlashMenuState, getTableMenuContext, getLinkPickerState } from '../../../editor-core'
-import type { NevoSlashItem, NevoTableContext } from '../../../types/editor-plugin'
+import type { NevoNodePopoverField, NevoSlashItem, NevoTableContext } from '../../../types/editor-plugin'
 import type { EditorCore } from './useEditorCore'
 
 export interface OverlayPosition {
@@ -65,6 +65,17 @@ export interface MarkmapPopoverState {
 export interface VegaPopoverState {
   open: boolean
   spec: string
+  position: OverlayPosition
+  nodePos: number | null
+}
+
+export interface PluginNodePopoverState {
+  open: boolean
+  nodeName: string | null
+  title: string
+  fields: NevoNodePopoverField[]
+  values: Record<string, unknown>
+  removable: boolean
   position: OverlayPosition
   nodePos: number | null
 }
@@ -158,6 +169,17 @@ export function useEditorOverlays(
     nodePos: null,
   })
 
+  const pluginNodePopover = reactive<PluginNodePopoverState>({
+    open: false,
+    nodeName: null,
+    title: '',
+    fields: [],
+    values: {},
+    removable: true,
+    position: { top: 0, left: 0 },
+    nodePos: null,
+  })
+
   const linkPickerOverlay = reactive<LinkPickerOverlayState>({
     open: false,
     query: '',
@@ -219,6 +241,9 @@ export function useEditorOverlays(
     markmapPopover.nodePos = null
     vegaPopover.open = false
     vegaPopover.nodePos = null
+    pluginNodePopover.open = false
+    pluginNodePopover.nodePos = null
+    pluginNodePopover.nodeName = null
     highlightPicker.open = false
     textColorPicker.open = false
     linkPickerOverlay.open = false
@@ -401,6 +426,7 @@ export function useEditorOverlays(
     mermaidPopover,
     markmapPopover,
     vegaPopover,
+    pluginNodePopover,
     linkPickerOverlay,
     activeMarkNames,
     updateOverlays,

@@ -9,7 +9,7 @@
   background: var(--glass-3);
   backdrop-filter: blur(28px) saturate(150%);
   border: 1px solid var(--line-2);
-  border-radius: 14px;
+  border-radius: calc(14px * var(--radius-scale, 1));
   box-shadow: var(--shadow-1);
 }
 
@@ -19,7 +19,7 @@
   gap: 6px;
   height: 26px;
   padding: 0 10px;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   border: 1px solid transparent;
   background: transparent;
   color: var(--text-2);
@@ -47,7 +47,7 @@
   border-color: oklch(0.55 0.18 25);
 }
 .nv-btn--danger:hover:not(:disabled) { background: oklch(0.50 0.20 25); color: white; }
-.nv-btn--xs { height: 22px; padding: 0 6px; font-size: 11.5px; border-radius: 5px; gap: 4px; }
+.nv-btn--xs { height: 22px; padding: 0 6px; font-size: 11.5px; border-radius: calc(5px * var(--radius-scale, 1)); gap: 4px; }
 .nv-btn--icon { width: 26px; padding: 0; justify-content: center; }
 .nv-btn--icon.nv-btn--xs { width: 22px; }
 .nv-btn--icon.nv-btn--md { width: 32px; }
@@ -86,7 +86,7 @@
   background: var(--hover-strong);
   border: 1px solid var(--line-2);
   border-bottom-width: 2px;
-  border-radius: 4px;
+  border-radius: calc(4px * var(--radius-scale, 1));
   padding: 1px 5px;
   min-width: 16px;
   text-align: center;
@@ -102,7 +102,7 @@
   height: 1.05em;
   vertical-align: -0.2em;
   background: var(--accent);
-  border-radius: 1px;
+  border-radius: calc(1px * var(--radius-scale, 1));
   margin-left: 1px;
   animation: nv-caret 1.05s steps(1) infinite;
 }
@@ -121,7 +121,7 @@
 .nv-popup-menu__panel {
   position: fixed;
   padding: 5px;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--radius-scale, 1));
   border: 1px solid var(--line-strong);
   background: linear-gradient(
     180deg,
@@ -145,7 +145,7 @@
   height: 30px;
   padding: 0 8px;
   border: none;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background: transparent;
   color: var(--text-2);
   font: 500 12.5px var(--font-ui);

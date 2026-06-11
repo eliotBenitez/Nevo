@@ -39,7 +39,7 @@
 .workspace-drawer-panel .sidebar { width: 100%; height: 100%; flex: 1; border-right: none; border-radius: 0; }
 
 .rename-modal-backdrop { position: fixed; inset: 0; background: oklch(0 0 0 / 0.35); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: grid; place-items: center; z-index: 50; }
-.rename-modal { width: min(420px, calc(100vw - 24px)); border-radius: 14px; border: 1px solid var(--line-2); background: var(--glass-3); box-shadow: var(--shadow-pop); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.rename-modal { width: min(420px, calc(100vw - 24px)); border-radius: calc(14px * var(--radius-scale, 1)); border: 1px solid var(--line-2); background: var(--glass-3); box-shadow: var(--shadow-pop); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
 .rename-modal__title { margin: 0; font-size: 14px; color: var(--text-1); font-weight: 560; }
 .rename-modal__actions { display: flex; justify-content: flex-end; gap: 8px; }
 
@@ -97,7 +97,7 @@
   align-items: center;
   gap: 5px;
   padding: 2px 6px;
-  border-radius: 5px;
+  border-radius: calc(5px * var(--radius-scale, 1));
   color: var(--text-3);
   white-space: nowrap;
   flex-shrink: 1;
@@ -141,7 +141,7 @@
   height: 28px;
   border: none;
   background: transparent;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   color: var(--text-4);
   cursor: pointer;
   display: grid;
@@ -177,7 +177,7 @@
   height: min(780px, calc(100vh - 36px));
   display: flex;
   flex-direction: column;
-  border-radius: 16px;
+  border-radius: calc(16px * var(--radius-scale, 1));
   border: 1px solid var(--line-strong);
   background: var(--glass-2);
   box-shadow:
@@ -259,7 +259,7 @@
   gap: 11px;
   padding: 12px 12px 13px;
   border: 1px solid var(--line-1);
-  border-radius: 10px;
+  border-radius: calc(10px * var(--radius-scale, 1));
   background: var(--glass-2);
 }
 
@@ -293,7 +293,7 @@
   height: 30px;
   padding: 0 28px 0 9px;
   border: 1px solid var(--line-1);
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   background: var(--glass-1);
   color: var(--text-2);
   font: 500 12px var(--font-ui);
@@ -330,7 +330,7 @@
 .pdf-segment {
   display: inline-flex;
   padding: 2px;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   background: var(--hover);
   border: 1px solid var(--line-1);
 }
@@ -345,7 +345,7 @@
   height: 24px;
   padding: 0 9px;
   border: none;
-  border-radius: 5px;
+  border-radius: calc(5px * var(--radius-scale, 1));
   background: transparent;
   color: var(--text-3);
   font: 500 11.5px var(--font-ui);
@@ -369,7 +369,7 @@
   display: inline-flex;
   align-items: center;
   border: 1px solid var(--line-1);
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   background: var(--hover);
   overflow: hidden;
 }
@@ -428,7 +428,7 @@
   height: 26px;
   padding: 0 10px;
   border: 1px solid var(--line-1);
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   background: var(--hover);
   color: var(--text-3);
   font: 500 11.5px var(--font-ui);
@@ -464,7 +464,7 @@
   max-width: 100%;
   height: auto;
   background: #fff;
-  border-radius: 2px;
+  border-radius: calc(2px * var(--radius-scale, 1));
   box-shadow: 0 8px 24px oklch(0 0 0 / 0.35);
 }
 
@@ -617,7 +617,7 @@
   overflow: auto;
   padding: 10px;
   border: 1px solid var(--line-2);
-  border-radius: 18px;
+  border-radius: calc(18px * var(--radius-scale, 1));
   background: color-mix(in oklab, var(--glass-2) 98%, var(--canvas-1));
   box-shadow:
     0 28px 70px oklch(0 0 0 / 0.28),
@@ -648,7 +648,7 @@
   gap: 4px;
   padding: 10px 12px;
   border: 0;
-  border-radius: 12px;
+  border-radius: calc(12px * var(--radius-scale, 1));
   background: transparent;
   color: inherit;
   text-align: left;
@@ -728,7 +728,7 @@
   gap: 6px;
   height: 28px;
   padding: 0 16px;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   font-size: 12.5px;
   font-weight: 450;
   color: var(--text-4);
@@ -818,7 +818,7 @@
   place-items: center;
   width: 14px;
   height: 14px;
-  border-radius: 4px;
+  border-radius: calc(4px * var(--radius-scale, 1));
   color: var(--text-4);
   position: absolute;
   right: 6px;
@@ -877,7 +877,7 @@
   height: min(820px, calc(100vh - 36px));
   display: flex;
   flex-direction: column;
-  border-radius: 16px;
+  border-radius: calc(16px * var(--radius-scale, 1));
   border: 1px solid var(--line-strong);
   background: var(--glass-2);
   box-shadow:
@@ -1010,7 +1010,7 @@
   gap: 10px;
   align-items: center;
   border: none;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   background: transparent;
   color: var(--text-2);
   text-align: left;
@@ -1031,7 +1031,7 @@
 .history-list__icon {
   width: 26px;
   height: 26px;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   background: var(--hover-strong);
   display: grid;
   place-items: center;
@@ -1104,7 +1104,7 @@
 .history-preview__icon {
   width: 46px;
   height: 46px;
-  border-radius: 14px;
+  border-radius: calc(14px * var(--radius-scale, 1));
   background: var(--hover-strong);
   display: grid;
   place-items: center;
@@ -1115,7 +1115,7 @@
 .history-preview__cover {
   margin-bottom: 14px;
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--radius-scale, 1));
   background: var(--hover);
   border: 1px solid var(--line-1);
 }
@@ -1131,7 +1131,7 @@
 .history-diff-row,
 .history-compare__meta-row {
   padding: 12px 14px;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--radius-scale, 1));
   border: 1px solid var(--line-2);
   background: color-mix(in oklab, var(--glass-2) 92%, transparent);
   color: var(--text-2);
@@ -1220,7 +1220,7 @@
 
 .rename-modal {
   width: min(420px, calc(100vw - 24px));
-  border-radius: 14px;
+  border-radius: calc(14px * var(--radius-scale, 1));
   border: 1px solid var(--line-2);
   background: var(--glass-3);
   box-shadow: var(--shadow-pop);
@@ -1240,7 +1240,7 @@
 .rename-modal__input {
   width: 100%;
   height: 34px;
-  border-radius: 9px;
+  border-radius: calc(9px * var(--radius-scale, 1));
   border: 1px solid var(--line-2);
   background: var(--glass-2);
   color: var(--text-1);
@@ -1282,7 +1282,7 @@
   align-items: center;
   gap: 10px;
   padding: 8px;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--radius-scale, 1));
   background: var(--hover);
   border: 1px solid var(--line-1);
 }
@@ -1290,7 +1290,7 @@
 .workspace-glyph {
   width: 32px;
   height: 32px;
-  border-radius: 9px;
+  border-radius: calc(9px * var(--radius-scale, 1));
   background: linear-gradient(135deg, var(--accent), oklch(0.55 0.1 295));
   display: grid;
   place-items: center;
@@ -1351,7 +1351,7 @@
   gap: 7px;
   padding: 0 10px;
   border: 1px solid color-mix(in oklab, var(--accent) 26%, transparent);
-  border-radius: 9px;
+  border-radius: calc(9px * var(--radius-scale, 1));
   background: color-mix(in oklab, var(--accent) 12%, transparent);
   color: var(--accent);
   font-size: 12.5px;
@@ -1392,7 +1392,7 @@
   display: grid;
   place-items: center;
   border: none;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   background: transparent;
   color: var(--text-3);
   cursor: pointer;
@@ -1449,7 +1449,7 @@
   place-items: center;
   color: var(--text-4);
   border: none;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   background: transparent;
   transition: background-color 140ms ease, color 140ms ease;
 }
@@ -1465,7 +1465,7 @@
   border: none;
   background: transparent;
   color: var(--text-2);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1520,7 +1520,7 @@
   border: none;
   background: transparent;
   color: var(--text-3);
-  border-radius: 9px;
+  border-radius: calc(9px * var(--radius-scale, 1));
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1554,7 +1554,7 @@
   background: transparent;
   color: var(--text-2);
   height: 30px;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1595,7 +1595,7 @@
 .tree-folder-add {
   width: 20px;
   height: 20px;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   border: 1px solid transparent;
   background: transparent;
   color: var(--text-4);

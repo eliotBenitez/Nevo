@@ -118,6 +118,7 @@
     "localWorkspace": "Local workspace",
     "cloudWorkspace": "Cloud storage",
     "toggleSidebar": "Toggle sidebar",
+    "toggleRightPanel": "Toggle right panel",
     "createNote": "New note",
     "createFolder": "New folder",
     "importMd": "Import .md",
@@ -484,6 +485,11 @@
         "immersive": "Immersive",
         "minimal": "Minimal"
       },
+      "roundness": {
+        "sharp": "Sharp",
+        "default": "Default",
+        "soft": "Soft"
+      },
       "backgroundScene": {
         "aurora": "Aurora",
         "paper": "Paper",
@@ -592,11 +598,18 @@
       "description": "Visual shell preferences — app-wide settings and workspace style.",
       "groups": {
         "application": "Application",
+        "comfort": "Comfort & Accessibility",
         "workspaceStyle": "Workspace Style"
       },
       "mode": {
         "title": "Mode",
         "description": "Global app preference saved in AppConfig"
+      },
+      "themeSchedule": {
+        "title": "Auto theme schedule",
+        "description": "Switch between light and dark by the clock. Overrides the mode above while active.",
+        "lightLabel": "Light theme from",
+        "darkLabel": "Dark theme from"
       },
       "accent": {
         "title": "Accent colour",
@@ -641,6 +654,18 @@
       "editorFont": {
         "title": "Editor font",
         "description": "Typeface used for the writing surface"
+      },
+      "interfaceZoom": {
+        "title": "Interface zoom",
+        "description": "Scale the entire app interface up or down"
+      },
+      "reduceTransparency": {
+        "title": "Reduce transparency",
+        "description": "Turn off background blur on panels for clarity and performance"
+      },
+      "interfaceRoundness": {
+        "title": "Corner roundness",
+        "description": "How rounded panels, buttons, and inputs appear"
       }
     },
     "editor": {
@@ -774,10 +799,6 @@
       "sidebarDefaultState": {
         "title": "Sidebar default state",
         "description": "Whether the sidebar starts expanded or collapsed on launch"
-      },
-      "backlinksVisibility": {
-        "title": "Backlinks visibility",
-        "description": "Show backlinks panel by default when opening a note"
       },
       "graphLabels": {
         "title": "Graph labels",
@@ -966,6 +987,10 @@
         "saveNote": "Save note",
         "searchTitles": "Global search",
         "toggleSidebar": "Toggle sidebar",
+        "toggleRightPanel": "Toggle right panel",
+        "openGraph": "Open graph",
+        "openHistory": "Open history",
+        "openTrash": "Open trash",
         "openSettings": "Open settings"
       }
     },
@@ -1154,6 +1179,11 @@
     "markmap": {
       "label": "Mind map",
       "placeholder": "# Topic\n## Idea A\n## Idea B",
+      "applyHint": "to apply",
+      "apply": "Apply",
+      "delete": "Delete"
+    },
+    "pluginBlock": {
       "applyHint": "to apply",
       "apply": "Apply",
       "delete": "Delete"

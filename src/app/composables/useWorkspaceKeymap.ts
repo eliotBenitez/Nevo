@@ -9,6 +9,10 @@ interface KeymapHandlers {
   saveNote: () => Promise<void>
   runSearch: () => void
   toggleSidebar: () => void
+  toggleRightPanel: () => void
+  openGraph: () => void
+  openHistory: () => void
+  openTrash: () => void
   openSettings: () => void
 }
 
@@ -20,6 +24,10 @@ export function useWorkspaceKeymap(settings: Ref<WorkspaceSettings>, handlers: K
       case 'workspace.save-note': return handlers.saveNote()
       case 'workspace.search': handlers.runSearch(); break
       case 'workspace.toggle-sidebar': handlers.toggleSidebar(); break
+      case 'workspace.toggle-right-panel': handlers.toggleRightPanel(); break
+      case 'workspace.open-graph': handlers.openGraph(); break
+      case 'workspace.open-history': handlers.openHistory(); break
+      case 'workspace.open-trash': handlers.openTrash(); break
       case 'app.open-settings': handlers.openSettings(); break
     }
   }

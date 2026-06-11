@@ -46,7 +46,7 @@ pub fn create_note(
         content: empty_doc(),
     };
 
-    let path = note_path(&workspace_path, &note.id);
+    let path = note_path(&workspace_path, &note.id)?;
     let content = serde_json::to_string_pretty(&note).map_err(|error| {
         let message = error.to_string();
         let _ = logger.error(
@@ -133,7 +133,7 @@ pub fn load_note(workspace_path: String, note_id: String) -> Result<NoteDocument
     })?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let diagnostics_enabled = workspace::is_extended_diagnostics_enabled(&workspace_path);
-    let path = note_path(&workspace_path, &note_id);
+    let path = note_path(&workspace_path, &note_id)?;
     let content = std::fs::read_to_string(&path).map_err(|error| {
         let message = error.to_string();
         let _ = logger.error(
@@ -184,7 +184,7 @@ pub fn save_note(workspace_path: String, note: NoteDocument) -> Result<(), Strin
     })?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let diagnostics_enabled = workspace::is_extended_diagnostics_enabled(&workspace_path);
-    let path = note_path(&workspace_path, &note.id);
+    let path = note_path(&workspace_path, &note.id)?;
     let content = serde_json::to_string(&note).map_err(|error| {
         let message = error.to_string();
         let _ = logger.error(
@@ -391,7 +391,7 @@ pub fn move_note(
     }
 
     // Update folderId inside the note file
-    let path = note_path(&workspace_path, &note_id);
+    let path = note_path(&workspace_path, &note_id)?;
     if path.exists() {
         let file_content = std::fs::read_to_string(&path).map_err(|error| {
             let message = error.to_string();

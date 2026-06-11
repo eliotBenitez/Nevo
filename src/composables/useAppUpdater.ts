@@ -12,6 +12,12 @@ export type UpdaterStatus =
   | 'upToDate'
   | 'error'
 
+// Source repository for richer "What's new" notes. The updater manifest
+// (latest.json) only carries the release title, so we fetch the full release
+// description (Markdown body) from the GitHub API. Must match the owner/repo of
+// the updater endpoint in src-tauri/tauri.conf.json.
+const RELEASE_REPO = 'eliotBenitez/Nevo'
+
 // Module-level singleton state so the silent startup check and the manual
 // "Check for updates" button in settings share the same flow and dialog.
 const status = ref<UpdaterStatus>('idle')
@@ -29,6 +35,33 @@ let totalBytes = 0
 
 function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
+}
+
+/**
+ * Fetch the full release description (Markdown body) from the GitHub API.
+ * The updater manifest only contains the release title, so this surfaces the
+ * actual changelog. Returns null on any failure so the caller can fall back to
+ * the updater-provided body without breaking the update flow.
+ */
+async function fetchGithubReleaseBody(version: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${RELEASE_REPO}/releases/tags/v${version}`,
+      { headers: { Accept: 'application/vnd.github+json' } },
+    )
+    if (!res.ok) return null
+    const data = (await res.json()) as { body?: string | null }
+    const body = data.body?.trim()
+    return body ? body : null
+  } catch (error) {
+    await appLogger.warn({
+      source: 'frontend.updater',
+      event: 'release-notes',
+      message: 'Failed to fetch GitHub release notes',
+      error,
+    })
+    return null
+  }
 }
 
 /**
@@ -53,6 +86,8 @@ async function check({ silent = false }: { silent?: boolean } = {}): Promise<boo
     if (update) {
       pendingUpdate = update
       availableVersion.value = update.version
+      // Show the manifest body immediately so the dialog is not blocked on the
+      // network, then upgrade to the full GitHub release description if available.
       releaseNotes.value = update.body?.trim() ? update.body : null
       releaseDate.value = update.date ?? null
       status.value = 'available'
@@ -63,6 +98,8 @@ async function check({ silent = false }: { silent?: boolean } = {}): Promise<boo
         message: 'Update available',
         payload: { version: update.version },
       })
+      const githubBody = await fetchGithubReleaseBody(update.version)
+      if (githubBody) releaseNotes.value = githubBody
       return true
     }
 

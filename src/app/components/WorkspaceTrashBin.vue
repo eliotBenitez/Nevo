@@ -150,7 +150,7 @@ async function emptyTrash() {
   height: 28px;
   display: grid;
   place-items: center;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   border: none;
   background: var(--hover);
   color: var(--text-3);

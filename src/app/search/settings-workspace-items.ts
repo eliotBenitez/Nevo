@@ -22,7 +22,6 @@ export function buildWorkspaceSearchItems(
     item('rememberExpandedFolders', t('settings.workspace.rememberExpandedFolders.title'), t('settings.workspace.rememberExpandedFolders.description'), booleanLabel(t, ws.rememberExpandedFolders)),
     item('sidebarDefaultState', t('settings.workspace.sidebarDefaultState.title'), t('settings.workspace.sidebarDefaultState.description'), t(`settings.options.sidebarDefaultState.${ws.sidebarDefaultState}`)),
     item('rootNotesVisible', t('settings.workspace.rootNotesVisible.title'), t('settings.workspace.rootNotesVisible.description'), booleanLabel(t, ws.rootNotesVisible)),
-    item('showBacklinksByDefault', t('settings.workspace.backlinksVisibility.title'), t('settings.workspace.backlinksVisibility.description'), booleanLabel(t, ws.showBacklinksByDefault)),
     item('newNotePlacement', t('settings.workspace.newNotePlacement.title'), t('settings.workspace.newNotePlacement.description'), t(`settings.options.itemPlacement.${ws.newNotePlacement}`)),
     item('newFolderPlacement', t('settings.workspace.newFolderPlacement.title'), t('settings.workspace.newFolderPlacement.description'), t(`settings.options.itemPlacement.${ws.newFolderPlacement}`)),
     item('showEmptyFolders', t('settings.workspace.showEmptyFolders.title'), t('settings.workspace.showEmptyFolders.description'), booleanLabel(t, ws.showEmptyFolders)),

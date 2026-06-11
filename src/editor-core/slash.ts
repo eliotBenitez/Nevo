@@ -130,6 +130,48 @@ function sortSlashItems(items: NevoSlashItem[], query: string): NevoSlashItem[] 
   return scored.map((entry) => entry.item)
 }
 
+function groupAndFlatSlashItems(items: NevoSlashItem[]): NevoSlashItem[] {
+  const CATEGORY_ORDER = ['text', 'lists', 'code', 'media', 'layout']
+  const map = new Map<string, NevoSlashItem[]>()
+  const uncategorized: NevoSlashItem[] = []
+
+  for (const item of items) {
+    const cat = item.category ?? ''
+    if (!cat) {
+      uncategorized.push(item)
+    } else {
+      let group = map.get(cat)
+      if (!group) {
+        group = []
+        map.set(cat, group)
+      }
+      group.push(item)
+    }
+  }
+
+  const result: NevoSlashItem[] = []
+
+  for (const key of CATEGORY_ORDER) {
+    const groupItems = map.get(key)
+    if (groupItems && groupItems.length > 0) {
+      result.push(...groupItems)
+      map.delete(key)
+    }
+  }
+
+  for (const groupItems of map.values()) {
+    if (groupItems.length > 0) {
+      result.push(...groupItems)
+    }
+  }
+
+  if (uncategorized.length > 0) {
+    result.push(...uncategorized)
+  }
+
+  return result
+}
+
 function normalizeActiveIndex(index: number, itemCount: number): number {
   if (itemCount <= 0) return 0
   const mod = index % itemCount
@@ -147,7 +189,7 @@ function buildSlashState(
     return createClosedState()
   }
 
-  const sortedItems = sortSlashItems(getSlashItems(), resolvedRange.query)
+  const sortedItems = groupAndFlatSlashItems(sortSlashItems(getSlashItems(), resolvedRange.query))
   const signature = getSlashSignature(resolvedRange)
   const range = { from: resolvedRange.from, to: resolvedRange.to }
 

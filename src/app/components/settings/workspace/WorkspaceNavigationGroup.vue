@@ -21,7 +21,6 @@ function resetNavigation() {
     draft.workspace.rememberExpandedFolders = d.rememberExpandedFolders
     draft.workspace.sidebarDefaultState = d.sidebarDefaultState
     draft.workspace.rootNotesVisible = d.rootNotesVisible
-    draft.workspace.showBacklinksByDefault = d.showBacklinksByDefault
     draft.workspace.showGraphLabels = d.showGraphLabels
   })
 }
@@ -75,16 +74,6 @@ const sidebarStateOptions = ['expanded', 'collapsed'].map(v => ({
         />
       </div>
 
-      <div class="settings-row settings-row--border">
-        <div class="row-copy">
-          <div class="row-title">{{ t('settings.workspace.backlinksVisibility.title') }}</div>
-          <div class="row-sub">{{ t('settings.workspace.backlinksVisibility.description') }}</div>
-        </div>
-        <NvToggle
-          :model-value="settings.workspace.showBacklinksByDefault"
-          @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.showBacklinksByDefault = v })"
-        />
-      </div>
 
       <div class="settings-row settings-row--border">
         <div class="row-copy">

@@ -4,9 +4,11 @@ import type {
   AppConfig,
   FocusRingStyle,
   InterfaceDensity,
+  InterfaceRoundness,
   ReducedMotionMode,
   ScrollbarVisibility,
   ThemeMode,
+  ThemeSchedule,
   WindowChromeStyle,
 } from '../types/workspace'
 import { useWorkspaceStore } from './workspace'
@@ -17,26 +19,64 @@ function applyRootAttr(key: string, value: string) {
   document.documentElement.setAttribute(`data-${key}`, value)
 }
 
+/** Returns 'light' when the current local time is within [lightTime, darkTime), otherwise 'dark'. */
+function resolveScheduledTheme(schedule: ThemeSchedule): 'light' | 'dark' {
+  const now = new Date()
+  const minutes = now.getHours() * 60 + now.getMinutes()
+  const toMinutes = (t: string) => {
+    const [h, m] = t.split(':').map(Number)
+    return h * 60 + m
+  }
+  const light = toMinutes(schedule.lightTime)
+  const dark = toMinutes(schedule.darkTime)
+  if (light === dark) return 'light'
+  if (light < dark) return minutes >= light && minutes < dark ? 'light' : 'dark'
+  // light time is after dark time (e.g. light 07:00 wraps past midnight)
+  return minutes >= light || minutes < dark ? 'light' : 'dark'
+}
+
 export const useThemeStore = defineStore('theme', () => {
   const theme = ref<Theme>('system')
+  const schedule = ref<ThemeSchedule>({ enabled: false, lightTime: '07:00', darkTime: '20:00' })
   let mediaQuery: MediaQueryList | null = null
   let onSystemThemeChange: (() => void) | null = null
+  let scheduleTimer: ReturnType<typeof setInterval> | null = null
 
   function applyTheme(t: Theme) {
-    const resolved = t === 'system'
-      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-      : t
+    const resolved = schedule.value.enabled
+      ? resolveScheduledTheme(schedule.value)
+      : t === 'system'
+        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        : t
     document.documentElement.classList.remove('theme-dark', 'theme-light')
     document.documentElement.classList.add(`theme-${resolved}`)
   }
 
+  function stopScheduleTimer() {
+    if (scheduleTimer) {
+      clearInterval(scheduleTimer)
+      scheduleTimer = null
+    }
+  }
+
+  function startScheduleTimer() {
+    stopScheduleTimer()
+    if (!schedule.value.enabled) return
+    scheduleTimer = setInterval(() => applyTheme(theme.value), 60_000)
+  }
+
   function applyAppearance(config: AppConfig) {
+    schedule.value = config.themeSchedule ?? schedule.value
     applyTheme(config.theme ?? theme.value)
     applyRootAttr('density', config.interfaceDensity ?? 'comfortable')
     applyRootAttr('motion', config.reducedMotion ?? 'system')
     applyRootAttr('scrollbars', config.scrollbarVisibility ?? 'hidden')
     applyRootAttr('focus-ring', config.focusRingStyle ?? 'accent')
     applyRootAttr('chrome', config.windowChromeStyle ?? 'default')
+    applyRootAttr('roundness', config.interfaceRoundness ?? 'default')
+    applyRootAttr('reduce-transparency', String(config.reduceTransparency ?? false))
+    document.documentElement.style.setProperty('--ui-scale', String((config.interfaceZoom ?? 100) / 100))
+    startScheduleTimer()
   }
 
   async function setTheme(t: Theme) {
@@ -70,6 +110,28 @@ export const useThemeStore = defineStore('theme', () => {
     await useWorkspaceStore().saveAppConfig({ windowChromeStyle: value })
   }
 
+  async function setInterfaceZoom(value: number) {
+    document.documentElement.style.setProperty('--ui-scale', String(value / 100))
+    await useWorkspaceStore().saveAppConfig({ interfaceZoom: value })
+  }
+
+  async function setReduceTransparency(value: boolean) {
+    applyRootAttr('reduce-transparency', String(value))
+    await useWorkspaceStore().saveAppConfig({ reduceTransparency: value })
+  }
+
+  async function setInterfaceRoundness(value: InterfaceRoundness) {
+    applyRootAttr('roundness', value)
+    await useWorkspaceStore().saveAppConfig({ interfaceRoundness: value })
+  }
+
+  async function setThemeSchedule(patch: Partial<ThemeSchedule>) {
+    schedule.value = { ...schedule.value, ...patch }
+    applyTheme(theme.value)
+    startScheduleTimer()
+    await useWorkspaceStore().saveAppConfig({ themeSchedule: { ...schedule.value } })
+  }
+
   async function init() {
     const workspaceStore = useWorkspaceStore()
     theme.value = workspaceStore.appConfig.theme
@@ -88,12 +150,17 @@ export const useThemeStore = defineStore('theme', () => {
 
   return {
     theme,
+    schedule,
     setTheme,
     setDensity,
     setReducedMotion,
     setScrollbarVisibility,
     setFocusRingStyle,
     setWindowChromeStyle,
+    setInterfaceZoom,
+    setReduceTransparency,
+    setInterfaceRoundness,
+    setThemeSchedule,
     applyAppearance,
     init,
   }

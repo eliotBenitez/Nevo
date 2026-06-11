@@ -82,6 +82,25 @@ body {
 [data-chrome="immersive"] .nv-titlebar { background: transparent; backdrop-filter: none; }
 [data-chrome="minimal"] .nv-titlebar { height: 0; overflow: hidden; }
 
+/* ── Interface zoom ──────────────────────────────────── */
+.nv-app { zoom: var(--ui-scale, 1); }
+
+/* ── Reduce transparency ─────────────────────────────── */
+[data-reduce-transparency="true"] .nv-glass,
+[data-reduce-transparency="true"] .nv-card,
+[data-reduce-transparency="true"] .nv-sidebar {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: var(--canvas-1);
+}
+
+/* ── Interface roundness ─────────────────────────────── */
+/* Global multiplier consumed by every `border-radius: calc(Npx * var(--radius-scale)) `
+   declaration across the app. Pills/circles (999px, 50%) are intentionally left unscaled. */
+[data-roundness="sharp"] { --radius-scale: 0.35; }
+[data-roundness="default"] { --radius-scale: 1; }
+[data-roundness="soft"] { --radius-scale: 1.75; }
+
 /* ── Background scenes ──────────────────────────────── */
 [data-scene="aurora"] .nv-canvas {
   background:

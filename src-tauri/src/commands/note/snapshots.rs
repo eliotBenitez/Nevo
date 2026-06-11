@@ -10,19 +10,24 @@ use crate::commands::path_utils::normalize_workspace_path;
 use crate::commands::workspace;
 use crate::logging::{LogContext, LogError};
 
-pub(crate) fn snapshot_dir_path(workspace_path: &str, note_id: &str) -> std::path::PathBuf {
-    Path::new(workspace_path)
+pub(crate) fn snapshot_dir_path(
+    workspace_path: &str,
+    note_id: &str,
+) -> Result<std::path::PathBuf, String> {
+    crate::commands::path_utils::validate_id(note_id)?;
+    Ok(Path::new(workspace_path)
         .join(".nevo")
         .join("snapshots")
-        .join(note_id)
+        .join(note_id))
 }
 
 fn snapshot_file_path(
     workspace_path: &str,
     note_id: &str,
     snapshot_id: &str,
-) -> std::path::PathBuf {
-    snapshot_dir_path(workspace_path, note_id).join(format!("{}.json", snapshot_id))
+) -> Result<std::path::PathBuf, String> {
+    crate::commands::path_utils::validate_id(snapshot_id)?;
+    Ok(snapshot_dir_path(workspace_path, note_id)?.join(format!("{}.json", snapshot_id)))
 }
 
 fn create_snapshot_id() -> String {
@@ -37,7 +42,7 @@ fn list_snapshot_files(
     workspace_path: &str,
     note_id: &str,
 ) -> Result<Vec<std::path::PathBuf>, String> {
-    let dir = snapshot_dir_path(workspace_path, note_id);
+    let dir = snapshot_dir_path(workspace_path, note_id)?;
     if !dir.exists() {
         return Ok(vec![]);
     }
@@ -84,10 +89,10 @@ fn snapshot_timestamp(path: &Path) -> Option<NaiveDateTime> {
 }
 
 fn write_note_snapshot(workspace_path: &str, note: &NoteDocument) -> Result<(), String> {
-    let dir = snapshot_dir_path(workspace_path, &note.id);
+    let dir = snapshot_dir_path(workspace_path, &note.id)?;
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let snapshot_id = create_snapshot_id();
-    let snapshot_path = snapshot_file_path(workspace_path, &note.id, &snapshot_id);
+    let snapshot_path = snapshot_file_path(workspace_path, &note.id, &snapshot_id)?;
     let content = serde_json::to_string(note).map_err(|e| e.to_string())?;
     std::fs::write(snapshot_path, content).map_err(|e| e.to_string())?;
     prune_note_snapshots_internal(workspace_path, &note.id, 50)
@@ -154,7 +159,7 @@ pub fn load_note_snapshot(
 ) -> Result<NoteDocument, String> {
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
-    let snapshot_path = snapshot_file_path(&workspace_path, &note_id, &snapshot_id);
+    let snapshot_path = snapshot_file_path(&workspace_path, &note_id, &snapshot_id)?;
     let content = std::fs::read_to_string(&snapshot_path).map_err(|e| e.to_string())?;
     let mut note: NoteDocument = serde_json::from_str(&content).map_err(|e| e.to_string())?;
     note.id = note_id;
@@ -183,7 +188,7 @@ pub fn restore_note_snapshot(
     })?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let diagnostics_enabled = workspace::is_extended_diagnostics_enabled(&workspace_path);
-    let snapshot_path = snapshot_file_path(&workspace_path, &note_id, &snapshot_id);
+    let snapshot_path = snapshot_file_path(&workspace_path, &note_id, &snapshot_id)?;
     let content = std::fs::read_to_string(&snapshot_path).map_err(|error| {
         let message = error.to_string();
         let _ = logger.error(
@@ -208,7 +213,7 @@ pub fn restore_note_snapshot(
     note.id = note_id.clone();
     note.updated_at = Utc::now().to_rfc3339();
 
-    let note_file_path = note_path(&workspace_path, &note_id);
+    let note_file_path = note_path(&workspace_path, &note_id)?;
     let payload = serde_json::to_string_pretty(&note).map_err(|error| {
         let message = error.to_string();
         let _ = logger.error(

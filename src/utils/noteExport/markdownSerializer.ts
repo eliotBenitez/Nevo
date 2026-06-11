@@ -1,4 +1,6 @@
 import type { BlockNode, NoteDocument } from '../../types/note'
+import { getPluginNodeSerializer } from '../../editor-core/plugin-host/active-serialization'
+import type { NevoSerializableNode } from '../../types/editor-plugin'
 
 export interface MarkdownSerializeResult {
   markdown: string
@@ -177,6 +179,12 @@ function nodeToMd(node: BlockNode, ctx: SerializeCtx): string {
     case 'hard_break':
       return '\n'
     default: {
+      const pluginSerializer = getPluginNodeSerializer(node.type)?.markdown
+      if (pluginSerializer) {
+        return pluginSerializer(node as NevoSerializableNode, {
+          serializeChildren: () => (node.content ?? []).map(child => nodeToMd(child, ctx)).filter(Boolean).join('\n\n'),
+        })
+      }
       const text = inlineContent(node, ctx)
       if (text) return text
       return (node.content ?? []).map(child => nodeToMd(child, ctx)).filter(Boolean).join('\n\n')

@@ -82,7 +82,7 @@ watch(
   place-items: center;
   width: 16px;
   height: 16px;
-  border-radius: 4px;
+  border-radius: calc(4px * var(--radius-scale, 1));
   border: 1.5px solid var(--line-strong);
   background: var(--glass-3, var(--surface-1));
   color: white;
@@ -104,8 +104,8 @@ watch(
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
-.nv-checkbox--xs .nv-checkbox__box { width: 12px; height: 12px; border-radius: 3px; }
-.nv-checkbox--md .nv-checkbox__box { width: 20px; height: 20px; border-radius: 5px; }
+.nv-checkbox--xs .nv-checkbox__box { width: 12px; height: 12px; border-radius: calc(3px * var(--radius-scale, 1)); }
+.nv-checkbox--md .nv-checkbox__box { width: 20px; height: 20px; border-radius: calc(5px * var(--radius-scale, 1)); }
 
 .nv-checkbox__label {
   font: 500 12.5px var(--font-ui);

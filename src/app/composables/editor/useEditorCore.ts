@@ -22,6 +22,7 @@ import {
   nevoSlashPluginKey,
   parseNoteContentToDoc,
   serializeDocToNoteContent,
+  setActivePluginSerialization,
 } from '../../../editor-core'
 import {
   createYDocFromContent,
@@ -102,19 +103,56 @@ export interface EditorCoreCallbacks {
   onMermaidEditRequest: (pos: number, rect?: DOMRect) => void
   onMarkmapEditRequest: (pos: number, rect?: DOMRect) => void
   onVegaEditRequest: (pos: number, rect?: DOMRect) => void
+  onPluginNodeEditRequest: (pos: number, nodeName: string, rect?: DOMRect) => void
   onCalloutIconPickRequest: (pos: number, rect: DOMRect, icon: string) => void
   onTemplateInsertRequest?: () => void
   onAfterTransaction?: (view: EditorView) => void
   onAssetSrcsRemoved?: (srcs: string[]) => void
 }
 
+const ASSET_SRC_PREFIX = '.nevo/assets/'
+
+function assetSrcOf(node: Node): string | null {
+  const src = node.attrs?.src
+  return typeof src === 'string' && src.startsWith(ASSET_SRC_PREFIX) ? src : null
+}
+
 function collectAssetSrcs(doc: Node): Set<string> {
   const srcs = new Set<string>()
   doc.descendants((node) => {
-    const src = node.attrs?.src
-    if (typeof src === 'string' && src.startsWith('.nevo/assets/')) srcs.add(src)
+    const src = assetSrcOf(node)
+    if (src) srcs.add(src)
   })
   return srcs
+}
+
+/**
+ * Asset srcs that disappeared in this transaction. Instead of walking the whole
+ * document twice (before + after), we scan only the ranges the transaction
+ * actually touched in the previous doc to gather candidate srcs; the full
+ * after-doc scan runs only when at least one asset node was in a changed range.
+ * For ordinary text edits there are no candidates, so neither walk happens.
+ */
+function collectRemovedAssetSrcs(prevDoc: Node, transaction: Transaction): string[] {
+  const candidates = new Set<string>()
+  let doc = prevDoc
+  for (const step of transaction.steps) {
+    const map = step.getMap()
+    map.forEach((oldStart, oldEnd) => {
+      if (oldEnd <= oldStart) return
+      doc.nodesBetween(oldStart, oldEnd, (node) => {
+        const src = assetSrcOf(node)
+        if (src) candidates.add(src)
+      })
+    })
+    const result = step.apply(doc)
+    if (result.doc) doc = result.doc
+  }
+  if (candidates.size === 0) return []
+  // The same asset may still be referenced elsewhere or have been re-inserted,
+  // so confirm against the resulting document before reporting it as removed.
+  const stillPresent = collectAssetSrcs(transaction.doc)
+  return [...candidates].filter((src) => !stillPresent.has(src))
 }
 
 export function createEditorCore(): EditorCore {
@@ -207,6 +245,25 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
 
   let pendingContentDoc: Node | null = null
   let contentSerializeTimer: ReturnType<typeof setTimeout> | null = null
+
+  // Debounced persistence of the editor-owned (disk-backed) Y.Doc. Hoisted to
+  // composable scope so it can be torn down on note switch / editor destroy —
+  // otherwise the pending timer leaks past `ydoc.destroy()` and the last edit
+  // within the debounce window is never written.
+  let yjsSaveTimer: ReturnType<typeof setTimeout> | null = null
+  let flushYjsPersistence: (() => void) | null = null
+
+  function teardownYjsPersistence() {
+    const hadPendingSave = yjsSaveTimer !== null
+    if (yjsSaveTimer) {
+      clearTimeout(yjsSaveTimer)
+      yjsSaveTimer = null
+    }
+    // Only flush when a debounced save was actually pending, so a plain note
+    // switch with no unsaved Yjs changes doesn't trigger a redundant write.
+    if (hadPendingSave) flushYjsPersistence?.()
+    flushYjsPersistence = null
+  }
 
   function clearContentSerializeTimer() {
     if (contentSerializeTimer) {
@@ -409,6 +466,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
       core.pluginHost = null
     }
     core.toolbarPluginActions = []
+    setActivePluginSerialization(null)
 
     if (!workspacePath) {
       core.schema = createSchemaWithPluginExtensions()
@@ -417,10 +475,14 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
 
     const manifests = pluginManifests.map(toEditorPluginManifest)
     const host = new EditorPluginHost({ workspacePath, manifests, nevoVersion: '1.0.0' })
+    host.setNodeEditRequestHandler((_view, position, nodeName, anchorRect) =>
+      callbacks.onPluginNodeEditRequest(position, nodeName, anchorRect),
+    )
     await host.initialize()
     core.pluginHost = host
     core.schema = createSchemaWithPluginExtensions(host)
     core.toolbarPluginActions = sortToolbarActions(Array.from(host.registries.toolbarActions.values()))
+    setActivePluginSerialization(host.registries)
 
     if (host.errors.length > 0) {
       await appLogger.warn({
@@ -435,6 +497,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
 
   function destroyEditorView() {
     flushPendingContentUpdate()
+    teardownYjsPersistence()
     core.editorView?.destroy()
     core.editorView = null
     // Cloud-backed sessions are owned by the workspace backend; only release
@@ -510,6 +573,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
 
     // Release any previous Y.Doc; cloud sessions are owned by the backend and
     // must not be destroyed here (only the editor-owned local docs are).
+    teardownYjsPersistence()
     if (core.ownsYdoc) { core.awareness?.destroy(); core.ydoc?.destroy() }
     core.awareness = null
     core.ydoc = null
@@ -556,16 +620,19 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
         core.ownsYdoc = true
         yFragment = ydoc.getXmlFragment(Y_FRAGMENT_NAME)
 
-        let saveTimer: ReturnType<typeof setTimeout> | null = null
+        const persistYjsState = () => {
+          if (core.ydoc !== ydoc) return
+          const state = encodeYDocState(ydoc)
+          void collabCommands.saveYjsState(workspacePath, noteId, Array.from(state)).catch(() => {
+            /* non-critical */
+          })
+        }
+        flushYjsPersistence = persistYjsState
         ydoc.on('update', () => {
-          if (saveTimer) clearTimeout(saveTimer)
-          saveTimer = setTimeout(async () => {
-            if (core.ydoc === ydoc) {
-              const state = encodeYDocState(ydoc)
-              try {
-                await collabCommands.saveYjsState(workspacePath, noteId, Array.from(state))
-              } catch { /* non-critical */ }
-            }
+          if (yjsSaveTimer) clearTimeout(yjsSaveTimer)
+          yjsSaveTimer = setTimeout(() => {
+            yjsSaveTimer = null
+            persistYjsState()
           }, 2000)
         })
       }
@@ -652,9 +719,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
           }
           if (transaction.docChanged && !core.isApplyingExternalState) {
             if (callbacks.onAssetSrcsRemoved) {
-              const prevSrcs = collectAssetSrcs(prevState.doc)
-              const nextSrcs = collectAssetSrcs(nextState.doc)
-              const removed = [...prevSrcs].filter((s) => !nextSrcs.has(s))
+              const removed = collectRemovedAssetSrcs(prevState.doc, transaction)
               if (removed.length > 0) callbacks.onAssetSrcsRemoved(removed)
             }
             scheduleContentUpdate(nextState.doc)

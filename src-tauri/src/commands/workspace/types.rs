@@ -180,7 +180,7 @@ impl Default for EditorSettings {
 pub struct WorkspaceBehaviorSettings {
     #[serde(rename = "defaultLandingView")]
     pub default_landing_view: String,
-    #[serde(rename = "showBacklinksByDefault")]
+    #[serde(rename = "showBacklinksByDefault", default = "bool_true")]
     pub show_backlinks_by_default: bool,
     #[serde(rename = "showGraphLabels")]
     pub show_graph_labels: bool,
@@ -726,6 +726,34 @@ pub(crate) fn default_hotkey_bindings() -> Vec<HotkeyBinding> {
             command_id: "workspace.toggle-sidebar".to_string(),
             label: "Toggle sidebar".to_string(),
             default_chord: "Ctrl+\\".to_string(),
+            custom_chord: None,
+            scope: "workspace".to_string(),
+        },
+        HotkeyBinding {
+            command_id: "workspace.toggle-right-panel".to_string(),
+            label: "Toggle right panel".to_string(),
+            default_chord: "Ctrl+Alt+\\".to_string(),
+            custom_chord: None,
+            scope: "workspace".to_string(),
+        },
+        HotkeyBinding {
+            command_id: "workspace.open-graph".to_string(),
+            label: "Open graph".to_string(),
+            default_chord: "Ctrl+Alt+G".to_string(),
+            custom_chord: None,
+            scope: "workspace".to_string(),
+        },
+        HotkeyBinding {
+            command_id: "workspace.open-history".to_string(),
+            label: "Open history".to_string(),
+            default_chord: "Ctrl+Alt+H".to_string(),
+            custom_chord: None,
+            scope: "workspace".to_string(),
+        },
+        HotkeyBinding {
+            command_id: "workspace.open-trash".to_string(),
+            label: "Open trash".to_string(),
+            default_chord: "Ctrl+Alt+T".to_string(),
             custom_chord: None,
             scope: "workspace".to_string(),
         },

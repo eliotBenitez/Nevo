@@ -1,3 +1,5 @@
+import type { EditorView } from 'prosemirror-view'
+import { NodeSelection } from 'prosemirror-state'
 import type {
   NevoEditorCapability,
   NevoEditorContext,
@@ -6,6 +8,7 @@ import type {
   NevoEditorPluginManifest,
   NevoEditorRegistries,
 } from '../../types/editor-plugin'
+import { makeBlockNodeView } from './blockNodeView'
 
 export function buildPluginContext(
   manifest: NevoEditorPluginManifest,
@@ -13,6 +16,7 @@ export function buildPluginContext(
   registries: NevoEditorRegistries,
   emit: <K extends keyof NevoEditorEventMap>(event: K, payload: NevoEditorEventMap[K]) => void,
   on: <K extends keyof NevoEditorEventMap>(event: K, listener: (payload: NevoEditorEventMap[K]) => void) => () => void,
+  requestNodeEdit: (view: EditorView, position: number, anchorRect?: DOMRect) => void,
 ): NevoEditorContext {
   const ensureCapability = (capability: NevoEditorCapability) => {
     if (!manifest.editorCapabilities.includes(capability)) {
@@ -33,7 +37,7 @@ export function buildPluginContext(
     on: (event, listener) => on(event, listener),
   }
 
-  return {
+  const context: NevoEditorContext = {
     pluginId: manifest.id,
     capabilities: new Set(manifest.editorCapabilities),
     registerNode: (name, spec) => {
@@ -75,6 +79,46 @@ export function buildPluginContext(
       if (registries.toolbarActions.has(action.id)) throw new Error(`Toolbar action already registered: ${action.id}`)
       registries.toolbarActions.set(action.id, action)
     },
+    registerNodeSerializer: (nodeName, serializer) => {
+      ensureCapability('editor.write')
+      if (registries.nodeSerializers.has(nodeName)) throw new Error(`Node serializer already registered: ${nodeName}`)
+      registries.nodeSerializers.set(nodeName, serializer)
+    },
+    registerNodeImporter: (importer) => {
+      ensureCapability('editor.write')
+      if (registries.nodeImporters.has(importer.fencedLang)) throw new Error(`Node importer already registered for lang: ${importer.fencedLang}`)
+      registries.nodeImporters.set(importer.fencedLang, importer)
+    },
+    registerNodePopover: (nodeName, config) => {
+      ensureCapability('editor.write')
+      if (registries.nodePopovers.has(nodeName)) throw new Error(`Node popover already registered: ${nodeName}`)
+      registries.nodePopovers.set(nodeName, config)
+    },
+    requestNodeEdit: (view, position, anchorRect) => {
+      requestNodeEdit(view, position, anchorRect)
+    },
+    registerBlockType: (config) => {
+      ensureCapability('editor.write')
+      context.registerNode(config.name, config.schema)
+      context.registerNodeView(config.name, makeBlockNodeView(config, context))
+      if (config.popover) context.registerNodePopover(config.name, config.popover)
+      if (config.serialize) context.registerNodeSerializer(config.name, config.serialize)
+      if (config.importer) context.registerNodeImporter(config.importer)
+      if (config.slashItem) {
+        const { defaultAttrs, ...slashRest } = config.slashItem
+        context.registerSlashItem({
+          ...slashRest,
+          run: ({ state, dispatch }) => {
+            const nodeType = state.schema.nodes[config.name]
+            if (!nodeType) return
+            const node = nodeType.create(defaultAttrs ?? null)
+            const tr = state.tr.replaceSelectionWith(node, false)
+            const insertPos = tr.mapping.map(state.selection.from)
+            dispatch(tr.setSelection(NodeSelection.create(tr.doc, insertPos)).scrollIntoView())
+          },
+        })
+      }
+    },
     eventBus,
     storage: {
       get: <T>(key: string) => getStorageBucket().get(key) as T | undefined,
@@ -82,4 +126,6 @@ export function buildPluginContext(
       delete: (key) => { getStorageBucket().delete(key) },
     },
   }
+
+  return context
 }

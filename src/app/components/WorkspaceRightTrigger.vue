@@ -6,7 +6,7 @@ const uiStore = useUiStore()
 </script>
 
 <template>
-  <div class="right-trigger" :title="'Open outline'" @click="uiStore.toggleRightPanel()">
+  <div class="right-trigger" :title="'Open outline'" @mousedown.stop.prevent="uiStore.toggleRightPanel()">
     <ChevronLeft :size="12" class="right-trigger__icon" />
   </div>
 </template>
@@ -17,25 +17,25 @@ const uiStore = useUiStore()
   right: 0;
   top: 0;
   bottom: 0;
-  width: 8px;
+  width: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 2;
-  transition: width 160ms ease, background-color 160ms ease;
+  transition: width 120ms ease, background-color 120ms ease;
   overflow: hidden;
 }
 
 .right-trigger:hover {
-  width: 22px;
+  width: 24px;
   background: color-mix(in oklab, var(--accent) 10%, transparent);
 }
 
 .right-trigger__icon {
   color: var(--text-4);
   opacity: 0;
-  transition: opacity 160ms ease;
+  transition: opacity 120ms ease;
   flex-shrink: 0;
 }
 

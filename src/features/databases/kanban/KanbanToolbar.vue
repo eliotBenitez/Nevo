@@ -243,7 +243,7 @@ function setDensity(density: KanbanCardDensity) {
   display: flex;
   padding: 2px;
   background: var(--hover-strong, var(--surface-2));
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   border: 1px solid var(--line-1, var(--border-subtle));
   gap: 1px;
 }
@@ -253,7 +253,7 @@ function setDensity(density: KanbanCardDensity) {
   align-items: center;
   gap: 4px;
   padding: 3px 9px;
-  border-radius: 5px;
+  border-radius: calc(5px * var(--radius-scale, 1));
   border: none;
   background: transparent;
   font-size: 11.5px;
@@ -307,7 +307,7 @@ function setDensity(density: KanbanCardDensity) {
   gap: 4px;
   height: 26px;
   padding: 0 9px;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   border: 1px solid transparent;
   background: none;
   font-size: 11.5px;
@@ -392,7 +392,7 @@ function setDensity(density: KanbanCardDensity) {
   grid-template-columns: 1fr 1fr;
   gap: 4px;
   padding: 2px;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   background: var(--hover, var(--surface-1));
   border: 1px solid var(--line-1, var(--border-subtle));
 }
@@ -400,7 +400,7 @@ function setDensity(density: KanbanCardDensity) {
 .kb-toolbar__density-btn {
   height: 24px;
   border: none;
-  border-radius: 5px;
+  border-radius: calc(5px * var(--radius-scale, 1));
   background: transparent;
   color: var(--text-3, var(--text-secondary));
   font-size: 11px;
@@ -431,7 +431,7 @@ function setDensity(density: KanbanCardDensity) {
   padding: 0 10px;
   background: var(--hover, var(--surface-1));
   border: 1px solid var(--line-1, var(--border-subtle));
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   width: 180px;
   transition: border-color 0.15s, width 0.2s;
 }

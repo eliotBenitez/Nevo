@@ -1,4 +1,3 @@
-import mermaid from 'mermaid'
 import type { Node as PMNode } from 'prosemirror-model'
 import { NodeSelection } from 'prosemirror-state'
 import type { EditorView, NodeView } from 'prosemirror-view'
@@ -6,13 +5,26 @@ import { resolveNodePosition, getStringAttr, type CoreNodeViewOptions, type Node
 
 let renderCounter = 0
 
+// Mermaid (~500 KB) is loaded on demand the first time a diagram becomes
+// visible, keeping it out of the initial bundle. The module promise is cached
+// so concurrent diagrams share a single load.
+let mermaidModulePromise: Promise<typeof import('mermaid')['default']> | null = null
+
+function loadMermaid(): Promise<typeof import('mermaid')['default']> {
+  if (!mermaidModulePromise) {
+    mermaidModulePromise = import('mermaid').then((mod) => mod.default)
+  }
+  return mermaidModulePromise
+}
+
 function getMermaidTheme(): 'dark' | 'neutral' {
   return document.documentElement.classList.contains('theme-dark') ? 'dark' : 'neutral'
 }
 
 let initializedTheme: string | null = null
 
-function ensureMermaidTheme() {
+async function ensureMermaid(): Promise<typeof import('mermaid')['default']> {
+  const mermaid = await loadMermaid()
   const theme = getMermaidTheme()
   if (theme !== initializedTheme) {
     initializedTheme = theme
@@ -21,6 +33,7 @@ function ensureMermaidTheme() {
     // 'loose' (which permits inline HTML/click handlers) is an XSS vector here.
     mermaid.initialize({ startOnLoad: false, theme, securityLevel: 'strict' })
   }
+  return mermaid
 }
 
 function buildHeader(): HTMLElement {
@@ -94,7 +107,7 @@ export function createMermaidNodeView(node: PMNode, view: EditorView, getPos: No
     }
 
     try {
-      ensureMermaidTheme()
+      const mermaid = await ensureMermaid()
       const id = `nv-mermaid-${++renderCounter}`
       const { svg } = await mermaid.render(id, code)
       rendered.innerHTML = svg

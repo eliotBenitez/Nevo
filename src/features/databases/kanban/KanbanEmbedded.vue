@@ -92,7 +92,7 @@ const syncLabel = computed(() => {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--line-2, var(--border-subtle));
-  border-radius: 12px;
+  border-radius: calc(12px * var(--radius-scale, 1));
   background: var(--glass-2, var(--surface-1));
   overflow: hidden;
   font-size: 12px;
@@ -129,7 +129,7 @@ const syncLabel = computed(() => {
   place-items: center;
   width: 22px;
   height: 22px;
-  border-radius: 5px;
+  border-radius: calc(5px * var(--radius-scale, 1));
   border: none;
   background: none;
   color: var(--text-4, var(--text-muted));

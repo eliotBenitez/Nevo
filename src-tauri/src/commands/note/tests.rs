@@ -230,7 +230,7 @@ fn search_workspace_blocks_skips_malformed_and_empty_note_content() {
     let workspace = TestWorkspace::new();
     let workspace_path = workspace.path_string();
 
-    let malformed_path = note_path(&workspace_path, "broken");
+    let malformed_path = note_path(&workspace_path, "broken").expect("valid note id");
     std::fs::write(&malformed_path, "{ this is not valid json").expect("write malformed note");
 
     let mut empty_note = create_note(

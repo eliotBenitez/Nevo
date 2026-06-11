@@ -531,7 +531,7 @@ onBeforeUnmount(() => {
   height: 32px;
   padding: 0 9px;
   border: 1px solid var(--line-2);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   background: var(--hover);
   color: var(--text-1);
   font: 500 12px var(--font-ui);
@@ -555,7 +555,7 @@ onBeforeUnmount(() => {
   height: 18px;
   flex: 0 0 auto;
   border: 1px solid color-mix(in oklab, var(--line-2) 70%, transparent);
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background:
     linear-gradient(45deg, var(--line-1) 25%, transparent 25%),
     linear-gradient(-45deg, var(--line-1) 25%, transparent 25%),
@@ -598,7 +598,7 @@ onBeforeUnmount(() => {
   z-index: 420;
   padding: 10px;
   border: 1px solid var(--line-2);
-  border-radius: 10px;
+  border-radius: calc(10px * var(--radius-scale, 1));
   background: var(--glass-3);
   backdrop-filter: blur(32px) saturate(160%);
   -webkit-backdrop-filter: blur(32px) saturate(160%);
@@ -610,7 +610,7 @@ onBeforeUnmount(() => {
   z-index: 430;
   padding: 10px;
   border: 1px solid var(--line-2);
-  border-radius: 10px;
+  border-radius: calc(10px * var(--radius-scale, 1));
   background: var(--glass-3);
   backdrop-filter: blur(32px) saturate(160%);
   -webkit-backdrop-filter: blur(32px) saturate(160%);
@@ -637,7 +637,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   aspect-ratio: 1;
   border: 1px solid color-mix(in oklab, var(--line-2) 70%, transparent);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   padding: 0;
   cursor: pointer;
   box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--shadow) 10%, transparent);
@@ -689,7 +689,7 @@ onBeforeUnmount(() => {
   max-width: 138px;
   padding: 0 8px;
   border: 1px solid var(--line-2);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   background: var(--hover);
   color: var(--text-2);
   font: 600 11px var(--font-mono);
@@ -715,7 +715,7 @@ onBeforeUnmount(() => {
   height: 16px;
   flex: 0 0 auto;
   border: 1px solid color-mix(in oklab, var(--line-2) 70%, transparent);
-  border-radius: 5px;
+  border-radius: calc(5px * var(--radius-scale, 1));
   box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--shadow) 10%, transparent);
 }
 
@@ -737,7 +737,7 @@ onBeforeUnmount(() => {
   width: 30px;
   height: 30px;
   border: 1px solid var(--line-2);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--shadow) 10%, transparent);
 }
 
@@ -746,7 +746,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   padding: 0 9px;
   border: 1px solid var(--line-2);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   background: var(--hover);
   color: var(--text-1);
   font: 600 12px var(--font-mono);
@@ -768,7 +768,7 @@ onBeforeUnmount(() => {
   position: relative;
   height: 92px;
   border: 1px solid var(--line-2);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   overflow: hidden;
   cursor: crosshair;
   touch-action: none;
@@ -832,7 +832,7 @@ onBeforeUnmount(() => {
   margin-top: 8px;
   padding: 4px 8px;
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   background: transparent;
   color: var(--text-3);
   font: 600 11.5px var(--font-ui);

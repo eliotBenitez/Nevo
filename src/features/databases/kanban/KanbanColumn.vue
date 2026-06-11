@@ -323,7 +323,7 @@ function cancelQuickAdd() {
   width: 292px;
   min-width: 292px;
   background: color-mix(in oklab, var(--glass-2, var(--surface-0)) 90%, transparent);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   border: 1px solid var(--line-1, var(--border-subtle));
   overflow: visible;
   flex-shrink: 0;
@@ -377,7 +377,7 @@ function cancelQuickAdd() {
   min-width: 0;
   height: 28px;
   padding: 0 8px;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   border: 1px solid var(--line-2, var(--border-subtle));
   background: var(--glass-3, var(--surface-1));
   color: var(--text-1, var(--text-primary));
@@ -436,7 +436,7 @@ function cancelQuickAdd() {
   justify-content: center;
   width: 20px;
   height: 20px;
-  border-radius: 5px;
+  border-radius: calc(5px * var(--radius-scale, 1));
   background: none;
   border: none;
   color: var(--text-4, var(--text-muted));
@@ -473,7 +473,7 @@ function cancelQuickAdd() {
   flex: 1;
   min-height: 60px;
   border: 1px dashed var(--line-2, var(--border-subtle));
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   margin: 4px 0;
   background: color-mix(in oklab, var(--surface-1) 58%, transparent);
 }
@@ -486,7 +486,7 @@ function cancelQuickAdd() {
 /* Drop zones */
 .kb-drop-zone {
   height: 4px;
-  border-radius: 2px;
+  border-radius: calc(2px * var(--radius-scale, 1));
   margin: 2px 1px;
   transition: height 0.12s ease, background 0.12s ease;
 }
@@ -495,14 +495,14 @@ function cancelQuickAdd() {
   height: 34px;
   background: color-mix(in oklab, var(--accent) 13%, transparent);
   border: 1px solid var(--accent);
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   box-shadow: 0 0 10px var(--accent-glow, oklch(0.66 0.10 258 / 0.18));
 }
 
 .kb-drop-zone--placeholder {
   height: 34px;
   border: 1px dashed var(--line-strong, var(--border-muted));
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   background: color-mix(in oklab, var(--surface-1) 84%, transparent);
 }
 
@@ -518,7 +518,7 @@ function cancelQuickAdd() {
   width: 100%;
   height: 32px;
   padding: 0 10px;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   border: 1px solid var(--line-2, var(--border-subtle));
   background: var(--glass-3, var(--surface-1));
   color: var(--text-1, var(--text-primary));

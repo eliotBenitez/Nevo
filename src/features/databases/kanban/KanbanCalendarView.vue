@@ -348,7 +348,7 @@ const dowLabels = computed(() =>
 .kb-cal__nav-btn,
 .kb-cal__today-btn,
 .kb-cal__select-btn {
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   border: 1px solid var(--line-1, var(--border-subtle));
   background: none;
   color: var(--text-3, var(--text-secondary));
@@ -397,13 +397,13 @@ const dowLabels = computed(() =>
   display: flex;
   padding: 2px;
   background: var(--hover-strong, var(--surface-2));
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   gap: 1px;
 }
 
 .kb-cal__mode-btn {
   padding: 3px 9px;
-  border-radius: 4px;
+  border-radius: calc(4px * var(--radius-scale, 1));
   font-size: 11px;
   color: var(--text-3, var(--text-secondary));
   cursor: pointer;
@@ -468,7 +468,7 @@ const dowLabels = computed(() =>
 .kb-cal__week-view__header,
 .kb-cal__week-view__body {
   border: 1px solid var(--line-2, var(--border-subtle));
-  border-radius: 10px;
+  border-radius: calc(10px * var(--radius-scale, 1));
   overflow: hidden;
   background: var(--line-2, var(--border-subtle));
   gap: 1px;
@@ -543,7 +543,7 @@ const dowLabels = computed(() =>
 .kb-cal__day-view__event {
   font-size: 10.5px;
   padding: 4px 6px;
-  border-radius: 4px;
+  border-radius: calc(4px * var(--radius-scale, 1));
   background: var(--hover-strong, var(--surface-2));
   color: var(--text-2, var(--text-secondary));
   border-left: 2px solid var(--text-3, var(--text-muted));
@@ -584,7 +584,7 @@ const dowLabels = computed(() =>
 
 .kb-cal__day-view__events {
   width: 100%;
-  border-radius: 12px;
+  border-radius: calc(12px * var(--radius-scale, 1));
   border: 1px solid var(--line-2, var(--border-subtle));
   background: var(--glass-2, var(--surface-1));
   padding: 16px;

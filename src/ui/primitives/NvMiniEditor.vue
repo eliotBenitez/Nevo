@@ -173,7 +173,7 @@ onBeforeUnmount(() => {
 .nme-root {
   position: relative;
   border: 1px solid var(--line-2, var(--border-subtle));
-  border-radius: 10px;
+  border-radius: calc(10px * var(--radius-scale, 1));
   background: var(--glass-3, var(--surface-1));
   transition: border-color 0.12s;
 }
@@ -219,7 +219,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 4px;
   padding: 4px;
-  border-radius: 9px;
+  border-radius: calc(9px * var(--radius-scale, 1));
   border: 1px solid var(--line-2, var(--border-subtle));
   background: var(--glass-2, var(--surface-1));
   backdrop-filter: blur(18px) saturate(160%);
@@ -230,7 +230,7 @@ onBeforeUnmount(() => {
   width: 180px;
   padding: 4px 8px;
   border: none;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background: var(--hover, var(--surface-2));
   color: var(--text-1, var(--text-primary));
   font-size: 12.5px;
@@ -241,7 +241,7 @@ onBeforeUnmount(() => {
   width: 220px;
   padding: 6px 8px;
   border: none;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background: var(--hover, var(--surface-2));
   color: var(--text-1, var(--text-primary));
   font-family: var(--font-mono, monospace);
@@ -259,7 +259,7 @@ onBeforeUnmount(() => {
   height: 26px;
   flex-shrink: 0;
   border: none;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background: none;
   color: var(--text-3, var(--text-secondary));
   cursor: pointer;

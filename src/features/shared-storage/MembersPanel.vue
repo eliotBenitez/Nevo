@@ -174,7 +174,7 @@ async function changeRole(member: StorageMember, role: StorageRole) {
   box-sizing: border-box;
   padding: 0.48rem 0.55rem;
   border: 1px solid var(--line-2, var(--border-subtle));
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   background: color-mix(in oklab, var(--glass-2, var(--surface-2)) 92%, transparent);
 }
 .members__avatar {
@@ -224,7 +224,7 @@ async function changeRole(member: StorageMember, role: StorageRole) {
   flex: 0 0 auto;
   padding: 0;
   border: none;
-  border-radius: 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
   background: transparent;
   color: var(--text-4, var(--text-muted));
   cursor: pointer;
@@ -241,7 +241,7 @@ async function changeRole(member: StorageMember, role: StorageRole) {
   box-sizing: border-box;
   padding: 0.6rem;
   border: 1px solid var(--line-2, var(--border-subtle));
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   background:
     linear-gradient(180deg, color-mix(in oklab, var(--glass-2, var(--surface-1)) 94%, transparent), color-mix(in oklab, var(--glass-1, var(--surface-1)) 94%, transparent));
 }
@@ -252,7 +252,7 @@ async function changeRole(member: StorageMember, role: StorageRole) {
   height: 28px;
   flex: 0 0 auto;
   border: 1px solid color-mix(in oklab, var(--accent) 18%, transparent);
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   background: var(--accent-soft);
   color: var(--accent);
 }
@@ -276,7 +276,7 @@ async function changeRole(member: StorageMember, role: StorageRole) {
   box-sizing: border-box;
   padding: 0 0.62rem;
   border: 1px solid var(--line-2, var(--border-subtle));
-  border-radius: 7px;
+  border-radius: calc(7px * var(--radius-scale, 1));
   background: color-mix(in oklab, var(--glass-3, var(--surface-2)) 92%, transparent);
   color: var(--text-1, inherit);
   font: 500 0.76rem var(--font-ui, inherit);
@@ -310,7 +310,7 @@ async function changeRole(member: StorageMember, role: StorageRole) {
   min-width: 0;
   padding: 0.38rem 0.5rem;
   border: 1px solid var(--line-1, var(--border-subtle));
-  border-radius: 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
   color: var(--text-2, inherit);
   font-size: 0.76rem;
 }

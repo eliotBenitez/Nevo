@@ -6,6 +6,11 @@ export { createMiniEditorState } from './mini'
 export type { CreateMiniEditorStateOptions, MiniEditorStateSetup } from './mini'
 export { serializeDocToNoteContent, parseNoteContentToDoc } from './serialization'
 export { EditorPluginHost } from './plugin-host'
+export {
+  setActivePluginSerialization,
+  getPluginNodeSerializer,
+  getPluginNodeImporter,
+} from './plugin-host/active-serialization'
 export { createCoreCommands, getLinkRange } from './commands'
 export { createCoreNodeViews } from './node-views'
 export { createSlashCommandPlugin, getSlashMenuState, executeSlashItem, nevoSlashPluginKey } from './slash'
