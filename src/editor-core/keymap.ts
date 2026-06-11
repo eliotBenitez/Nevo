@@ -3,22 +3,54 @@ import type { Schema } from 'prosemirror-model'
 import { chainCommands, newlineInCode, splitBlock } from 'prosemirror-commands'
 import { redo, undo } from 'prosemirror-history'
 import { liftListItem, splitListItem } from 'prosemirror-schema-list'
-import { goToNextCell } from 'prosemirror-tables'
+import { CellSelection, findTable, goToNextCell, selectedRect } from 'prosemirror-tables'
 import { createExitToggleCommand, createExitToggleOnDoubleEnterCommand } from './node-views/toggle'
 
-function createInsertParagraphAfterMathBlockCommand(schema: Schema): Command {
-  const mathBlock = schema.nodes.math_block
+const PARAGRAPH_AFTER_SELECTED_BLOCK_TYPES = new Set([
+  'file_block',
+  'image_block',
+  'media_block',
+  'embed_block',
+  'note_embed',
+  'mermaid_block',
+  'markmap_block',
+  'vega_block',
+  'table',
+  'divider',
+  'math_block',
+])
+
+function createInsertParagraphAfterSelectedBlockCommand(schema: Schema): Command {
   const paragraph = schema.nodes.paragraph
+  const supportedTypes = new Set(
+    Array.from(PARAGRAPH_AFTER_SELECTED_BLOCK_TYPES)
+      .map((typeName) => schema.nodes[typeName])
+      .filter(Boolean),
+  )
 
   return (state, dispatch) => {
-    if (!mathBlock || !paragraph) return false
-    if (!(state.selection instanceof NodeSelection) || state.selection.node.type !== mathBlock) return false
+    if (!paragraph) return false
+
+    let insertPos: number | null = null
+    if (state.selection instanceof NodeSelection) {
+      const node = state.selection.node
+      const hasBlockGroup = typeof node.type.spec.group === 'string' && node.type.spec.group.split(/\s+/).includes('block')
+      if ((!node.isBlock && !hasBlockGroup) || !supportedTypes.has(node.type)) return false
+      insertPos = state.selection.to
+    } else if (state.selection instanceof CellSelection) {
+      const table = findTable(state.selection.$anchorCell)
+      if (!table || !supportedTypes.has(table.node.type)) return false
+      const rect = selectedRect(state)
+      if (rect.top !== 0 || rect.left !== 0 || rect.bottom !== rect.map.height || rect.right !== rect.map.width) return false
+      insertPos = table.pos + table.node.nodeSize
+    } else {
+      return false
+    }
 
     const paragraphNode = paragraph.createAndFill()
     if (!paragraphNode) return false
     if (!dispatch) return true
 
-    const insertPos = state.selection.to
     const tr = state.tr.insert(insertPos, paragraphNode)
     dispatch(tr.setSelection(TextSelection.create(tr.doc, insertPos + 1)).scrollIntoView())
     return true
@@ -185,7 +217,7 @@ function createInsertBlockquoteHardBreakCommand(schema: Schema): Command {
 
 export function createCoreKeymap(schema: Schema, commands: Map<string, Command>, tabBehavior: 'indent' | 'focus' = 'indent'): Record<string, Command> {
   const listItem = schema.nodes.list_item
-  const insertParagraphAfterMathBlock = createInsertParagraphAfterMathBlockCommand(schema)
+  const insertParagraphAfterSelectedBlock = createInsertParagraphAfterSelectedBlockCommand(schema)
   const exitContainerOnDoubleEnter = createExitContainerOnDoubleEnterCommand(schema)
   const exitBlockquote = createExitBlockquoteCommand(schema)
   const exitToggle = createExitToggleCommand(schema)
@@ -214,10 +246,10 @@ export function createCoreKeymap(schema: Schema, commands: Map<string, Command>,
     'Mod-Shift-7': commands.get('core.orderedList') ?? (() => false),
     'Mod-Shift-8': commands.get('core.bulletList') ?? (() => false),
     'Mod-Shift-9': commands.get('core.blockquote') ?? (() => false),
-    Enter: chainCommands(insertParagraphAfterMathBlock, newlineInCode, exitContainerOnDoubleEnter, exitToggleOnDoubleEnter, exitEmptyListItem, listItem ? splitListItem(listItem) : () => false, splitBlock),
+    Enter: chainCommands(insertParagraphAfterSelectedBlock, newlineInCode, exitContainerOnDoubleEnter, exitToggleOnDoubleEnter, exitEmptyListItem, listItem ? splitListItem(listItem) : () => false, splitBlock),
     'Shift-Enter': insertBlockquoteHardBreak,
-    'Mod-Enter': chainCommands(insertParagraphAfterMathBlock, exitBlockquote, exitToggle, insertListItemHardBreak),
-    'Ctrl-Enter': chainCommands(insertParagraphAfterMathBlock, exitBlockquote, exitToggle, insertListItemHardBreak),
+    'Mod-Enter': chainCommands(insertParagraphAfterSelectedBlock, exitBlockquote, exitToggle, insertListItemHardBreak),
+    'Ctrl-Enter': chainCommands(insertParagraphAfterSelectedBlock, exitBlockquote, exitToggle, insertListItemHardBreak),
   }
 
   if (tabBehavior !== 'focus') {

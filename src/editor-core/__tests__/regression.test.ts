@@ -8,6 +8,7 @@ import { createNevoEditorState } from '../state'
 import { nevoBaseSchema } from '../schema'
 import { serializeDocToNoteContent } from '../serialization'
 import { createYDocFromContent, Y_FRAGMENT_NAME } from '../collaboration'
+import { createCoreKeymap } from '../keymap'
 import type { BlockNode } from '../../types/note'
 
 function dispatchEditorKey(view: EditorView, event: KeyboardEvent): boolean {
@@ -54,6 +55,66 @@ function findTextBlockContentPositions(doc: PMNode, text: string): number[] {
 
   return positions
 }
+
+function findNodePos(doc: PMNode, typeName: string): number {
+  let found: number | null = null
+
+  doc.descendants((node, pos) => {
+    if (found !== null || node.type.name !== typeName) return true
+
+    found = pos
+    return false
+  })
+
+  if (found === null) throw new Error(`Node "${typeName}" not found`)
+  return found
+}
+
+function createRegressionEditorView(content: BlockNode) {
+  const setup = createNevoEditorState({ schema: nevoBaseSchema, content })
+  const mount = document.createElement('div')
+  document.body.appendChild(mount)
+
+  let view: EditorView
+  // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
+  view = new EditorView(mount, {
+    state: setup.state,
+    nodeViews: setup.nodeViews,
+    dispatchTransaction(transaction) {
+      view.updateState(view.state.apply(transaction))
+    },
+  })
+
+  return {
+    view,
+    commands: setup.commands,
+    destroy() {
+      view.destroy()
+      mount.remove()
+    },
+  }
+}
+
+const paragraphAfterSelectedBlockCases: Array<[string, BlockNode]> = [
+  ['file_block', { type: 'file_block', attrs: { src: 'file.pdf', filename: 'file.pdf', mime: 'application/pdf', size: 1 } }],
+  ['image_block', { type: 'image_block', attrs: { src: 'image.png', alt: '', caption: '', sizePreset: 'medium', width: null, align: 'center' } }],
+  ['media_block', { type: 'media_block', attrs: { kind: 'audio', src: 'audio.mp3', name: 'audio.mp3', mime: 'audio/mpeg', size: 1 } }],
+  ['embed_block', { type: 'embed_block', attrs: { url: 'https://example.com', title: 'Example' } }],
+  [
+    'table',
+    {
+      type: 'table',
+      content: [
+        {
+          type: 'table_row',
+          content: [
+            { type: 'table_cell', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'cell' }] }] },
+          ],
+        },
+      ],
+    },
+  ],
+]
 
 describe('editor regression', () => {
   it('does not select a leading media block when opening a note with following text', () => {
@@ -266,6 +327,116 @@ describe('editor regression', () => {
     } finally {
       view.destroy()
       mount.remove()
+    }
+  })
+
+  it.each(paragraphAfterSelectedBlockCases)('creates a new paragraph after a selected %s on Enter', (typeName, block) => {
+    const content: BlockNode = {
+      type: 'doc',
+      content: [block],
+    }
+    const { view, destroy } = createRegressionEditorView(content)
+
+    try {
+      const blockPos = findNodePos(view.state.doc, typeName)
+      view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, blockPos)))
+
+      const handled = dispatchEditorKey(
+        view,
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+      )
+
+      expect(handled).toBe(true)
+      expect(view.state.doc.childCount).toBe(2)
+      expect(view.state.doc.child(0).type.name).toBe(typeName)
+      expect(view.state.doc.child(1).type.name).toBe('paragraph')
+      expect(view.state.selection).toBeInstanceOf(TextSelection)
+      expect(view.state.selection.$from.parent.type.name).toBe('paragraph')
+      expect(view.state.selection.$from.parent.textContent).toBe('')
+      expect(view.state.selection.$from.before()).toBe(view.state.doc.child(0).nodeSize)
+    } finally {
+      destroy()
+    }
+  })
+
+  it('inserts a new paragraph immediately after a selected file block before existing content', () => {
+    const content: BlockNode = {
+      type: 'doc',
+      content: [
+        { type: 'file_block', attrs: { src: 'file.pdf', filename: 'file.pdf', mime: 'application/pdf', size: 1 } },
+        { type: 'paragraph', content: [{ type: 'text', text: 'after' }] },
+      ],
+    }
+    const { view, destroy } = createRegressionEditorView(content)
+
+    try {
+      view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, 0)))
+
+      const handled = dispatchEditorKey(
+        view,
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+      )
+
+      expect(handled).toBe(true)
+      expect(view.state.doc.childCount).toBe(3)
+      expect(view.state.doc.child(0).type.name).toBe('file_block')
+      expect(view.state.doc.child(1).type.name).toBe('paragraph')
+      expect(view.state.doc.child(1).textContent).toBe('')
+      expect(view.state.doc.child(2).type.name).toBe('paragraph')
+      expect(view.state.doc.child(2).textContent).toBe('after')
+      expect(view.state.selection.$from.before()).toBe(view.state.doc.child(0).nodeSize)
+    } finally {
+      destroy()
+    }
+  })
+
+  it.each(['Ctrl-Enter', 'Mod-Enter'] as const)('creates a new paragraph after a selected image block through the %s binding', (bindingKey) => {
+    const content: BlockNode = {
+      type: 'doc',
+      content: [
+        { type: 'image_block', attrs: { src: 'image.png', alt: '', caption: '', sizePreset: 'medium', width: null, align: 'center' } },
+      ],
+    }
+    const { view, commands, destroy } = createRegressionEditorView(content)
+
+    try {
+      view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, 0)))
+      const bindings = createCoreKeymap(nevoBaseSchema, commands)
+
+      expect(bindings[bindingKey]?.(view.state, view.dispatch, view)).toBe(true)
+      expect(view.state.doc.childCount).toBe(2)
+      expect(view.state.doc.child(1).type.name).toBe('paragraph')
+      expect(view.state.selection.$from.parent.type.name).toBe('paragraph')
+    } finally {
+      destroy()
+    }
+  })
+
+  it('keeps regular Enter inside a paragraph splitting the paragraph', () => {
+    const content: BlockNode = {
+      type: 'doc',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'hello' }] }],
+    }
+    const { view, destroy } = createRegressionEditorView(content)
+
+    try {
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 3)))
+
+      const handled = dispatchEditorKey(
+        view,
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+      )
+
+      expect(handled).toBe(true)
+      expect(view.state.doc.toJSON()).toEqual({
+        type: 'doc',
+        content: [
+          { type: 'paragraph', content: [{ type: 'text', text: 'he' }] },
+          { type: 'paragraph', content: [{ type: 'text', text: 'llo' }] },
+        ],
+      })
+    } finally {
+      destroy()
     }
   })
 

@@ -595,6 +595,10 @@
   background: transparent !important;
 }
 
+.doc-editor .nv-prosemirror .nv-vega-render.nv-vega-landscape svg {
+  width: 100%;
+}
+
 .doc-editor .nv-prosemirror .nv-vega-block[data-empty='true'] .nv-vega-render,
 .doc-editor .nv-prosemirror .nv-vega-block[data-error='true'] .nv-vega-render {
   color: var(--text-4);

@@ -3,7 +3,7 @@ import { computed, ref, type CSSProperties } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { GripVertical } from 'lucide-vue-next'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
-import type { KanbanBoard, KanbanBoardCardViewSettings, KanbanCard, KanbanCardField, KanbanCardPriority } from '../../../types/kanban'
+import type { KanbanBoard, KanbanBoardCardViewSettings, KanbanCard, KanbanCardField, KanbanCardPriority, KanbanPropertyOption } from '../../../types/kanban'
 import { getBoardStatusProperty, getCardStatusValue, computeTaskProgress } from './kanbanFields'
 
 interface Props {
@@ -59,7 +59,11 @@ const visibleProperties = computed(() => {
   const limit = isCompactCard.value ? 2 : 5
 
   return safeFields.value
-    .filter(field => hasRenderableValue(field) && (!visibleSet || visibleSet.has(field.id)))
+    .filter(field => {
+      const name = field.name.toLowerCase().trim()
+      const isTagsField = field.type === 'multi_select' && (name === 'tags' || name === 'теги')
+      return !isTagsField && hasRenderableValue(field) && (!visibleSet || visibleSet.has(field.id))
+    })
     .sort((a, b) => {
       const orderA = propertyOrderMap.value.get(a.id) ?? a.order
       const orderB = propertyOrderMap.value.get(b.id) ?? b.order
@@ -145,7 +149,49 @@ const priorityColor = computed(() => {
 })
 
 const taskProgress = computed(() => computeTaskProgress(props.card.content))
-const progressValue = computed(() => taskProgress.value?.pct ?? null)
+
+const cardTags = computed(() => {
+  const field = safeFields.value.find(f => {
+    const name = f.name.toLowerCase().trim()
+    return f.type === 'multi_select' && (name === 'tags' || name === 'теги')
+  })
+  if (!field || !Array.isArray(field.value)) return []
+  return field.value
+    .map(valId => field.options?.find(opt => opt.id === valId))
+    .filter((opt): opt is KanbanPropertyOption => !!opt)
+})
+
+const TAG_COLORS = [
+  { text: '#3b82f6', bg: '#3b82f618', border: '#3b82f630' },
+  { text: '#10b981', bg: '#10b98118', border: '#10b98130' },
+  { text: '#f59e0b', bg: '#f59e0b18', border: '#f59e0b30' },
+  { text: '#ef4444', bg: '#ef444418', border: '#ef444430' },
+  { text: '#8b5cf6', bg: '#8b5cf618', border: '#8b5cf630' },
+  { text: '#ec4899', bg: '#ec489918', border: '#ec489930' },
+  { text: '#06b6d4', bg: '#06b6d418', border: '#06b6d430' },
+  { text: '#f97316', bg: '#f9731618', border: '#f9731630' },
+]
+
+function getTagColorStyle(tag: KanbanPropertyOption) {
+  if (tag.color) {
+    return {
+      color: tag.color,
+      background: tag.color + '18',
+      borderColor: tag.color + '30',
+    }
+  }
+  let hash = 0
+  const name = tag.name
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const index = Math.abs(hash) % TAG_COLORS.length
+  return {
+    color: TAG_COLORS[index].text,
+    background: TAG_COLORS[index].bg,
+    borderColor: TAG_COLORS[index].border,
+  }
+}
 </script>
 
 <template>
@@ -206,6 +252,17 @@ const progressValue = computed(() => taskProgress.value?.pct ?? null)
         <span>{{ card.title || t('kanban.card.untitled') }}</span>
       </div>
 
+      <div v-if="cardTags.length" class="kb-card__tags">
+        <span
+          v-for="tag in cardTags"
+          :key="tag.id"
+          class="kb-card__tag"
+          :style="getTagColorStyle(tag)"
+        >
+          {{ tag.name }}
+        </span>
+      </div>
+
       <p v-if="previewText" class="kb-card__preview">{{ previewText }}</p>
 
       <div v-if="visibleProperties.length" class="kb-card__properties">
@@ -224,8 +281,14 @@ const progressValue = computed(() => taskProgress.value?.pct ?? null)
         </div>
       </div>
 
-      <div v-if="progressValue !== null" class="kb-card__progress">
-        <div class="kb-card__progress-fill" :style="{ width: progressValue + '%' }" />
+      <div v-if="taskProgress !== null" class="kb-card__progress-container">
+        <div class="kb-card__progress">
+          <div class="kb-card__progress-fill" :style="{ width: taskProgress.pct + '%' }" />
+        </div>
+        <span class="kb-card__progress-text">
+          <span>{{ taskProgress.pct }}%</span>
+          <span class="kb-card__progress-count">{{ taskProgress.done }}/{{ taskProgress.total }}</span>
+        </span>
       </div>
     </div>
   </div>
@@ -448,12 +511,19 @@ const progressValue = computed(() => taskProgress.value?.pct ?? null)
   background: var(--hover, var(--surface-1));
 }
 
+.kb-card__progress-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
 .kb-card__progress {
+  flex: 1;
   height: 3px;
   border-radius: 999px;
   background: var(--line-2, var(--border-subtle));
   overflow: hidden;
-  margin-top: 2px;
 }
 
 .kb-card__progress-fill {
@@ -461,6 +531,39 @@ const progressValue = computed(() => taskProgress.value?.pct ?? null)
   border-radius: 999px;
   background: var(--accent, #3b82f6);
   transition: width 0.2s ease;
+}
+
+.kb-card__progress-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-3, var(--text-secondary));
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.kb-card__progress-count {
+  color: var(--text-4, var(--text-muted));
+}
+
+.kb-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 1px;
+}
+
+.kb-card__tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  line-height: 1.2;
 }
 
 @media (prefers-reduced-motion: reduce) {

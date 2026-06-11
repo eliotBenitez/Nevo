@@ -282,7 +282,7 @@ export function buildWorkspaceSettingsSearchItems(options: BuildWorkspaceSetting
       sectionLabel: sectionLabel(t, 'advanced'),
       title: t('settings.advanced.experimentalGraphTools.title'),
       description: t('settings.advanced.experimentalGraphTools.description'),
-      value: t('settings.state.coming'),
+      value: booleanLabel(t, settings.advanced.experimentalGraphTools),
     },
     {
       type: 'setting', id: 'advanced.developerLogging', section: 'advanced',

@@ -108,18 +108,34 @@ describe('serializeNoteToTypst', () => {
     expect(source).toContain('image("markmap-1.svg")')
   })
 
+  it('collects Vega charts as SVG assets', () => {
+    const spec = '{"$schema":"https://vega.github.io/schema/vega-lite/v6.json","mark":"bar"}'
+    const { source, vega } = serializeNoteToTypst(note({
+      type: 'doc',
+      content: [
+        { type: 'vega_block', attrs: { spec } },
+      ],
+    }))
+    expect(vega).toEqual([{ name: 'vega-1.svg', spec }])
+    expect(source).toContain('image("vega-1.svg")')
+  })
+
   it('references assets through the archive assets folder when a prefix is provided', () => {
-    const { source, images, mermaid } = serializeNoteToTypst(note({
+    const spec = '{"mark":"bar"}'
+    const { source, images, mermaid, vega } = serializeNoteToTypst(note({
       type: 'doc',
       content: [
         { type: 'image_block', attrs: { src: 'assets/pic.png' } },
         { type: 'mermaid_block', attrs: { code: 'graph TD; A-->B' } },
+        { type: 'vega_block', attrs: { spec } },
       ],
     }), undefined, { assetPathPrefix: 'Doc-typst_assets/' })
     expect(images).toEqual([{ name: 'img-1.png', src: 'assets/pic.png' }])
     expect(mermaid).toEqual([{ name: 'mermaid-1.svg', code: 'graph TD; A-->B' }])
+    expect(vega).toEqual([{ name: 'vega-1.svg', spec }])
     expect(source).toContain('image("Doc-typst_assets/img-1.png"')
     expect(source).toContain('image("Doc-typst_assets/mermaid-1.svg")')
+    expect(source).toContain('image("Doc-typst_assets/vega-1.svg")')
   })
 
   it('centers tables in the document', () => {

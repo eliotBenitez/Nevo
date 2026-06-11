@@ -106,6 +106,7 @@ export function createVegaNodeView(node: PMNode, view: EditorView, getPos: NodeV
 
     try {
       rendered.innerHTML = ''
+      rendered.classList.remove('nv-vega-landscape')
       const embed = await loadVegaEmbed()
       const result = await embed(rendered, parsed as Parameters<typeof embed>[1], {
         actions: false,
@@ -115,8 +116,18 @@ export function createVegaNodeView(node: PMNode, view: EditorView, getPos: NodeV
       currentView = result.view
       dom.dataset.error = 'false'
       lastRenderedSpec = specStr
+
+      const svg = rendered.querySelector('svg')
+      if (svg) {
+        const w = parseFloat(svg.getAttribute('width') || '0')
+        const h = parseFloat(svg.getAttribute('height') || '0')
+        if (w > 0 && h > 0 && w >= h) {
+          rendered.classList.add('nv-vega-landscape')
+        }
+      }
     } catch {
       rendered.innerHTML = ''
+      rendered.classList.remove('nv-vega-landscape')
       rendered.textContent = 'Invalid chart specification'
       dom.dataset.error = 'true'
       lastRenderedSpec = specStr

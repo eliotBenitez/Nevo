@@ -42,6 +42,12 @@ describe('buildWorkspaceSettingsSearchItems', () => {
     expect(items.find(item => item.id === 'advanced.developerLogging')?.value).toBe('Off')
   })
 
+  it('shows experimental graph tools as a boolean label', () => {
+    const items = buildItems()
+
+    expect(items.find(item => item.id === 'advanced.experimentalGraphTools')?.value).toBe('Off')
+  })
+
   it('labels fixed editor hotkeys without hiding editable workspace hotkeys', () => {
     const items = buildItems()
 

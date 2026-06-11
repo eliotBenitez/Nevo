@@ -4,6 +4,7 @@ import { DEFAULT_PDF_OPTIONS, type PdfExportOptions } from './pdfOptions'
 import { serializeNoteToTypst } from './typstSerializer'
 import { renderMermaidToSvgForPdf } from './mermaidToSvg'
 import { renderMarkmapToExportSvg } from './markmapToSvg'
+import { renderVegaToSvg } from './vegaToSvg'
 
 export interface TypstExportPayload {
   source: string
@@ -32,7 +33,7 @@ export async function buildTypstExport(
   options: PdfExportOptions = DEFAULT_PDF_OPTIONS,
   buildOptions: BuildTypstExportOptions = {},
 ): Promise<TypstExportPayload> {
-  const { source, images, mermaid, markmap } = serializeNoteToTypst(note, options, {
+  const { source, images, mermaid, markmap, vega } = serializeNoteToTypst(note, options, {
     assetPathPrefix: buildOptions.assetPathPrefix,
   })
 
@@ -49,6 +50,11 @@ export async function buildTypstExport(
   for (const mindmap of markmap) {
     const svg = await renderMarkmapToExportSvg(mindmap.markdown)
     if (svg) assets.push({ name: mindmap.name, bytesBase64: utf8ToBase64(svg) })
+  }
+
+  for (const chart of vega) {
+    const svg = await renderVegaToSvg(chart.spec)
+    if (svg) assets.push({ name: chart.name, bytesBase64: utf8ToBase64(svg) })
   }
 
   return { source, assets }

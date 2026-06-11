@@ -62,6 +62,37 @@ body {
   --transition-speed: 1.6;
 }
 
+/* ── Theme transitions ─────────────────────────────── */
+.theme-transitioning,
+.theme-transitioning *,
+.theme-transitioning *::before,
+.theme-transitioning *::after {
+  transition-property:
+    background-color,
+    color,
+    border-color,
+    box-shadow,
+    fill,
+    stroke,
+    caret-color,
+    outline-color;
+  transition-duration: 420ms;
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.theme-transitioning .nv-canvas {
+  transition-property:
+    background,
+    background-color,
+    color,
+    border-color,
+    box-shadow,
+    fill,
+    stroke,
+    caret-color,
+    outline-color;
+}
+
 /* ── Scrollbars ──────────────────────────────────────── */
 [data-scrollbars="hidden"] .nv-app,
 [data-scrollbars="hidden"] .nv-app * { scrollbar-width: none; }

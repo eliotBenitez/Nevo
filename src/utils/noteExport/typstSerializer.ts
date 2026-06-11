@@ -31,11 +31,19 @@ export interface TypstMarkmapAsset {
   markdown: string
 }
 
+export interface TypstVegaAsset {
+  /** Filename referenced inside the Typst source. */
+  name: string
+  /** Raw Vega/Vega-Lite spec, rasterised to SVG on the frontend before compiling. */
+  spec: string
+}
+
 export interface TypstSerializeResult {
   source: string
   images: TypstImageAsset[]
   mermaid: TypstMermaidAsset[]
   markmap: TypstMarkmapAsset[]
+  vega: TypstVegaAsset[]
 }
 
 export interface TypstSerializeOptions {
@@ -46,9 +54,11 @@ interface SerializeCtx {
   images: TypstImageAsset[]
   mermaid: TypstMermaidAsset[]
   markmap: TypstMarkmapAsset[]
+  vega: TypstVegaAsset[]
   imageSeq: number
   mermaidSeq: number
   markmapSeq: number
+  vegaSeq: number
   assetPathPrefix: string
 }
 
@@ -188,6 +198,10 @@ function nodeToTypst(node: BlockNode, ctx: SerializeCtx): string {
       const name = registerMarkmap(String(node.attrs?.markdown ?? ''), ctx)
       return `#figure(image(${quote(name)}))`
     }
+    case 'vega_block': {
+      const name = registerVega(String(node.attrs?.spec ?? ''), ctx)
+      return `#figure(image(${quote(name)}))`
+    }
     case 'table':
       return tableToTypst(node, ctx)
     case 'column_list': {
@@ -236,6 +250,12 @@ function registerMermaid(code: string, ctx: SerializeCtx): string {
 function registerMarkmap(markdown: string, ctx: SerializeCtx): string {
   const name = `markmap-${++ctx.markmapSeq}.svg`
   ctx.markmap.push({ name, markdown })
+  return `${ctx.assetPathPrefix}${name}`
+}
+
+function registerVega(spec: string, ctx: SerializeCtx): string {
+  const name = `vega-${++ctx.vegaSeq}.svg`
+  ctx.vega.push({ name, spec })
   return `${ctx.assetPathPrefix}${name}`
 }
 
@@ -296,12 +316,14 @@ export function serializeNoteToTypst(
     images: [],
     mermaid: [],
     markmap: [],
+    vega: [],
     imageSeq: 0,
     mermaidSeq: 0,
     markmapSeq: 0,
+    vegaSeq: 0,
     assetPathPrefix: serializeOptions.assetPathPrefix ?? '',
   }
   const body = nodeToTypst(note.content, ctx)
   const source = `${buildPreamble(note.title, options)}\n\n${body}\n`
-  return { source, images: ctx.images, mermaid: ctx.mermaid, markmap: ctx.markmap }
+  return { source, images: ctx.images, mermaid: ctx.mermaid, markmap: ctx.markmap, vega: ctx.vega }
 }

@@ -52,9 +52,8 @@ async function revealPath(path: string | undefined) {
             </div>
             <NvToggle
               :model-value="settings.advanced.experimentalGraphTools"
-              disabled
+              @update:model-value="v => workspaceStore.updateSettings(draft => { draft.advanced.experimentalGraphTools = v })"
             />
-            <span class="status-chip status-chip--coming">{{ t('settings.state.coming') }}</span>
           </div>
 
           <div class="settings-row settings-row--border">

@@ -1,9 +1,6 @@
 export { nevoBaseSchema } from './schema'
-export { nevoMiniSchema } from './schema/mini'
 export { createSchemaWithPluginExtensions } from './buildSchema'
 export { createNevoEditorState, createCoreSlashItems } from './state'
-export { createMiniEditorState } from './mini'
-export type { CreateMiniEditorStateOptions, MiniEditorStateSetup } from './mini'
 export { serializeDocToNoteContent, parseNoteContentToDoc } from './serialization'
 export { EditorPluginHost } from './plugin-host'
 export {

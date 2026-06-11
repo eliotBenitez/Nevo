@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { confirm } from '@tauri-apps/plugin-dialog'
 import { useI18n } from 'vue-i18n'
 import { Trash2, X, Zap, Plus, Link } from 'lucide-vue-next'
-import type { KanbanBoard, KanbanCard, KanbanCardPriority, KanbanPropertyType } from '../../../types/kanban'
+import type { KanbanBoard, KanbanCard, KanbanCardField, KanbanCardPriority, KanbanPropertyType } from '../../../types/kanban'
 import { useKanbanStore } from '../../../stores/kanban'
+import { useWorkspaceStore } from '../../../stores/workspace'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvCheckbox from '../../../ui/primitives/NvCheckbox.vue'
 import NvPopupMenu from '../../../ui/primitives/NvPopupMenu.vue'
@@ -18,6 +19,7 @@ import {
   getCardStatusValue,
   serializeCardProperties,
   computeTaskProgress,
+  createKanbanId,
 } from './kanbanFields'
 import { useCardFieldsEditor } from './composables/useCardFieldsEditor'
 
@@ -31,6 +33,7 @@ const emit = defineEmits<{ 'close': [] }>()
 
 const { t, locale } = useI18n()
 const kanbanStore = useKanbanStore()
+const workspaceStore = useWorkspaceStore()
 
 const localTitle = ref(props.card.title)
 const localContent = ref<unknown>(props.card.content ?? { type: 'doc', content: [] })
@@ -154,6 +157,151 @@ function markNotesDirty() {
   isDirty.value = true
   notesDirty.value = true
 }
+
+const tagsField = computed(() => {
+  return localFields.value.find(field => {
+    const name = field.name.toLowerCase().trim()
+    return field.type === 'multi_select' && (name === 'tags' || name === 'теги')
+  }) ?? null
+})
+
+const selectedTagIds = computed(() => {
+  if (!tagsField.value) return []
+  return Array.isArray(tagsField.value.value) ? (tagsField.value.value as string[]) : []
+})
+
+const TAG_COLORS = [
+  { text: '#3b82f6', bg: '#3b82f618', border: '#3b82f630' },
+  { text: '#10b981', bg: '#10b98118', border: '#10b98130' },
+  { text: '#f59e0b', bg: '#f59e0b18', border: '#f59e0b30' },
+  { text: '#ef4444', bg: '#ef444418', border: '#ef444430' },
+  { text: '#8b5cf6', bg: '#8b5cf618', border: '#8b5cf630' },
+  { text: '#ec4899', bg: '#ec489918', border: '#ec489930' },
+  { text: '#06b6d4', bg: '#06b6d418', border: '#06b6d430' },
+  { text: '#f97316', bg: '#f9731618', border: '#f9731630' },
+]
+
+function getTagColorStyle(optionId: string) {
+  if (!tagsField.value) return {}
+  const opt = tagsField.value.options?.find(o => o.id === optionId)
+  if (opt?.color) {
+    return {
+      color: opt.color,
+      background: opt.color + '18',
+      borderColor: opt.color + '30',
+    }
+  }
+  let hash = 0
+  const name = opt?.name ?? optionId
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const index = Math.abs(hash) % TAG_COLORS.length
+  return {
+    color: TAG_COLORS[index].text,
+    background: TAG_COLORS[index].bg,
+    borderColor: TAG_COLORS[index].border,
+  }
+}
+
+function getTagLabel(optionId: string): string {
+  if (!tagsField.value) return ''
+  return tagsField.value.options?.find(opt => opt.id === optionId)?.name ?? optionId
+}
+
+const showTagDropdown = ref(false)
+const newTagInput = ref('')
+const tagDropdownRef = ref<HTMLDivElement | null>(null)
+const tagInputRef = ref<HTMLInputElement | null>(null)
+
+const filteredTagOptions = computed(() => {
+  if (!tagsField.value) return []
+  const query = newTagInput.value.toLowerCase().trim()
+  const opts = tagsField.value.options ?? []
+  if (!query) return opts
+  return opts.filter(opt => opt.name.toLowerCase().includes(query))
+})
+
+function toggleTag(optionId: string, checked: boolean) {
+  if (!tagsField.value) return
+  toggleMultiSelect(tagsField.value, optionId, checked)
+}
+
+function createNewTag() {
+  const name = newTagInput.value.trim()
+  if (!name || !tagsField.value) return
+  
+  const existing = tagsField.value.options?.find(opt => opt.name.toLowerCase() === name.toLowerCase())
+  if (existing) {
+    if (!selectedTagIds.value.includes(existing.id)) {
+      toggleTag(existing.id, true)
+    }
+    newTagInput.value = ''
+    return
+  }
+
+  const optionId = createKanbanId()
+  const randomColor = TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)].text
+  
+  const fieldId = tagsField.value.id
+  localFields.value = localFields.value.map(field => {
+    if (field.id !== fieldId) return field
+    const opts = field.options ?? []
+    return {
+      ...field,
+      options: [...opts, { id: optionId, name, color: randomColor }],
+    }
+  })
+  
+  toggleTag(optionId, true)
+  newTagInput.value = ''
+}
+
+function enableTagsField() {
+  const type = 'multi_select'
+  const name = locale.value === 'ru' ? 'Теги' : 'Tags'
+  const options = [
+    { id: createKanbanId(), name: locale.value === 'ru' ? 'Срочно' : 'Urgent', color: '#ef4444' },
+    { id: createKanbanId(), name: locale.value === 'ru' ? 'В работе' : 'Feature', color: '#3b82f6' },
+  ]
+  const field: KanbanCardField = {
+    id: createKanbanId(),
+    name,
+    type,
+    value: [],
+    options,
+    order: localFields.value.length,
+  }
+  localFields.value = [...localFields.value, field]
+  markDirty()
+}
+
+function onDocumentClick(event: MouseEvent) {
+  if (!showTagDropdown.value) return
+  const target = event.target as Node | null
+  if (!target) return
+  
+  const dropdown = tagDropdownRef.value
+  if (dropdown && !dropdown.contains(target)) {
+    const trigger = document.querySelector('.km-add-tag-pill-btn')
+    if (trigger && trigger.contains(target)) return
+    showTagDropdown.value = false
+  }
+}
+
+watch(showTagDropdown, isOpen => {
+  if (isOpen) {
+    document.addEventListener('mousedown', onDocumentClick)
+    setTimeout(() => tagInputRef.value?.focus(), 50)
+  } else {
+    document.removeEventListener('mousedown', onDocumentClick)
+  }
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', onDocumentClick)
+})
+
 
 function createFieldFromMenu(type: KanbanPropertyType) {
   createField(type)
@@ -287,6 +435,9 @@ function onKeydown(event: KeyboardEvent) {
                 <NvMiniEditor
                   :model-value="localContent"
                   :placeholder="t('kanban.card.notesPlaceholder')"
+                  :workspace-path="workspaceStore.activePath"
+                  :plugin-manifests="workspaceStore.plugins"
+                  :settings="workspaceStore.settings"
                   class="km-notes-editor"
                   @update:model-value="value => { localContent = value; markNotesDirty() }"
                 />
@@ -392,6 +543,66 @@ function onKeydown(event: KeyboardEvent) {
                 </div>
               </div>
 
+              <div class="km-prop-col km-prop-tags-col">
+                <span class="km-prop-label">{{ t('kanban.groups.tag') }}</span>
+                <div v-if="tagsField" class="km-tags-selector">
+                  <div class="km-tags-list">
+                    <span
+                      v-for="valId in selectedTagIds"
+                      :key="valId"
+                      class="km-tag-pill"
+                      :style="getTagColorStyle(valId)"
+                    >
+                      {{ getTagLabel(valId) }}
+                      <button type="button" class="km-tag-remove" :aria-label="t('kanban.common.delete')" @click="toggleTag(valId, false)">
+                        <X :size="10" />
+                      </button>
+                    </span>
+                    
+                    <NvButton variant="ghost" size="xs" class="km-add-tag-pill-btn" @click="showTagDropdown = !showTagDropdown">
+                      <Plus :size="10" /> {{ t('kanban.card.addTag') }}
+                    </NvButton>
+                  </div>
+
+                  <div v-if="showTagDropdown" ref="tagDropdownRef" class="km-tags-dropdown">
+                    <div class="km-tags-dropdown__search">
+                      <input
+                        ref="tagInputRef"
+                        v-model="newTagInput"
+                        class="km-prop-input"
+                        :placeholder="t('kanban.card.optionPlaceholder')"
+                        @keydown.enter.prevent="createNewTag"
+                      />
+                    </div>
+                    <div class="km-tags-dropdown__list">
+                      <button
+                        v-for="opt in filteredTagOptions"
+                        :key="opt.id"
+                        type="button"
+                        class="km-tags-dropdown__item"
+                        :class="{ 'is-selected': selectedTagIds.includes(opt.id) }"
+                        @click="toggleTag(opt.id, !selectedTagIds.includes(opt.id))"
+                      >
+                        <span class="km-tags-dropdown__checkbox">
+                          <span v-if="selectedTagIds.includes(opt.id)">✓</span>
+                        </span>
+                        <span>{{ opt.name }}</span>
+                      </button>
+                      <div v-if="filteredTagOptions.length === 0 && newTagInput.trim()" class="km-tags-dropdown__create">
+                        <button type="button" class="km-tags-dropdown__create-btn" @click="createNewTag">
+                          <Plus :size="10" /> {{ t('kanban.card.addOption') }} "{{ newTagInput }}"
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="km-tags-empty">
+                  <NvButton variant="ghost" size="xs" class="km-enable-tags-btn" @click="enableTagsField">
+                    <Plus :size="10" /> {{ t('kanban.card.enableTags') }}
+                  </NvButton>
+                </div>
+              </div>
+
               <div class="km-prop-row">
                 <span class="km-prop-label">{{ t('kanban.card.progress') }}</span>
                 <div v-if="taskProgress" class="km-task-progress">
@@ -405,7 +616,7 @@ function onKeydown(event: KeyboardEvent) {
                 <span v-else class="km-task-progress__empty">{{ t('kanban.card.progressNoTasks') }}</span>
               </div>
 
-              <div v-for="field in localFields" :key="field.id" class="km-field-card">
+              <div v-for="field in localFields.filter(f => f.name.toLowerCase().trim() !== 'tags' && f.name.toLowerCase().trim() !== 'теги')" :key="field.id" class="km-field-card">
                 <div class="km-field-card__header">
                   <input
                     class="km-prop-input km-field-card__name"
@@ -1059,5 +1270,160 @@ function onKeydown(event: KeyboardEvent) {
   .km-field-card__option {
     grid-template-columns: 1fr;
   }
+}
+
+.km-prop-tags-col {
+  position: relative;
+}
+
+.km-tags-selector {
+  margin-top: 4px;
+}
+
+.km-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.km-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  line-height: 1.2;
+}
+
+.km-tag-remove {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  opacity: 0.6;
+  transition: opacity 0.1s;
+}
+
+.km-tag-remove:hover {
+  opacity: 1;
+}
+
+.km-add-tag-pill-btn {
+  height: 22px;
+  padding: 0 8px;
+  font-size: 10.5px;
+  border-radius: 999px;
+}
+
+.km-tags-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 2050;
+  width: 220px;
+  margin-top: 4px;
+  background: var(--surface-2, #1f2937);
+  border: 1px solid var(--line-2, var(--border-subtle));
+  border-radius: calc(8px * var(--radius-scale, 1));
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.km-tags-dropdown__search {
+  padding: 6px;
+  border-bottom: 1px solid var(--line-1, var(--border-subtle));
+}
+
+.km-tags-dropdown__search input {
+  width: 100%;
+  height: 28px;
+  font-size: 11.5px;
+}
+
+.km-tags-dropdown__list {
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.km-tags-dropdown__item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 11.5px;
+  color: var(--text-2, var(--text-secondary));
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.km-tags-dropdown__item:hover {
+  background: var(--hover, rgba(255, 255, 255, 0.05));
+  color: var(--text-1, var(--text-primary));
+}
+
+.km-tags-dropdown__checkbox {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--line-3, var(--border-muted));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: bold;
+  color: var(--accent);
+}
+
+.km-tags-dropdown__item.is-selected .km-tags-dropdown__checkbox {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.km-tags-dropdown__create {
+  padding: 4px 6px;
+}
+
+.km-tags-dropdown__create-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  background: none;
+  border: none;
+  border-radius: calc(4px * var(--radius-scale, 1));
+  font-size: 11px;
+  color: var(--accent);
+  text-align: left;
+  cursor: pointer;
+}
+
+.km-tags-dropdown__create-btn:hover {
+  background: var(--accent-soft);
+}
+
+.km-tags-empty {
+  margin-top: 4px;
+}
+
+.km-enable-tags-btn {
+  height: 24px;
+  padding: 0 10px;
+  font-size: 11px;
 }
 </style>

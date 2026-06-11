@@ -568,88 +568,30 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     return true
   }
 
-  async function setupEditorForNote(note: NoteDocument, editorRoot: HTMLDivElement, settings: WorkspaceSettings) {
-    let yFragment: import('yjs').XmlFragment | undefined
-
-    // Release any previous Y.Doc; cloud sessions are owned by the backend and
-    // must not be destroyed here (only the editor-owned local docs are).
-    teardownYjsPersistence()
-    if (core.ownsYdoc) { core.awareness?.destroy(); core.ydoc?.destroy() }
-    core.awareness = null
-    core.ydoc = null
-
-    if (workspaceStore.backendKind === 'cloud') {
-      const cloud = workspaceStore.backend as CloudBackend | null
-      const session = cloud?.getNoteSession(note.id) ?? null
-      if (session) {
-        await session.whenSynced()
-        core.ydoc = session.ydoc
-        core.awareness = session.awareness
-        core.ownsYdoc = false
-        yFragment = session.ydoc.getXmlFragment(Y_FRAGMENT_NAME)
-        const name = authStore.user?.displayName || authStore.user?.email || 'User'
-        initAwarenessUser(session.awareness, name)
-      }
-    } else if (core.workspacePath) {
-      const workspacePath = core.workspacePath
-      const noteId = note.id
-      let ydoc: Y.Doc | null = null
-
-      try {
-        const bytes = await collabCommands.loadYjsState(workspacePath, noteId)
-        if (bytes.length > 0) {
-          ydoc = restoreYDocFromBinary(new Uint8Array(bytes))
-          try {
-            ydoc.getXmlFragment(Y_FRAGMENT_NAME)
-          } catch {
-            ydoc.destroy()
-            ydoc = createYDocFromContent(core.schema, note.content)
-          }
-        } else {
-          ydoc = createYDocFromContent(core.schema, note.content)
-        }
-      } catch {
-        try {
-          ydoc = createYDocFromContent(core.schema, note.content)
-        } catch { /* fall through — use non-Yjs mode */ }
-      }
-
-      if (ydoc) {
-        core.ydoc = ydoc
-        core.awareness = new Awareness(ydoc)
-        core.ownsYdoc = true
-        yFragment = ydoc.getXmlFragment(Y_FRAGMENT_NAME)
-
-        const persistYjsState = () => {
-          if (core.ydoc !== ydoc) return
-          const state = encodeYDocState(ydoc)
-          void collabCommands.saveYjsState(workspacePath, noteId, Array.from(state)).catch(() => {
-            /* non-critical */
-          })
-        }
-        flushYjsPersistence = persistYjsState
-        ydoc.on('update', () => {
-          if (yjsSaveTimer) clearTimeout(yjsSaveTimer)
-          yjsSaveTimer = setTimeout(() => {
-            yjsSaveTimer = null
-            persistYjsState()
-          }, 2000)
-        })
-      }
-    }
-
+  async function setupEditorForContent(
+    content: NoteDocument['content'],
+    documentId: string,
+    editorRoot: HTMLDivElement,
+    settings: WorkspaceSettings,
+    options: {
+      yFragment?: import('yjs').XmlFragment
+      enableTemplates?: boolean
+    } = {},
+  ) {
     const setup = createNevoEditorState({
       schema: core.schema,
-      content: note.content,
+      content,
       enableSlashCommands: settings.editor.slashCommands,
       enableMarkdownShortcuts: settings.editor.markdownShortcuts,
       tabBehavior: settings.editor.tabKeyBehavior,
-      onTemplateInsertRequest: settings.features?.templates !== false ? callbacks.onTemplateInsertRequest : undefined,
+      onTemplateInsertRequest: options.enableTemplates !== false && settings.features?.templates !== false
+        ? callbacks.onTemplateInsertRequest
+        : undefined,
       enableVega: settings.features?.vega !== false,
       enableMarkmap: settings.features?.markmap !== false,
       pluginHost: core.pluginHost ?? undefined,
-      yFragment,
-      awareness: core.awareness ?? undefined,
+      yFragment: options.yFragment,
+      awareness: options.yFragment ? core.awareness ?? undefined : undefined,
       nodeViewOptions: {
         onRequestCalloutIconPick: ({ position, node, anchorRect }) => {
           callbacks.onCalloutIconPickRequest(position, anchorRect, typeof node.attrs.icon === 'string' ? node.attrs.icon : '💡')
@@ -677,8 +619,8 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     core.coreCommands = setup.coreCommands
     core.slashItems = setup.slashItems
     core.lastSerializedContent = JSON.stringify(serializeDocToNoteContent(setup.state.doc))
-    core.lastSerializedContentRef = note.content
-    core.lastLoadedNoteId = note.id
+    core.lastSerializedContentRef = content
+    core.lastLoadedNoteId = documentId
 
     if (!core.editorView) {
       core.editorView = new EditorView(editorRoot, {
@@ -827,6 +769,93 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     callbacks.onOverlaysUpdate()
   }
 
+  async function setupEditorForDocument(
+    content: NoteDocument['content'],
+    documentId: string,
+    editorRoot: HTMLDivElement,
+    settings: WorkspaceSettings,
+  ) {
+    teardownYjsPersistence()
+    if (core.ownsYdoc) { core.awareness?.destroy(); core.ydoc?.destroy() }
+    core.awareness = null
+    core.ydoc = null
+    core.ownsYdoc = false
+    await setupEditorForContent(content, documentId, editorRoot, settings, { enableTemplates: false })
+  }
+
+  async function setupEditorForNote(note: NoteDocument, editorRoot: HTMLDivElement, settings: WorkspaceSettings) {
+    let yFragment: import('yjs').XmlFragment | undefined
+
+    // Release any previous Y.Doc; cloud sessions are owned by the backend and
+    // must not be destroyed here (only the editor-owned local docs are).
+    teardownYjsPersistence()
+    if (core.ownsYdoc) { core.awareness?.destroy(); core.ydoc?.destroy() }
+    core.awareness = null
+    core.ydoc = null
+
+    if (workspaceStore.backendKind === 'cloud') {
+      const cloud = workspaceStore.backend as CloudBackend | null
+      const session = cloud?.getNoteSession(note.id) ?? null
+      if (session) {
+        await session.whenSynced()
+        core.ydoc = session.ydoc
+        core.awareness = session.awareness
+        core.ownsYdoc = false
+        yFragment = session.ydoc.getXmlFragment(Y_FRAGMENT_NAME)
+        const name = authStore.user?.displayName || authStore.user?.email || 'User'
+        initAwarenessUser(session.awareness, name)
+      }
+    } else if (core.workspacePath) {
+      const workspacePath = core.workspacePath
+      const noteId = note.id
+      let ydoc: Y.Doc | null = null
+
+      try {
+        const bytes = await collabCommands.loadYjsState(workspacePath, noteId)
+        if (bytes.length > 0) {
+          ydoc = restoreYDocFromBinary(new Uint8Array(bytes))
+          try {
+            ydoc.getXmlFragment(Y_FRAGMENT_NAME)
+          } catch {
+            ydoc.destroy()
+            ydoc = createYDocFromContent(core.schema, note.content)
+          }
+        } else {
+          ydoc = createYDocFromContent(core.schema, note.content)
+        }
+      } catch {
+        try {
+          ydoc = createYDocFromContent(core.schema, note.content)
+        } catch { /* fall through — use non-Yjs mode */ }
+      }
+
+      if (ydoc) {
+        core.ydoc = ydoc
+        core.awareness = new Awareness(ydoc)
+        core.ownsYdoc = true
+        yFragment = ydoc.getXmlFragment(Y_FRAGMENT_NAME)
+
+        const persistYjsState = () => {
+          if (core.ydoc !== ydoc) return
+          const state = encodeYDocState(ydoc)
+          void collabCommands.saveYjsState(workspacePath, noteId, Array.from(state)).catch(() => {
+            /* non-critical */
+          })
+        }
+        flushYjsPersistence = persistYjsState
+        ydoc.on('update', () => {
+          if (yjsSaveTimer) clearTimeout(yjsSaveTimer)
+          yjsSaveTimer = setTimeout(() => {
+            yjsSaveTimer = null
+            persistYjsState()
+          }, 2000)
+        })
+      }
+    }
+
+    await setupEditorForContent(note.content, note.id, editorRoot, settings, { yFragment })
+  }
+
   return {
     isMarkActive,
     executeStateCommand,
@@ -837,6 +866,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     getSlashItemFromState,
     initPluginHost,
     destroyEditorView,
+    setupEditorForDocument,
     setupEditorForNote,
     flushPendingContentUpdate,
     insertContentAtSelection(content: NoteDocument['content']): boolean {

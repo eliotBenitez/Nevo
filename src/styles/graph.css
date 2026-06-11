@@ -380,6 +380,7 @@
 .gc-chip__dot--mention  { background: oklch(0.68 0.14 45); }
 .gc-chip__dot--parent   { background: oklch(0.68 0.14 300); }
 .gc-chip__dot--label    { background: var(--text-3); }
+.gc-chip__dot--arrow    { background: oklch(0.68 0.14 170); }
 .gc-chip__dot--focus    { background: var(--accent); box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 18%, transparent); }
 
 .gc-chip--focus {

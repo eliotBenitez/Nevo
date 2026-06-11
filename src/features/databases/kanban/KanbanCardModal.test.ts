@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createI18n } from 'vue-i18n'
@@ -8,6 +8,7 @@ import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvCheckbox from '../../../ui/primitives/NvCheckbox.vue'
 import NvNumberInput from '../../../ui/primitives/NvNumberInput.vue'
 import type { KanbanBoard, KanbanCard, KanbanCardField } from '../../../types/kanban'
+import { useKanbanStore } from '../../../stores/kanban'
 import enMessages from '../../../locales/en.json'
 import ruMessages from '../../../locales/ru.json'
 
@@ -86,9 +87,25 @@ function makeCard(fields: KanbanCardField[] = makeFields()): KanbanCard {
 
 const MiniEditorStub = defineComponent({
   props: {
+    modelValue: {
+      type: Object,
+      default: () => ({}),
+    },
     placeholder: {
       type: String,
       default: '',
+    },
+    workspacePath: {
+      type: String,
+      default: null,
+    },
+    pluginManifests: {
+      type: Array,
+      default: () => [],
+    },
+    settings: {
+      type: Object,
+      default: () => ({}),
     },
   },
   template: '<div class="mini-editor-stub">{{ placeholder }}</div>',
@@ -155,6 +172,7 @@ async function clickAddFieldTrigger() {
 }
 
 afterEach(() => {
+  vi.restoreAllMocks()
   document.body.innerHTML = ''
 })
 
@@ -185,6 +203,43 @@ describe('KanbanCardModal', () => {
     expect(wrapper.findAllComponents(NvButton).length).toBeGreaterThan(0)
     expect(wrapper.findComponent(NvNumberInput).exists()).toBe(true)
     expect(wrapper.findComponent(NvCheckbox).exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  it('passes workspace settings to compact editor and saves card content without changing title input separately', async () => {
+    const wrapper = mountModal()
+    const kanbanStore = useKanbanStore()
+    const updateCardSpy = vi.spyOn(kanbanStore, 'updateCard').mockResolvedValue(undefined)
+
+    await nextTick()
+
+    const editor = wrapper.findComponent(MiniEditorStub)
+    expect(editor.exists()).toBe(true)
+    expect(editor.props('modelValue')).toEqual({ type: 'doc', content: [] })
+    expect(editor.props('pluginManifests')).toEqual([])
+    expect(editor.props('settings')).toMatchObject({
+      editor: expect.objectContaining({ slashCommands: true }),
+      features: expect.objectContaining({ kanban: true }),
+    })
+
+    const nextContent = {
+      type: 'doc',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Новая заметка' }] }],
+    }
+    await editor.vm.$emit('update:modelValue', nextContent)
+    expect(document.body.querySelector<HTMLInputElement>('.km-title-input')?.value).toBe('Проверить локализацию')
+
+    const saveButton = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button'))
+      .find(button => button.textContent?.trim() === 'Сохранить')
+    expect(saveButton).toBeTruthy()
+    saveButton?.click()
+    await nextTick()
+
+    expect(updateCardSpy).toHaveBeenCalledWith('board-1', 'card-1', expect.objectContaining({
+      title: 'Проверить локализацию',
+      content: nextContent,
+    }))
 
     wrapper.unmount()
   })

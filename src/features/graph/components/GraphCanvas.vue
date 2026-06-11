@@ -14,6 +14,7 @@ interface Props {
   focusedNodeId?: string | null
   focusedNeighborIds?: Set<string>
   showLabels: boolean
+  showArrows?: boolean
   filters: Set<EdgeKind>
   searchQuery?: string
 }
@@ -142,16 +143,51 @@ function draw() {
 
     ctx.save()
     ctx.globalAlpha = dimmed ? 0.04 : (isFocused ? 0.9 : isHL ? EDGE_ALPHA_HL[edge.kind] : EDGE_ALPHA[edge.kind])
-    ctx.beginPath()
-    ctx.moveTo(src.x, src.y)
-    ctx.lineTo(tgt.x, tgt.y)
     ctx.strokeStyle = isFocused || isHL ? accentColor : edgeBase
     ctx.lineWidth = (isFocused ? 1.8 : isHL ? 1.5 : 1) / scale
-    if (edge.kind !== 'link') {
-      ctx.setLineDash([4 / scale, 3 / scale])
+
+    if (props.showArrows) {
+      const dx = tgt.x - src.x
+      const dy = tgt.y - src.y
+      const len = Math.hypot(dx, dy)
+      if (len > 0) {
+        const udx = dx / len
+        const udy = dy / len
+        const r = nodeRadius(tgt)
+        const arrowDist = r + 2.5 / scale
+        const tx = tgt.x - udx * arrowDist
+        const ty = tgt.y - udy * arrowDist
+
+        ctx.beginPath()
+        ctx.moveTo(src.x, src.y)
+        ctx.lineTo(tx, ty)
+        if (edge.kind !== 'link') {
+          ctx.setLineDash([4 / scale, 3 / scale])
+        }
+        ctx.stroke()
+        ctx.setLineDash([])
+
+        // Draw arrowhead
+        const arrowSize = (isFocused || isHL ? 8.5 : 7.5) / Math.sqrt(scale)
+        const angle = Math.atan2(dy, dx)
+        ctx.beginPath()
+        ctx.moveTo(tx, ty)
+        ctx.lineTo(tx - arrowSize * Math.cos(angle - Math.PI / 5), ty - arrowSize * Math.sin(angle - Math.PI / 5))
+        ctx.lineTo(tx - arrowSize * Math.cos(angle + Math.PI / 5), ty - arrowSize * Math.sin(angle + Math.PI / 5))
+        ctx.closePath()
+        ctx.fillStyle = isFocused || isHL ? accentColor : edgeBase
+        ctx.fill()
+      }
+    } else {
+      ctx.beginPath()
+      ctx.moveTo(src.x, src.y)
+      ctx.lineTo(tgt.x, tgt.y)
+      if (edge.kind !== 'link') {
+        ctx.setLineDash([4 / scale, 3 / scale])
+      }
+      ctx.stroke()
+      ctx.setLineDash([])
     }
-    ctx.stroke()
-    ctx.setLineDash([])
     ctx.restore()
   }
 

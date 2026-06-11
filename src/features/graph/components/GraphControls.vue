@@ -10,6 +10,8 @@ interface Props {
   filters: Set<EdgeKind>
   zoom: number
   focusedNodeTitle?: string | null
+  experimentalEnabled?: boolean
+  showArrows?: boolean
 }
 
 defineProps<Props>()
@@ -19,6 +21,7 @@ const emit = defineEmits<{
   'reset': []
   'reset-focus': []
   'toggle-labels': []
+  'toggle-arrows': []
   'toggle-filter': [kind: EdgeKind]
 }>()
 
@@ -78,6 +81,15 @@ const KINDS: { id: EdgeKind; label: string }[] = [
         >
           <span class="gc-chip__dot gc-chip__dot--label" />
           {{ t('graph.showLabels') }}
+        </button>
+        <button
+          v-if="experimentalEnabled"
+          class="gc-chip"
+          :class="{ 'gc-chip--on': showArrows }"
+          @click="emit('toggle-arrows')"
+        >
+          <span class="gc-chip__dot gc-chip__dot--arrow" />
+          {{ t('graph.showArrows') }}
         </button>
       </div>
 

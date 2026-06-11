@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { ArrowLeft, Search } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { useWorkspaceStore } from '../../stores/workspace'
+import { getActivePinia } from 'pinia'
 import type { WorkspaceManifest } from '../../types/workspace'
 import type { EdgeKind, GraphSnapshot } from '../../types/graph'
 import GraphCanvas from './components/GraphCanvas.vue'
@@ -28,6 +29,15 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const experimentalEnabled = computed(() => {
+  if (!getActivePinia()) return false
+  try {
+    return useWorkspaceStore().settings.advanced.experimentalGraphTools
+  } catch {
+    return false
+  }
+})
+const showArrows = ref(false)
 
 const containerRef = ref<HTMLDivElement | null>(null)
 const canvasCompRef = ref<{ canvasRef: HTMLCanvasElement | null } | null>(null)
@@ -50,8 +60,9 @@ onMounted(() => {
     containerHeight.value = containerRef.value.clientHeight
   }
   try {
-    const workspaceStore = useWorkspaceStore()
-    showLabels.value = workspaceStore.settings.workspace.showGraphLabels
+    if (getActivePinia()) {
+      showLabels.value = useWorkspaceStore().settings.workspace.showGraphLabels
+    }
   } catch {}
   if (props.workspacePath && props.manifest) loadGraph()
 })
@@ -188,6 +199,7 @@ watch(simNodes, (nodes) => {
         :focused-node-id="focus.focusedNodeId.value"
         :focused-neighbor-ids="focus.focusedNeighborIds.value"
         :show-labels="showLabels"
+        :show-arrows="showArrows"
         :filters="filters"
         :search-query="searchQuery"
         @mousemove="interaction.onMouseMove"
@@ -211,11 +223,14 @@ watch(simNodes, (nodes) => {
         :filters="filters"
         :zoom="camera.scale.value"
         :focused-node-title="focus.focusedNode.value?.title ?? null"
+        :experimental-enabled="experimentalEnabled"
+        :show-arrows="showArrows"
         @zoom-in="camera.zoomIn"
         @zoom-out="camera.zoomOut"
         @reset="camera.reset"
         @reset-focus="focus.clearFocusedNode"
         @toggle-labels="showLabels = !showLabels"
+        @toggle-arrows="showArrows = !showArrows"
         @toggle-filter="toggleFilter"
       />
     </div>

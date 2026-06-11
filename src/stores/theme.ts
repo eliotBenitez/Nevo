@@ -14,13 +14,17 @@ import type {
 import { useWorkspaceStore } from './workspace'
 
 type Theme = ThemeMode
+type ResolvedTheme = 'light' | 'dark'
+
+const THEME_TRANSITION_CLASS = 'theme-transitioning'
+const THEME_TRANSITION_DURATION = 420
 
 function applyRootAttr(key: string, value: string) {
   document.documentElement.setAttribute(`data-${key}`, value)
 }
 
 /** Returns 'light' when the current local time is within [lightTime, darkTime), otherwise 'dark'. */
-function resolveScheduledTheme(schedule: ThemeSchedule): 'light' | 'dark' {
+function resolveScheduledTheme(schedule: ThemeSchedule): ResolvedTheme {
   const now = new Date()
   const minutes = now.getHours() * 60 + now.getMinutes()
   const toMinutes = (t: string) => {
@@ -41,15 +45,36 @@ export const useThemeStore = defineStore('theme', () => {
   let mediaQuery: MediaQueryList | null = null
   let onSystemThemeChange: (() => void) | null = null
   let scheduleTimer: ReturnType<typeof setInterval> | null = null
+  let transitionTimer: ReturnType<typeof setTimeout> | null = null
+  let appliedTheme: ResolvedTheme | null = null
 
-  function applyTheme(t: Theme) {
-    const resolved = schedule.value.enabled
+  function resolveTheme(t: Theme): ResolvedTheme {
+    return schedule.value.enabled
       ? resolveScheduledTheme(schedule.value)
       : t === 'system'
         ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
         : t
+  }
+
+  function startThemeTransition() {
+    if (transitionTimer) {
+      clearTimeout(transitionTimer)
+    }
+    document.documentElement.classList.add(THEME_TRANSITION_CLASS)
+    transitionTimer = setTimeout(() => {
+      document.documentElement.classList.remove(THEME_TRANSITION_CLASS)
+      transitionTimer = null
+    }, THEME_TRANSITION_DURATION)
+  }
+
+  function applyTheme(t: Theme, options: { animate?: boolean } = {}) {
+    const resolved = resolveTheme(t)
+    if (options.animate !== false && appliedTheme !== null && appliedTheme !== resolved) {
+      startThemeTransition()
+    }
     document.documentElement.classList.remove('theme-dark', 'theme-light')
     document.documentElement.classList.add(`theme-${resolved}`)
+    appliedTheme = resolved
   }
 
   function stopScheduleTimer() {
@@ -67,7 +92,7 @@ export const useThemeStore = defineStore('theme', () => {
 
   function applyAppearance(config: AppConfig) {
     schedule.value = config.themeSchedule ?? schedule.value
-    applyTheme(config.theme ?? theme.value)
+    applyTheme(config.theme ?? theme.value, { animate: false })
     applyRootAttr('density', config.interfaceDensity ?? 'comfortable')
     applyRootAttr('motion', config.reducedMotion ?? 'system')
     applyRootAttr('scrollbars', config.scrollbarVisibility ?? 'hidden')
@@ -143,7 +168,7 @@ export const useThemeStore = defineStore('theme', () => {
 
     mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
     onSystemThemeChange = () => {
-      if (theme.value === 'system') applyTheme('system')
+      if (theme.value === 'system' && !schedule.value.enabled) applyTheme('system')
     }
     mediaQuery.addEventListener('change', onSystemThemeChange)
   }
