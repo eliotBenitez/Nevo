@@ -60,8 +60,66 @@ fn enable_native_spellcheck(app: &tauri::App) {
     }
 }
 
+/// Inside an AppImage, WebKitGTK relies on GStreamer for `<video>`/`<audio>`
+/// playback, but the generated AppRun does not export the GStreamer plugin
+/// paths. WebKit then fails to bring up the media/render pipeline, which shows
+/// up as a blank (gray) window unless the user manually exports the paths.
+///
+/// We point GStreamer at the bundled plugins (copied by the AppImage
+/// `bundleMediaFramework` option) before WebKit initializes, so the AppImage is
+/// self-contained and works without any manual `export`.
+#[cfg(target_os = "linux")]
+fn configure_bundled_gstreamer() {
+    use std::path::{Path, PathBuf};
+
+    // APPDIR is only set when running from a mounted AppImage.
+    let Ok(appdir) = std::env::var("APPDIR") else {
+        return;
+    };
+    let appdir = PathBuf::from(appdir);
+
+    let plugin_dir = [
+        "usr/lib/x86_64-linux-gnu/gstreamer-1.0",
+        "usr/lib/aarch64-linux-gnu/gstreamer-1.0",
+        "usr/lib/gstreamer-1.0",
+        "usr/lib64/gstreamer-1.0",
+    ]
+    .iter()
+    .map(|rel| appdir.join(rel))
+    .find(|path| path.is_dir());
+
+    let Some(plugin_dir) = plugin_dir else {
+        // Nothing was bundled — leave the system defaults untouched.
+        return;
+    };
+
+    // Force WebKit/GStreamer to use ONLY the bundled plugins so playback works
+    // on machines without a system GStreamer install.
+    std::env::set_var("GST_PLUGIN_SYSTEM_PATH_1_0", &plugin_dir);
+    std::env::set_var("GST_PLUGIN_PATH_1_0", &plugin_dir);
+
+    let scanner = [
+        "usr/lib/x86_64-linux-gnu/gstreamer1.0/gstreamer-1.0/gst-plugin-scanner",
+        "usr/lib/aarch64-linux-gnu/gstreamer1.0/gstreamer-1.0/gst-plugin-scanner",
+        "usr/lib/gstreamer1.0/gstreamer-1.0/gst-plugin-scanner",
+        "usr/libexec/gstreamer-1.0/gst-plugin-scanner",
+    ]
+    .iter()
+    .map(|rel| appdir.join(rel))
+    .find(|path: &PathBuf| Path::is_file(path));
+
+    if let Some(scanner) = scanner {
+        std::env::set_var("GST_PLUGIN_SCANNER_1_0", &scanner);
+        std::env::set_var("GST_PLUGIN_SCANNER", &scanner);
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Must run before WebKitGTK (and therefore GStreamer) is initialized.
+    #[cfg(target_os = "linux")]
+    configure_bundled_gstreamer();
+
     let app = tauri::Builder::default()
         .manage(collab::server::CollabAppState::new())
         .setup(|app| {
