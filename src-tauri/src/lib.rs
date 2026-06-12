@@ -114,11 +114,28 @@ fn configure_bundled_gstreamer() {
     }
 }
 
+/// WebKitGTK tries to bring up its DMABUF renderer through EGL/GBM. On many
+/// systems — and especially inside an AppImage, where bundled graphics
+/// libraries clash with the host GPU drivers — creating the EGL display fails
+/// with `EGL_BAD_PARAMETER`, which aborts the web process and leaves a blank
+/// (gray) window. Disabling the DMABUF renderer forces a compatible rendering
+/// path and avoids the crash. We only set it when the user has not already
+/// chosen a value, so it can still be overridden.
+#[cfg(target_os = "linux")]
+fn configure_webkit_rendering() {
+    if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Must run before WebKitGTK (and therefore GStreamer) is initialized.
     #[cfg(target_os = "linux")]
-    configure_bundled_gstreamer();
+    {
+        configure_webkit_rendering();
+        configure_bundled_gstreamer();
+    }
 
     let app = tauri::Builder::default()
         .manage(collab::server::CollabAppState::new())
