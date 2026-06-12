@@ -1,3 +1,6 @@
+## [2026-06-12]
+- Исправлено: AppImage из GitHub Actions собирался без GStreamer (меньше по размеру, серый/пустой фон вместо видео) — опция `bundleMediaFramework: true` работала вхолостую, т.к. на раннере не были установлены GStreamer-плагины; в `.github/workflows/release.yml` в степ установки Linux-зависимостей добавлены `libgstreamer1.0-dev`, `*-plugins-base/bad1.0-dev` и runtime-плагины (`gstreamer1.0-plugins-base/good/bad/ugly`, `libav`, `pulseaudio`, `gl`, `x`, `tools`)
+
 - Исправлено: настройки AI `apiKind` и `baseUrl` (тип API и endpoint) сбрасывались к дефолтам при перезапуске — Rust-функция `normalize_settings_value` (workspace/settings.rs) пересобирает настройки вручную и не копировала эти два новых поля при save/load; теперь они читаются и сохраняются
 - Добавлены регрессионные тесты на сохранение AI-провайдера через нормализацию (54 теста всего)
 - Исправлено: добавлены недостающие ключи локализации для AI команд в слэш-меню редактора (`slashMenu.items.ai_continue`, `slashMenu.items.ai_summarize`, `slashMenu.items.ai_ask`) в файлы `en.json` и `ru.json`
