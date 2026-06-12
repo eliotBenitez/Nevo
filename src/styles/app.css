@@ -84,6 +84,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  gap: 6px;
   flex: 0 0 auto;
 }
 
@@ -340,6 +341,12 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.pdf-segment--stack .pdf-segment__btn {
+  padding: 0 4px;
+  font-size: 11px;
+  justify-content: center;
+}
+
 .pdf-segment__btn {
   min-width: 0;
   height: 24px;
@@ -354,6 +361,14 @@
   align-items: center;
   gap: 4px;
   transition: background 0.12s, color 0.12s;
+}
+
+.pdf-segment__btn-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  text-align: center;
 }
 
 .pdf-segment__btn--icon {

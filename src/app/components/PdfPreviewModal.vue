@@ -126,7 +126,16 @@ watch(
   { immediate: true },
 )
 
+function onWindowKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    event.stopPropagation()
+    emit('close')
+  }
+}
+
 onMounted(async () => {
+  window.addEventListener('keydown', onWindowKeydown, true)
   try {
     const fonts = await configCommands.listSystemFonts()
     systemFonts.value = [...new Set(fonts)].sort((a, b) => a.localeCompare(b))
@@ -136,6 +145,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onWindowKeydown, true)
   generationId += 1
   previewReady.value = false
   previewPages.value = []
@@ -179,7 +189,7 @@ onBeforeUnmount(() => {
                     class="pdf-segment__btn"
                     :class="{ 'pdf-segment__btn--active': paperFormat === fmt }"
                     @click="paperFormat = fmt"
-                  >{{ fmt }}</button>
+                  ><span class="pdf-segment__btn-text">{{ fmt }}</span></button>
                 </div>
               </div>
 
@@ -217,7 +227,7 @@ onBeforeUnmount(() => {
                     class="pdf-segment__btn"
                     :class="{ 'pdf-segment__btn--active': marginPreset === preset }"
                     @click="marginPreset = preset"
-                  >{{ t(`export.marginPresets.${preset}`) }}</button>
+                  ><span class="pdf-segment__btn-text">{{ t(`export.marginPresets.${preset}`) }}</span></button>
                 </div>
               </div>
             </section>
@@ -258,7 +268,7 @@ onBeforeUnmount(() => {
                     class="pdf-segment__btn"
                     :class="{ 'pdf-segment__btn--active': lineSpacing === preset }"
                     @click="lineSpacing = preset"
-                  >{{ t(`export.lineSpacings.${preset}`) }}</button>
+                  ><span class="pdf-segment__btn-text">{{ t(`export.lineSpacings.${preset}`) }}</span></button>
                 </div>
               </div>
             </section>

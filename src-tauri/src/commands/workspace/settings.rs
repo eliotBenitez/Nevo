@@ -477,6 +477,18 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
         0,
         500,
     );
+    settings.ai.base_url = ai
+        .get("baseUrl")
+        .and_then(|value| value.as_str())
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or("http://localhost:11434")
+        .to_string();
+    settings.ai.api_kind = ai
+        .get("apiKind")
+        .and_then(|value| value.as_str())
+        .filter(|value| matches!(*value, "ollama" | "openai"))
+        .unwrap_or("ollama")
+        .to_string();
 
     let plugins = object
         .get("plugins")
@@ -772,6 +784,35 @@ mod tests {
         assert_eq!(settings.appearance.editor_line_width, "wide");
         assert!(settings.editor.spell_check);
         assert_eq!(settings.advanced.schema_version, 2);
+    }
+
+    #[test]
+    fn preserves_ai_provider_settings_through_normalization() {
+        let settings = normalize_settings_value(json!({
+            "ai": {
+                "enabled": true,
+                "apiKind": "openai",
+                "baseUrl": "http://localhost:1234/v1",
+                "defaultModel": "qwen2.5",
+                "streamingOutput": false
+            }
+        }));
+
+        assert!(settings.ai.enabled);
+        assert_eq!(settings.ai.api_kind, "openai");
+        assert_eq!(settings.ai.base_url, "http://localhost:1234/v1");
+        assert_eq!(settings.ai.default_model, "qwen2.5");
+        assert!(!settings.ai.streaming_output);
+    }
+
+    #[test]
+    fn falls_back_to_default_ai_provider_for_unknown_api_kind() {
+        let settings = normalize_settings_value(json!({
+            "ai": { "apiKind": "bogus", "baseUrl": "   " }
+        }));
+
+        assert_eq!(settings.ai.api_kind, "ollama");
+        assert_eq!(settings.ai.base_url, "http://localhost:11434");
     }
 
     #[test]

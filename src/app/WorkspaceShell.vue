@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, History, Menu, PanelLeft, PanelRight, Settings2, X } from 'lucide-vue-next'
+import { ArrowLeft, History, Menu, PanelLeft, Settings2, X } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import WindowControls from '../ui/primitives/WindowControls.vue'
 import WorkspaceRightPanel from './components/WorkspaceRightPanel.vue'
@@ -12,15 +12,15 @@ import WorkspaceEditorPane from './components/WorkspaceEditorPane.vue'
 import WorkspaceHistoryModal from './components/WorkspaceHistoryModal.vue'
 import WorkspaceTrashBin from './components/WorkspaceTrashBin.vue'
 import PdfPreviewModal from './components/PdfPreviewModal.vue'
-import WorkspaceSettingsModal from './components/WorkspaceSettingsModal.vue'
+const WorkspaceSettingsModal = defineAsyncComponent(() => import('./components/WorkspaceSettingsModal.vue'))
 import WorkspaceRenameModal from './components/WorkspaceRenameModal.vue'
 import UpdateDialog from './components/UpdateDialog.vue'
 import TemplatePickerModal from './components/templates/TemplatePickerModal.vue'
 import TitleBarSearch from './components/TitleBarSearch.vue'
 import TitleBarTabs from './components/TitleBarTabs.vue'
-import GraphView from '../features/graph/GraphView.vue'
-import KanbanView from '../features/databases/kanban/KanbanView.vue'
-import KanbanBoardModal from '../features/databases/kanban/KanbanBoardModal.vue'
+const GraphView = defineAsyncComponent(() => import('../features/graph/GraphView.vue'))
+const KanbanView = defineAsyncComponent(() => import('../features/databases/kanban/KanbanView.vue'))
+const KanbanBoardModal = defineAsyncComponent(() => import('../features/databases/kanban/KanbanBoardModal.vue'))
 import { useUiStore } from '../stores/ui'
 import { useKanbanStore } from '../stores/kanban'
 import { useWorkspaceStore } from '../stores/workspace'
@@ -408,16 +408,7 @@ onBeforeUnmount(() => {
           <button type="button" class="nv-btn titlebar-action-btn" :title="t('workspace.system.history')" @click="openHistory()"><History :size="13" /><span class="titlebar-action-label">{{ t('workspace.system.history') }}</span></button>
           <button type="button" class="nv-btn titlebar-action-btn" :title="t('workspace.system.settings')" @click="openSettings()"><Settings2 :size="13" /><span class="titlebar-action-label">{{ t('workspace.system.settings') }}</span></button>
         </div>
-        <button
-          v-if="!isGraphView && !isKanbanView && !useDrawerNavigation"
-          type="button"
-          class="nv-btn workspace-sidebar-toggle"
-          :title="t('workspace.toggleRightPanel')"
-          :class="{ 'workspace-sidebar-toggle--collapsed': !rightPanelOpen }"
-          @click="uiStore.toggleRightPanel()"
-        >
-          <PanelRight :size="15" />
-        </button>
+
         <TitleBarSearch ref="titleBarSearchRef" :manifest="manifest" :workspace-path="workspaceStore.activePath" :settings-items="settingsSearchItems" :search-shortcut="workspaceSearchShortcut" @select-result="handleTitleBarSearchSelect" />
       </div>
       <WindowControls v-if="runtime.supportsWindowControls" />

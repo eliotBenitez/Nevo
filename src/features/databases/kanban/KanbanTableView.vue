@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ChevronDown, Columns3 } from 'lucide-vue-next'
 import NvPopupMenu from '../../../ui/primitives/NvPopupMenu.vue'
-import type { KanbanBoard, KanbanCard } from '../../../types/kanban'
+import type { KanbanBoard, KanbanCard, KanbanPropertyOption } from '../../../types/kanban'
 import { findCardField, getBoardStatusProperty, getCardFieldDescriptors, getCardStatusValue } from './kanbanFields'
 
 interface Props {
@@ -19,6 +19,10 @@ const { t, locale } = useI18n()
 const selectedCardId = ref<string | null>(null)
 const collapsedGroups = ref<Set<string>>(new Set())
 const selectedFieldIds = ref<string[]>([])
+const showProgressColumn = ref(localStorage.getItem('kanban_table_show_progress') !== 'false')
+watch(showProgressColumn, value => {
+  localStorage.setItem('kanban_table_show_progress', String(value))
+})
 
 const statusProp = computed(() => getBoardStatusProperty(props.board))
 
@@ -58,6 +62,8 @@ const groups = computed(() => {
 
 const avgProgress = computed(() => {
   const numericValues = filteredCards.value.flatMap(card => {
+    if (typeof card.progress === 'number') return [card.progress]
+
     const progressField = card.fields.find(field =>
       field.type === 'number' && field.name.toLowerCase().includes('progress'),
     ) ?? card.fields.find(field => field.type === 'number')
@@ -117,6 +123,51 @@ function getStatusOption(card: KanbanCard) {
   const value = getCardStatusValue(card, props.board)
   return statusProp.value?.options?.find(option => option.id === value) ?? null
 }
+
+const TAG_COLORS = [
+  { text: '#3b82f6', bg: '#3b82f618', border: '#3b82f630' },
+  { text: '#10b981', bg: '#10b98118', border: '#10b98130' },
+  { text: '#f59e0b', bg: '#f59e0b18', border: '#f59e0b30' },
+  { text: '#ef4444', bg: '#ef444418', border: '#ef444430' },
+  { text: '#8b5cf6', bg: '#8b5cf618', border: '#8b5cf630' },
+  { text: '#ec4899', bg: '#ec489918', border: '#ec489930' },
+  { text: '#06b6d4', bg: '#06b6d418', border: '#06b6d430' },
+  { text: '#f97316', bg: '#f9731618', border: '#f9731630' },
+]
+
+function getTagColorStyle(tag: KanbanPropertyOption) {
+  if (tag.color) {
+    return {
+      color: tag.color,
+      background: tag.color + '18',
+      borderColor: tag.color + '30',
+    }
+  }
+  let hash = 0
+  const name = tag.name
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const index = Math.abs(hash) % TAG_COLORS.length
+  return {
+    color: TAG_COLORS[index].text,
+    background: TAG_COLORS[index].bg,
+    borderColor: TAG_COLORS[index].border,
+  }
+}
+
+function isTagsColumn(col: { name: string; type: string }): boolean {
+  const name = col.name.toLowerCase().trim()
+  return col.type === 'multi_select' && (name === 'tags' || name === 'теги')
+}
+
+function getCardTags(card: KanbanCard, colId: string): KanbanPropertyOption[] {
+  const field = findCardField(card, { id: colId })
+  if (!field || !Array.isArray(field.value)) return []
+  return field.value
+    .map(valId => field.options?.find(opt => opt.id === valId))
+    .filter((opt): opt is KanbanPropertyOption => !!opt)
+}
 </script>
 
 <template>
@@ -130,6 +181,15 @@ function getStatusOption(card: KanbanCard) {
           </button>
         </template>
         <div class="kb-table__field-content">
+          <label class="kb-table__field-option">
+            <input
+              type="checkbox"
+              v-model="showProgressColumn"
+            />
+            <span>{{ t('kanban.card.progress') }}</span>
+            <span class="kb-table__field-type">progress</span>
+          </label>
+          <div v-if="availableFields.length" class="kb-table__field-separator" />
           <label v-for="field in availableFields" :key="field.id" class="kb-table__field-option">
             <input
               type="checkbox"
@@ -153,6 +213,9 @@ function getStatusOption(card: KanbanCard) {
             <th class="kb-table__th kb-table__th--check" />
             <th class="kb-table__th kb-table__th--title">{{ t('kanban.table.title') }}</th>
             <th class="kb-table__th kb-table__th--status">{{ statusProp?.name ?? t('kanban.table.status') }}</th>
+            <th v-if="showProgressColumn" class="kb-table__th kb-table__th--progress">
+              {{ t('kanban.card.progress') }}
+            </th>
             <th v-for="col in visibleColumns" :key="col.id" class="kb-table__th">
               {{ col.name }}
             </th>
@@ -162,7 +225,7 @@ function getStatusOption(card: KanbanCard) {
         <tbody>
           <template v-for="group in groups" :key="group.id">
             <tr class="kb-table__group-row" @click="toggleGroup(group.id)">
-              <td :colspan="3 + visibleColumns.length" class="kb-table__group-cell">
+              <td :colspan="(showProgressColumn ? 4 : 3) + visibleColumns.length" class="kb-table__group-cell">
                 <div class="kb-table__group-inner">
                   <ChevronDown
                     :size="10"
@@ -207,13 +270,37 @@ function getStatusOption(card: KanbanCard) {
                     {{ getStatusOption(card)?.name }}
                   </span>
                 </td>
+                <td v-if="showProgressColumn" class="kb-table__td kb-table__td--progress">
+                  <div v-if="typeof card.progress === 'number'" class="kb-table__progress-wrapper">
+                    <div class="kb-table__progress-bar">
+                      <div class="kb-table__progress-fill" :style="{ width: card.progress + '%' }" />
+                    </div>
+                    <span class="kb-table__progress-text">{{ card.progress }}%</span>
+                  </div>
+                  <span v-else class="kb-table__progress-empty">—</span>
+                </td>
                 <td
                   v-for="col in visibleColumns"
                   :key="col.id"
                   class="kb-table__td"
-                  :style="getFieldColor(card, col.id) ? { color: getFieldColor(card, col.id) } : {}"
+                  :style="(!isTagsColumn(col) && getFieldColor(card, col.id)) ? { color: getFieldColor(card, col.id) } : {}"
                 >
-                  {{ getFieldValue(card, col.id) }}
+                  <template v-if="isTagsColumn(col)">
+                    <div v-if="getCardTags(card, col.id).length" class="kb-table__tags">
+                      <span
+                        v-for="tag in getCardTags(card, col.id)"
+                        :key="tag.id"
+                        class="kb-table__tag"
+                        :style="getTagColorStyle(tag)"
+                      >
+                        {{ tag.name }}
+                      </span>
+                    </div>
+                    <span v-else>—</span>
+                  </template>
+                  <template v-else>
+                    {{ getFieldValue(card, col.id) }}
+                  </template>
                 </td>
               </tr>
             </template>
@@ -226,8 +313,8 @@ function getStatusOption(card: KanbanCard) {
             <td class="kb-table__td kb-table__td--sum">
               {{ t('kanban.table.items', { n: filteredCards.length, g: groups.length }) }}
             </td>
-            <td v-for="_ in (1 + visibleColumns.length)" :key="_" class="kb-table__td">
-              <span v-if="_ === 1 && avgProgress !== null" class="kb-table__sum-prog">
+            <td v-for="_ in ((showProgressColumn ? 2 : 1) + visibleColumns.length)" :key="_" class="kb-table__td">
+              <span v-if="(_ === (showProgressColumn ? 2 : 1)) && avgProgress !== null" class="kb-table__sum-prog">
                 {{ t('kanban.table.avgProgress', { n: avgProgress }) }}
               </span>
             </td>
@@ -466,6 +553,65 @@ function getStatusOption(card: KanbanCard) {
 .kb-table__td--sum {
   color: var(--text-4, var(--text-muted));
   font-size: 11px;
+}
+
+.kb-table__field-separator {
+  height: 1px;
+  background: var(--line-1, var(--border-subtle));
+  margin: 4px 0;
+}
+
+.kb-table__progress-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 120px;
+}
+
+.kb-table__progress-bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line-2, var(--border-subtle));
+  overflow: hidden;
+}
+
+.kb-table__progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent, #3b82f6);
+}
+
+.kb-table__progress-text {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-3, var(--text-secondary));
+  flex-shrink: 0;
+}
+
+.kb-table__progress-empty {
+  color: var(--text-4, var(--text-muted));
+}
+
+.kb-table__tags {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.kb-table__tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 @keyframes kb-blink {

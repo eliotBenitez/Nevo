@@ -323,6 +323,14 @@ impl Default for WorkspaceBehaviorSettings {
     }
 }
 
+fn default_ai_base_url() -> String {
+    "http://localhost:11434".to_string()
+}
+
+fn default_ai_api_kind() -> String {
+    "ollama".to_string()
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AISettings {
     pub enabled: bool,
@@ -342,6 +350,10 @@ pub struct AISettings {
     pub max_tokens_per_request: u32,
     #[serde(rename = "cloudDailyBudgetUsd")]
     pub cloud_daily_budget_usd: u32,
+    #[serde(rename = "baseUrl", default = "default_ai_base_url")]
+    pub base_url: String,
+    #[serde(rename = "apiKind", default = "default_ai_api_kind")]
+    pub api_kind: String,
 }
 
 impl Default for AISettings {
@@ -356,6 +368,8 @@ impl Default for AISettings {
             streaming_output: true,
             max_tokens_per_request: 1024,
             cloud_daily_budget_usd: 0,
+            base_url: default_ai_base_url(),
+            api_kind: default_ai_api_kind(),
         }
     }
 }

@@ -44,6 +44,7 @@ export type EditorStatsVisibility = 'off' | 'corner'
 export type EditorTypewriterPosition = 'upper' | 'center' | 'lower'
 export type RecentItemsBehavior = 'remember' | 'manual'
 export type AIProviderKind = 'local' | 'cloud'
+export type AIApiKind = 'ollama' | 'openai'
 export type PluginInstallSource = 'folder-only'
 export type AttachmentImportBehavior = 'copy-into-workspace'
 export type HotkeyScope = 'workspace' | 'app'
@@ -189,7 +190,9 @@ export interface AISettings {
   enabled: boolean
   privacyMode: boolean
   defaultProvider: AIProviderKind
+  apiKind: AIApiKind
   defaultModel: string
+  baseUrl: string
   slashCommands: boolean
   contextualSuggestions: boolean
   streamingOutput: boolean

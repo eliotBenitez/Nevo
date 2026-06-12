@@ -4,7 +4,7 @@ mod logging;
 mod media_server;
 
 use commands::{
-    auth, config, folder, fonts, graph, kanban, kanban_ops, note, templates, typst_export,
+    ai, auth, config, folder, fonts, graph, kanban, kanban_ops, note, templates, typst_export,
     workspace,
 };
 #[cfg(target_os = "linux")]
@@ -108,6 +108,9 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
             logging::log_frontend_event,
+            ai::ai_list_models,
+            ai::ai_complete,
+            ai::ai_complete_stream,
             auth::start_oauth_loopback,
             auth::secure_store_set,
             auth::secure_store_get,

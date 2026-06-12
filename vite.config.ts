@@ -16,6 +16,26 @@ export default defineConfig(async () => ({
     globals: true,
   },
 
+  build: {
+    chunkSizeWarningLimit: 900,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return
+          // mermaid / vega / markmap intentionally omitted: they are already
+          // split into their own chunks via dynamic import().
+          if (id.includes("/prosemirror-")) return "vendor-prosemirror"
+          if (/\/(yjs|y-prosemirror|y-protocols|y-websocket)\//.test(id)) return "vendor-yjs"
+          if (/\/(vue|vue-router|@vue|pinia|@vueuse|vue-i18n)\//.test(id)) return "vendor-vue"
+          if (/\/(unified|remark-[^/]+|mdast-[^/]+|micromark[^/]*|unist-[^/]+)\//.test(id)) return "vendor-unified"
+          if (id.includes("/katex/")) return "vendor-katex"
+          if (id.includes("/highlight.js/")) return "vendor-highlight"
+          if (/\/d3-(force|zoom|drag|selection|dispatch|timer|quadtree|transition|interpolate|color|ease)\//.test(id)) return "vendor-d3"
+        },
+      },
+    },
+  },
+
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent Vite from obscuring rust errors

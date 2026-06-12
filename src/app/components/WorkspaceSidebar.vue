@@ -9,6 +9,7 @@ import WorkspaceTreeNode from './WorkspaceTreeNode.vue'
 import SidebarActionBar from './SidebarActionBar.vue'
 import { collectFolderIds, filterTree, sortTree, type SortMode } from '../composables/useSidebarTree'
 import NvPopupMenu from '../../ui/primitives/NvPopupMenu.vue'
+import NvNoteIcon from '../../ui/primitives/NvNoteIcon.vue'
 import type { NvMenuItemDef } from '../../ui/primitives/menu-types'
 import NvMenuItem from '../../ui/primitives/NvMenuItem.vue'
 import NvMenuSeparator from '../../ui/primitives/NvMenuSeparator.vue'
@@ -232,7 +233,7 @@ function runBoardAction(action: BoardMenuAction) {
 <template>
   <aside class="sidebar">
     <div class="workspace-head">
-      <div class="workspace-glyph">{{ workspaceGlyph }}</div>
+      <div class="workspace-glyph"><NvNoteIcon :value="workspaceGlyph" :size="16" /></div>
       <div class="workspace-meta">
         <div class="workspace-name">{{ workspaceName }}</div>
         <div class="workspace-subtitle">{{ backendKind === 'cloud' ? t('workspace.cloudWorkspace') : t('workspace.localWorkspace') }}</div>

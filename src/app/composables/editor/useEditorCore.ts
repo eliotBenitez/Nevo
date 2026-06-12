@@ -39,6 +39,8 @@ import { looksLikeMarkdown, parseMarkdownToSlice } from './markdownPaste'
 import { appLogger } from '../../../utils/logger'
 import { isProseMirrorTransformError } from './prosemirrorErrors'
 import { i18n } from '../../../i18n'
+import { useAiCompletion } from '../../../composables/useAiCompletion'
+import { buildAiSlashItems } from './aiSlashItems'
 
 function resolveEditorLanguage(): string {
   return document.documentElement.lang || 'ru'
@@ -108,6 +110,7 @@ export interface EditorCoreCallbacks {
   onTemplateInsertRequest?: () => void
   onAfterTransaction?: (view: EditorView) => void
   onAssetSrcsRemoved?: (srcs: string[]) => void
+  onAiAskRequest?: (onSubmit: (instruction: string) => void) => void
 }
 
 const ASSET_SRC_PREFIX = '.nevo/assets/'
@@ -242,6 +245,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
   // async note-setup path, which decides between disk-backed and cloud-backed Yjs.
   const workspaceStore = useWorkspaceStore()
   const authStore = useAuthStore()
+  const ai = useAiCompletion()
 
   let pendingContentDoc: Node | null = null
   let contentSerializeTimer: ReturnType<typeof setTimeout> | null = null
@@ -578,6 +582,22 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
       enableTemplates?: boolean
     } = {},
   ) {
+    const aiSlashItems = (settings.ai.enabled && settings.ai.slashCommands && settings.editor.slashCommands)
+      ? buildAiSlashItems({
+          ai,
+          t: i18n.global.t,
+          onError: (msg) => {
+            void appLogger.error({
+              source: 'frontend.editor',
+              event: 'ai_slash_error',
+              message: msg,
+              workspacePath: core.workspacePath,
+            })
+          },
+          requestAiAsk: (submit) => callbacks.onAiAskRequest?.(submit),
+        })
+      : []
+
     const setup = createNevoEditorState({
       schema: core.schema,
       content,
@@ -613,6 +633,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
         onNoteEmbedOpen: (noteId) => callbacks.onNoteEmbedOpen(noteId),
         t: (key: string) => i18n.global.t(key),
       },
+      aiSlashItems,
     })
 
     core.commandRegistry = setup.commands

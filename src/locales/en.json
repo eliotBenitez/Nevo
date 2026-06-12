@@ -769,6 +769,7 @@
         "description": "Rename the workspace and update its glyph or gradient",
         "panelDescription": "Rename the workspace and update its glyph or gradient after creation",
         "namePlaceholder": "Workspace name",
+        "glyphLabel": "Choose glyph",
         "save": "Save identity"
       },
       "workspaceType": {
@@ -886,6 +887,31 @@
           "label": "Cloud · placeholder",
           "description": "Reserved placeholder until cloud providers are wired in"
         }
+      },
+      "enabled": {
+        "title": "Enable AI",
+        "description": "Turn on local AI features"
+      },
+      "apiKind": {
+        "title": "API type",
+        "description": "Local server API protocol",
+        "ollama": "Ollama",
+        "openai": "OpenAI-compatible (LM Studio, llama.cpp)"
+      },
+      "endpoint": {
+        "title": "Ollama endpoint",
+        "description": "Local Ollama server URL",
+        "placeholder": "http://localhost:11434"
+      },
+      "testConnection": {
+        "button": "Test connection",
+        "checking": "Checking…",
+        "success": "Connected · {count} models",
+        "error": "Connection failed"
+      },
+      "maxTokens": {
+        "title": "Max tokens per request",
+        "description": "Upper bound on generated tokens"
       },
       "defaultModel": {
         "title": "Default model",
@@ -1187,6 +1213,25 @@
       "applyHint": "to apply",
       "apply": "Apply",
       "delete": "Delete"
+    },
+    "slash": {
+      "ai": {
+        "continue": {
+          "title": "Continue writing"
+        },
+        "summarize": {
+          "title": "Summarize"
+        },
+        "ask": {
+          "title": "Ask AI"
+        }
+      }
+    },
+    "aiAsk": {
+      "title": "Ask AI",
+      "placeholder": "Describe what you want…",
+      "confirm": "Generate",
+      "cancel": "Cancel"
     }
   },
   "version": "v0.9.4 · Tauri",
@@ -1324,7 +1369,10 @@
       "insert_template": "Insert Template",
       "quote": "Quote",
       "callout": "Callout",
-      "divider": "Divider"
+      "divider": "Divider",
+      "ai_continue": "Continue writing",
+      "ai_summarize": "Summarize",
+      "ai_ask": "Ask AI"
     }
   },
   "noteEmbed": {

@@ -1,18 +1,25 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import { ChevronRight } from 'lucide-vue-next'
+import { ChevronRight, PanelRight } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import NvNoteIcon from '../../ui/primitives/NvNoteIcon.vue'
 import { useWorkspaceStore } from '../../stores/workspace'
 import { useTreeStore } from '../../stores/tree'
 import { useNoteStore } from '../../stores/note'
+import { useUiStore } from '../../stores/ui'
+import { useDeviceLayout } from '../../composables/useDeviceLayout'
 import type { NoteDocument } from '../../types/note'
 
 const props = defineProps<{ note: NoteDocument | null }>()
 
+const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
 const treeStore = useTreeStore()
+const uiStore = useUiStore()
 const { isDirty } = storeToRefs(useNoteStore())
+const { rightPanelOpen } = storeToRefs(uiStore)
+const { useDrawerNavigation } = useDeviceLayout()
 
 interface BreadcrumbItem {
   icon: string
@@ -58,7 +65,17 @@ const trail = computed<BreadcrumbItem[]>(() => {
       </template>
     </div>
 
-    <div v-if="$slots.actions" class="breadcrumb-strip__actions">
+    <div class="breadcrumb-strip__actions">
+      <button
+        v-if="!useDrawerNavigation"
+        type="button"
+        class="nv-btn workspace-sidebar-toggle"
+        :title="t('workspace.toggleRightPanel')"
+        :class="{ 'workspace-sidebar-toggle--collapsed': !rightPanelOpen }"
+        @click="uiStore.toggleRightPanel()"
+      >
+        <PanelRight :size="15" />
+      </button>
       <slot name="actions" />
     </div>
   </div>

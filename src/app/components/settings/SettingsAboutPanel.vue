@@ -8,6 +8,7 @@ import { useDeviceLayout } from '../../../composables/useDeviceLayout'
 import { useAppUpdater } from '../../../composables/useAppUpdater'
 import { appLogger } from '../../../utils/logger'
 import NvButton from '../../../ui/primitives/NvButton.vue'
+import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 
 const { t } = useI18n()
 const { runtime } = useDeviceLayout()
@@ -64,7 +65,7 @@ async function openExternalUrl(url: string) {
 
     <div class="panel-body">
       <div class="about-hero">
-        <div class="about-mark"><em>{{ manifest?.glyph || 'N' }}</em></div>
+        <div class="about-mark"><em><NvNoteIcon :value="manifest?.glyph || 'N'" :size="22" /></em></div>
         <div class="about-copy">
           <div class="about-name"><em>Nevo</em></div>
           <p class="about-tagline">{{ t('settings.about.tagline') }}</p>

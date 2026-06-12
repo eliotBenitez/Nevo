@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, watch, computed } from 'vue'
+import { reactive, watch, computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useWorkspaceStore } from '../../../stores/workspace'
@@ -15,6 +15,8 @@ import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import NvToggle from '../../../ui/primitives/NvToggle.vue'
 import NvColorPicker from '../../../ui/primitives/NvColorPicker.vue'
+import NvIconPicker from '../../../ui/primitives/NvIconPicker.vue'
+import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
@@ -36,6 +38,29 @@ function syncDraft(m: WorkspaceManifest | null) {
 }
 
 watch(manifest, syncDraft)
+
+const glyphPickerRef = ref<HTMLElement | null>(null)
+const glyphPickerOpen = ref(false)
+
+function toggleGlyphPicker() {
+  glyphPickerOpen.value = !glyphPickerOpen.value
+}
+
+function selectGlyph(value: string) {
+  workspaceDraft.glyph = value
+  glyphPickerOpen.value = false
+}
+
+function onGlyphDocumentMouseDown(event: MouseEvent) {
+  const target = event.target as Node | null
+  if (!target) return
+  if (glyphPickerOpen.value && !(glyphPickerRef.value?.contains(target) ?? false)) {
+    glyphPickerOpen.value = false
+  }
+}
+
+onMounted(() => { document.addEventListener('mousedown', onGlyphDocumentMouseDown) })
+onBeforeUnmount(() => { document.removeEventListener('mousedown', onGlyphDocumentMouseDown) })
 
 async function saveWorkspaceIdentity() {
   if (!manifest.value) return
@@ -133,7 +158,24 @@ function resetWorkspaceStyle() {
             </div>
             <div class="workspace-inputs">
               <input v-model="workspaceDraft.name" class="ui-input" :placeholder="t('settings.workspace.identity.namePlaceholder')">
-              <input v-model="workspaceDraft.glyph" class="ui-input ui-input--glyph" maxlength="2" placeholder="N">
+              <div ref="glyphPickerRef" class="glyph-field">
+                <button
+                  type="button"
+                  class="glyph-trigger"
+                  :class="{ 'is-active': glyphPickerOpen }"
+                  :title="t('settings.workspace.identity.glyphLabel')"
+                  @click="toggleGlyphPicker"
+                >
+                  <NvNoteIcon :value="workspaceDraft.glyph" :size="20" />
+                </button>
+                <NvIconPicker
+                  v-if="glyphPickerOpen"
+                  class="glyph-picker-popover"
+                  :value="workspaceDraft.glyph"
+                  @select="selectGlyph"
+                  @close="glyphPickerOpen = false"
+                />
+              </div>
             </div>
             <NvColorPicker
               v-model="workspaceDraft.gradient"

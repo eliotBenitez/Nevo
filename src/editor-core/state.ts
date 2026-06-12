@@ -26,6 +26,7 @@ import { createActiveBlockEmphasisPlugin } from './plugins/active-block-emphasis
 import { createListMarkerPlugin } from './plugins/list-markers'
 import { headingFoldingPlugin } from './plugins/heading-folding'
 import { createToggleFoldingPlugin } from './plugins/toggle-folding'
+import { createAiStreamingPlugin } from './plugins/ai-streaming'
 
 export interface CreateNevoEditorStateOptions {
   schema: Schema
@@ -40,6 +41,7 @@ export interface CreateNevoEditorStateOptions {
   enableMarkmap?: boolean
   yFragment?: XmlFragment
   awareness?: Awareness
+  aiSlashItems?: NevoSlashItem[]
 }
 
 export interface NevoEditorStateSetup {
@@ -202,6 +204,9 @@ export function createNevoEditorState(options: CreateNevoEditorStateOptions): Ne
     plugins.push(host.createDecorationPlugin())
     plugins.push(...host.registries.extraPlugins)
   }
+  if (options.aiSlashItems?.length) {
+    slashItems.push(...options.aiSlashItems)
+  }
 
   plugins.push(columnResizing({ cellMinWidth: 80, defaultCellMinWidth: 120 }))
   plugins.push(tableEditing())
@@ -209,6 +214,7 @@ export function createNevoEditorState(options: CreateNevoEditorStateOptions): Ne
   plugins.push(createBlockSelectionPlugin())
   plugins.push(createActiveBlockEmphasisPlugin())
   plugins.push(createListMarkerPlugin())
+  plugins.push(createAiStreamingPlugin())
   plugins.push(headingFoldingPlugin)
   plugins.push(createToggleFoldingPlugin())
   if (options.enableSlashCommands !== false) {

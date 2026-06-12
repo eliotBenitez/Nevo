@@ -185,7 +185,9 @@ export function normalizeWorkspaceSettings(input: unknown): WorkspaceSettings {
   normalized.ai.enabled = typeof ai.enabled === 'boolean' ? ai.enabled : defaults.ai.enabled
   normalized.ai.privacyMode = typeof ai.privacyMode === 'boolean' ? ai.privacyMode : defaults.ai.privacyMode
   normalized.ai.defaultProvider = ai.defaultProvider === 'cloud' ? 'cloud' : defaults.ai.defaultProvider
+  normalized.ai.apiKind = ai.apiKind === 'openai' ? 'openai' : defaults.ai.apiKind
   normalized.ai.defaultModel = typeof ai.defaultModel === 'string' && ai.defaultModel.trim() ? ai.defaultModel.trim() : defaults.ai.defaultModel
+  normalized.ai.baseUrl = typeof ai.baseUrl === 'string' && ai.baseUrl.trim() ? ai.baseUrl.trim() : defaults.ai.baseUrl
   normalized.ai.slashCommands = typeof ai.slashCommands === 'boolean' ? ai.slashCommands : defaults.ai.slashCommands
   normalized.ai.contextualSuggestions = typeof ai.contextualSuggestions === 'boolean' ? ai.contextualSuggestions : defaults.ai.contextualSuggestions
   normalized.ai.streamingOutput = typeof ai.streamingOutput === 'boolean' ? ai.streamingOutput : defaults.ai.streamingOutput

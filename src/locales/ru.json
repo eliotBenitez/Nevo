@@ -769,6 +769,7 @@
         "description": "Переименовать пространство и обновить его символ или градиент",
         "panelDescription": "Переименуйте пространство и измените его символ или градиент после создания",
         "namePlaceholder": "Название пространства",
+        "glyphLabel": "Выбрать символ",
         "save": "Сохранить"
       },
       "workspaceType": {
@@ -886,6 +887,31 @@
           "label": "Облако · заглушка",
           "description": "Резервный вариант, пока облачные провайдеры ещё не подключены"
         }
+      },
+      "enabled": {
+        "title": "Включить ИИ",
+        "description": "Включить локальные ИИ-функции"
+      },
+      "apiKind": {
+        "title": "Тип API",
+        "description": "Протокол API локального сервера",
+        "ollama": "Ollama",
+        "openai": "OpenAI-совместимый (LM Studio, llama.cpp)"
+      },
+      "endpoint": {
+        "title": "Адрес Ollama",
+        "description": "URL локального сервера Ollama",
+        "placeholder": "http://localhost:11434"
+      },
+      "testConnection": {
+        "button": "Проверить соединение",
+        "checking": "Проверка…",
+        "success": "Подключено · моделей: {count}",
+        "error": "Не удалось подключиться"
+      },
+      "maxTokens": {
+        "title": "Максимум токенов на запрос",
+        "description": "Верхний предел генерируемых токенов"
       },
       "defaultModel": {
         "title": "Модель по умолчанию",
@@ -1187,6 +1213,25 @@
       "applyHint": "применить",
       "apply": "Применить",
       "delete": "Удалить"
+    },
+    "slash": {
+      "ai": {
+        "continue": {
+          "title": "Продолжить текст"
+        },
+        "summarize": {
+          "title": "Кратко изложить"
+        },
+        "ask": {
+          "title": "Спросить AI"
+        }
+      }
+    },
+    "aiAsk": {
+      "title": "Спросить AI",
+      "placeholder": "Опишите, что нужно…",
+      "confirm": "Сгенерировать",
+      "cancel": "Отмена"
     }
   },
   "version": "v0.9.4 · Tauri",
@@ -1324,7 +1369,10 @@
       "insert_template": "Вставить шаблон",
       "quote": "Цитата",
       "callout": "Выноска",
-      "divider": "Разделитель"
+      "divider": "Разделитель",
+      "ai_continue": "Продолжить текст",
+      "ai_summarize": "Кратко изложить",
+      "ai_ask": "Спросить AI"
     }
   },
   "noteEmbed": {
