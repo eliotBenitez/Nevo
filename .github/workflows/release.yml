@@ -132,6 +132,7 @@ jobs:
           echo "$files_json" | jq -r 'keys[]'
 
       - name: Build and publish release
+        if: matrix.platform != 'macos-latest'
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -145,6 +146,30 @@ jobs:
           prerelease: false
           includeUpdaterJson: true
           args: ${{ matrix.args }}
+
+      # The macOS DMG step (bundle_dmg.sh -> hdiutil + Finder AppleScript) is
+      # flaky on headless runners. Retry just the macOS build a few times so a
+      # transient DMG failure doesn't break the release. Kept separate from the
+      # step above so the proven path for Linux/Windows is never affected.
+      - name: Build and publish release (macOS, with retry)
+        if: matrix.platform == 'macos-latest'
+        uses: Wandalen/wretry.action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          action: tauri-apps/tauri-action@v0
+          attempt_limit: 3
+          attempt_delay: 15000
+          with: |
+            tagName: ${{ github.ref_name }}
+            releaseName: 'Nevo ${{ github.ref_name }}'
+            releaseBody: 'See the assets to download and install this version.'
+            releaseDraft: true
+            prerelease: false
+            includeUpdaterJson: true
+            args: ${{ matrix.args }}
 
       # Fail the build (the release stays a draft) if libav or any of its deps
       # did not make it into the AppImage, so we never publish a binary that
