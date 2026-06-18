@@ -114,39 +114,17 @@ fn configure_bundled_gstreamer() {
     }
 }
 
-/// WebKitGTK tries to bring up its DMABUF renderer through EGL/GBM. Inside an
-/// AppImage this crashes (`EGL_BAD_PARAMETER`, gray window) because the
-/// bundled libEGL/GBM clash with the host GPU drivers. Disabling the DMABUF
-/// renderer there forces a compatible software path and avoids the crash.
-///
-/// This guard is **AppImage-only**: `.deb`/`.rpm`/Flatpak and `tauri dev` use
-/// the system graphics stack, where the DMABUF renderer works and provides
-/// hardware GPU compositing. Setting the variable unconditionally (as it once
-/// did) silently forces software compositing everywhere — which is extremely
-/// expensive for `backdrop-filter`/translucent layers and turns every scroll
-/// into a frame-time spike. We therefore only act when `APPDIR` is present,
-/// i.e. when running from a mounted AppImage.
-#[cfg(target_os = "linux")]
-fn configure_webkit_rendering() {
-    let Ok(appdir) = std::env::var("APPDIR") else {
-        return;
-    };
-    if appdir.is_empty() {
-        return;
-    }
-
-    // Honour a user override; only set when they haven't chosen a value.
-    if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
-        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
-    }
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Must run before WebKitGTK (and therefore GStreamer) is initialized.
+    //
+    // Note: we intentionally do NOT touch `WEBKIT_DISABLE_DMABUF_RENDERER`.
+    // Forcing it on inside the AppImage dropped WebKitGTK to software
+    // compositing, which made `backdrop-filter`/translucent layers crawl
+    // (the AppImage lagged while `tauri dev` did not). Leaving the DMABUF
+    // renderer enabled lets the AppImage use hardware GPU compositing too.
     #[cfg(target_os = "linux")]
     {
-        configure_webkit_rendering();
         configure_bundled_gstreamer();
     }
 
