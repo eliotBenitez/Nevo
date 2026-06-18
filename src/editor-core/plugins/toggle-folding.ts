@@ -1,8 +1,42 @@
 import { Plugin, PluginKey } from 'prosemirror-state'
+import type { Transaction } from 'prosemirror-state'
 import { Decoration, DecorationSet } from 'prosemirror-view'
 import type { Node } from 'prosemirror-model'
 
 export const toggleFoldingKey = new PluginKey('toggleFolding')
+
+/**
+ * Detects whether a transaction structurally affects toggle nodes (insert,
+ * delete, or collapse/attrs change). Returns false for pure text edits inside
+ * non-toggle blocks so the decoration set can be cheaply remapped.
+ *
+ * Walks only the changed ranges reported by each step's map (not the whole
+ * document): a toggle is affected if one appears in any old or new range.
+ */
+function transactionAffectsToggles(tr: Transaction): boolean {
+  let affects = false
+  let before = tr.before
+  for (const step of tr.steps) {
+    step.getMap().forEach((oldStart, oldEnd, newStart, newEnd) => {
+      if (affects) return
+      if (oldEnd > oldStart) {
+        before.nodesBetween(oldStart, oldEnd, (node) => {
+          if (node.type.name === 'toggle') { affects = true; return false }
+          return true
+        })
+      }
+      if (!affects && newEnd > newStart) {
+        tr.doc.nodesBetween(newStart, newEnd, (node) => {
+          if (node.type.name === 'toggle') { affects = true; return false }
+          return true
+        })
+      }
+    })
+    if (affects) return true
+    before = step.apply(before).doc ?? before
+  }
+  return false
+}
 
 function buildToggleFoldingDecorations(doc: Node): DecorationSet {
   const decorations: Decoration[] = []
@@ -42,12 +76,18 @@ export function createToggleFoldingPlugin(): Plugin {
       init(_, state) {
         return buildToggleFoldingDecorations(state.doc)
       },
-      apply(tr, old, _oldState, newState) {
-        if (tr.docChanged || tr.getMeta(toggleFoldingKey)) {
-          return buildToggleFoldingDecorations(newState.doc)
-        }
-        return old
-      },
+    apply(tr, old, _oldState, newState) {
+      if (tr.getMeta(toggleFoldingKey)) {
+        return buildToggleFoldingDecorations(newState.doc)
+      }
+      if (!tr.docChanged) return old
+      // Avoid the O(document) rebuild for pure text edits inside non-toggle
+      // blocks: remap the existing decorations by mapping instead.
+      if (!transactionAffectsToggles(tr)) {
+        return old.map(tr.mapping, tr.doc)
+      }
+      return buildToggleFoldingDecorations(newState.doc)
+    },
     },
     props: {
       decorations(state) {

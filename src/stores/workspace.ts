@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
 import { applyAppLocale } from '../i18n'
 import type {
   AppMetadata,
@@ -51,7 +51,10 @@ export function getRestoreCandidates(recents: RecentWorkspace[]): RecentWorkspac
 
 export const useWorkspaceStore = defineStore('workspace', () => {
   const manifest = ref<WorkspaceManifest | null>(null)
-  const settings = ref<WorkspaceSettings>(createDefaultWorkspaceSettings())
+  // Settings is only ever replaced wholesale (saveSettings/updateSettings reassign
+  // a fresh object), never mutated in place — so a shallowRef avoids the cost of
+  // deeply proxying this large object on every nested read while staying reactive.
+  const settings = shallowRef<WorkspaceSettings>(createDefaultWorkspaceSettings())
   const plugins = ref<PluginManifest[]>([])
   const recents = ref<RecentWorkspace[]>([])
   const activeHandle = ref<WorkspaceHandle | null>(null)
@@ -191,12 +194,20 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   /** Open a server-hosted shared storage as a workspace (cloud backend). */
-  async function openCloudWorkspace(storageId: string) {
+  async function openCloudWorkspace(storageId: string, serverUrl?: string) {
     const shared = useSharedStorageStore()
     const auth = useAuthStore()
     const server = useServerConfigStore()
     const api = useApiClient()
     try {
+      const target = serverUrl ?? recents.value.find(r => r.storageId === storageId)?.serverUrl ?? server.serverUrl
+      if (target !== server.serverUrl) {
+        server.setServerUrl(target)
+        shared.reset()
+      }
+      if (!auth.isAuthenticated || auth.sessionServerUrl !== server.serverUrl) {
+        await auth.login('github')
+      }
       if (!shared.storages.length) await shared.loadStorages()
       const storage = shared.storages.find(s => s.id === storageId)
       if (!storage) throw new Error('shared storage not found')
@@ -251,10 +262,11 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   async function _persistCloudRecent(storage: SharedStorage) {
+    const server = useServerConfigStore()
     const now = new Date().toISOString()
     const existing = recents.value.find(r => r.storageId === storage.id)
     const recent: RecentWorkspace = existing
-      ? { ...existing, name: storage.name, glyph: storage.glyph, gradient: storage.gradient, lastOpened: now }
+      ? { ...existing, name: storage.name, glyph: storage.glyph, gradient: storage.gradient, lastOpened: now, serverUrl: server.serverUrl }
       : {
           id: storage.id,
           name: storage.name,
@@ -265,6 +277,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
           pageCount: 0,
           kind: 'cloud',
           storageId: storage.id,
+          serverUrl: server.serverUrl,
         }
     recents.value = [recent, ...recents.value.filter(r => r.storageId !== storage.id)]
     await saveAppConfig({ recents: recents.value })

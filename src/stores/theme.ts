@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import type {
   AppConfig,
   FocusRingStyle,
@@ -21,6 +21,11 @@ const THEME_TRANSITION_DURATION = 420
 
 function applyRootAttr(key: string, value: string) {
   document.documentElement.setAttribute(`data-${key}`, value)
+}
+
+/** Effective value: explicit user choice wins, otherwise disabled by default. */
+function resolveReduceTransparency(value: boolean | undefined): boolean {
+  return value ?? false
 }
 
 /** Returns 'light' when the current local time is within [lightTime, darkTime), otherwise 'dark'. */
@@ -99,7 +104,7 @@ export const useThemeStore = defineStore('theme', () => {
     applyRootAttr('focus-ring', config.focusRingStyle ?? 'accent')
     applyRootAttr('chrome', config.windowChromeStyle ?? 'default')
     applyRootAttr('roundness', config.interfaceRoundness ?? 'default')
-    applyRootAttr('reduce-transparency', String(config.reduceTransparency ?? false))
+    applyRootAttr('reduce-transparency', String(resolveReduceTransparency(config.reduceTransparency)))
     document.documentElement.style.setProperty('--ui-scale', String((config.interfaceZoom ?? 100) / 100))
     startScheduleTimer()
   }
@@ -140,10 +145,17 @@ export const useThemeStore = defineStore('theme', () => {
     await useWorkspaceStore().saveAppConfig({ interfaceZoom: value })
   }
 
-  async function setReduceTransparency(value: boolean) {
-    applyRootAttr('reduce-transparency', String(value))
+  // `undefined` resets to the platform auto default; an explicit boolean is a
+  // manual override (lets Linux users turn glass back on).
+  async function setReduceTransparency(value: boolean | undefined) {
+    applyRootAttr('reduce-transparency', String(resolveReduceTransparency(value)))
     await useWorkspaceStore().saveAppConfig({ reduceTransparency: value })
   }
+
+  /** Effective reduce-transparency state for binding UI toggles. */
+  const reduceTransparencyEnabled = computed(() =>
+    resolveReduceTransparency(useWorkspaceStore().appConfig.reduceTransparency),
+  )
 
   async function setInterfaceRoundness(value: InterfaceRoundness) {
     applyRootAttr('roundness', value)
@@ -184,6 +196,7 @@ export const useThemeStore = defineStore('theme', () => {
     setWindowChromeStyle,
     setInterfaceZoom,
     setReduceTransparency,
+    reduceTransparencyEnabled,
     setInterfaceRoundness,
     setThemeSchedule,
     applyAppearance,

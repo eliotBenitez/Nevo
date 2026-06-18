@@ -453,6 +453,15 @@ export class CloudBackend implements WorkspaceBackend {
   pruneSnapshots(): Promise<WorkspaceCleanupReport> { return Promise.resolve({ removedFiles: 0, bytesFreed: 0 }) }
   cleanupOrphanedAssets(): Promise<WorkspaceCleanupReport> { return Promise.resolve({ removedFiles: 0, bytesFreed: 0 }) }
   deleteUnreferencedAsset(): Promise<boolean> { return Promise.resolve(false) }
+  // Draw assets are local-only for now: cloud storage would need an
+  // encrypted-blob relay (see uploadAsset/fetchAsset). Surfaced as a clear
+  // error so the editor can disable the drawing flow there.
+  saveDrawAsset(): Promise<string> {
+    return Promise.reject(new Error('Drawing assets are not supported on cloud workspaces yet'))
+  }
+  readDrawAsset(): Promise<number[]> {
+    return Promise.reject(new Error('Drawing assets are not supported on cloud workspaces yet'))
+  }
   getDiagnostics(): Promise<WorkspaceDiagnostics> {
     const snap = readManifest(this.map)
     let noteCount = snap?.rootNotes.length ?? 0

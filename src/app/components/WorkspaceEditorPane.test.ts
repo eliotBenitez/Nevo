@@ -177,6 +177,7 @@ vi.mock('../composables/editor/useEditorOverlays', () => ({
     highlightPicker: { open: false, position: { top: 0, left: 0 } },
     textColorPicker: { open: false, position: { top: 0, left: 0 } },
     mathPopover: { open: false, latex: '', isInline: true, position: { top: 0, left: 0 }, nodePos: null },
+    formulaPopover: { open: false, formula: '', position: { top: 0, left: 0 }, cellPos: null },
     mermaidPopover: { open: false, code: '', position: { top: 0, left: 0 }, nodePos: null },
     markmapPopover: { open: false, markdown: '', position: { top: 0, left: 0 }, nodePos: null },
     vegaPopover: { open: false, spec: '', position: { top: 0, left: 0 }, nodePos: null },
@@ -200,6 +201,17 @@ vi.mock('../composables/editor/useMathEditor', () => ({
     applyMathFromPopover: vi.fn(),
     removeMathFromPopover: vi.fn(),
     onMathInputKeyDown: vi.fn(),
+  }),
+}))
+
+vi.mock('../composables/editor/useFormulaEditor', () => ({
+  useFormulaEditor: () => ({
+    openFormulaPopoverForCell: vi.fn(),
+    closeFormulaPopover: vi.fn(),
+    applyFormulaFromPopover: vi.fn(),
+    removeFormulaFromPopover: vi.fn(),
+    onFormulaInputKeyDown: vi.fn(),
+    repositionFormulaPopover: vi.fn(),
   }),
 }))
 
@@ -873,7 +885,7 @@ describe('WorkspaceEditorPane scrollbar overlay', () => {
     link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }))
     await nextTick()
 
-    expect(wrapper.emitted('open-note')).toEqual([['note-2']])
+    expect(wrapper.emitted('open-note')).toEqual([['note-2', 'heading-1']])
   })
 
   it('does not emit open-note for an internal editor link when the note is missing', async () => {

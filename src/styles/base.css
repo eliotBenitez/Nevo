@@ -34,6 +34,14 @@ body {
   inset: 0;
   z-index: 0;
   pointer-events: none;
+  /* Promote the app background to its own static compositing layer. Without this
+     the layered radial gradients are recomposited against every scrolling surface
+     on WebKitGTK, which is a major source of scroll jank. `translateZ(0)` + `contain`
+     keep the canvas as a static, GPU-resident layer. We deliberately avoid a
+     permanent `will-change` here: keeping it set forces the compositor to hold this
+     full-viewport layer perpetually "hot", which costs more than it saves. */
+  transform: translateZ(0);
+  contain: strict;
   background:
     radial-gradient(60% 50% at 18% 12%, var(--wash-a) 0%, transparent 70%),
     radial-gradient(50% 40% at 95% 95%, var(--wash-b) 0%, transparent 70%),
@@ -117,11 +125,49 @@ body {
 .nv-app { zoom: var(--ui-scale, 1); }
 
 /* ── Reduce transparency ─────────────────────────────── */
+/* When transparency is reduced, override the glass-* color tokens at the root
+   so EVERY surface that reads them (sidebar, titlebar, settings panels, popovers,
+   prose blocks, etc.) becomes opaque — not just the .nv-glass/.nv-card classes.
+   This matters on WebKitGTK: a translucent `background` over the animated
+   `.nv-canvas` without a `backdrop-filter` forces a heavy composite of the
+   translucent layer against the layered background on every frame, which is the
+   dominant cause of scroll jank there. Making the tokens opaque lets the
+   compositor treat each surface as a simple opaque layer. */
+[data-reduce-transparency="true"] {
+  --glass-1: var(--canvas-1);
+  --glass-2: var(--canvas-1);
+  --glass-3: var(--canvas-1);
+  --glass-titlebar: var(--canvas-1);
+}
 [data-reduce-transparency="true"] .nv-glass,
 [data-reduce-transparency="true"] .nv-card,
 [data-reduce-transparency="true"] .nv-sidebar {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+  background: var(--canvas-1);
+}
+/* `backdrop-filter` is the dominant rendering cost on WebKitGTK and is the
+   default-on rationale on Linux. Strip it from EVERY element — the titlebar,
+   editor popovers/menus, stats badge and prose blocks don't use the .nv-glass
+   class, so they would otherwise keep blurring even with the toggle on. */
+[data-reduce-transparency="true"] *,
+[data-reduce-transparency="true"] *::before,
+[data-reduce-transparency="true"] *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+/* Keep the persistent, full-width titlebar opaque so dropping its blur doesn't
+   leave it see-through over scrolling content. */
+[data-reduce-transparency="true"] .workspace-titlebar {
+  background: var(--canvas-1);
+}
+/* The settings modal scrolls inside a `border-radius` + `overflow: hidden` window,
+   which keeps WebKitGTK on the slow main-thread scroll path; behind the scroller the
+   `.settings-shell` paints two large radial gradients that then get re-rasterized on
+   every scroll frame. Flatten the shell to a single opaque color so each frame only
+   repaints a cheap flat surface + text (the editor's doc body is fast for the same
+   reason — nothing expensive paints behind it). */
+[data-reduce-transparency="true"] .settings-shell {
   background: var(--canvas-1);
 }
 

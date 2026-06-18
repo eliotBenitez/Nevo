@@ -227,7 +227,7 @@ const roundnessOptions = ['sharp', 'default', 'soft'].map(v => ({ value: v, labe
               <div class="row-sub">{{ t('settings.appearance.reduceTransparency.description') }}</div>
             </div>
             <NvToggle
-              :model-value="appConfig.reduceTransparency"
+              :model-value="themeStore.reduceTransparencyEnabled"
               @update:model-value="v => themeStore.setReduceTransparency(v)"
             />
           </div>

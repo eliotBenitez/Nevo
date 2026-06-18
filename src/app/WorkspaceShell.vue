@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, History, Menu, PanelLeft, Settings2, X } from 'lucide-vue-next'
@@ -9,18 +9,19 @@ import WorkspaceRightPanel from './components/WorkspaceRightPanel.vue'
 import WorkspaceRightTrigger from './components/WorkspaceRightTrigger.vue'
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
 import WorkspaceEditorPane from './components/WorkspaceEditorPane.vue'
-import WorkspaceHistoryModal from './components/WorkspaceHistoryModal.vue'
-import WorkspaceTrashBin from './components/WorkspaceTrashBin.vue'
-import PdfPreviewModal from './components/PdfPreviewModal.vue'
+const WorkspaceHistoryModal = defineAsyncComponent(() => import('./components/WorkspaceHistoryModal.vue'))
+const WorkspaceTrashBin = defineAsyncComponent(() => import('./components/WorkspaceTrashBin.vue'))
+const PdfPreviewModal = defineAsyncComponent(() => import('./components/PdfPreviewModal.vue'))
 const WorkspaceSettingsModal = defineAsyncComponent(() => import('./components/WorkspaceSettingsModal.vue'))
 import WorkspaceRenameModal from './components/WorkspaceRenameModal.vue'
 import UpdateDialog from './components/UpdateDialog.vue'
-import TemplatePickerModal from './components/templates/TemplatePickerModal.vue'
+const TemplatePickerModal = defineAsyncComponent(() => import('./components/templates/TemplatePickerModal.vue'))
 import TitleBarSearch from './components/TitleBarSearch.vue'
 import TitleBarTabs from './components/TitleBarTabs.vue'
 const GraphView = defineAsyncComponent(() => import('../features/graph/GraphView.vue'))
 const KanbanView = defineAsyncComponent(() => import('../features/databases/kanban/KanbanView.vue'))
 const KanbanBoardModal = defineAsyncComponent(() => import('../features/databases/kanban/KanbanBoardModal.vue'))
+const DrawView = defineAsyncComponent(() => import('../features/draw/DrawView.vue'))
 import { useUiStore } from '../stores/ui'
 import { useKanbanStore } from '../stores/kanban'
 import { useWorkspaceStore } from '../stores/workspace'
@@ -69,7 +70,7 @@ const { tree, folderById } = storeToRefs(treeStore)
 const { activeNote, saveStatus } = storeToRefs(noteStore)
 const tabsStore = useTabsStore()
 const { tabs, activeTabId } = storeToRefs(tabsStore)
-const editorPaneRef = ref<{ editorRoot: HTMLDivElement | null; flushPendingContent?: () => void } | null>(null)
+const editorPaneRef = ref<{ editorRoot: HTMLDivElement | null; flushPendingContent?: () => void; updateDrawBlock?: (payload: { drawId: string; svgPreview: string; src: string; title?: string }) => void } | null>(null)
 noteStore.setPendingContentFlush(() => editorPaneRef.value?.flushPendingContent?.())
 const editorRootEl = computed(() => editorPaneRef.value?.editorRoot ?? null)
 const { flushSave } = useNotePersistence()
@@ -90,6 +91,8 @@ const boardModal = reactive<{
 }>({ open: false, mode: 'create' })
 const restoredRouteForWorkspace = ref<string | null>(null)
 const pendingBlockTarget = ref<WorkspaceBlockNavigationTarget | null>(null)
+type DrawUpdatePayload = { drawId: string; svgPreview: string; src: string; title?: string }
+const pendingDrawUpdate = ref<DrawUpdatePayload | null>(null)
 const templateCreatePickerOpen = ref(false)
 const templateCreateFolderId = ref<string | null>(null)
 const { runtime, useDrawerNavigation, useCompactHeader, useFullscreenDialogs, shellStyle } = useDeviceLayout()
@@ -97,8 +100,13 @@ const { runtime, useDrawerNavigation, useCompactHeader, useFullscreenDialogs, sh
 const activeFolderId = computed(() => route.params.folderId ? String(route.params.folderId) : null)
 const activeNoteId = computed(() => route.params.noteId ? String(route.params.noteId) : null)
 const routeBoardId = computed(() => route.params.boardId ? String(route.params.boardId) : null)
+const routeDrawId = computed(() => route.params.drawId ? String(route.params.drawId) : null)
 const isGraphView = computed(() => route.path === '/workspace/graph')
 const isKanbanView = computed(() => !!routeBoardId.value)
+const isDrawView = computed(() => !!routeDrawId.value)
+// Dark-mode detection for the draw canvas background. The theme store applies
+// a `theme-dark` class to <html>; we mirror it reactively.
+const isDarkMode = computed(() => typeof document !== 'undefined' && document.documentElement.classList.contains('theme-dark'))
 
 const kanbanStore = useKanbanStore()
 const { activeBoardId: activeBoardId } = storeToRefs(kanbanStore)
@@ -162,13 +170,39 @@ async function runWorkspaceSearch(seed = '') { titleBarSearchRef.value?.focusSea
 function openSettings(section: SettingsSectionId | null = null) { mobileSidebarOpen.value = false; settingsModalSection.value = section; settingsModalOpen.value = true }
 function openTrash() { mobileSidebarOpen.value = false; trashModalOpen.value = true }
 function openHistory(noteId: string | null = null) { mobileSidebarOpen.value = false; historyModalPreselectedNoteId.value = noteId; historyModalOpen.value = true }
-function openNote(noteId: string) {
+function scrollToAnchorInEditor(anchor: string) {
+  const root = editorRootEl.value
+  if (!root) return
+  const pm = root.querySelector('.ProseMirror')
+  if (!pm) return
+  const normalized = anchor.trim()
+  const headings = Array.from(pm.querySelectorAll('h1, h2, h3, h4, h5, h6')) as HTMLElement[]
+  const target = headings.find(h => h.textContent?.trim() === normalized)
+    ?? headings.find(h => (h.textContent?.trim().toLowerCase() ?? '') === normalized.toLowerCase())
+  target?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+}
+
+function openNote(noteId: string, anchor?: string | null) {
   mobileSidebarOpen.value = false
   const meta = treeStore.noteById.get(noteId)
   tabsStore.openTab(noteId, meta?.title ?? t('workspace.untitledNote'), meta?.icon ?? '📄')
-  if (activeNoteId.value === noteId && !isGraphView.value) return
+  // The draw route also carries the parent noteId, so guard against treating
+  // "back from the drawing canvas" as a no-op when the ids match — we must
+  // still navigate to the note route to leave the canvas.
+  const sameNote = activeNoteId.value === noteId && !isGraphView.value && !isDrawView.value
+  if (sameNote) {
+    // Already viewing the target note — just scroll to the anchor if any.
+    if (anchor) {
+      nextTick(() => scrollToAnchorInEditor(anchor))
+    }
+    return
+  }
   flushSave()
   router.push(`/workspace/note/${noteId}`)
+  if (anchor) {
+    // Give the new note time to render before scrolling to the heading.
+    nextTick(() => { setTimeout(() => scrollToAnchorInEditor(anchor), 60) })
+  }
 }
 function closeTab(tabId: string) {
   const nextNoteId = tabsStore.closeTab(tabId)
@@ -178,6 +212,35 @@ function closeTab(tabId: string) {
 function openFolder(folderId: string) { mobileSidebarOpen.value = false; if (activeFolderId.value === folderId) return; flushSave(); router.push(`/workspace/folder/${folderId}`) }
 function openGraph() { mobileSidebarOpen.value = false; if (isGraphView.value) return; flushSave(); router.push('/workspace/graph') }
 function openBoard(boardId: string) { mobileSidebarOpen.value = false; flushSave(); router.push(`/workspace/board/${boardId}`) }
+
+// Open the full-canvas drawing editor for a draw_block. The noteId is the
+// parent note (so save-target stays valid); drawId identifies the block.
+function openDraw(noteId: string, drawId: string) {
+  mobileSidebarOpen.value = false
+  if (isDrawView.value && routeDrawId.value === drawId && activeNoteId.value === noteId) return
+  flushSave()
+  router.push(`/workspace/draw/${noteId}/${drawId}`)
+}
+
+// Sync preview/src back into the draw_block node after the canvas saved.
+//
+// On local workspaces the editor's source of truth is a disk-backed Y.Doc, not
+// `note.content` — so the update MUST go through a ProseMirror transaction
+// (updateDrawBlock), which y-prosemirror mirrors into the Y.Doc and persists.
+// Patching note.content alone is invisible to the editor and gets clobbered
+// when the Y.Doc re-serializes (and the now-unreferenced asset is reaped).
+//
+// The editor pane is unmounted while the canvas is open, so stash the update
+// and let the pane apply it when it remounts — same approach as
+// pendingBlockTarget.
+function onUpdateDraw(payload: DrawUpdatePayload) {
+  if (editorPaneRef.value?.updateDrawBlock) {
+    editorPaneRef.value.updateDrawBlock(payload)
+  } else {
+    pendingDrawUpdate.value = payload
+  }
+}
+function consumePendingDrawUpdate() { pendingDrawUpdate.value = null }
 function createBoard() {
   mobileSidebarOpen.value = false
   boardModal.mode = 'create'
@@ -420,8 +483,9 @@ onBeforeUnmount(() => {
       </div>
       <GraphView v-if="isGraphView" :workspace-path="workspaceStore.activePath" :manifest="manifest" :active-note-id="activeNoteId" @open-note="openNote" @back="() => router.push('/workspace')" />
       <KanbanView v-else-if="isKanbanView && routeBoardId" :board-id="routeBoardId" @back="() => router.push('/workspace')" />
-      <WorkspaceEditorPane v-else ref="editorPaneRef" :note="activeNote" :workspace-path="workspaceStore.activePath" :workspace-name="manifest?.name ?? ''" :plugin-manifests="workspaceStore.plugins" :settings="settings" :save-status="saveStatus" :container-title="containerOverview.title" :container-kind="containerOverview.kind" :container-items="containerOverview.items" :pending-block-target="pendingBlockTarget" @update:title="updateTitle" @update:icon="updateIcon" @update:cover="updateCover" @update:content="updateContent" @content-dirty="markContentDirty" @create-note="createNote" @consumed-pending-target="consumePendingBlockTarget" @open-note="openNote" @open-folder="openFolder" @request-export="handleRequestExport" @request-import-md="() => activeNoteId && importMdIntoNote(activeNoteId)" />
-      <WorkspaceRightTrigger v-if="!rightPanelOpen && !isGraphView && !isKanbanView && !useDrawerNavigation" />
+      <DrawView v-else-if="isDrawView && routeDrawId && activeNoteId" :workspace-path="workspaceStore.activePath" :note-id="activeNoteId" :draw-id="routeDrawId ? routeDrawId : ''" :is-dark="isDarkMode" @open-note="openNote" @update-draw="onUpdateDraw" @back="() => activeNoteId && openNote(activeNoteId)" />
+      <WorkspaceEditorPane v-else ref="editorPaneRef" :note="activeNote" :workspace-path="workspaceStore.activePath" :workspace-name="manifest?.name ?? ''" :plugin-manifests="workspaceStore.plugins" :settings="settings" :save-status="saveStatus" :container-title="containerOverview.title" :container-kind="containerOverview.kind" :container-items="containerOverview.items" :pending-block-target="pendingBlockTarget" :pending-draw-update="pendingDrawUpdate" @update:title="updateTitle" @update:icon="updateIcon" @update:cover="updateCover" @update:content="updateContent" @content-dirty="markContentDirty" @create-note="createNote" @consumed-pending-target="consumePendingBlockTarget" @consumed-draw-update="consumePendingDrawUpdate" @open-note="openNote" @open-folder="openFolder" @request-export="handleRequestExport" @request-import-md="() => activeNoteId && importMdIntoNote(activeNoteId)" @open-draw="openDraw" />
+      <WorkspaceRightTrigger v-if="!rightPanelOpen && !isGraphView && !isKanbanView && !isDrawView && !useDrawerNavigation" />
       <div class="workspace-right-panel-shell" :class="{ 'workspace-right-panel-shell--hidden': !rightPanelOpen }">
         <WorkspaceRightPanel
           v-if="rightPanelOpen"
@@ -446,7 +510,7 @@ onBeforeUnmount(() => {
     </div>
   </Teleport>
 
-  <WorkspaceHistoryModal :open="historyModalOpen" :workspace-path="workspaceStore.activePath" :manifest="manifest" :active-note-id="activeNoteId" :active-note="activeNote" :preselected-note-id="historyModalPreselectedNoteId" @close="historyModalOpen = false" @restored="handleHistoryRestored" />
+  <WorkspaceHistoryModal v-if="historyModalOpen" :open="historyModalOpen" :workspace-path="workspaceStore.activePath" :manifest="manifest" :active-note-id="activeNoteId" :active-note="activeNote" :preselected-note-id="historyModalPreselectedNoteId" @close="historyModalOpen = false" @restored="handleHistoryRestored" />
   
   <Teleport to="body">
     <div v-if="trashModalOpen" class="history-modal-backdrop" @click.self="trashModalOpen = false">
@@ -464,9 +528,10 @@ onBeforeUnmount(() => {
     </div>
   </Teleport>
 
-  <WorkspaceSettingsModal :open="settingsModalOpen" :initial-section="settingsModalSection" @close="() => { settingsModalOpen = false; settingsModalSection = null }" />
+  <WorkspaceSettingsModal v-if="settingsModalOpen" :open="settingsModalOpen" :initial-section="settingsModalSection" @close="() => { settingsModalOpen = false; settingsModalSection = null }" />
   <PdfPreviewModal v-if="pdfPreview.open && pdfPreview.note" :note="pdfPreview.note" :workspace-path="pdfPreview.workspacePath" @close="closePdfPreview" />
   <TemplatePickerModal
+    v-if="templateCreatePickerOpen"
     :open="templateCreatePickerOpen"
     mode="create-note"
     :workspace-path="workspaceStore.activePath"

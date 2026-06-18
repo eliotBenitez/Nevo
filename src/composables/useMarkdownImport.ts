@@ -34,7 +34,7 @@ export function useMarkdownImport() {
 
     const text = await noteCommands.readTextFile(selected)
     const basename = selected.split(/[/\\]/).pop()?.replace(/\.md$/i, '') ?? 'Untitled'
-    return { basename, parsed: parseMarkdownToBlockNode(text, basename) }
+    return { basename, parsed: parseMarkdownToBlockNode(text, basename, (title) => treeStore.resolveNoteIdByTitle(title)) }
   }
 
   async function importMarkdownFile(folderId: string | null = null): Promise<string | null> {

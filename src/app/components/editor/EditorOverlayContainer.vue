@@ -4,7 +4,7 @@ import type { NevoSlashItem, NevoToolbarAction } from '../../../types/editor-plu
 import { HIGHLIGHT_COLORS, TEXT_COLORS } from '../../../utils/editorColors'
 import type {
   SlashOverlayState, ToolbarOverlayState, TableMenuOverlayState,
-  LinkPopoverState, MathPopoverState, MermaidPopoverState, MarkmapPopoverState, VegaPopoverState,
+  LinkPopoverState, MathPopoverState, FormulaPopoverState, MermaidPopoverState, MarkmapPopoverState, VegaPopoverState,
   ColorPickerState, LinkPickerOverlayState, PluginNodePopoverState,
 } from '../../composables/editor/useEditorOverlays'
 import type { BlockHandleState } from '../../composables/editor/useBlockHandle'
@@ -14,6 +14,7 @@ import EditorColorPicker from './EditorColorPicker.vue'
 import EditorTableMenu from './EditorTableMenu.vue'
 import EditorLinkPopover from './EditorLinkPopover.vue'
 import EditorMathPopover from './EditorMathPopover.vue'
+import EditorFormulaPopover from './EditorFormulaPopover.vue'
 import EditorMermaidPopover from './EditorMermaidPopover.vue'
 import EditorMarkmapPopover from './EditorMarkmapPopover.vue'
 import EditorVegaPopover from './EditorVegaPopover.vue'
@@ -52,6 +53,11 @@ export interface OverlayHandlers {
   applyTableCellAlignment: (alignment: string | null) => void
   applyTableCellBackground: (color: string | null) => void
   applyTableCellAttr: (name: string, value: string | null) => void
+  openTableCellFormula: () => void
+  updateFormula: (v: string) => void
+  applyFormula: () => void
+  removeFormula: () => void
+  onFormulaInputKeyDown: (e: KeyboardEvent) => void
   updateLinkHref: (v: string) => void
   applyLink: () => void
   removeLink: () => void
@@ -80,6 +86,7 @@ export interface OverlayHandlers {
   cancelEmbedUrl: () => void
   onEmbedUrlInputKeyDown: (e: KeyboardEvent) => void
   selectLinkNote: (note: { id: string; title: string }) => void
+  selectLinkCreateNote: (payload: { noteTitle: string; anchor: string | null; alias: string | null }) => void
   selectSlashEmoji: (emoji: string) => void
   openSlashEmojiPicker: () => void
   closeSlashEmojiPicker: () => void
@@ -110,6 +117,7 @@ interface Props {
   highlightPicker: ColorPickerState
   textColorPicker: ColorPickerState
   mathPopover: MathPopoverState
+  formulaPopover: FormulaPopoverState
   mermaidPopover: MermaidPopoverState
   markmapPopover: MarkmapPopoverState
   vegaPopover: VegaPopoverState
@@ -133,6 +141,7 @@ const toolbarElRef = ref<HTMLDivElement | null>(null)
 const tableMenuElRef = ref<HTMLDivElement | null>(null)
 const linkPopoverElRef = ref<HTMLElement | null>(null)
 const mathPopoverElRef = ref<HTMLElement | null>(null)
+const formulaPopoverElRef = ref<HTMLElement | null>(null)
 const mermaidPopoverElRef = ref<HTMLElement | null>(null)
 const markmapPopoverElRef = ref<HTMLElement | null>(null)
 const vegaPopoverElRef = ref<HTMLElement | null>(null)
@@ -144,6 +153,7 @@ const blockHandleElRef = ref<HTMLElement | null>(null)
 const blockTypeMenuElRef = ref<HTMLElement | null>(null)
 const linkPopoverCompRef = ref<{ focusInput: () => void } | null>(null)
 const mathPopoverCompRef = ref<{ focusInput: () => void } | null>(null)
+const formulaPopoverCompRef = ref<{ focusInput: () => void } | null>(null)
 const mermaidPopoverCompRef = ref<{ focusInput: () => void } | null>(null)
 const markmapPopoverCompRef = ref<{ focusInput: () => void } | null>(null)
 const vegaPopoverCompRef = ref<{ focusInput: () => void } | null>(null)
@@ -170,6 +180,7 @@ const toolbarStyle = computed(() => ({ top: `${props.toolbarOverlay.position.top
 const tableMenuStyle = computed(() => ({ top: `${props.tableMenuOverlay.position.top}px`, left: `${props.tableMenuOverlay.position.left}px` }))
 const linkPopoverStyle = computed(() => ({ top: `${props.linkPopover.position.top}px`, left: `${props.linkPopover.position.left}px` }))
 const mathPopoverStyle = computed(() => ({ top: `${props.mathPopover.position.top}px`, left: `${props.mathPopover.position.left}px` }))
+const formulaPopoverStyle = computed(() => ({ top: `${props.formulaPopover.position.top}px`, left: `${props.formulaPopover.position.left}px` }))
 const mermaidPopoverStyle = computed(() => ({ top: `${props.mermaidPopover.position.top}px`, left: `${props.mermaidPopover.position.left}px` }))
 const markmapPopoverStyle = computed(() => ({ top: `${props.markmapPopover.position.top}px`, left: `${props.markmapPopover.position.left}px` }))
 const vegaPopoverStyle = computed(() => ({ top: `${props.vegaPopover.position.top}px`, left: `${props.vegaPopover.position.left}px` }))
@@ -189,6 +200,8 @@ defineExpose({
   linkPopoverComp: linkPopoverCompRef,
   mathPopoverEl: mathPopoverElRef,
   mathPopoverComp: mathPopoverCompRef,
+  formulaPopoverEl: formulaPopoverElRef,
+  formulaPopoverComp: formulaPopoverCompRef,
   mermaidPopoverEl: mermaidPopoverElRef,
   mermaidPopoverComp: mermaidPopoverCompRef,
   markmapPopoverEl: markmapPopoverElRef,
@@ -264,6 +277,20 @@ defineExpose({
         @cell-alignment="handlers.applyTableCellAlignment"
         @cell-background="handlers.applyTableCellBackground"
         @cell-attr="handlers.applyTableCellAttr"
+        @cell-formula="handlers.openTableCellFormula"
+      />
+    </div>
+
+    <div v-if="formulaPopover.open" ref="formulaPopoverElRef" class="teleport-anchor">
+      <EditorFormulaPopover
+        ref="formulaPopoverCompRef"
+        :open="formulaPopover.open"
+        :formula="formulaPopover.formula"
+        :popover-style="formulaPopoverStyle"
+        @update:formula="handlers.updateFormula"
+        @apply="handlers.applyFormula"
+        @remove="handlers.removeFormula"
+        @keydown="handlers.onFormulaInputKeyDown"
       />
     </div>
 
@@ -371,6 +398,7 @@ defineExpose({
         :menu-style="linkPickerStyle"
         :current-note-id="currentNoteId"
         @select="handlers.selectLinkNote"
+        @create="handlers.selectLinkCreateNote"
         @item-mousedown="(e) => e.preventDefault()"
       />
     </div>
@@ -396,7 +424,8 @@ defineExpose({
       <EditorBlockHandle
         :visible="blockHandle.visible"
         :position="blockHandle.position"
-        :hovered-block-node="blockHandle.hoveredBlockNode"
+        :hovered-block-type-name="blockHandle.hoveredBlockTypeName"
+        :hovered-block-icon-attrs="blockHandle.hoveredBlockIconAttrs"
         @dragstart="handlers.onBlockDragStart"
         @dragend="handlers.onBlockDragEnd"
         @type-icon-click="handlers.onTypeIconClick"
@@ -409,7 +438,7 @@ defineExpose({
       <EditorBlockTypeMenu
         :open="blockHandle.typeMenuOpen"
         :menu-style="blockTypeMenuStyle"
-        :block-node-type="blockHandle.hoveredBlockNode?.type.name ?? null"
+        :block-node-type="blockHandle.hoveredBlockTypeName"
         @turn-into="handlers.turnInto"
         @duplicate="handlers.duplicateBlock"
         @insert-above="handlers.insertBlockAbove"

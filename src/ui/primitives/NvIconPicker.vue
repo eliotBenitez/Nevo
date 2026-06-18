@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import * as LucideIcons from 'lucide-vue-next'
 import { humanizeLucideName, lucideTokenFromExportName } from '../../utils/noteIcon'
-import { emojiCategories } from './iconPickerEmoji'
+import { emojiCategories, filterUnsupportedEmojisAsync } from './iconPickerEmoji'
 
 type PickerTab = 'emoji' | 'icons'
 
@@ -25,6 +25,8 @@ const visibleTabs = computed<PickerTab[]>(() => props.tabs.length > 0 ? props.ta
 const activeTab = ref<PickerTab>(visibleTabs.value[0] ?? 'emoji')
 const query = ref('')
 
+const activeEmojiCategories = ref(emojiCategories)
+
 const searchableIcons = Object.entries(LucideIcons)
   .filter(([name, icon]) => {
     if (!/^[A-Z]/.test(name)) return false
@@ -44,9 +46,10 @@ const normalizedQuery = computed(() => query.value.trim().toLowerCase())
 
 const filteredEmojiCategories = computed(() => {
   const search = normalizedQuery.value
-  if (!search) return emojiCategories
+  const sourceCategories = activeEmojiCategories.value
+  if (!search) return sourceCategories
 
-  return emojiCategories
+  return sourceCategories
     .map((category) => ({
       ...category,
       items: category.items.filter((item) => {
@@ -91,8 +94,9 @@ function onDocumentKeyDown(event: KeyboardEvent) {
   emit('close')
 }
 
-onMounted(() => {
+onMounted(async () => {
   document.addEventListener('keydown', onDocumentKeyDown)
+  activeEmojiCategories.value = await filterUnsupportedEmojisAsync(emojiCategories)
 })
 
 onBeforeUnmount(() => {

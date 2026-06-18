@@ -16,7 +16,7 @@ import './styles/settings.css'
 import './styles/onboarding.css'
 import './styles/graph.css'
 import './styles/ui.css'
-import 'katex/dist/katex.min.css'
+import './features/draw/draw.css'
 import 'highlight.js/styles/github-dark.css'
 
 const pinia = createPinia()

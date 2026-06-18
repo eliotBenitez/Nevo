@@ -83,6 +83,13 @@
           }
         }
       },
+      "serverLabel": "Адрес сервера",
+      "serverHint": "Базовый URL вашего self-hosted сервера",
+      "serverPlaceholder": "http://localhost:8080",
+      "serverCheck": "Проверить связь",
+      "serverChecking": "Проверка…",
+      "serverOk": "Сервер доступен",
+      "serverFail": "Недоступен",
       "back": "Назад",
       "encryption": "Шифрование на устройстве",
       "create": "Создать пространство"
@@ -108,6 +115,8 @@
     }
   },
   "common": {
+    "back": "Назад",
+    "loading": "Загрузка...",
     "keyboard": {
       "esc": "Esc",
       "ctrlCmdEnter": "Ctrl/Cmd + Enter"
@@ -1142,6 +1151,12 @@
       "math": "Формула",
       "image": "Вставить изображение"
     },
+    "linkPicker": {
+      "createNote": "Создать заметку «{title}»",
+      "anchorHint": "Якорь: {anchor}",
+      "aliasHint": "Алиас: {alias}",
+      "aliasAnchorHint": "Алиас: {alias} · Якорь: {anchor}"
+    },
     "blockHandle": {
       "drag": "Перетащить",
       "options": "Опции блока"
@@ -1163,6 +1178,12 @@
       "rowAddBelow": "Строка ниже",
       "colAddLeft": "Столбец слева",
       "colAddRight": "Столбец справа",
+      "formula": "Формула",
+      "formulaLabel": "Формула ячейки",
+      "formulaHint": "В стиле Excel, напр. =SUM(A1:A3)",
+      "formulaPlaceholder": "=SUM(A1:A3)",
+      "formulaApply": "Применить",
+      "formulaRemove": "Удалить",
       "mergeCells": "Объединить ячейки",
       "splitCell": "Разделить ячейку",
       "toggleHeaderRow": "Заголовочная строка",
@@ -1213,6 +1234,11 @@
       "applyHint": "применить",
       "apply": "Применить",
       "delete": "Удалить"
+    },
+    "draw": {
+      "label": "Рисунок",
+      "openCanvas": "Открыть холст",
+      "empty": "Пустой рисунок — нажмите, чтобы открыть холст"
     },
     "slash": {
       "ai": {
@@ -1362,6 +1388,7 @@
       "file": "Файл",
       "table": "Таблица",
       "mermaid": "Диаграмма Mermaid",
+      "draw": "Рисунок",
       "markmap": "Интеллект-карта",
       "chart": "Диаграмма",
       "note_embed": "Вставка заметки",

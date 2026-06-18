@@ -17,26 +17,84 @@ const processor = unified().use(remarkParse).use(remarkGfm).use(remarkMath)
 // Mark descriptor
 type Mark = { type: string; attrs?: Record<string, unknown> }
 
-function inlineToContent(nodes: PhrasingContent[], marks: Mark[] = []): BlockNode[] {
+// Resolver for wiki-style links: given a target note title, returns its id
+// (or null when no matching note exists). Used by parseMarkdownToBlockNode.
+export type WikiLinkResolver = (title: string) => string | null
+
+// Matches Obsidian-style wiki links: [[Note]], [[Note#Anchor]], [[Note|Alias]],
+// [[Note#Anchor|Alias]]. Group 1 = note title, 2 = optional anchor, 3 = alias.
+const WIKI_LINK_RE = /\[\[([^\]|#]+)(?:#([^\]|]+))?(?:\|([^\]]+))?\]\]/g
+
+/** Split a raw text value into BlockNodes, expanding any `[[wiki links]]`
+ *  into internal_link-marked text nodes. Plain segments keep their marks. */
+function textWithWikiLinks(value: string, marks: Mark[], resolver?: WikiLinkResolver): BlockNode[] {
+  if (!resolver || !value.includes('[[')) {
+    const node: BlockNode = { type: 'text', text: value }
+    if (marks.length) node.marks = marks
+    return [node]
+  }
+
+  const result: BlockNode[] = []
+  let lastIndex = 0
+  WIKI_LINK_RE.lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = WIKI_LINK_RE.exec(value)) !== null) {
+    const noteTitle = (match[1] ?? '').trim()
+    if (!noteTitle) continue
+    const anchor = (match[2] ?? '').trim() || null
+    const alias = (match[3] ?? '').trim() || null
+
+    // Leading plain text
+    if (match.index > lastIndex) {
+      const before = value.slice(lastIndex, match.index)
+      const node: BlockNode = { type: 'text', text: before }
+      if (marks.length) node.marks = marks
+      result.push(node)
+    }
+
+    const noteId = resolver(noteTitle) ?? ''
+    const displayText = alias || noteTitle
+    result.push({
+      type: 'text',
+      text: displayText,
+      marks: [
+        ...marks,
+        { type: 'internal_link', attrs: { noteId, title: noteTitle, anchor, alias } },
+      ],
+    })
+
+    lastIndex = match.index + match[0].length
+  }
+
+  // Trailing plain text
+  if (lastIndex < value.length) {
+    const after = value.slice(lastIndex)
+    const node: BlockNode = { type: 'text', text: after }
+    if (marks.length) node.marks = marks
+    result.push(node)
+  }
+
+  return result.length ? result : [{ type: 'text', text: value, ...(marks.length ? { marks } : {}) }]
+}
+
+function inlineToContent(nodes: PhrasingContent[], marks: Mark[] = [], resolver?: WikiLinkResolver): BlockNode[] {
   const result: BlockNode[] = []
   for (const node of nodes) {
     switch (node.type) {
       case 'text': {
         if (node.value) {
-          const block: BlockNode = { type: 'text', text: node.value }
-          if (marks.length) block.marks = marks
-          result.push(block)
+          result.push(...textWithWikiLinks(node.value, marks, resolver))
         }
         break
       }
       case 'strong':
-        result.push(...inlineToContent(node.children as PhrasingContent[], [...marks, { type: 'strong' }]))
+        result.push(...inlineToContent(node.children as PhrasingContent[], [...marks, { type: 'strong' }], resolver))
         break
       case 'emphasis':
-        result.push(...inlineToContent(node.children as PhrasingContent[], [...marks, { type: 'em' }]))
+        result.push(...inlineToContent(node.children as PhrasingContent[], [...marks, { type: 'em' }], resolver))
         break
       case 'delete':
-        result.push(...inlineToContent((node as { children: PhrasingContent[] }).children, [...marks, { type: 'strike' }]))
+        result.push(...inlineToContent((node as { children: PhrasingContent[] }).children, [...marks, { type: 'strike' }], resolver))
         break
       case 'inlineCode':
         if (node.value) {
@@ -47,6 +105,7 @@ function inlineToContent(nodes: PhrasingContent[], marks: Mark[] = []): BlockNod
         result.push(...inlineToContent(
           node.children as PhrasingContent[],
           [...marks, { type: 'link', attrs: { href: node.url } }],
+          resolver,
         ))
         break
       case 'image':
@@ -65,26 +124,26 @@ function inlineToContent(nodes: PhrasingContent[], marks: Mark[] = []): BlockNod
   return result
 }
 
-function cellParagraph(cells: PhrasingContent[]): BlockNode {
-  const content = inlineToContent(cells)
+function cellParagraph(cells: PhrasingContent[], resolver?: WikiLinkResolver): BlockNode {
+  const content = inlineToContent(cells, [], resolver)
   return content.length ? { type: 'paragraph', content } : { type: 'paragraph' }
 }
 
-function listItemToNode(item: ListItem): BlockNode {
+function listItemToNode(item: ListItem, resolver?: WikiLinkResolver): BlockNode {
   // Checklist item: content is inline*
   if (typeof item.checked === 'boolean') {
     const content: BlockNode[] = []
     for (const child of item.children) {
-      if (child.type === 'paragraph') content.push(...inlineToContent(child.children as PhrasingContent[]))
+      if (child.type === 'paragraph') content.push(...inlineToContent(child.children as PhrasingContent[], [], resolver))
     }
     return { type: 'checklist_item', attrs: { checked: item.checked }, content }
   }
   // Regular list item: content is paragraph block*
-  const content = item.children.flatMap(blockToNodes)
+  const content = item.children.flatMap((child) => blockToNodes(child, resolver))
   return { type: 'list_item', content: content.length ? content : [{ type: 'paragraph' }] }
 }
 
-function blockToNodes(node: Content): BlockNode[] {
+function blockToNodes(node: Content, resolver?: WikiLinkResolver): BlockNode[] {
   switch (node.type) {
     case 'paragraph': {
       // Standalone image → image_block
@@ -92,11 +151,11 @@ function blockToNodes(node: Content): BlockNode[] {
         const img = node.children[0]
         return [{ type: 'image_block', attrs: { src: img.url, alt: img.alt || null, caption: null, sizePreset: 'full', width: null } }]
       }
-      const content = inlineToContent(node.children as PhrasingContent[])
+      const content = inlineToContent(node.children as PhrasingContent[], [], resolver)
       return [{ type: 'paragraph', content }]
     }
     case 'heading': {
-      const content = inlineToContent(node.children as PhrasingContent[])
+      const content = inlineToContent(node.children as PhrasingContent[], [], resolver)
       return [{ type: 'heading', attrs: { level: node.depth }, content }]
     }
     case 'code': {
@@ -112,16 +171,16 @@ function blockToNodes(node: Content): BlockNode[] {
       return [{ type: 'code_block', attrs: { language: node.lang ?? null }, content }]
     }
     case 'blockquote': {
-      const content = node.children.flatMap(blockToNodes)
+      const content = node.children.flatMap((child) => blockToNodes(child, resolver))
       return [{ type: 'blockquote', content: content.length ? content : [{ type: 'paragraph' }] }]
     }
     case 'list': {
       const isChecklist = node.children.some(item => typeof item.checked === 'boolean')
       if (isChecklist) {
-        return node.children.map(listItemToNode)
+        return node.children.map((item) => listItemToNode(item, resolver))
       }
       const listType = node.ordered ? 'ordered_list' : 'bullet_list'
-      return [{ type: listType, content: node.children.map(listItemToNode) }]
+      return [{ type: listType, content: node.children.map((item) => listItemToNode(item, resolver)) }]
     }
     case 'table': {
       const rows = node.children.map((row, rowIndex) => ({
@@ -129,7 +188,7 @@ function blockToNodes(node: Content): BlockNode[] {
         content: row.children.map(cell => ({
           type: rowIndex === 0 ? 'table_header' : 'table_cell',
           attrs: { colspan: 1, rowspan: 1, colwidth: null },
-          content: [cellParagraph(cell.children as PhrasingContent[])],
+          content: [cellParagraph(cell.children as PhrasingContent[], resolver)],
         })),
       }))
       return [{ type: 'table', content: rows }]
@@ -146,7 +205,7 @@ function blockToNodes(node: Content): BlockNode[] {
   }
 }
 
-export function parseMarkdownToBlockNode(markdown: string, fallbackTitle: string): ParsedMarkdown {
+export function parseMarkdownToBlockNode(markdown: string, fallbackTitle: string, resolver?: WikiLinkResolver): ParsedMarkdown {
   const tree = processor.parse(markdown) as Root
   let title = fallbackTitle
   let titleExtracted = false
@@ -155,14 +214,14 @@ export function parseMarkdownToBlockNode(markdown: string, fallbackTitle: string
   for (const node of tree.children) {
     // Extract first H1 as note title
     if (!titleExtracted && node.type === 'heading' && node.depth === 1) {
-      title = inlineToContent(node.children as PhrasingContent[])
+      title = inlineToContent(node.children as PhrasingContent[], [], resolver)
         .filter(n => n.type === 'text')
         .map(n => n.text ?? '')
         .join('')
       titleExtracted = true
       continue
     }
-    blocks.push(...blockToNodes(node))
+    blocks.push(...blockToNodes(node, resolver))
   }
 
   return {

@@ -18,6 +18,7 @@ export interface NevoTableMenuContext {
     borderColor: string | null
     textColor: string | null
     padding: string | null
+    formula: string | null
     isHeader: boolean
   } | null
 }
@@ -58,6 +59,7 @@ export function getTableMenuContext(state: EditorState): NevoTableMenuContext | 
             borderColor: toStringAttr(cellNode.attrs.borderColor),
             textColor: toStringAttr(cellNode.attrs.textColor),
             padding: toStringAttr(cellNode.attrs.padding),
+            formula: toStringAttr(cellNode.attrs.formula),
             isHeader: cellNode.type.name === 'table_header',
           }
         : null,

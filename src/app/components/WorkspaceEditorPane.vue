@@ -16,13 +16,14 @@ import type { NevoToolbarAction } from '../../types/editor-plugin'
 import NvNoteIcon from '../../ui/primitives/NvNoteIcon.vue'
 import { resolveEditorFontFamilyCss, EDITOR_LINE_WIDTHS } from '../../utils/workspace-settings'
 import { createEditorCore, useEditorCore } from '../composables/editor/useEditorCore'
-import { getLinkPickerState } from '../../editor-core'
+import { getLinkPickerState, parseWikiQuery } from '../../editor-core'
 import { useGraphStore } from '../../stores/graph'
 import { useTreeStore } from '../../stores/tree'
 import { useWorkspaceStore } from '../../stores/workspace'
 import { CloudBackend, CLOUD_ASSET_SCHEME } from '../../core/workspace-backend'
 import { useEditorOverlays } from '../composables/editor/useEditorOverlays'
 import { useMathEditor } from '../composables/editor/useMathEditor'
+import { useFormulaEditor } from '../composables/editor/useFormulaEditor'
 import { useMermaidEditor } from '../composables/editor/useMermaidEditor'
 import { usePluginNodePopover } from '../composables/editor/usePluginNodePopover'
 import { useMarkmapEditor } from '../composables/editor/useMarkmapEditor'
@@ -68,11 +69,13 @@ interface Props {
   containerKind: 'root' | 'folder' | null
   containerItems: TreeNode[]
   pendingBlockTarget?: WorkspaceBlockNavigationTarget | null
+  pendingDrawUpdate?: { drawId: string; svgPreview: string; src: string; title?: string } | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
   workspaceName: '',
   pendingBlockTarget: undefined,
+  pendingDrawUpdate: undefined,
 })
 const emit = defineEmits<{
   'update:title': [value: string]
@@ -82,11 +85,17 @@ const emit = defineEmits<{
   'content-dirty': []
   'create-note': []
   'consumed-pending-target': []
-  'open-note': [noteId: string]
+  'consumed-draw-update': []
+  'open-note': [noteId: string, anchor?: string | null]
   'open-folder': [folderId: string]
   'request-export': [format: 'markdown' | 'html' | 'typst' | 'pdf']
   'request-import-md': []
+  'open-draw': [noteId: string, drawId: string]
 }>()
+
+function emitOpenDraw(drawId: string) {
+  if (drawId && props.note?.id) emit('open-draw', props.note.id, drawId)
+}
 
 const { t, locale } = useI18n()
 
@@ -99,6 +108,8 @@ interface OverlayContainerInstance {
   linkPopoverComp: { focusInput: () => void } | null
   mathPopoverEl: HTMLElement | null
   mathPopoverComp: { focusInput: () => void } | null
+  formulaPopoverEl: HTMLElement | null
+  formulaPopoverComp: { focusInput: () => void } | null
   mermaidPopoverEl: HTMLElement | null
   mermaidPopoverComp: { focusInput: () => void } | null
   markmapPopoverEl: HTMLElement | null
@@ -182,7 +193,7 @@ const overlays = useEditorOverlays(core, {
   getTableMenuEl: () => overlayContainerRef.value?.tableMenuEl ?? null,
   getLinkPickerEl: () => overlayContainerRef.value?.linkPickerEl ?? null,
 })
-const { slashOverlay, toolbarOverlay, tableMenuOverlay, linkPopover, highlightPicker, textColorPicker, mathPopover, mermaidPopover, markmapPopover, vegaPopover, pluginNodePopover, linkPickerOverlay, activeMarkNames } = overlays
+const { slashOverlay, toolbarOverlay, tableMenuOverlay, linkPopover, highlightPicker, textColorPicker, mathPopover, formulaPopover, mermaidPopover, markmapPopover, vegaPopover, pluginNodePopover, linkPickerOverlay, activeMarkNames } = overlays
 
 const { imageCtxMenu, imageMenuItems, openImageContextMenu } = useImageContextMenu(() => props.workspacePath)
 
@@ -245,6 +256,17 @@ const mathEditor = useMathEditor(
   {
     getMathPopoverEl: () => overlayContainerRef.value?.mathPopoverEl ?? null,
     onFocusInput: () => overlayContainerRef.value?.mathPopoverComp?.focusInput(),
+  },
+  overlays.updateOverlays,
+  overlays.clampOverlayPosition,
+)
+
+const formulaEditor = useFormulaEditor(
+  core,
+  formulaPopover,
+  {
+    getFormulaPopoverEl: () => overlayContainerRef.value?.formulaPopoverEl ?? null,
+    onFocusInput: () => overlayContainerRef.value?.formulaPopoverComp?.focusInput(),
   },
   overlays.updateOverlays,
   overlays.clampOverlayPosition,
@@ -378,10 +400,12 @@ const editorSetup = useEditorCore(core, {
   onAfterTransaction,
   onDocChanged: scheduleGraphUpdate,
   onAssetSrcsRemoved: () => { pendingAssetCleanup = true },
-  onInternalLinkOpen: (noteId) => {
+  onInternalLinkOpen: (noteId, anchor) => {
     if (!treeStore.noteById.get(noteId)) return
-    emit('open-note', noteId)
+    emit('open-note', noteId, anchor)
   },
+  internalLinkExists: (noteId) => treeStore.noteById.has(noteId),
+  resolveWikiLink: (title) => treeStore.resolveNoteIdByTitle(title),
   resolveAssetSrc: (src) => {
     if (/^(https?|data|blob):/.test(src)) return src
     if (src.startsWith(CLOUD_ASSET_SCHEME)) return resolveCloudAsset(src)
@@ -455,10 +479,12 @@ const editorSetup = useEditorCore(core, {
     emit('open-note', noteId)
   },
   onMathEditRequest: (pos, rect) => mathEditor.openMathPopoverForNode(pos, rect),
+  onFormulaEditRequest: (cellPos, _formula, rect) => formulaEditor.openFormulaPopoverForCell(cellPos, rect),
   onMermaidEditRequest: (pos, rect) => mermaidEditor.openMermaidPopoverForNode(pos, rect),
   onPluginNodeEditRequest: (pos, nodeName, rect) => pluginNodeEditor.openForNode(pos, nodeName, rect),
   onMarkmapEditRequest: (pos, rect) => markmapEditor.openMarkmapPopoverForNode(pos, rect),
   onVegaEditRequest: (pos, rect) => vegaEditor.openVegaPopoverForNode(pos, rect),
+  onDrawOpen: (drawId) => emitOpenDraw(drawId),
   onLinkPickerEnter: () => overlayContainerRef.value?.linkPickerComp?.selectActive() ?? false,
   onMathInlineInsert: () => mathEditor.insertInlineMathAndEdit(),
   onMathBlockInsert: () => mathEditor.insertBlockMathAndEdit(),
@@ -545,6 +571,12 @@ function applyTableCellBackground(color: string | null) {
 function applyTableCellAttr(name: string, value: string | null) {
   if (!core.coreCommands) return
   editorSetup.executeStateCommand(core.coreCommands.setTableCellAttr(name, value))
+}
+
+function openTableCellFormula() {
+  const cellPos = tableMenuOverlay.context?.activeCell?.pos
+  if (typeof cellPos !== 'number') return
+  formulaEditor.openFormulaPopoverForCell(cellPos)
 }
 
 // Plugin toolbar
@@ -704,8 +736,48 @@ function selectLinkNote(note: { id: string; title: string }) {
   if (!markType) return
 
   const { from, to } = pickerState.range
-  const mark = markType.create({ noteId: note.id })
-  const displayText = note.title
+  const parsed = parseWikiQuery(pickerState.query)
+  const mark = markType.create({
+    noteId: note.id,
+    title: note.title,
+    anchor: parsed.anchor,
+    alias: parsed.alias,
+  })
+  const displayText = parsed.alias || note.title
+
+  const tr = view.state.tr
+    .delete(from, to)
+    .insertText(displayText, from)
+    .addMark(from, from + displayText.length, mark)
+    .removeStoredMark(markType)
+  view.dispatch(tr.scrollIntoView())
+  view.focus()
+}
+
+// Link picker: create a brand-new note and link to it (placed next to the
+// active note). Emits 'create-note' on failure so the caller can recover.
+async function selectLinkCreateNote(payload: { noteTitle: string; anchor: string | null; alias: string | null }) {
+  const view = core.editorView
+  if (!view) return
+
+  const pickerState = getLinkPickerState(view.state)
+  if (!pickerState.open || !pickerState.range) return
+
+  const markType = view.state.schema.marks.internal_link
+  if (!markType) return
+
+  const folderId = props.note?.folderId ?? null
+  const note = await treeStore.createNote(folderId, payload.noteTitle)
+  if (!note) return
+
+  const { from, to } = pickerState.range
+  const mark = markType.create({
+    noteId: note.id,
+    title: payload.noteTitle,
+    anchor: payload.anchor,
+    alias: payload.alias,
+  })
+  const displayText = payload.alias || payload.noteTitle
 
   const tr = view.state.tr
     .delete(from, to)
@@ -744,6 +816,10 @@ function onDocumentMouseDown(event: MouseEvent) {
   if (mathPopover.open) {
     const insidePopover = c?.mathPopoverEl?.contains(target) ?? false
     if (!insidePopover) mathEditor.closeMathPopover()
+  }
+  if (formulaPopover.open) {
+    const insidePopover = c?.formulaPopoverEl?.contains(target) ?? false
+    if (!insidePopover) formulaEditor.closeFormulaPopover()
   }
   if (mermaidPopover.open) {
     const insidePopover = c?.mermaidPopoverEl?.contains(target) ?? false
@@ -872,6 +948,11 @@ const overlayHandlers: OverlayHandlers = {
   applyMath: mathEditor.applyMathFromPopover,
   removeMath: mathEditor.removeMathFromPopover,
   onMathInputKeyDown: mathEditor.onMathInputKeyDown,
+  openTableCellFormula,
+  updateFormula: (v) => { formulaPopover.formula = v },
+  applyFormula: formulaEditor.applyFormulaFromPopover,
+  removeFormula: formulaEditor.removeFormulaFromPopover,
+  onFormulaInputKeyDown: formulaEditor.onFormulaInputKeyDown,
   updateCode: (v) => { mermaidPopover.code = v },
   applyMermaid: mermaidEditor.applyMermaidFromPopover,
   removeMermaid: mermaidEditor.removeMermaidFromPopover,
@@ -892,6 +973,7 @@ const overlayHandlers: OverlayHandlers = {
   cancelEmbedUrl,
   onEmbedUrlInputKeyDown,
   selectLinkNote,
+  selectLinkCreateNote,
   selectSlashEmoji,
   openSlashEmojiPicker,
   closeSlashEmojiPicker,
@@ -930,6 +1012,13 @@ watch(
 )
 
 // Watches
+// Re-evaluate broken-link decorations whenever the workspace tree changes,
+// since note existence (not the doc) determines whether a link is broken.
+watch(
+  () => treeStore.noteById.size,
+  () => { core.refreshBrokenLinks() },
+)
+
 watch(
   () => ({
     workspacePath: props.workspacePath,
@@ -964,6 +1053,7 @@ watch(
         notePreload.mount(editorRoot.value)
         updateEditorStatsNow()
         await applyPendingBlockTargetIfReady()
+        applyPendingDrawUpdateIfReady()
         await refreshScrollbarMetrics()
       }
     } else {
@@ -1015,10 +1105,17 @@ watch(
     blockHandleComposable.unmount()
     if (!noteState) { notePreload.unmount(); editorSetup.destroyEditorView(); return }
     if (core.editorView && noteState.id === core.lastLoadedNoteId) {
+      // Content identity is preserved across the editor→store→props round-trip
+      // (setContent mutates in place, flushPendingContentUpdate stores the same
+      // reference it serialized). The reference check is the fast path and avoids
+      // an O(document) JSON.stringify on every debounced flush for large notes.
       const rawContent = toRaw(noteState.content)
-      const sameContentRef = rawContent === core.lastSerializedContentRef
-      const sameSerializedContent = !sameContentRef && JSON.stringify(rawContent) === core.lastSerializedContent
-      if (sameContentRef || sameSerializedContent) {
+      // Fallback for a value-identical sync-back delivered as a *new* object
+      // (e.g. an external/collab update): compare the serialized form so a no-op
+      // update doesn't tear down editor state or dismiss open overlays. This runs
+      // only when the cheap ref check misses for the same note — not the hot path.
+      if (rawContent === core.lastSerializedContentRef
+        || JSON.stringify(rawContent) === core.lastSerializedContent) {
         core.lastSerializedContentRef = rawContent
         if (!isTouch.value) blockHandleComposable.mount()
         return
@@ -1035,6 +1132,7 @@ watch(
       updateEditorStatsNow()
       if (!isTouch.value) blockHandleComposable.mount()
       await applyPendingBlockTargetIfReady()
+      applyPendingDrawUpdateIfReady()
       await refreshScrollbarMetrics()
     }
   },
@@ -1067,6 +1165,11 @@ watch(
     await applyPendingBlockTargetIfReady()
     await refreshScrollbarMetrics()
   },
+)
+
+watch(
+  () => props.pendingDrawUpdate ? `${props.pendingDrawUpdate.drawId}:${props.pendingDrawUpdate.src}` : null,
+  () => { applyPendingDrawUpdateIfReady() },
 )
 
 watch(
@@ -1197,7 +1300,47 @@ const scrollbarPositionStyle = computed<CSSProperties>(() => {
   return { top: `${coverBottomInViewport}px` }
 })
 
-defineExpose({ editorRoot, flushPendingContent })
+// Sync a draw_block node (svgPreview/src/title) from the canvas back into
+// the editor document after the drawing was saved. Dispatches a transaction
+// that finds the node by its drawId and updates its attributes — used by
+// WorkspaceShell.onUpdateDraw after the canvas persisted the asset.
+function updateDrawBlock(payload: { drawId: string; svgPreview: string; src: string; title?: string }): boolean {
+  const view = core.editorView
+  if (!view) return false
+  const nodeType = view.state.schema.nodes.draw_block
+  if (!nodeType) return false
+  let targetPos = -1
+  view.state.doc.descendants((node, pos) => {
+    if (targetPos === -1 && node.type === nodeType && node.attrs.drawId === payload.drawId) {
+      targetPos = pos
+      return false
+    }
+    return false
+  })
+  if (targetPos === -1) return false
+  const node = view.state.doc.nodeAt(targetPos)
+  if (!node) return false
+  const attrs: Record<string, unknown> = {
+    ...node.attrs,
+    svgPreview: payload.svgPreview,
+    src: payload.src,
+  }
+  if (typeof payload.title === 'string') attrs.title = payload.title
+  view.dispatch(view.state.tr.setNodeMarkup(targetPos, undefined, attrs))
+  return true
+}
+
+// Apply a draw_block update stashed while the canvas was open (the editor pane
+// was unmounted then). Runs after the editor view is ready on remount; the
+// dispatched transaction is mirrored into the Y.Doc by y-prosemirror, so the
+// preview both renders and persists.
+function applyPendingDrawUpdateIfReady() {
+  const pending = props.pendingDrawUpdate
+  if (!pending || !core.editorView) return
+  if (updateDrawBlock(pending)) emit('consumed-draw-update')
+}
+
+defineExpose({ editorRoot, flushPendingContent, updateDrawBlock })
 </script>
 
 <template>
@@ -1456,6 +1599,7 @@ defineExpose({ editorRoot, flushPendingContent })
     :highlight-picker="highlightPicker"
     :text-color-picker="textColorPicker"
     :math-popover="mathPopover"
+    :formula-popover="formulaPopover"
     :mermaid-popover="mermaidPopover"
     :markmap-popover="markmapPopover"
     :vega-popover="vegaPopover"

@@ -83,6 +83,13 @@
           }
         }
       },
+      "serverLabel": "Server URL",
+      "serverHint": "Base URL of your self-hosted relay",
+      "serverPlaceholder": "http://localhost:8080",
+      "serverCheck": "Test connection",
+      "serverChecking": "Checking…",
+      "serverOk": "Connected",
+      "serverFail": "Unreachable",
       "back": "Back",
       "encryption": "Encrypted at rest",
       "create": "Create workspace"
@@ -108,6 +115,8 @@
     }
   },
   "common": {
+    "back": "Back",
+    "loading": "Loading...",
     "keyboard": {
       "esc": "Esc",
       "ctrlCmdEnter": "Ctrl/Cmd + Enter"
@@ -1142,6 +1151,12 @@
       "math": "Inline math",
       "image": "Insert image"
     },
+    "linkPicker": {
+      "createNote": "Create note “{title}”",
+      "anchorHint": "Anchor: {anchor}",
+      "aliasHint": "Alias: {alias}",
+      "aliasAnchorHint": "Alias: {alias} · Anchor: {anchor}"
+    },
     "blockHandle": {
       "drag": "Drag to reorder",
       "options": "Block options"
@@ -1163,6 +1178,12 @@
       "rowAddBelow": "Row + Below",
       "colAddLeft": "Col + Left",
       "colAddRight": "Col + Right",
+      "formula": "Formula",
+      "formulaLabel": "Cell formula",
+      "formulaHint": "Excel-style, e.g. =SUM(A1:A3)",
+      "formulaPlaceholder": "=SUM(A1:A3)",
+      "formulaApply": "Apply",
+      "formulaRemove": "Remove",
       "mergeCells": "Merge Cells",
       "splitCell": "Split Cell",
       "toggleHeaderRow": "Toggle Header Row",
@@ -1213,6 +1234,11 @@
       "applyHint": "to apply",
       "apply": "Apply",
       "delete": "Delete"
+    },
+    "draw": {
+      "label": "Drawing",
+      "openCanvas": "Open canvas",
+      "empty": "Empty drawing — click to open the canvas"
     },
     "slash": {
       "ai": {
@@ -1362,6 +1388,7 @@
       "file": "File Attachment",
       "table": "Table",
       "mermaid": "Mermaid Diagram",
+      "draw": "Drawing",
       "markmap": "Mind Map",
       "chart": "Chart",
       "note_embed": "Note Embed",

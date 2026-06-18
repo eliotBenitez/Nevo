@@ -120,6 +120,29 @@ describe('serializeNoteToTypst', () => {
     expect(source).toContain('image("vega-1.svg")')
   })
 
+  it('collects drawings as SVG assets from svgPreview', () => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50" width="100%"><path d="M0 0"/></svg>'
+    const { source, draw } = serializeNoteToTypst(note({
+      type: 'doc',
+      content: [
+        { type: 'draw_block', attrs: { drawId: 'd1', src: '.nevo/assets/draw-d1-x.draw.json', svgPreview: svg } },
+      ],
+    }))
+    expect(draw).toEqual([{ name: 'draw-1.svg', svg }])
+    expect(source).toContain('image("draw-1.svg", width: 70%)')
+  })
+
+  it('skips empty drawings (no svgPreview)', () => {
+    const { source, draw } = serializeNoteToTypst(note({
+      type: 'doc',
+      content: [
+        { type: 'draw_block', attrs: { drawId: 'd1', src: '', svgPreview: '' } },
+      ],
+    }))
+    expect(draw).toEqual([])
+    expect(source).not.toContain('image("draw-1.svg"')
+  })
+
   it('references assets through the archive assets folder when a prefix is provided', () => {
     const spec = '{"mark":"bar"}'
     const { source, images, mermaid, vega } = serializeNoteToTypst(note({

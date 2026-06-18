@@ -180,6 +180,9 @@
   overflow-x: hidden;
   overscroll-behavior: contain;
   scroll-behavior: auto;
+  /* Isolate paint so scrolling the doc body doesn't repaint the sidebar/right
+     panel. `contain: paint` is safe on a scrolling element (unlike `strict`). */
+  contain: paint;
 }
 
 .doc-body--smooth {
@@ -1317,7 +1320,7 @@
 }
 
 .table-menu {
-  transform: translate(-8px, calc(-100% - 10px));
+  transform: translateX(-50%);
   border: 1px solid var(--line-2);
   border-radius: calc(12px * var(--radius-scale, 1));
   background: var(--glass-3);

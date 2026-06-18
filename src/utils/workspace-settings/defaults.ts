@@ -70,7 +70,8 @@ export function createDefaultAppConfig(): AppConfig {
     focusRingStyle: 'accent',
     windowChromeStyle: 'default',
     interfaceZoom: 100,
-    reduceTransparency: false,
+    // `undefined` = off by default; set explicitly only when the user toggles it.
+    reduceTransparency: undefined,
     interfaceRoundness: 'default',
     themeSchedule: { enabled: false, lightTime: '07:00', darkTime: '20:00' },
   }

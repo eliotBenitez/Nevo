@@ -15,6 +15,45 @@ export interface LinkPickerState {
   activeIndex: number
 }
 
+/** Structured view of a wiki-link query typed inside `[[ ]]`.
+ *  Supports the Obsidian-style forms:
+ *    [[Note]]
+ *    [[Note#Anchor]]
+ *    [[Note|Alias]]
+ *    [[Note#Anchor|Alias]]
+ *  Only `noteTitle` is used for search/matching; `anchor` and `alias` are
+ *  carried through so the picker can show a hint and the caller can store
+ *  them on the resulting `internal_link` mark. */
+export interface ParsedWikiQuery {
+  noteTitle: string
+  anchor: string | null
+  alias: string | null
+}
+
+export function parseWikiQuery(query: string): ParsedWikiQuery {
+  // Split off the alias first: everything after the first unescaped `|`.
+  const pipeIndex = query.indexOf('|')
+  let targetPart = query
+  let alias: string | null = null
+  if (pipeIndex >= 0) {
+    targetPart = query.slice(0, pipeIndex)
+    alias = query.slice(pipeIndex + 1).trim() || null
+  }
+
+  // Then split off the anchor: everything after the first `#` in the target.
+  const hashIndex = targetPart.indexOf('#')
+  let noteTitle = targetPart
+  let anchor: string | null = null
+  if (hashIndex >= 0) {
+    noteTitle = targetPart.slice(0, hashIndex)
+    anchor = targetPart.slice(hashIndex + 1).trim() || null
+  }
+
+  noteTitle = noteTitle.trim()
+
+  return { noteTitle, anchor, alias }
+}
+
 type LinkPickerMeta =
   | { type: 'move'; delta: number }
   | { type: 'dismiss' }

@@ -1,8 +1,43 @@
 import { Plugin, PluginKey } from 'prosemirror-state'
+import type { Transaction } from 'prosemirror-state'
 import { Decoration, DecorationSet } from 'prosemirror-view'
 import type { Node } from 'prosemirror-model'
 
 export const headingFoldingKey = new PluginKey('headingFolding')
+
+/**
+ * Detects whether a transaction structurally affects heading nodes (insert,
+ * delete, level change, collapse toggle). Returns false for pure text edits
+ * inside non-heading blocks — the common typing case on large documents —
+ * so the decoration set can be cheaply remapped instead of fully rebuilt.
+ *
+ * Walks only the changed ranges reported by each step's map (not the whole
+ * document): a heading is affected if one appears in any old or new range.
+ */
+function transactionAffectsHeadings(tr: Transaction): boolean {
+  let affects = false
+  let before = tr.before
+  for (const step of tr.steps) {
+    step.getMap().forEach((oldStart, oldEnd, newStart, newEnd) => {
+      if (affects) return
+      if (oldEnd > oldStart) {
+        before.nodesBetween(oldStart, oldEnd, (node) => {
+          if (node.type.name === 'heading') { affects = true; return false }
+          return true
+        })
+      }
+      if (!affects && newEnd > newStart) {
+        tr.doc.nodesBetween(newStart, newEnd, (node) => {
+          if (node.type.name === 'heading') { affects = true; return false }
+          return true
+        })
+      }
+    })
+    if (affects) return true
+    before = step.apply(before).doc ?? before
+  }
+  return false
+}
 
 /**
  * Builds decorations to hide nodes that fall under a collapsed heading.
@@ -57,11 +92,18 @@ export const headingFoldingPlugin = new Plugin({
       return buildDecorations(state.doc)
     },
     apply(tr, old, _oldState, newState) {
-      // Rebuild decorations if the document changed or if we explicitly requested an update
-      if (tr.docChanged || tr.getMeta(headingFoldingKey)) {
+      // Forced rebuild via explicit meta (fold/unfold commands).
+      if (tr.getMeta(headingFoldingKey)) {
         return buildDecorations(newState.doc)
       }
-      return old
+      if (!tr.docChanged) return old
+      // Avoid the O(document) rebuild for the common typing case: if no step
+      // touched a heading, the existing decorations stay structurally valid
+      // and only need their positions remapped.
+      if (!transactionAffectsHeadings(tr)) {
+        return old.map(tr.mapping, tr.doc)
+      }
+      return buildDecorations(newState.doc)
     },
   },
   props: {

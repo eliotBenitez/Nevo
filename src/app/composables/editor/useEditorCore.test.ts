@@ -9,8 +9,8 @@ import { createEditorCore, useEditorCore } from './useEditorCore'
 
 vi.mock('../../../tauri/commands', () => ({
   collabCommands: {
-    loadYjsState: vi.fn(),
-    saveYjsState: vi.fn(),
+    loadYjsState: vi.fn(async () => new Uint8Array()),
+    saveYjsState: vi.fn(async () => undefined),
   },
 }))
 
@@ -55,6 +55,7 @@ function createCallbacks() {
     onFilePickerRequest: vi.fn(),
     onFileOpenRequest: vi.fn(),
     onMathEditRequest: vi.fn(),
+    onFormulaEditRequest: vi.fn(),
     onMathInlineInsert: vi.fn(() => false),
     onMathBlockInsert: vi.fn(() => false),
     onSlashMathItemRan: vi.fn(),

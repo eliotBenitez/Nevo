@@ -22,7 +22,9 @@ jobs:
           - platform: 'macos-latest' # Intel
             args: '--target x86_64-apple-darwin'
           - platform: 'ubuntu-24.04'
-            args: ''
+            # AppImage отключён: на свежем WebKitGTK он не запускается, поэтому
+            # собираем только .deb/.rpm (AppImage добавляется в Release вручную).
+            args: '--bundles deb,rpm'
           - platform: 'windows-latest'
             args: ''
 
@@ -75,62 +77,6 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      # Tauri's `bundleMediaFramework` (via linuxdeploy-plugin-gstreamer) bundles a
-      # fixed plugin list that omits `libgstlibav` (ffmpeg) and `h264parse`, so the
-      # AppImage cannot decode MP4/H.264/AAC. Stage those plugins plus their full
-      # ffmpeg dependency closure and inject them through `appimage.files`. Done in
-      # CI only (runs on the ubuntu-24.04 runner; deps are resolved dynamically
-      # via ldd, so ffmpeg sonames are not hardcoded) so it never affects local builds.
-      - name: Stage libav for the AppImage (Linux)
-        if: matrix.platform == 'ubuntu-24.04'
-        run: |
-          set -euo pipefail
-          GST_DIR="/usr/lib/x86_64-linux-gnu/gstreamer-1.0"
-          PLUGINS="libgstlibav.so libgstvideoparsersbad.so"
-          STAGE="$PWD/src-tauri/appimage-libs"
-          rm -rf "$STAGE"
-          mkdir -p "$STAGE/usr/lib/gstreamer-1.0"
-
-          # Libraries that must come from the host (graphics/system ABI).
-          curl -fsSL https://raw.githubusercontent.com/AppImage/pkg2appimage/master/excludelist \
-            | sed 's/#.*//' | tr -d '[:blank:]' | grep -v '^$' | sort -u > /tmp/excludelist
-          is_excluded() { grep -qxF "$1" /tmp/excludelist; }
-
-          : > /tmp/pairs
-          # The GStreamer plugins, placed next to the already-bundled ones.
-          for p in $PLUGINS; do
-            [ -f "$GST_DIR/$p" ] || { echo "Missing plugin: $p"; exit 1; }
-            cp -L "$GST_DIR/$p" "$STAGE/usr/lib/gstreamer-1.0/$p"
-            patchelf --set-rpath '$ORIGIN/..' "$STAGE/usr/lib/gstreamer-1.0/$p"
-            echo "usr/lib/gstreamer-1.0/$p|$STAGE/usr/lib/gstreamer-1.0/$p" >> /tmp/pairs
-          done
-
-          # Their transitive deps (ffmpeg + codec libs), minus host-provided ones
-          # and the GStreamer core libs that the media framework already bundles.
-          for p in $PLUGINS; do
-            ldd "$GST_DIR/$p" | awk '/=> \// {print $3}'
-          done | sort -u | while read -r path; do
-            [ -f "$path" ] || continue
-            base="$(basename "$path")"
-            is_excluded "$base" && continue
-            case "$base" in libgst*-1.0.so*) continue;; esac
-            if [ ! -f "$STAGE/usr/lib/$base" ]; then
-              cp -L "$path" "$STAGE/usr/lib/$base"
-              patchelf --set-rpath '$ORIGIN' "$STAGE/usr/lib/$base" || true
-            fi
-            echo "usr/lib/$base|$STAGE/usr/lib/$base" >> /tmp/pairs
-          done
-          sort -u /tmp/pairs -o /tmp/pairs
-
-          files_json=$(jq -Rn '[inputs | split("|") | {(.[0]): .[1]}] | add // {}' /tmp/pairs)
-          jq --argjson f "$files_json" \
-            '.bundle.linux.appimage.files = ((.bundle.linux.appimage.files // {}) + $f)' \
-            src-tauri/tauri.conf.json > /tmp/conf.json
-          mv /tmp/conf.json src-tauri/tauri.conf.json
-
-          echo "Staged $(echo "$files_json" | jq 'length') files for the AppImage:"
-          echo "$files_json" | jq -r 'keys[]'
-
       - name: Build and publish release
         if: matrix.platform != 'macos-latest'
         uses: tauri-apps/tauri-action@v0
@@ -171,24 +117,49 @@ jobs:
             includeUpdaterJson: true
             args: ${{ matrix.args }}
 
-      # Fail the build (the release stays a draft) if libav or any of its deps
-      # did not make it into the AppImage, so we never publish a binary that
-      # silently cannot play MP4/H.264.
-      - name: Verify libav is bundled (Linux)
-        if: matrix.platform == 'ubuntu-24.04'
+  # Builds a Flatpak bundle so Linux users get a fixed, recent WebKitGTK (from
+  # the GNOME runtime) regardless of their distro. Runs after `release` so the
+  # draft release already exists; it reuses the .deb that job published instead
+  # of recompiling.
+  flatpak:
+    name: Flatpak (Linux)
+    needs: release
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Flatpak tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+      - name: Download the .deb from the draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          app=$(ls src-tauri/target/release/bundle/appimage/*.AppImage | head -1)
-          echo "Inspecting: $app"
-          "$app" --appimage-extract >/dev/null
-          test -f squashfs-root/usr/lib/gstreamer-1.0/libgstlibav.so
-          test -f squashfs-root/usr/lib/gstreamer-1.0/libgstvideoparsersbad.so
-          missing=$(LD_LIBRARY_PATH="$PWD/squashfs-root/usr/lib" \
-            ldd squashfs-root/usr/lib/gstreamer-1.0/libgstlibav.so 2>/dev/null \
-            | awk '/not found/ {print $1}')
-          if [ -n "$missing" ]; then
-            echo "Unresolved libav dependencies inside the AppImage:"
-            echo "$missing"
-            exit 1
-          fi
-          echo "libgstlibav.so and its dependencies are present and resolvable."
+          gh release download "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" \
+            --pattern '*_amd64.deb' \
+            --dir . --clobber
+          deb=$(ls *_amd64.deb | head -1)
+          mv "$deb" flatpak-source.deb
+          echo "Using $deb"
+
+      - name: Build Flatpak bundle
+        run: |
+          set -euo pipefail
+          flatpak-builder --user --install-deps-from=flathub --force-clean \
+            --repo=flatpak-repo flatpak-build-dir com.eliotBenitezhvat.nevo.yml
+          flatpak build-bundle flatpak-repo \
+            "Nevo_${{ github.ref_name }}_amd64.flatpak" \
+            com.eliotBenitezhvat.nevo \
+            --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
+
+      - name: Upload Flatpak to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          files: Nevo_${{ github.ref_name }}_amd64.flatpak

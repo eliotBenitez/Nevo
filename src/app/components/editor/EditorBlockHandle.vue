@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import type { Component } from 'vue'
-import type { Node as PMNode } from 'prosemirror-model'
 import {
   GripVertical,
   Pilcrow,
@@ -29,12 +28,14 @@ import {
   Video,
   Music,
   FileText,
+  Palette,
 } from 'lucide-vue-next'
 
 defineProps<{
   visible: boolean
   position: { top: number; left: number }
-  hoveredBlockNode: PMNode | null
+  hoveredBlockTypeName: string | null
+  hoveredBlockIconAttrs: { level?: number; kind?: string } | null
 }>()
 
 const emit = defineEmits<{
@@ -63,12 +64,13 @@ const nodeTypeIconMap: Record<string, Component> = {
   table: Table2,
   note_embed: FileText,
   embed_block: Globe,
+  draw_block: Palette,
 }
 
-function getNodeIcon(node: PMNode | null): Component {
-  if (!node) return Pilcrow
-  if (node.type.name === 'heading') {
-    const level = node.attrs.level
+function getNodeIcon(typeName: string | null, attrs: { level?: number; kind?: string } | null): Component {
+  if (!typeName) return Pilcrow
+  if (typeName === 'heading') {
+    const level = attrs?.level
     if (level === 1) return Heading1
     if (level === 2) return Heading2
     if (level === 3) return Heading3
@@ -76,10 +78,10 @@ function getNodeIcon(node: PMNode | null): Component {
     if (level === 5) return Heading5
     return Heading6
   }
-  if (node.type.name === 'media_block') {
-    return node.attrs.kind === 'video' ? Video : Music
+  if (typeName === 'media_block') {
+    return attrs?.kind === 'video' ? Video : Music
   }
-  return nodeTypeIconMap[node.type.name] ?? Pilcrow
+  return nodeTypeIconMap[typeName] ?? Pilcrow
 }
 
 const { t } = useI18n()
@@ -109,7 +111,7 @@ const { t } = useI18n()
       :title="t('editor.blockHandle.options')"
       @mousedown.prevent="emit('typeIconClick')"
     >
-      <component :is="getNodeIcon(hoveredBlockNode)" :size="13" />
+      <component :is="getNodeIcon(hoveredBlockTypeName, hoveredBlockIconAttrs)" :size="13" />
     </button>
   </div>
 </template>

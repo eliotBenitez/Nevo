@@ -3,6 +3,7 @@ import { computed, ref, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import type { NoteMeta, FolderMeta } from '../../../types/note'
+import { parseWikiQuery } from '../../../editor-core'
 
 interface PickerNote {
   id: string
@@ -20,16 +21,35 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   select: [note: PickerNote]
+  create: [payload: { noteTitle: string; anchor: string | null; alias: string | null }]
   itemMousedown: [event: MouseEvent]
 }>()
 
 const menuRef = ref<HTMLDivElement | null>(null)
 
+const parsed = computed(() => parseWikiQuery(props.query))
+const noteTitleQuery = computed(() => parsed.value.noteTitle)
+
+const createEnabled = computed(() => noteTitleQuery.value.length > 0)
+
 function selectActive(): boolean {
-  const note = filteredNotes.value[clampedActiveIndex.value]
-  if (!note) return false
-  emit('select', note)
-  return true
+  // When there are matches, Enter selects the active one.
+  if (filteredNotes.value.length > 0) {
+    const note = filteredNotes.value[clampedActiveIndex.value]
+    if (!note) return false
+    emit('select', note)
+    return true
+  }
+  // Otherwise, if a title has been typed, Enter creates a new note.
+  if (createEnabled.value) {
+    emit('create', {
+      noteTitle: noteTitleQuery.value,
+      anchor: parsed.value.anchor,
+      alias: parsed.value.alias,
+    })
+    return true
+  }
+  return false
 }
 
 defineExpose({ menuRef, selectActive })
@@ -55,7 +75,7 @@ const allNotes = computed<PickerNote[]>(() => {
 })
 
 const filteredNotes = computed<PickerNote[]>(() => {
-  const q = props.query.toLowerCase().trim()
+  const q = noteTitleQuery.value.toLowerCase().trim()
   if (!q) return allNotes.value.slice(0, 12)
   return allNotes.value
     .filter(n => n.title.toLowerCase().includes(q))
@@ -76,10 +96,28 @@ watch(() => clampedActiveIndex.value, () => {
     active?.scrollIntoView({ block: 'nearest' })
   })
 })
+
+function onCreateClick(event: MouseEvent) {
+  if (!createEnabled.value) return
+  emit('itemMousedown', event)
+  emit('create', {
+    noteTitle: noteTitleQuery.value,
+    anchor: parsed.value.anchor,
+    alias: parsed.value.alias,
+  })
+}
+
+const aliasHint = computed(() => {
+  const { anchor, alias } = parsed.value
+  if (anchor && alias) return t('editor.linkPicker.aliasAnchorHint', { anchor, alias })
+  if (anchor) return t('editor.linkPicker.anchorHint', { anchor })
+  if (alias) return t('editor.linkPicker.aliasHint', { alias })
+  return ''
+})
 </script>
 
 <template>
-  <div v-if="open && filteredNotes.length > 0" ref="menuRef" class="editor-overlay link-picker" :style="menuStyle">
+  <div v-if="open && (filteredNotes.length > 0 || createEnabled)" ref="menuRef" class="editor-overlay link-picker" :style="menuStyle">
     <div class="link-picker__header">
       <span class="link-picker__header-label">[[</span>
       <span class="link-picker__header-query">{{ query || t('noteEmbed.searchPlaceholder') }}</span>
@@ -96,5 +134,17 @@ watch(() => clampedActiveIndex.value, () => {
       <span class="link-picker__icon">{{ note.icon }}</span>
       <span class="link-picker__title">{{ note.title }}</span>
     </button>
+    <button
+      v-if="createEnabled"
+      class="link-picker__item link-picker__create"
+      :class="{ 'is-active': filteredNotes.length === 0 }"
+      :title="t('editor.linkPicker.createNote', { title: noteTitleQuery })"
+      @mousedown="emit('itemMousedown', $event)"
+      @click="onCreateClick"
+    >
+      <span class="link-picker__icon link-picker__create-icon">✨</span>
+      <span class="link-picker__title">{{ t('editor.linkPicker.createNote', { title: noteTitleQuery }) }}</span>
+    </button>
+    <div v-if="aliasHint" class="link-picker__hint">{{ aliasHint }}</div>
   </div>
 </template>

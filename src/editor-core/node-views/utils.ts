@@ -37,9 +37,11 @@ export interface CoreNodeViewOptions {
     isInline: boolean
     anchorRect: DOMRect
   }) => void
+  onRequestFormulaEdit?: (ctx: { view: EditorView; cellPos: number; formula: string; anchorRect: DOMRect }) => void
   onRequestMermaidEdit?: (ctx: { view: EditorView; position: number; node: PMNode; anchorRect: DOMRect }) => void
   onRequestMarkmapEdit?: (ctx: { view: EditorView; position: number; node: PMNode; anchorRect: DOMRect }) => void
   onRequestVegaEdit?: (ctx: { view: EditorView; position: number; node: PMNode; anchorRect: DOMRect }) => void
+  onRequestDrawOpen?: (ctx: { view: EditorView; position: number; node: PMNode }) => void
   onRequestNoteEmbedPick?: (ctx: { view: EditorView; position: number; anchorRect: DOMRect }) => void
   onNoteEmbedOpen?: (noteId: string) => void
   onNoteEmbedContentLoad?: (ctx: {

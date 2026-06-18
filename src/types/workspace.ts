@@ -74,6 +74,8 @@ export interface RecentWorkspace {
   kind?: 'local' | 'cloud'
   /** Set when kind === 'cloud': the shared storage id used to open it. */
   storageId?: string
+  /** Set when kind === 'cloud': base URL of the relay hosting this storage. */
+  serverUrl?: string
 }
 
 export interface WorkspaceConfig {
@@ -210,6 +212,7 @@ export interface FeaturesSettings {
   templates?: boolean
   vega?: boolean
   markmap?: boolean
+  draw?: boolean
 }
 
 export interface HotkeyBinding {
@@ -273,7 +276,10 @@ export interface AppConfig {
   focusRingStyle: FocusRingStyle
   windowChromeStyle: WindowChromeStyle
   interfaceZoom: number
-  reduceTransparency: boolean
+  /** Tri-state: `undefined` means "auto" — enabled on Linux/WebKitGTK (where
+   *  backdrop-filter is expensive) and disabled elsewhere. An explicit boolean
+   *  is a manual user override. */
+  reduceTransparency?: boolean
   interfaceRoundness: InterfaceRoundness
   themeSchedule: ThemeSchedule
 }

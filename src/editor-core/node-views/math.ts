@@ -1,7 +1,7 @@
 import type { Node as PMNode } from 'prosemirror-model'
 import { NodeSelection } from 'prosemirror-state'
 import type { EditorView, NodeView } from 'prosemirror-view'
-import { renderKatexToString } from '../../utils/katex'
+import { isKatexLoaded, loadKatex, renderKatexToString } from '../../utils/katex'
 import { resolveNodePosition, getStringAttr, type CoreNodeViewOptions, type NodeViewPosition } from './utils'
 
 export function createMathNodeView(node: PMNode, view: EditorView, getPos: NodeViewPosition, options?: CoreNodeViewOptions): NodeView {
@@ -29,6 +29,21 @@ export function createMathNodeView(node: PMNode, view: EditorView, getPos: NodeV
 
     const latex = getStringAttr(currentNode, 'latex')
     const displayMode = currentNode.type.name === 'math_block' || currentNode.attrs.displayMode === true
+
+    // KaTeX is loaded lazily. Until it is ready show the raw LaTeX as a placeholder
+    // and re-render once the module resolves.
+    if (!isKatexLoaded()) {
+      const isEmpty = latex.trim().length === 0
+      dom.dataset.empty = isEmpty ? 'true' : 'false'
+      rendered.textContent = latex || '…'
+      void loadKatex().then(() => {
+        lastRenderedLatex = null
+        lastRenderedDisplayMode = null
+        sync()
+      })
+      return
+    }
+
     if (latex === lastRenderedLatex && displayMode === lastRenderedDisplayMode) return
 
     const isEmpty = latex.trim().length === 0

@@ -93,6 +93,10 @@ export function createNoteEmbedNodeView(
 
   let currentNode = node
   let lastLoadedNoteId = ''
+  // Tracks the noteId the popup menu was last rendered for, so the menu's
+  // vdom is only rebuilt when the pickNote/open/remove actions meaningfully
+  // change — not on every ProseMirror `update()` (e.g. title/icon edits).
+  let lastRenderedPopupNoteId: string | null = null
 
   const setHtml = (html: string) => {
     contentEl.innerHTML = sanitizeEmbedHtml(html)
@@ -133,6 +137,14 @@ export function createNoteEmbedNodeView(
       iconEl.style.fontSize = ''
     }
 
+    // The popup menu only depends on noteId (and locale t()), so rebuild it
+    // only when that changes — not on every attribute sync. Cheap text/icon
+    // mutations above still apply without touching the Vue vdom.
+    if (noteId !== lastRenderedPopupNoteId) {
+      lastRenderedPopupNoteId = noteId
+      renderPopupMenu()
+    }
+
     if (noteId !== lastLoadedNoteId) {
       lastLoadedNoteId = noteId
       if (noteId) {
@@ -146,6 +158,10 @@ export function createNoteEmbedNodeView(
         loadingEl.style.display = 'none'
       }
     }
+  }
+
+  const renderPopupMenu = () => {
+    const noteId = getStringAttr(currentNode, 'noteId')
 
     // Render Popup Menu
     const menuVNode = h(NvPopupMenu, {

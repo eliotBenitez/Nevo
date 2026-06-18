@@ -12,13 +12,15 @@ import { blockNode } from '../../../utils/noteExport/htmlSerializer'
 import { createDefaultWorkspaceSettings, EDITOR_LINE_WIDTHS, resolveEditorFontFamilyCss } from '../../../utils/workspace-settings'
 import { CloudBackend, CLOUD_ASSET_SCHEME } from '../../../core/workspace-backend'
 import { useWorkspaceStore } from '../../../stores/workspace'
+import { useTreeStore } from '../../../stores/tree'
 import type { BlockNode } from '../../../types/note'
 import type { PluginManifest, WorkspaceSettings } from '../../../types/workspace'
 import type { NevoToolbarAction } from '../../../types/editor-plugin'
-import { getLinkPickerState } from '../../../editor-core'
+import { getLinkPickerState, parseWikiQuery } from '../../../editor-core'
 import { createEditorCore, useEditorCore } from '../../composables/editor/useEditorCore'
 import { useEditorOverlays } from '../../composables/editor/useEditorOverlays'
 import { useMathEditor } from '../../composables/editor/useMathEditor'
+import { useFormulaEditor } from '../../composables/editor/useFormulaEditor'
 import { useMermaidEditor } from '../../composables/editor/useMermaidEditor'
 import { usePluginNodePopover } from '../../composables/editor/usePluginNodePopover'
 import { useMarkmapEditor } from '../../composables/editor/useMarkmapEditor'
@@ -61,7 +63,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   'update:content': [value: BlockNode]
   'content-dirty': []
-  'open-note': [noteId: string]
+  'open-note': [noteId: string, anchor?: string | null]
   'asset-srcs-removed': [srcs: string[]]
 }>()
 
@@ -74,6 +76,8 @@ interface OverlayContainerInstance {
   linkPopoverComp: { focusInput: () => void } | null
   mathPopoverEl: HTMLElement | null
   mathPopoverComp: { focusInput: () => void } | null
+  formulaPopoverEl: HTMLElement | null
+  formulaPopoverComp: { focusInput: () => void } | null
   mermaidPopoverEl: HTMLElement | null
   mermaidPopoverComp: { focusInput: () => void } | null
   markmapPopoverEl: HTMLElement | null
@@ -92,6 +96,7 @@ interface OverlayContainerInstance {
 
 const { locale } = useI18n()
 const workspaceStore = useWorkspaceStore()
+const treeStore = useTreeStore()
 const surfaceRootEl = ref<HTMLDivElement | null>(null)
 const editorRoot = ref<HTMLDivElement | null>(null)
 const imageInputRef = ref<HTMLInputElement | null>(null)
@@ -118,7 +123,7 @@ const overlays = useEditorOverlays(core, {
   getTableMenuEl: () => overlayContainerRef.value?.tableMenuEl ?? null,
   getLinkPickerEl: () => overlayContainerRef.value?.linkPickerEl ?? null,
 })
-const { slashOverlay, toolbarOverlay, tableMenuOverlay, linkPopover, highlightPicker, textColorPicker, mathPopover, mermaidPopover, markmapPopover, vegaPopover, pluginNodePopover, linkPickerOverlay, activeMarkNames } = overlays
+const { slashOverlay, toolbarOverlay, tableMenuOverlay, linkPopover, highlightPicker, textColorPicker, mathPopover, formulaPopover, mermaidPopover, markmapPopover, vegaPopover, pluginNodePopover, linkPickerOverlay, activeMarkNames } = overlays
 
 const { imageCtxMenu, imageMenuItems, openImageContextMenu } = useImageContextMenu(() => props.workspacePath)
 const imageUpload = useImageUpload(core, () => props.workspacePath, overlays.updateOverlays)
@@ -172,6 +177,17 @@ const mathEditor = useMathEditor(
   {
     getMathPopoverEl: () => overlayContainerRef.value?.mathPopoverEl ?? null,
     onFocusInput: () => overlayContainerRef.value?.mathPopoverComp?.focusInput(),
+  },
+  overlays.updateOverlays,
+  overlays.clampOverlayPosition,
+)
+
+const formulaEditor = useFormulaEditor(
+  core,
+  formulaPopover,
+  {
+    getFormulaPopoverEl: () => overlayContainerRef.value?.formulaPopoverEl ?? null,
+    onFocusInput: () => overlayContainerRef.value?.formulaPopoverComp?.focusInput(),
   },
   overlays.updateOverlays,
   overlays.clampOverlayPosition,
@@ -312,7 +328,9 @@ const editorSetup = useEditorCore(core, {
   onDocDirty: () => emit('content-dirty'),
   onAfterTransaction,
   onAssetSrcsRemoved: (srcs) => emit('asset-srcs-removed', srcs),
-  onInternalLinkOpen: (noteId) => emit('open-note', noteId),
+  onInternalLinkOpen: (noteId, anchor) => emit('open-note', noteId, anchor),
+  internalLinkExists: (noteId) => treeStore.noteById.has(noteId),
+  resolveWikiLink: (title) => treeStore.resolveNoteIdByTitle(title),
   resolveAssetSrc,
   resolveMediaSrc,
   onImagePickerRequest: (pos) => {
@@ -362,6 +380,7 @@ const editorSetup = useEditorCore(core, {
   },
   onNoteEmbedOpen: (noteId) => emit('open-note', noteId),
   onMathEditRequest: (pos, rect) => mathEditor.openMathPopoverForNode(pos, rect),
+  onFormulaEditRequest: (cellPos, _formula, rect) => formulaEditor.openFormulaPopoverForCell(cellPos, rect),
   onMermaidEditRequest: (pos, rect) => mermaidEditor.openMermaidPopoverForNode(pos, rect),
   onPluginNodeEditRequest: (pos, nodeName, rect) => pluginNodeEditor.openForNode(pos, nodeName, rect),
   onMarkmapEditRequest: (pos, rect) => markmapEditor.openMarkmapPopoverForNode(pos, rect),
@@ -427,6 +446,12 @@ function applyTableCellAttr(name: string, value: string | null) {
   editorSetup.executeStateCommand(core.coreCommands.setTableCellAttr(name, value))
 }
 
+function openTableCellFormula() {
+  const cellPos = tableMenuOverlay.context?.activeCell?.pos
+  if (typeof cellPos !== 'number') return
+  formulaEditor.openFormulaPopoverForCell(cellPos)
+}
+
 function runPluginAction(action: NevoToolbarAction) {
   editorSetup.runPluginToolbarAction(action)
 }
@@ -453,11 +478,48 @@ function selectLinkNote(note: { id: string; title: string }) {
   const markType = view.state.schema.marks.internal_link
   if (!markType) return
   const { from, to } = pickerState.range
-  const displayText = note.title
+  const parsed = parseWikiQuery(pickerState.query)
+  const displayText = parsed.alias || note.title
+  const mark = markType.create({
+    noteId: note.id,
+    title: note.title,
+    anchor: parsed.anchor,
+    alias: parsed.alias,
+  })
   const tr = view.state.tr
     .delete(from, to)
     .insertText(displayText, from)
-    .addMark(from, from + displayText.length, markType.create({ noteId: note.id }))
+    .addMark(from, from + displayText.length, mark)
+    .removeStoredMark(markType)
+  view.dispatch(tr.scrollIntoView())
+  view.focus()
+}
+
+// Link picker: create a brand-new note (in the workspace root for the
+// surface/mini context, which has no "current folder") and link to it.
+async function selectLinkCreateNote(payload: { noteTitle: string; anchor: string | null; alias: string | null }) {
+  const view = core.editorView
+  if (!view) return
+  const pickerState = getLinkPickerState(view.state)
+  if (!pickerState.open || !pickerState.range) return
+  const markType = view.state.schema.marks.internal_link
+  if (!markType) return
+
+  const note = await treeStore.createNote(null, payload.noteTitle)
+  if (!note) return
+
+  const { from, to } = pickerState.range
+  const displayText = payload.alias || payload.noteTitle
+  const mark = markType.create({
+    noteId: note.id,
+    title: payload.noteTitle,
+    anchor: payload.anchor,
+    alias: payload.alias,
+  })
+  const tr = view.state.tr
+    .delete(from, to)
+    .insertText(displayText, from)
+    .addMark(from, from + displayText.length, mark)
     .removeStoredMark(markType)
   view.dispatch(tr.scrollIntoView())
   view.focus()
@@ -493,6 +555,11 @@ const overlayHandlers: OverlayHandlers = {
   applyMath: mathEditor.applyMathFromPopover,
   removeMath: mathEditor.removeMathFromPopover,
   onMathInputKeyDown: mathEditor.onMathInputKeyDown,
+  openTableCellFormula,
+  updateFormula: (v) => { formulaPopover.formula = v },
+  applyFormula: formulaEditor.applyFormulaFromPopover,
+  removeFormula: formulaEditor.removeFormulaFromPopover,
+  onFormulaInputKeyDown: formulaEditor.onFormulaInputKeyDown,
   updateCode: (v) => { mermaidPopover.code = v },
   applyMermaid: mermaidEditor.applyMermaidFromPopover,
   removeMermaid: mermaidEditor.removeMermaidFromPopover,
@@ -513,6 +580,7 @@ const overlayHandlers: OverlayHandlers = {
   cancelEmbedUrl,
   onEmbedUrlInputKeyDown,
   selectLinkNote,
+  selectLinkCreateNote,
   selectSlashEmoji,
   openSlashEmojiPicker,
   closeSlashEmojiPicker,
@@ -548,6 +616,7 @@ function closeFloatingUiFromDocument(target: Node) {
     if (!insidePopover && !insideToolbar) linkEditor.closeLinkPopover()
   }
   if (mathPopover.open && !(c?.mathPopoverEl?.contains(target) ?? false)) mathEditor.closeMathPopover()
+  if (formulaPopover.open && !(c?.formulaPopoverEl?.contains(target) ?? false)) formulaEditor.closeFormulaPopover()
   if (mermaidPopover.open && !(c?.mermaidPopoverEl?.contains(target) ?? false)) mermaidEditor.closeMermaidPopover()
   if (markmapPopover.open && !(c?.markmapPopoverEl?.contains(target) ?? false)) markmapEditor.closeMarkmapPopover()
   if (vegaPopover.open && !(c?.vegaPopoverEl?.contains(target) ?? false)) vegaEditor.closeVegaPopover()
@@ -609,10 +678,11 @@ watch(
   async ([documentId, content]) => {
     if (!hasInitializedPluginHost.value) return
     if (core.editorView && documentId === core.lastLoadedNoteId) {
+      // Content identity is preserved across the editor→store→props round-trip
+      // (setContent mutates in place). A reference check suffices and avoids an
+      // O(document) JSON.stringify on every debounced flush for large notes.
       const rawContent = toRaw(content)
-      const sameContentRef = rawContent === core.lastSerializedContentRef
-      const sameSerializedContent = !sameContentRef && JSON.stringify(rawContent) === core.lastSerializedContent
-      if (sameContentRef || sameSerializedContent) {
+      if (rawContent === core.lastSerializedContentRef) {
         core.lastSerializedContentRef = rawContent
         refreshIsEmpty()
         return
@@ -782,6 +852,7 @@ defineExpose({
     :highlight-picker="highlightPicker"
     :text-color-picker="textColorPicker"
     :math-popover="mathPopover"
+    :formula-popover="formulaPopover"
     :mermaid-popover="mermaidPopover"
     :markmap-popover="markmapPopover"
     :vega-popover="vegaPopover"

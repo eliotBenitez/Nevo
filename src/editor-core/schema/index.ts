@@ -2,7 +2,7 @@ import { Schema } from 'prosemirror-model'
 import { schema as basicSchema } from 'prosemirror-schema-basic'
 import { addListNodes } from 'prosemirror-schema-list'
 import { calloutNodeSpec, checklistItemNodeSpec, dividerNodeSpec, headingNodeSpec, toggleNodeSpec, toggleTitleNodeSpec } from './nodes-block'
-import { codeBlockNodeSpec, fileBlockNodeSpec, imageBlockNodeSpec, mathBlockNodeSpec, mathInlineNodeSpec, markmapBlockNodeSpec, mermaidBlockNodeSpec, vegaBlockNodeSpec } from './nodes-content'
+import { codeBlockNodeSpec, drawBlockNodeSpec, fileBlockNodeSpec, imageBlockNodeSpec, mathBlockNodeSpec, mathInlineNodeSpec, markmapBlockNodeSpec, mermaidBlockNodeSpec, vegaBlockNodeSpec } from './nodes-content'
 import { mediaBlockNodeSpec, noteEmbedNodeSpec, embedBlockNodeSpec } from './nodes-embeds'
 import { columnListNodeSpec, columnNodeSpec } from './nodes-columns'
 import { tableNodeSpecs } from './nodes-table'
@@ -31,6 +31,7 @@ let nodes = addListNodes(basicSchema.spec.nodes, 'paragraph block*', 'block')
   .addToEnd('image_block', imageBlockNodeSpec)
   .addToEnd('file_block', fileBlockNodeSpec)
   .addToEnd('mermaid_block', mermaidBlockNodeSpec)
+  .addToEnd('draw_block', drawBlockNodeSpec)
   .addToEnd('markmap_block', markmapBlockNodeSpec)
   .addToEnd('vega_block', vegaBlockNodeSpec)
   .addToEnd('note_embed', noteEmbedNodeSpec)

@@ -9,6 +9,15 @@ export const tableNodeSpecs = tableNodes({
   tableGroup: 'block',
   cellContent: 'block+',
   cellAttributes: {
+    formula: {
+      default: null,
+      getFromDOM: (dom) => dom.getAttribute('data-formula'),
+      setDOMAttr: (value, attrs) => {
+        if (typeof value === 'string' && value) {
+          attrs['data-formula'] = value
+        }
+      },
+    },
     align: {
       default: null,
       getFromDOM: (dom) => dom.getAttribute('data-align'),

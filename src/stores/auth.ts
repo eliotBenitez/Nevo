@@ -16,6 +16,7 @@ export const useAuthStore = defineStore('auth', () => {
   const refreshToken = ref<string | null>(null)
   const user = ref<CloudUser | null>(null)
   const status = ref<AuthStatus>('anonymous')
+  const sessionServerUrl = ref<string | null>(null)
 
   // The user's own keys: public (base64 SPKI, also on server) and private
   // (base64 PKCS8, device-only, kept in memory after unlock for DEK unwrapping).
@@ -40,6 +41,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (await refresh()) {
       await loadMe()
       await ensureKeypair()
+      sessionServerUrl.value = serverCfg.serverUrl
       status.value = 'authenticated'
     }
   }
@@ -62,6 +64,7 @@ export const useAuthStore = defineStore('auth', () => {
     await applyTokens(tokens)
     await loadMe()
     await ensureKeypair()
+    sessionServerUrl.value = serverCfg.serverUrl
     status.value = 'authenticated'
   }
 
@@ -109,6 +112,7 @@ export const useAuthStore = defineStore('auth', () => {
     refreshToken.value = null
     user.value = null
     status.value = 'anonymous'
+    sessionServerUrl.value = null
     await secureStore.delete(SECRET_REFRESH_TOKEN)
   }
 
@@ -145,7 +149,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     accessToken, refreshToken, user, status, publicKey, privateKey,
-    isAuthenticated,
+    isAuthenticated, sessionServerUrl,
     init, login, logout, refresh, ensureKeypair,
   }
 })

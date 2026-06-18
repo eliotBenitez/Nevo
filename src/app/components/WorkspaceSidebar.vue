@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+import { watchDebounced } from '@vueuse/core'
 import { ArrowLeft, Download, FolderPen, History, Kanban, Network, Plus, Search, Settings, Trash2, Upload } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
@@ -86,7 +87,9 @@ watch(storageKey, (key) => {
   }
 }, { immediate: true })
 
-watch(collapsedFolders, (nextState) => {
+// Persist collapse state, but debounce the synchronous localStorage write so
+// rapidly toggling folders doesn't serialize + write on every single toggle.
+watchDebounced(collapsedFolders, (nextState) => {
   const key = storageKey.value
   if (!key || !isRememberEnabled.value) return
   try {
@@ -94,7 +97,7 @@ watch(collapsedFolders, (nextState) => {
   } catch (e) {
     console.error('Failed to save collapsed folders state:', e)
   }
-}, { deep: true })
+}, { deep: true, debounce: 300 })
 
 watch(isRememberEnabled, (enabled) => {
   if (!enabled) {

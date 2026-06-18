@@ -2,7 +2,7 @@
 import { computed, reactive } from 'vue'
 import { ChevronRight, ExternalLink, FileText, Hash, X } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
-import { useTimeAgo, useDateFormat } from '@vueuse/core'
+import { useTimeAgo, useDateFormat, refDebounced } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import type { NoteDocument } from '../../types/note'
@@ -21,10 +21,15 @@ const { t } = useI18n()
 const graphStore = useGraphStore()
 const { backlinks } = storeToRefs(graphStore)
 
-const outline = computed(() => props.note ? extractOutline(props.note.content) : [])
-const wordCount = computed(() => props.note ? countWords(props.note.content) : 0)
+// Outline/word-count/links walk the whole document. While the user is typing,
+// the note content updates frequently, so debounce the source to avoid
+// recomputing these on every keystroke.
+const noteContent = computed(() => props.note?.content ?? null)
+const debouncedContent = refDebounced(noteContent, 300)
+const outline = computed(() => debouncedContent.value ? extractOutline(debouncedContent.value) : [])
+const wordCount = computed(() => debouncedContent.value ? countWords(debouncedContent.value) : 0)
 const readMinutes = computed(() => Math.max(1, Math.round(wordCount.value / 200)))
-const externalLinks = computed(() => props.note ? extractExternalLinks(props.note.content) : [])
+const externalLinks = computed(() => debouncedContent.value ? extractExternalLinks(debouncedContent.value) : [])
 
 const updatedAt = computed(() => props.note ? new Date(props.note.updatedAt) : new Date())
 const createdAt = computed(() => props.note ? new Date(props.note.createdAt) : new Date())
@@ -161,7 +166,7 @@ function linkDomain(url: string): string {
 .right-panel__close { width: 24px; height: 24px; display: grid; place-items: center; border: none; border-radius: calc(6px * var(--radius-scale, 1)); background: transparent; color: var(--text-4); cursor: pointer; transition: background-color 120ms ease, color 120ms ease; }
 .right-panel__close:hover { background: var(--hover); color: var(--text-1); }
 
-.right-panel__toc { flex: 1; overflow-y: auto; padding: 6px 0; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+.right-panel__toc { flex: 1; overflow-y: auto; padding: 6px 0; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; contain: paint; }
 
 .right-panel__toc-item {
   position: relative; width: 100%; height: 28px; display: flex; align-items: center;
@@ -189,7 +194,7 @@ function linkDomain(url: string): string {
 }
 
 .right-panel__section { flex-shrink: 0; padding: 10px 12px; border-top: 1px solid var(--line-1); display: flex; flex-direction: column; gap: 4px; }
-.right-panel__section--scroll { max-height: 160px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+.right-panel__section--scroll { max-height: 160px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; contain: paint; }
 .right-panel__section-label { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-4); margin-bottom: 4px; }
 .right-panel__meta-row { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-3); }
 .right-panel__meta-key { color: var(--text-4); min-width: 58px; flex-shrink: 0; }

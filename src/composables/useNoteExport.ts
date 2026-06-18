@@ -5,6 +5,7 @@ import { noteCommands } from '../tauri/commands'
 import { serializeNoteToMarkdown } from '../utils/noteExport/markdownSerializer'
 import { serializeNoteToHtml } from '../utils/noteExport/htmlSerializer'
 import { buildTypstExport } from '../utils/noteExport/buildTypstExport'
+import { loadHyperformula } from '../editor-core/tableFormula'
 
 function sanitizeFilename(title: string, fallback: string): string {
   const safe = title.replace(/[/\\?%*:|"<>]/g, '-').trim()
@@ -40,6 +41,7 @@ export function useNoteExport() {
   async function exportAsMarkdown(note: NoteDocument, workspacePath: string): Promise<void> {
     const safeName = sanitizeFilename(note.title, `note-${note.id}`)
     const assetsSubfolderName = `${safeName}_assets`
+    await loadHyperformula()
     const { markdown, assetSrcs } = serializeNoteToMarkdown(note, assetsSubfolderName)
 
     let savePath: string | null | undefined
@@ -75,6 +77,7 @@ export function useNoteExport() {
     if (!savePath) return
 
     const assetsSubfolderName = `${exportStem(savePath, safeName)}_assets`
+    await loadHyperformula()
     const { html, assetSrcs } = await serializeNoteToHtml(note, assetsSubfolderName)
     await noteCommands.exportNoteHtml(workspacePath, savePath, html, assetSrcs)
   }
@@ -96,6 +99,7 @@ export function useNoteExport() {
     if (!savePath) return
 
     const stem = exportStem(savePath, `${safeName}-typst`)
+    await loadHyperformula()
     const { source, assets } = await buildTypstExport(note, undefined, {
       assetPathPrefix: `${stem}_assets/`,
     })

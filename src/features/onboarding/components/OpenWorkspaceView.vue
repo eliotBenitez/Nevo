@@ -90,7 +90,7 @@ async function openWorkspace(id: string) {
   const ws = allWorkspaces.value.find(w => w.id === id)
   if (!ws) return
   if (ws.kind === 'cloud' && ws.storageId) {
-    await workspaceStore.openCloudWorkspace(ws.storageId)
+    await workspaceStore.openCloudWorkspace(ws.storageId, ws.serverUrl)
   } else {
     await workspaceStore.openWorkspace(ws.path)
   }

@@ -14,10 +14,15 @@
 }
 
 .settings-window {
+  --settings-radius: calc(16px * var(--radius-scale, 1));
   width: min(1240px, calc(100vw - 36px));
   height: min(820px, calc(100vh - 36px));
-  border-radius: calc(16px * var(--radius-scale, 1));
-  overflow: hidden;
+  border-radius: var(--settings-radius);
+  /* No `overflow: hidden` here on purpose: a rounded-corner clipping ancestor forces
+     WebKitGTK off its accelerated overflow-scroll path, making `.panel-body` scroll
+     janky. `border-radius` alone still rounds this element's own border/shadow without
+     clipping descendants, so we keep the rounded look and round the edge children's own
+     backgrounds (titlebar top, sidebar/shell bottom) below instead of clipping here. */
   border: 1px solid var(--line-strong);
   box-shadow:
     0 40px 100px -20px oklch(0 0 0 / 0.55),
@@ -35,6 +40,7 @@
   color: var(--text-4);
   background: color-mix(in oklab, var(--glass-titlebar) 92%, transparent);
   border-bottom: 1px solid var(--line-1);
+  border-radius: var(--settings-radius) var(--settings-radius) 0 0;
   position: relative;
   padding: 0 40px;
 }
@@ -62,6 +68,11 @@
     radial-gradient(55% 60% at 0% 0%, color-mix(in oklab, var(--accent-soft) 80%, transparent), transparent 72%),
     radial-gradient(45% 55% at 100% 100%, color-mix(in oklab, oklch(0.7 0.11 32 / 0.12) 85%, transparent), transparent 72%),
     var(--glass-2);
+  /* Round the shell's own bottom corners to match the window. The right/bottom area is
+     the transparent main column, so the shell's background fills the rounded corner; the
+     left bottom corner is covered by the opaque sidebar, which rounds itself below. No
+     `overflow: hidden` here — that would re-introduce the rounded-clip ancestor. */
+  border-radius: 0 0 var(--settings-radius) var(--settings-radius);
 }
 
 .settings-sidebar {
@@ -71,6 +82,7 @@
   flex-direction: column;
   background: var(--glass-1);
   border-right: 1px solid var(--line-1);
+  border-bottom-left-radius: var(--settings-radius);
 }
 
 .settings-sidebar__head {
@@ -132,6 +144,8 @@
   gap: 4px;
   padding: 8px 6px;
   overflow: auto;
+  overscroll-behavior: contain;
+  contain: paint;
 }
 
 .settings-nav__item {
@@ -269,6 +283,10 @@
     flex: 0 0 auto;
     border-right: none;
     border-bottom: 1px solid var(--line-1);
+    /* Stacked layout: the sidebar sits at the top, so its bottom-left corner is now
+       mid-window. The shell rounds both bottom corners (the full-width main column shows
+       them through), so the sidebar must not round here. */
+    border-bottom-left-radius: 0;
   }
 
   .settings-nav {
@@ -293,6 +311,8 @@
     height: 100dvh;
     border-radius: 0;
     border: none;
+    /* Edge-to-edge: flatten the shared radius so titlebar/shell/sidebar corners are square. */
+    --settings-radius: 0px;
   }
 
   .settings-sidebar__foot {
@@ -571,6 +591,7 @@
   border-radius: calc(12px * var(--radius-scale, 1));
   overflow: auto;
   overscroll-behavior: contain;
+  contain: paint;
 }
 
 .settings-hotkeys-panel .search-row {

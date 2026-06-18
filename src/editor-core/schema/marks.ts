@@ -58,8 +58,14 @@ export const subscriptMarkSpec: MarkSpec = {
 
 export const internalLinkMarkSpec: MarkSpec = {
   attrs: {
-    noteId: {},
+    noteId: { default: '' },
     anchor: { default: null },
+    // Target note title — preserved for wiki-style `[[Title]]` round-trip
+    // (import/export) and for resolving the link when noteId is unknown.
+    title: { default: null },
+    // Optional alias: visible text differs from the target title
+    // (i.e. `[[Title|Alias]]` in Markdown). Null means "use title as text".
+    alias: { default: null },
   },
   inclusive: false,
   parseDOM: [
@@ -68,8 +74,10 @@ export const internalLinkMarkSpec: MarkSpec = {
       getAttrs: (dom) => {
         const el = dom as HTMLElement
         return {
-          noteId: el.getAttribute('data-note-id'),
+          noteId: el.getAttribute('data-note-id') ?? '',
           anchor: el.getAttribute('data-anchor') || null,
+          title: el.getAttribute('data-title') || null,
+          alias: el.getAttribute('data-alias') || null,
         }
       },
     },
@@ -79,6 +87,8 @@ export const internalLinkMarkSpec: MarkSpec = {
     {
       'data-note-id': mark.attrs.noteId,
       ...(mark.attrs.anchor ? { 'data-anchor': mark.attrs.anchor } : {}),
+      ...(mark.attrs.title ? { 'data-title': mark.attrs.title } : {}),
+      ...(mark.attrs.alias ? { 'data-alias': mark.attrs.alias } : {}),
       class: 'nv-internal-link',
     },
     0,

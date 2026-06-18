@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, markRaw, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, markRaw, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import {
@@ -26,16 +26,19 @@ import { buildWorkspaceSettingsSearchItems } from '../search/settings'
 import { useSettingsHotkeys } from '../composables/useSettingsHotkeys'
 import { useThemeStore } from '../../stores/theme'
 import { getTotalPluginCount } from '../../utils/plugin-counts'
-import SettingsAppearancePanel from './settings/SettingsAppearancePanel.vue'
-import SettingsEditorPanel from './settings/SettingsEditorPanel.vue'
-import SettingsAiPanel from './settings/SettingsAiPanel.vue'
-import SettingsPluginsPanel from './settings/SettingsPluginsPanel.vue'
-import SettingsHotkeysPanel from './settings/SettingsHotkeysPanel.vue'
-import SettingsAboutPanel from './settings/SettingsAboutPanel.vue'
-import SettingsGeneralPanel from './settings/SettingsGeneralPanel.vue'
-import SettingsWorkspacePanel from './settings/SettingsWorkspacePanel.vue'
-import SettingsFilesPanel from './settings/SettingsFilesPanel.vue'
-import SettingsAdvancedPanel from './settings/SettingsAdvancedPanel.vue'
+// Panels are loaded on demand: only the active section is mounted at a time
+// (see the v-else-if chain in the template), so deferring their import keeps the
+// settings modal's first paint cheap and avoids loading 10 panels up front.
+const SettingsAppearancePanel = defineAsyncComponent(() => import('./settings/SettingsAppearancePanel.vue'))
+const SettingsEditorPanel = defineAsyncComponent(() => import('./settings/SettingsEditorPanel.vue'))
+const SettingsAiPanel = defineAsyncComponent(() => import('./settings/SettingsAiPanel.vue'))
+const SettingsPluginsPanel = defineAsyncComponent(() => import('./settings/SettingsPluginsPanel.vue'))
+const SettingsHotkeysPanel = defineAsyncComponent(() => import('./settings/SettingsHotkeysPanel.vue'))
+const SettingsAboutPanel = defineAsyncComponent(() => import('./settings/SettingsAboutPanel.vue'))
+const SettingsGeneralPanel = defineAsyncComponent(() => import('./settings/SettingsGeneralPanel.vue'))
+const SettingsWorkspacePanel = defineAsyncComponent(() => import('./settings/SettingsWorkspacePanel.vue'))
+const SettingsFilesPanel = defineAsyncComponent(() => import('./settings/SettingsFilesPanel.vue'))
+const SettingsAdvancedPanel = defineAsyncComponent(() => import('./settings/SettingsAdvancedPanel.vue'))
 
 interface Props {
   open: boolean
@@ -106,6 +109,7 @@ watch(
     await workspaceStore.loadDiagnostics()
     await workspaceStore.reloadPlugins()
   },
+  { immediate: true },
 )
 
 watch(

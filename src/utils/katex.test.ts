@@ -1,7 +1,11 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { renderKatexToString } from './katex'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { loadKatex, renderKatexToString } from './katex'
 
 describe('renderKatexToString', () => {
+  beforeAll(async () => {
+    await loadKatex()
+  })
+
   afterEach(() => {
     vi.restoreAllMocks()
   })

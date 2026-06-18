@@ -165,6 +165,12 @@ export const noteCommands = {
   deleteUnreferencedAsset: (workspacePath: string, assetSrc: string) =>
     invokeCommand<boolean>('delete_unreferenced_asset', { workspacePath, assetSrc }),
 
+  saveDrawAsset: (workspacePath: string, drawId: string, bytes: number[]) =>
+    invokeCommand<string>('save_draw_asset', { workspacePath, drawId, bytes }),
+
+  readDrawAsset: (workspacePath: string, src: string) =>
+    invokeCommand<number[]>('read_draw_asset', { workspacePath, src }),
+
   getMediaServerInfo: () =>
     invokeCommand<{ port: number; token: string }>('get_media_server_info'),
 
@@ -220,11 +226,22 @@ export interface CollabServerInfo {
 }
 
 export const collabCommands = {
-  saveYjsState: (workspacePath: string, noteId: string, bytes: number[]) =>
-    invokeCommand<void>('save_yjs_state', { workspacePath, noteId, bytes }),
+  saveYjsState: (workspacePath: string, noteId: string, bytes: Uint8Array) =>
+    // Pass the Y.Doc update as a raw IPC body (ArrayBuffer) instead of a JSON
+    // number array, avoiding ~3-4× transport overhead. workspacePath/noteId
+    // travel via headers since `invoke` accepts either args OR a raw body, not both.
+    invoke<void>(
+      'save_yjs_state',
+      bytes,
+      { headers: { 'nv-workspace-path': workspacePath, 'nv-note-id': noteId } },
+    ),
 
   loadYjsState: (workspacePath: string, noteId: string) =>
-    invokeCommand<number[]>('load_yjs_state', { workspacePath, noteId }),
+    // Backend returns a raw binary response (ArrayBuffer), which we expose as
+    // Uint8Array so callers can hand it straight to Yjs without re-encoding.
+    invoke<ArrayBuffer>('load_yjs_state', { workspacePath, noteId }).then(
+      (buf) => new Uint8Array(buf),
+    ),
 
   startServer: (port: number) =>
     invokeCommand<CollabServerInfo>('start_collab_server', { port }),

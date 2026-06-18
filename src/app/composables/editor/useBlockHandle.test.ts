@@ -182,7 +182,8 @@ describe('createDeleteBlockTransaction', () => {
       const blockHandle = useBlockHandle(core)
       const dividerPos = doc.child(0).nodeSize
       blockHandle.blockHandle.hoveredBlockPos = dividerPos
-      blockHandle.blockHandle.hoveredBlockNode = doc.child(1)
+      blockHandle.blockHandle.hoveredBlockTypeName = doc.child(1).type.name
+      blockHandle.blockHandle.hoveredBlockIconAttrs = null
       blockHandle.blockHandle.visible = true
       blockHandle.blockHandle.typeMenuOpen = true
 
@@ -238,7 +239,8 @@ describe('useBlockHandle drag', () => {
       blockHandle = useBlockHandle(core)
       const tablePos = doc.child(0).nodeSize
       blockHandle.blockHandle.hoveredBlockPos = tablePos
-      blockHandle.blockHandle.hoveredBlockNode = doc.child(1)
+      blockHandle.blockHandle.hoveredBlockTypeName = doc.child(1).type.name
+      blockHandle.blockHandle.hoveredBlockIconAttrs = null
 
       blockHandle.onDragStart(createDragStartEvent(createDataTransfer()))
 
@@ -278,14 +280,13 @@ describe('useBlockHandle drag', () => {
 
 describe('EditorBlockHandle', () => {
   it('renders heading icons for heading levels 4 through 6', () => {
-    const schema = nevoBaseSchema
-
     for (const level of [4, 5, 6]) {
       const wrapper = mountVue(EditorBlockHandle, {
         props: {
           visible: true,
           position: { top: 0, left: 0 },
-          hoveredBlockNode: schema.node('heading', { level }, [schema.text('Heading')]),
+          hoveredBlockTypeName: 'heading',
+          hoveredBlockIconAttrs: { level },
         },
         global: {
           plugins: [i18n],

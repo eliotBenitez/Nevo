@@ -54,6 +54,7 @@ describe('serialization compatibility', () => {
                     colspan: 1,
                     rowspan: 1,
                     colwidth: null,
+                    formula: null,
                     align: 'center',
                     background: 'oklch(0.95 0.04 90)',
                     borderColor: null,

@@ -1,5 +1,6 @@
 import type { BlockNode, NoteDocument } from '../../types/note'
 import { getPluginNodeSerializer } from '../../editor-core/plugin-host/active-serialization'
+import { computeBlockTableValues, type FormulaCellResult } from '../../editor-core/tableFormula'
 import type { NevoSerializableNode } from '../../types/editor-plugin'
 
 export interface MarkdownSerializeResult {
@@ -34,8 +35,19 @@ function textNodeToMd(node: BlockNode, _ctx: SerializeCtx): string {
       const href = String(mark.attrs?.href ?? '')
       text = `[${text}](${href})`
     } else if (mark.type === 'internal_link') {
+      // Prefer the stored target title (the mark attribute set by the picker /
+      // importer). Fall back to the visible text so legacy links without a
+      // `title` attr still round-trip reasonably.
       const title = String(mark.attrs?.title ?? text)
-      text = `[[${title}]]`
+      const alias = mark.attrs?.alias ? String(mark.attrs.alias) : ''
+      // Only emit the `|alias` form when the alias actually differs from the
+      // target title — otherwise `[[Title]]` is enough and less noisy.
+      // (The visible `text` already equals the alias, so we compare alias↔title.)
+      if (alias && alias !== title) {
+        text = `[[${title}|${alias}]]`
+      } else {
+        text = `[[${title}]]`
+      }
     }
   }
   return text
@@ -55,8 +67,19 @@ function prefixLines(text: string, prefix: string): string {
   return text.split('\n').map(l => `${prefix}${l}`).join('\n')
 }
 
-function tableRowToMd(row: BlockNode, ctx: SerializeCtx): string {
-  const cells = (row.content ?? []).map(cell => inlineContent(cell, ctx).replace(/\|/g, '\\|'))
+function tableRowToMd(
+  row: BlockNode,
+  ctx: SerializeCtx,
+  rowIndex: number,
+  values: Map<string, FormulaCellResult>,
+): string {
+  const cells = (row.content ?? []).map((cell, colIndex) => {
+    const formula = typeof cell.attrs?.formula === 'string' ? cell.attrs.formula.trim() : ''
+    const text = formula
+      ? (values.get(`${rowIndex}:${colIndex}`)?.value ?? formula)
+      : inlineContent(cell, ctx)
+    return text.replace(/\|/g, '\\|')
+  })
   return `| ${cells.join(' | ')} |`
 }
 
@@ -118,13 +141,14 @@ function nodeToMd(node: BlockNode, ctx: SerializeCtx): string {
     case 'table': {
       const rows = node.content ?? []
       if (!rows.length) return ''
+      const values = computeBlockTableValues(node)
       const lines: string[] = []
       const head = rows[0]
-      lines.push(tableRowToMd(head, ctx))
+      lines.push(tableRowToMd(head, ctx, 0, values))
       const colCount = (head.content ?? []).length
       lines.push(`| ${Array(colCount).fill('---').join(' | ')} |`)
       for (let i = 1; i < rows.length; i++) {
-        lines.push(tableRowToMd(rows[i], ctx))
+        lines.push(tableRowToMd(rows[i], ctx, i, values))
       }
       return lines.join('\n')
     }

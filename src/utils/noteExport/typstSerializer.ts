@@ -1,5 +1,6 @@
 import type { BlockNode, NoteDocument } from '../../types/note'
 import { getPluginNodeSerializer } from '../../editor-core/plugin-host/active-serialization'
+import { computeBlockTableValues } from '../../editor-core/tableFormula'
 import type { NevoSerializableNode } from '../../types/editor-plugin'
 import {
   DEFAULT_PDF_OPTIONS,
@@ -38,12 +39,20 @@ export interface TypstVegaAsset {
   spec: string
 }
 
+export interface TypstDrawAsset {
+  /** Filename referenced inside the Typst source. */
+  name: string
+  /** Inline SVG snapshot of the drawing (already native paths — usvg-ready). */
+  svg: string
+}
+
 export interface TypstSerializeResult {
   source: string
   images: TypstImageAsset[]
   mermaid: TypstMermaidAsset[]
   markmap: TypstMarkmapAsset[]
   vega: TypstVegaAsset[]
+  draw: TypstDrawAsset[]
 }
 
 export interface TypstSerializeOptions {
@@ -55,10 +64,12 @@ interface SerializeCtx {
   mermaid: TypstMermaidAsset[]
   markmap: TypstMarkmapAsset[]
   vega: TypstVegaAsset[]
+  draw: TypstDrawAsset[]
   imageSeq: number
   mermaidSeq: number
   markmapSeq: number
   vegaSeq: number
+  drawSeq: number
   assetPathPrefix: string
 }
 
@@ -131,12 +142,17 @@ function tableToTypst(node: BlockNode, ctx: SerializeCtx): string {
   const rows = node.content ?? []
   if (!rows.length) return ''
   const colCount = (rows[0].content ?? []).length || 1
+  const values = computeBlockTableValues(node)
   const cells: string[] = []
-  for (const row of rows) {
-    for (const cell of row.content ?? []) {
-      cells.push(`[${inlineContent(cell, ctx).trim()}]`)
-    }
-  }
+  rows.forEach((row, rowIndex) => {
+    ;(row.content ?? []).forEach((cell, colIndex) => {
+      const formula = typeof cell.attrs?.formula === 'string' ? cell.attrs.formula.trim() : ''
+      const content = formula
+        ? escapeText(values.get(`${rowIndex}:${colIndex}`)?.value ?? formula)
+        : inlineContent(cell, ctx).trim()
+      cells.push(`[${content}]`)
+    })
+  })
   // Tables are block-level and left-aligned by default; center them in the page.
   return `#align(center)[#table(\n  columns: ${colCount},\n  ${cells.join(', ')}\n)]`
 }
@@ -202,6 +218,14 @@ function nodeToTypst(node: BlockNode, ctx: SerializeCtx): string {
       const name = registerVega(String(node.attrs?.spec ?? ''), ctx)
       return `#figure(image(${quote(name)}))`
     }
+    case 'draw_block': {
+      // The drawing's svgPreview is a native-path SVG (no foreignObject), so it
+      // rasterises cleanly via usvg. Skip empty drawings.
+      const svg = String(node.attrs?.svgPreview ?? '')
+      if (!svg.trim()) return ''
+      const name = registerDraw(svg, ctx)
+      return `#figure(image(${quote(name)}, width: 70%))`
+    }
     case 'table':
       return tableToTypst(node, ctx)
     case 'column_list': {
@@ -256,6 +280,12 @@ function registerMarkmap(markdown: string, ctx: SerializeCtx): string {
 function registerVega(spec: string, ctx: SerializeCtx): string {
   const name = `vega-${++ctx.vegaSeq}.svg`
   ctx.vega.push({ name, spec })
+  return `${ctx.assetPathPrefix}${name}`
+}
+
+function registerDraw(svg: string, ctx: SerializeCtx): string {
+  const name = `draw-${++ctx.drawSeq}.svg`
+  ctx.draw.push({ name, svg })
   return `${ctx.assetPathPrefix}${name}`
 }
 
@@ -317,13 +347,15 @@ export function serializeNoteToTypst(
     mermaid: [],
     markmap: [],
     vega: [],
+    draw: [],
     imageSeq: 0,
     mermaidSeq: 0,
     markmapSeq: 0,
     vegaSeq: 0,
+    drawSeq: 0,
     assetPathPrefix: serializeOptions.assetPathPrefix ?? '',
   }
   const body = nodeToTypst(note.content, ctx)
   const source = `${buildPreamble(note.title, options)}\n\n${body}\n`
-  return { source, images: ctx.images, mermaid: ctx.mermaid, markmap: ctx.markmap, vega: ctx.vega }
+  return { source, images: ctx.images, mermaid: ctx.mermaid, markmap: ctx.markmap, vega: ctx.vega, draw: ctx.draw }
 }

@@ -18,7 +18,7 @@ vi.mock('../../tauri/commands', () => ({
     cleanupOrphanedAssets: vi.fn(async () => undefined),
   },
   collabCommands: {
-    loadYjsState: vi.fn(async () => []),
+    loadYjsState: vi.fn(async () => new Uint8Array()),
     saveYjsState: vi.fn(async () => undefined),
   },
   noteCommands: {

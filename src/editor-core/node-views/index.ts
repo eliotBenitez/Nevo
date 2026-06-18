@@ -7,6 +7,7 @@ import { createHeadingNodeView } from './heading'
 import { createFileNodeView } from './file'
 import { createCodeBlockNodeView } from './code-block'
 import { createMermaidNodeView } from './mermaid'
+import { createDrawNodeView } from './draw'
 import { createMarkmapNodeView } from './markmap'
 import { createVegaNodeView } from './vega'
 import { createNoteEmbedNodeView } from './note-embed'
@@ -47,6 +48,7 @@ export function createCoreNodeViews(schema: Schema, options?: CoreNodeViewOption
   }
   if (schema.nodes.mermaid_block) {
     nodeViews.mermaid_block = (node, view, getPos) => createMermaidNodeView(node, view, getPos, options)
+    nodeViews.draw_block = (node, view, getPos) => createDrawNodeView(node, view, getPos, options)
   }
   if (schema.nodes.markmap_block) {
     nodeViews.markmap_block = (node, view, getPos) => createMarkmapNodeView(node, view, getPos, options)

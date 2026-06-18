@@ -1,7 +1,8 @@
 import type { BlockNode, NoteDocument } from '../../types/note'
 import { getPluginNodeSerializer } from '../../editor-core/plugin-host/active-serialization'
+import { computeBlockTableValues } from '../../editor-core/tableFormula'
 import type { NevoSerializableNode } from '../../types/editor-plugin'
-import { renderKatexToString } from '../katex'
+import { loadKatex, renderKatexToString } from '../katex'
 import { renderMermaidToSvg } from './mermaidToSvg'
 import { renderMarkmapToSvg } from './markmapToSvg'
 
@@ -260,6 +261,9 @@ async function listItemContent(node: BlockNode, ctx: SerializeCtx): Promise<stri
 }
 
 export async function blockNode(node: BlockNode, ctx: SerializeCtx): Promise<string> {
+  // KaTeX renders synchronously inside renderMath(); ensure the lazily-loaded
+  // module is ready before any math node is serialized.
+  await loadKatex()
   switch (node.type) {
     case 'doc':
       return blockChildren(node, ctx)
@@ -295,12 +299,19 @@ export async function blockNode(node: BlockNode, ctx: SerializeCtx): Promise<str
     case 'table': {
       const rows = node.content ?? []
       if (!rows.length) return ''
-      const htmlRows = await Promise.all(rows.map(async row => {
-        const cells = await Promise.all((row.content ?? []).map(async cell => {
+      const values = computeBlockTableValues(node)
+      const htmlRows = await Promise.all(rows.map(async (row, rowIndex) => {
+        const cells = await Promise.all((row.content ?? []).map(async (cell, colIndex) => {
           const tag = cell.type === 'table_header' ? 'th' : 'td'
-          const body = cell.content?.length === 1 && cell.content[0].type === 'paragraph'
-            ? inlineContent(cell.content[0], ctx)
-            : await blockChildren(cell, ctx)
+          const formula = typeof cell.attrs?.formula === 'string' ? cell.attrs.formula.trim() : ''
+          let body: string
+          if (formula) {
+            body = escapeHtml(values.get(`${rowIndex}:${colIndex}`)?.value ?? formula)
+          } else {
+            body = cell.content?.length === 1 && cell.content[0].type === 'paragraph'
+              ? inlineContent(cell.content[0], ctx)
+              : await blockChildren(cell, ctx)
+          }
           return `<${tag}${tableCellStyle(cell)}>${body}</${tag}>`
         }))
         return `<tr>${cells.join('')}</tr>`

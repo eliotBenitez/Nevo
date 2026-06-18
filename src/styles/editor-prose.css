@@ -507,6 +507,76 @@
   font-style: italic;
 }
 
+/* --- Draw block (hand-drawn diagrams) --- */
+.doc-editor .nv-prosemirror .nv-draw-block {
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-1);
+  cursor: pointer;
+  transition: border-color 0.12s ease;
+}
+.doc-editor .nv-prosemirror .nv-draw-block:hover {
+  border-color: var(--accent);
+}
+.doc-editor .nv-prosemirror .nv-draw-block.ProseMirror-selectednode {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 35%, transparent);
+}
+.doc-editor .nv-prosemirror .nv-draw-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  font-size: 12px;
+  color: var(--text-3);
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border-2);
+}
+.doc-editor .nv-prosemirror .nv-draw-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.doc-editor .nv-prosemirror .nv-draw-header-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-3);
+}
+.doc-editor .nv-prosemirror .nv-draw-open-hint {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.doc-editor .nv-prosemirror .nv-draw-block:hover .nv-draw-open-hint {
+  opacity: 1;
+}
+.doc-editor .nv-prosemirror .nv-draw-render {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  padding: 16px 20px;
+}
+.doc-editor .nv-prosemirror .nv-draw-render svg {
+  max-width: 100%;
+  height: auto;
+}
+.doc-editor .nv-prosemirror .nv-draw-empty {
+  color: var(--text-4);
+  font-size: 13px;
+  font-style: italic;
+}
+.doc-editor .nv-prosemirror .nv-draw-caption {
+  padding: 6px 14px 10px;
+  font-size: 13px;
+  color: var(--text-3);
+  text-align: center;
+}
+.doc-editor .nv-prosemirror .nv-draw-caption[data-visible='false'] {
+  display: none;
+}
+
 .doc-editor .nv-prosemirror .nv-mermaid-block[data-error='true'] {
   border-color: color-mix(in oklab, #c84e4e 45%, var(--line-2));
 }
@@ -828,6 +898,28 @@
 .doc-editor .nv-prosemirror td > p,
 .doc-editor .nv-prosemirror th > p {
   margin: 0;
+}
+
+/* Formula cells render their computed value via a widget decoration; the
+   underlying (empty) cell content is hidden so only the result is shown. */
+.doc-editor .nv-prosemirror td.nv-formula-cell > :not(.nv-formula-value),
+.doc-editor .nv-prosemirror th.nv-formula-cell > :not(.nv-formula-value) {
+  display: none;
+}
+
+.doc-editor .nv-prosemirror .nv-formula-value {
+  display: inline-block;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.doc-editor .nv-prosemirror td.nv-formula-cell,
+.doc-editor .nv-prosemirror th.nv-formula-cell {
+  background: color-mix(in oklab, var(--accent, #4f8cff) 7%, transparent);
+}
+
+.doc-editor .nv-prosemirror .nv-formula-cell[data-error='true'] .nv-formula-value {
+  color: rgba(239, 68, 68, 0.95);
 }
 
 .doc-editor .nv-prosemirror tr > *:last-child {
@@ -1328,6 +1420,19 @@
 .doc-editor .nv-prosemirror .nv-internal-link:hover {
   border-bottom-color: var(--accent);
   opacity: 0.85;
+}
+
+/* Broken internal links — target note no longer exists. Marked via the
+ * broken-link-decoration plugin (inline decoration adds `.is-broken`). */
+.doc-editor .nv-prosemirror .nv-internal-link.is-broken,
+.doc-editor .nv-prosemirror .nv-internal-link .is-broken {
+  color: var(--danger, #e0533d);
+  border-bottom: 1px dashed color-mix(in oklab, var(--danger, #e0533d) 70%, transparent);
+}
+.doc-editor .nv-prosemirror .nv-internal-link.is-broken:hover,
+.doc-editor .nv-prosemirror .nv-internal-link:hover .is-broken {
+  border-bottom-style: solid;
+  opacity: 1;
 }
 
 /* ---- Shared embed button / input base ---- */

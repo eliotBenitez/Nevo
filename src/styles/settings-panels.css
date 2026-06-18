@@ -43,10 +43,20 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 20px 30px 30px;
   display: flex;
   flex-direction: column;
   gap: 24px;
+  contain: paint;
+  /* The settings window has `border-radius` + `overflow: hidden`; a rounded-corner
+     clipping ancestor disables WebKit's accelerated overflow scrolling, forcing slow
+     main-thread repaints on every scroll frame. `will-change: transform` is the
+     documented hint that pushes this scroller onto WebKit's composited scroll path
+     independent of that clip (the editor's `.doc-body` is smooth precisely because it
+     has no rounded-clip ancestor). Unlike the permanent full-viewport `.nv-canvas`
+     layer, this scroller only exists while the modal is open, so the hint is transient. */
+  will-change: transform;
 }
 
 .search-field {

@@ -45,7 +45,7 @@ watch(() => props.open, (open) => {
   toggleEscapeListener(open)
   if (open) nextTick(activate)
   else deactivate()
-})
+}, { immediate: true })
 
 onBeforeUnmount(() => { toggleEscapeListener(false) })
 

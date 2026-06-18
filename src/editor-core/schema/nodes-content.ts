@@ -187,6 +187,50 @@ export const mermaidBlockNodeSpec: NodeSpec = {
   },
 }
 
+export const drawBlockNodeSpec: NodeSpec = {
+  group: 'block',
+  atom: true,
+  selectable: true,
+  draggable: true,
+  defining: true,
+  attrs: {
+    // Stable drawing id (uuid). Lets the canvas find and update the right
+    // node after saving, and seeds the asset filename.
+    drawId: { default: '' },
+    // Relative path to the `.draw.json` asset (".nevo/assets/draw-<id>-<hash>.draw.json").
+    // Empty until the first save on the canvas.
+    src: { default: '' },
+    // Inline SVG snapshot for the document preview — cheap to render in the
+    // note without loading the (potentially large) stroke payload.
+    svgPreview: { default: '' },
+    // Optional caption shown under the drawing.
+    title: { default: '' },
+  },
+  parseDOM: [
+    {
+      tag: 'div[data-nevo-draw-block]',
+      getAttrs(dom) {
+        if (!(dom instanceof HTMLElement)) return false
+        return {
+          drawId: dom.dataset.drawId ?? '',
+          src: dom.dataset.src ?? '',
+          svgPreview: dom.dataset.svgPreview ?? '',
+          title: dom.dataset.title ?? '',
+        }
+      },
+    },
+  ],
+  toDOM(node) {
+    const attrs: Record<string, string> = { 'data-nevo-draw-block': 'true' }
+    if (node.attrs.drawId) attrs['data-draw-id'] = node.attrs.drawId
+    if (node.attrs.src) attrs['data-src'] = node.attrs.src
+    if (node.attrs.title) attrs['data-title'] = node.attrs.title
+    // svgPreview can be large; keep it out of the DOM data-attrs to avoid
+    // bloating the serialized HTML. The node-view renders it from the node.
+    return ['div', attrs]
+  },
+}
+
 export const vegaBlockNodeSpec: NodeSpec = {
   group: 'block',
   atom: true,

@@ -30,6 +30,10 @@ const routes: RouteRecordRaw[] = [
     path: '/workspace/board/:boardId',
     component: () => import('../app/WorkspaceShell.vue'),
   },
+  {
+    path: '/workspace/draw/:noteId/:drawId',
+    component: () => import('../app/WorkspaceShell.vue'),
+  },
 ]
 
 export const router = createRouter({

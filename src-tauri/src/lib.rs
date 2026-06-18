@@ -114,15 +114,28 @@ fn configure_bundled_gstreamer() {
     }
 }
 
-/// WebKitGTK tries to bring up its DMABUF renderer through EGL/GBM. On many
-/// systems — and especially inside an AppImage, where bundled graphics
-/// libraries clash with the host GPU drivers — creating the EGL display fails
-/// with `EGL_BAD_PARAMETER`, which aborts the web process and leaves a blank
-/// (gray) window. Disabling the DMABUF renderer forces a compatible rendering
-/// path and avoids the crash. We only set it when the user has not already
-/// chosen a value, so it can still be overridden.
+/// WebKitGTK tries to bring up its DMABUF renderer through EGL/GBM. Inside an
+/// AppImage this crashes (`EGL_BAD_PARAMETER`, gray window) because the
+/// bundled libEGL/GBM clash with the host GPU drivers. Disabling the DMABUF
+/// renderer there forces a compatible software path and avoids the crash.
+///
+/// This guard is **AppImage-only**: `.deb`/`.rpm`/Flatpak and `tauri dev` use
+/// the system graphics stack, where the DMABUF renderer works and provides
+/// hardware GPU compositing. Setting the variable unconditionally (as it once
+/// did) silently forces software compositing everywhere — which is extremely
+/// expensive for `backdrop-filter`/translucent layers and turns every scroll
+/// into a frame-time spike. We therefore only act when `APPDIR` is present,
+/// i.e. when running from a mounted AppImage.
 #[cfg(target_os = "linux")]
 fn configure_webkit_rendering() {
+    let Ok(appdir) = std::env::var("APPDIR") else {
+        return;
+    };
+    if appdir.is_empty() {
+        return;
+    }
+
+    // Honour a user override; only set when they haven't chosen a value.
     if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
         std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
     }
@@ -230,6 +243,8 @@ pub fn run() {
             note::import_image_asset,
             note::import_asset_by_path,
             note::delete_unreferenced_asset,
+            note::save_draw_asset,
+            note::read_draw_asset,
             note::open_file_path,
             media_server::get_media_server_info,
             note::search_workspace_blocks,

@@ -23,6 +23,7 @@ import {
   SmilePlus,
   SquareCode,
   Table,
+  Palette,
 } from 'lucide-vue-next'
 import type { NevoSlashItem } from '../../../types/editor-plugin'
 import NvIconPicker from '../../../ui/primitives/NvIconPicker.vue'
@@ -73,6 +74,7 @@ const slashIconById: Record<string, Component> = {
   embed: Globe,
   divider: Minus,
   checklist: CheckSquare,
+  draw: Palette,
 }
 
 const CATEGORY_ORDER = ['text', 'lists', 'code', 'media', 'layout']

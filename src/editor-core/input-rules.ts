@@ -2,6 +2,7 @@ import { InputRule, inputRules, textblockTypeInputRule, wrappingInputRule } from
 import { NodeSelection, TextSelection } from 'prosemirror-state'
 import type { Plugin } from 'prosemirror-state'
 import { Fragment, type MarkType, type Node as PMNode, type NodeType, type Schema } from 'prosemirror-model'
+import { generateDrawId } from '../utils/draw/drawEngine'
 
 function markInputRule(regexp: RegExp, markType: MarkType, attrs?: Record<string, unknown>): InputRule {
   return new InputRule(regexp, (state, match, start, end) => {
@@ -216,6 +217,21 @@ function blockRules(schema: Schema): InputRule[] {
         const markmapBlock = schema.nodes.markmap_block.create({ markdown: '# Topic\n## Idea A\n## Idea B' })
         const from = $from.before()
         const tr = state.tr.replaceWith(from, $from.after(), markmapBlock)
+        return tr.setSelection(NodeSelection.create(tr.doc, from))
+      }),
+    )
+  }
+
+  // ```draw → draw block (opens the canvas on click)
+  if (schema.nodes.draw_block) {
+    rules.push(
+      new InputRule(/^```draw\s$/, (state) => {
+        const { $from } = state.selection
+        if (!$from.parent.isTextblock) return null
+        const drawId = generateDrawId()
+        const drawBlock = schema.nodes.draw_block.create({ drawId, src: '', svgPreview: '', title: '' })
+        const from = $from.before()
+        const tr = state.tr.replaceWith(from, $from.after(), drawBlock)
         return tr.setSelection(NodeSelection.create(tr.doc, from))
       }),
     )

@@ -147,6 +147,7 @@ export interface NevoTableContext {
     borderColor: string | null
     textColor: string | null
     padding: string | null
+    formula: string | null
     isHeader: boolean
   } | null
 }

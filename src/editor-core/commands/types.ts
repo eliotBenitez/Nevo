@@ -135,6 +135,7 @@ export interface NevoCoreCommands {
   setImageAttrsAtSelection: (attrs: Partial<ImageBlockAttrs>) => Command
   setFileAttrsAtSelection: (attrs: Partial<FileBlockAttrs>) => Command
   setTableCellAttr: (name: string, value: unknown) => Command
+  setTableCellFormula: (value: string | null) => Command
   setTableCellAlignment: (alignment: TableCellAlignment) => Command
   setTableCellBackground: (background: string | null) => Command
   insertMermaid: () => Command

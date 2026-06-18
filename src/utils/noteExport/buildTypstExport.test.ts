@@ -40,6 +40,23 @@ describe('buildTypstExport', () => {
     ])
   })
 
+  it('inlines drawings, replacing width="100%" with viewBox pixel size for usvg', async () => {
+    const svgPreview = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="100%" preserveAspectRatio="xMidYMid meet"><path d="M0 0L10 10"/></svg>'
+
+    const payload = await buildTypstExport(note({
+      type: 'doc',
+      content: [
+        { type: 'draw_block', attrs: { drawId: 'd1', src: 's', svgPreview } },
+      ],
+    }))
+
+    expect(payload.source).toContain('image("draw-1.svg", width: 70%)')
+    expect(payload.assets).toHaveLength(1)
+    const decoded = atob(payload.assets[0].bytesBase64!)
+    expect(decoded).toContain('width="120" height="80"')
+    expect(decoded).not.toContain('width="100%"')
+  })
+
   it('skips invalid Vega charts when SVG rendering returns null', async () => {
     vi.mocked(renderVegaToSvg).mockResolvedValueOnce(null)
 

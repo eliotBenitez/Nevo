@@ -105,3 +105,168 @@ export const emojiCategories: EmojiCategory[] = categoryConfig
     }
   })
   .filter((category) => category.items.length > 0)
+
+let canvas: HTMLCanvasElement | null = null
+let ctx: CanvasRenderingContext2D | null = null
+let tofuData: Uint8ClampedArray | null = null
+let doubleTofuData: Uint8ClampedArray | null = null
+let singleEmojiWidth = 0
+
+function initCanvas() {
+  if (typeof document === 'undefined') return
+  try {
+    canvas = document.createElement('canvas')
+    canvas.width = 32
+    canvas.height = 32
+    ctx = canvas.getContext('2d', { willReadFrequently: true })
+    if (!ctx) return
+
+    ctx.font = '16px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif'
+    ctx.textBaseline = 'top'
+
+    // Measure base single emoji width
+    singleEmojiWidth = ctx.measureText('😀').width
+
+    // Render a known unsupported glyph (tofu) to compare
+    // Unicode \uFFFF is guaranteed to be unsupported
+    ctx.clearRect(0, 0, 32, 32)
+    ctx.fillText('\u{FFFF}', 0, 0)
+    tofuData = ctx.getImageData(0, 0, 32, 32).data
+
+    // Also render two tofus to capture split rendering if needed
+    ctx.clearRect(0, 0, 32, 32)
+    ctx.fillText('\u{FFFF}\u{FFFF}', 0, 0)
+    doubleTofuData = ctx.getImageData(0, 0, 32, 32).data
+  } catch (e) {
+    ctx = null
+  }
+}
+
+const supportCache = new Map<string, boolean>()
+
+export function isEmojiSupported(emoji: string): boolean {
+  if (typeof document === 'undefined') return true
+  if (supportCache.has(emoji)) return supportCache.get(emoji)!
+
+  if (!canvas) {
+    initCanvas()
+  }
+  if (!ctx || !tofuData) return true // Fallback to true if Canvas/Context is not available
+
+  try {
+    // 1. Check width first
+    const width = ctx.measureText(emoji).width
+    // If it's a ZWJ sequence/compound emoji and split into multiple parts, it will be much wider
+    // than a single emoji
+    if (singleEmojiWidth > 0 && width > singleEmojiWidth * 1.8) {
+      supportCache.set(emoji, false)
+      return false
+    }
+
+    // 2. Render target emoji
+    ctx.clearRect(0, 0, 32, 32)
+    ctx.fillText(emoji, 0, 0)
+    const emojiData = ctx.getImageData(0, 0, 32, 32).data
+
+    // 3. Compare with tofuData
+    let matchTofu = true
+    for (let i = 0; i < tofuData.length; i++) {
+      if (tofuData[i] !== emojiData[i]) {
+        matchTofu = false
+        break
+      }
+    }
+    if (matchTofu) {
+      supportCache.set(emoji, false)
+      return false
+    }
+
+    // 4. Also compare with doubleTofuData
+    if (doubleTofuData) {
+      let matchDoubleTofu = true
+      for (let i = 0; i < doubleTofuData.length; i++) {
+        if (doubleTofuData[i] !== emojiData[i]) {
+          matchDoubleTofu = false
+          break
+        }
+      }
+      if (matchDoubleTofu) {
+        supportCache.set(emoji, false)
+        return false
+      }
+    }
+
+    // 5. Check if it's completely blank (all transparent pixels)
+    let isBlank = true
+    for (let i = 3; i < emojiData.length; i += 4) {
+      if (emojiData[i] !== 0) {
+        isBlank = false
+        break
+      }
+    }
+    if (isBlank) {
+      supportCache.set(emoji, false)
+      return false
+    }
+
+    supportCache.set(emoji, true)
+    return true
+  } catch (e) {
+    return true
+  }
+}
+
+/**
+ * Асинхронно фильтрует список категорий эмодзи порциями, чтобы не блокировать UI thread.
+ */
+export function filterUnsupportedEmojisAsync(
+  categories: EmojiCategory[]
+): Promise<EmojiCategory[]> {
+  return new Promise((resolve) => {
+    const result: EmojiCategory[] = categories.map((cat) => ({
+      ...cat,
+      items: [],
+    }))
+
+    let categoryIndex = 0
+    let itemIndex = 0
+    const batchSize = 150
+
+    function processBatch() {
+      let processed = 0
+
+      while (categoryIndex < categories.length && processed < batchSize) {
+        const sourceCat = categories[categoryIndex]
+        const destCat = result[categoryIndex]
+
+        const itemsToProcess = sourceCat.items.slice(itemIndex, itemIndex + (batchSize - processed))
+        for (const item of itemsToProcess) {
+          if (isEmojiSupported(item.value)) {
+            destCat.items.push(item)
+          }
+        }
+
+        processed += itemsToProcess.length
+        itemIndex += itemsToProcess.length
+
+        if (itemIndex >= sourceCat.items.length) {
+          categoryIndex++
+          itemIndex = 0
+        }
+      }
+
+      if (categoryIndex < categories.length) {
+        if (typeof requestIdleCallback === 'function') {
+          requestIdleCallback(() => processBatch())
+        } else {
+          setTimeout(processBatch, 0)
+        }
+      } else {
+        const finalResult = result.filter((cat) => cat.items.length > 0)
+        resolve(finalResult)
+      }
+    }
+
+    processBatch()
+  })
+}

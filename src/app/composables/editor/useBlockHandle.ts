@@ -10,8 +10,11 @@ export interface BlockHandleState {
   visible: boolean
   position: { top: number; left: number }
   hoveredBlockPos: number | null
-  hoveredBlockNode: PMNode | null
-  hoveredBlockDom: HTMLElement | null
+  /** Primitive mirror of the hovered block's type so Vue only tracks a string
+   *  change instead of deep-proxying a ProseMirror node. */
+  hoveredBlockTypeName: string | null
+  /** Extra attrs needed to resolve the block icon (e.g. heading level, media kind). */
+  hoveredBlockIconAttrs: { level?: number; kind?: string } | null
   isDragging: boolean
   typeMenuOpen: boolean
   typeMenuPosition: { top: number; left: number }
@@ -45,6 +48,14 @@ const BLOCK_HANDLE_LEFT_OFFSET = 28
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
+}
+
+/** Extracts only the primitive attrs the block-handle icon depends on, so Vue
+ *  can track a small stable shape instead of a deep ProseMirror node. */
+function extractBlockIconAttrs(node: PMNode): { level?: number; kind?: string } | null {
+  if (node.type.name === 'heading') return { level: node.attrs.level }
+  if (node.type.name === 'media_block') return { kind: node.attrs.kind }
+  return null
 }
 
 export function resolveBlockHandlePosition(
@@ -148,12 +159,17 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     visible: false,
     position: { top: 0, left: 0 },
     hoveredBlockPos: null,
-    hoveredBlockNode: null,
-    hoveredBlockDom: null,
+    hoveredBlockTypeName: null,
+    hoveredBlockIconAttrs: null,
     isDragging: false,
     typeMenuOpen: false,
     typeMenuPosition: { top: 0, left: 0 },
   })
+
+  // Heavy/non-reactive refs kept outside Vue's reactivity: a ProseMirror node
+  // would otherwise be deep-proxied on every hover, and the DOM element has no
+  // reason to be tracked reactively.
+  let hoveredBlockDom: HTMLElement | null = null
 
   let currentDom: EventTarget | null = null
   let isOverHandle = false
@@ -188,8 +204,8 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     // Sticky corridor: when moving toward the currently shown handle (which sits in the
     // gap to the left of the active block), keep it instead of recomputing. Without this,
     // crossing into a neighbouring column while reaching the handle makes it jump away.
-    if (blockHandle.visible && blockHandle.hoveredBlockDom && !blockHandle.typeMenuOpen) {
-      const rect = blockHandle.hoveredBlockDom.getBoundingClientRect()
+    if (blockHandle.visible && hoveredBlockDom && !blockHandle.typeMenuOpen) {
+      const rect = hoveredBlockDom.getBoundingClientRect()
       const corridorLeft = blockHandle.position.left - BLOCK_HANDLE_BOUNDARY_MARGIN
       if (clientY >= rect.top && clientY <= rect.bottom && clientX >= corridorLeft && clientX <= rect.right) {
         return
@@ -291,7 +307,7 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     if (
       blockHandle.visible
       && blockHandle.hoveredBlockPos === hoveredBlockPos
-      && blockHandle.hoveredBlockDom === blockDom
+      && hoveredBlockDom === blockDom
       && !blockHandle.typeMenuOpen
     ) return
 
@@ -299,8 +315,9 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     clearHideTimer()
     blockHandle.visible = true
     blockHandle.hoveredBlockPos = hoveredBlockPos
-    blockHandle.hoveredBlockNode = blockNode
-    blockHandle.hoveredBlockDom = blockDom
+    blockHandle.hoveredBlockTypeName = blockNode.type.name
+    blockHandle.hoveredBlockIconAttrs = extractBlockIconAttrs(blockNode)
+    hoveredBlockDom = blockDom
     const handleBounds = options.getHandleBoundaryEl?.()?.getBoundingClientRect()
     blockHandle.position = resolveBlockHandlePosition(blockRect, handleBounds)
   }
@@ -366,8 +383,9 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     blockHandle.visible = false
     blockHandle.typeMenuOpen = false
     blockHandle.hoveredBlockPos = null
-    blockHandle.hoveredBlockNode = null
-    blockHandle.hoveredBlockDom = null
+    blockHandle.hoveredBlockTypeName = null
+    blockHandle.hoveredBlockIconAttrs = null
+    hoveredBlockDom = null
   }
 
   let dragGhost: HTMLElement | null = null
@@ -529,7 +547,10 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
   }
 
   function copyBlockRef() {
-    const node = blockHandle.hoveredBlockNode
+    const view = core.editorView
+    const pos = blockHandle.hoveredBlockPos
+    if (!view || pos === null) return
+    const node = view.state.doc.nodeAt(pos)
     if (!node) return
     navigator.clipboard.writeText(node.textContent).catch(() => {})
     blockHandle.typeMenuOpen = false

@@ -39,14 +39,18 @@ export const useTreeStore = defineStore('tree', () => {
   const tree = computed<TreeNode[]>(() => {
     const manifest = workspaceStore.manifest
     if (!manifest) return []
+    // Resolve each root id via the prebuilt maps (O(1)) instead of scanning the
+    // root folder/note arrays for every entry (was O(rootOrder × roots)).
+    const folders = folderById.value
+    const notes = noteById.value
     const nodes: TreeNode[] = []
     for (const id of manifest.rootOrder) {
-      const folder = manifest.tree.find(f => f.id === id)
+      const folder = folders.get(id)
       if (folder) {
         nodes.push({ kind: 'folder', meta: folder })
         continue
       }
-      const note = manifest.rootNotes.find(n => n.id === id)
+      const note = notes.get(id)
       if (note) nodes.push({ kind: 'note', meta: note })
     }
     return nodes
@@ -214,7 +218,19 @@ export const useTreeStore = defineStore('tree', () => {
     manifest.trash = []
   }
 
-  return { tree, folderById, noteById, createFolder, renameFolder, deleteFolder, createNote, createNoteFromTemplate, renameNote, syncNoteMeta, deleteNote, moveNote, restoreFromTrash, permanentlyDeleteFromTrash, emptyTrash }
+  /** Resolve a note id by its title (case-insensitive, trimmed, exact match).
+   *  Used by wiki-link `[[Title]]` resolution for both the link picker and the
+   *  Markdown importer. Returns null when no note matches. */
+  function resolveNoteIdByTitle(title: string): string | null {
+    const normalized = title.trim().toLowerCase()
+    if (!normalized) return null
+    for (const meta of noteById.value.values()) {
+      if (meta.title.trim().toLowerCase() === normalized) return meta.id
+    }
+    return null
+  }
+
+  return { tree, folderById, noteById, resolveNoteIdByTitle, createFolder, renameFolder, deleteFolder, createNote, createNoteFromTemplate, renameNote, syncNoteMeta, deleteNote, moveNote, restoreFromTrash, permanentlyDeleteFromTrash, emptyTrash }
 })
 
 // --- tree mutation helpers ---

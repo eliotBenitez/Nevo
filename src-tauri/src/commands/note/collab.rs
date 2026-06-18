@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use tauri::ipc::{InvokeBody, Request, Response};
+
 use crate::commands::path_utils::normalize_workspace_path;
 
 fn yjs_state_path(workspace_path: &str, note_id: &str) -> Result<std::path::PathBuf, String> {
@@ -10,12 +12,28 @@ fn yjs_state_path(workspace_path: &str, note_id: &str) -> Result<std::path::Path
         .join(format!("{}.yjs", note_id)))
 }
 
+/// Persists the binary Y.Doc update. The bytes are sent from the frontend as a
+/// raw request body (ArrayBuffer / Uint8Array) instead of a JSON array of
+/// numbers, which avoids the ~3-4× transport overhead of encoding every byte
+/// as a JSON number. `workspace_path` and `note_id` are passed via headers.
 #[tauri::command]
-pub fn save_yjs_state(
-    workspace_path: String,
-    note_id: String,
-    bytes: Vec<u8>,
-) -> Result<(), String> {
+pub fn save_yjs_state(request: Request) -> Result<(), String> {
+    let headers = request.headers();
+    let workspace_path = headers
+        .get("nv-workspace-path")
+        .and_then(|v| v.to_str().ok())
+        .ok_or_else(|| "missing nv-workspace-path header".to_string())?
+        .to_owned();
+    let note_id = headers
+        .get("nv-note-id")
+        .and_then(|v| v.to_str().ok())
+        .ok_or_else(|| "missing nv-note-id header".to_string())?;
+
+    let bytes = match request.body() {
+        InvokeBody::Raw(bytes) => bytes.as_slice(),
+        _ => return Err("save_yjs_state expects a raw binary body".to_string()),
+    };
+
     let workspace_path = normalize_workspace_path(&workspace_path)
         .map_err(|e| e.to_string())?
         .to_string_lossy()
@@ -24,20 +42,23 @@ pub fn save_yjs_state(
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
-    crate::commands::path_utils::write_atomic(&path, &bytes).map_err(|e| e.to_string())
+    crate::commands::path_utils::write_atomic(&path, bytes).map_err(|e| e.to_string())
 }
 
+/// Loads the persisted Y.Doc bytes and returns them as a raw binary response
+/// (ArrayBuffer on the frontend), avoiding JSON-array encoding.
 #[tauri::command]
-pub fn load_yjs_state(workspace_path: String, note_id: String) -> Result<Vec<u8>, String> {
+pub fn load_yjs_state(workspace_path: String, note_id: String) -> Result<Response, String> {
     let workspace_path = normalize_workspace_path(&workspace_path)
         .map_err(|e| e.to_string())?
         .to_string_lossy()
         .into_owned();
     let path = yjs_state_path(&workspace_path, &note_id)?;
     if !path.exists() {
-        return Ok(Vec::new());
+        return Ok(Response::new(Vec::new()));
     }
-    std::fs::read(&path).map_err(|e| e.to_string())
+    let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
+    Ok(Response::new(bytes))
 }
 
 /// Max size for a text file imported through `read_text_file` (25 MiB).

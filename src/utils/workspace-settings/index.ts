@@ -5,7 +5,8 @@ export { ACCENT_PRESETS, EDITOR_FONT_FAMILY_VARS, EDITOR_LINE_WIDTHS, resolveEdi
 export { normalizeWorkspaceSettings, normalizeAppConfig, normalizeHotkeyBindings } from './normalizers'
 
 export function cloneWorkspaceSettings(settings: WorkspaceSettings): WorkspaceSettings {
-  return JSON.parse(JSON.stringify(settings)) as WorkspaceSettings
+  // structuredClone is faster than a JSON round-trip; settings is plain data.
+  return structuredClone(settings)
 }
 
 export function resolveBindingChord(binding: HotkeyBinding): string {

@@ -80,6 +80,10 @@ export interface WorkspaceBackend {
   importImageAsset(fileName: string, bytes: number[]): Promise<ImportedImageAsset>
   importAssetByPath(sourcePath: string, fileName: string): Promise<ImportedImageAsset>
   deleteUnreferencedAsset(assetSrc: string): Promise<boolean>
+  /** Persist a draw_block payload (JSON bytes) and return the relative `src`. */
+  saveDrawAsset(drawId: string, bytes: number[]): Promise<string>
+  /** Read a draw_block payload back as JSON bytes. */
+  readDrawAsset(src: string): Promise<number[]>
 
   // --- snapshots / history ---
   listNoteSnapshots(noteId: string): Promise<NoteSnapshotMeta[]>

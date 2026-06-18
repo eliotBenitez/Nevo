@@ -159,8 +159,13 @@ export function collectWorkspaceEntitySearchItems(manifest: WorkspaceManifest | 
 
   const items: WorkspaceEntitySearchItem[] = []
 
+  // Index root entries so walking rootOrder is O(1) per id instead of re-scanning
+  // the root note/folder arrays for every entry (was O(rootOrder × roots)).
+  const rootNotes = new Map(manifest.rootNotes.map(note => [note.id, note]))
+  const rootFolders = new Map(manifest.tree.map(folder => [folder.id, folder]))
+
   for (const id of manifest.rootOrder) {
-    const rootNote = manifest.rootNotes.find(note => note.id === id)
+    const rootNote = rootNotes.get(id)
     if (rootNote) {
       items.push({
         type: 'note',
@@ -171,7 +176,7 @@ export function collectWorkspaceEntitySearchItems(manifest: WorkspaceManifest | 
       continue
     }
 
-    const rootFolder = manifest.tree.find(folder => folder.id === id)
+    const rootFolder = rootFolders.get(id)
     if (rootFolder) {
       collectFolderItems(rootFolder, '', items)
     }

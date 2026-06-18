@@ -23,9 +23,10 @@ import { getLinkRange, createLinkSetCommand, createUnsetLinkCommand } from './li
 import { getInternalLinkRange, createSetInternalLinkCommand, createUnsetInternalLinkCommand } from './internal-link'
 import { createInsertMathInlineCommand, createInsertMathBlockCommand, createUpdateMathCommand, createRemoveMathCommand } from './math'
 import { createInsertMermaidCommand, createUpdateMermaidCommand, createRemoveMermaidCommand } from './mermaid'
+import { createInsertDrawCommand, createUpdateDrawByIdCommand, createRemoveDrawCommand } from './draw'
 import { createInsertMarkmapCommand, createUpdateMarkmapCommand, createRemoveMarkmapCommand } from './markmap'
 import { createInsertVegaCommand, createUpdateVegaCommand, createRemoveVegaCommand } from './vega'
-import { createInsertTableCommand } from './table'
+import { createInsertTableCommand, createSetCellFormulaCommand } from './table'
 import { createImageAttrsCommand, createInsertImageCommand, createRemoveImageCommand } from './image'
 import { createFileAttrsCommand, createInsertFileCommand, createRemoveFileCommand } from './file'
 import { createInsertNoteEmbedCommand, createNoteEmbedAttrsCommand } from './note-embed'
@@ -201,6 +202,7 @@ export function createCoreCommands(schema: Schema) {
   const setTableCellAlignment = (alignment: TableCellAlignment): Command => setCellAttr('align', alignment)
   const setTableCellBackground = (background: string | null): Command => setCellAttr('background', background)
   const setTableCellAttr = (name: string, value: unknown): Command => setCellAttr(name, value)
+  const setTableCellFormula = (value: string | null): Command => createSetCellFormulaCommand(value)
 
   if (imageBlock) {
     commands.set('core.image.insert', createInsertImageCommand(imageBlock))
@@ -225,6 +227,17 @@ export function createCoreCommands(schema: Schema) {
 
   commands.set('core.markmap.insert', insertMarkmap())
   commands.set('core.markmap.update', updateMarkmapAtSelection(''))
+
+  const drawBlock = schema.nodes.draw_block
+  const insertDraw = drawBlock ? (drawId: string) => createInsertDrawCommand(drawBlock, drawId) : () => () => false
+  const updateDrawById = drawBlock
+    ? (drawId: string, attrs: Record<string, unknown>) => createUpdateDrawByIdCommand(drawBlock, drawId, attrs)
+    : () => () => false
+  const removeDrawAtSelection = drawBlock ? createRemoveDrawCommand(drawBlock) : () => false
+
+  commands.set('core.draw.insert', insertDraw(''))
+  commands.set('core.draw.updateById', updateDrawById('', {}))
+  commands.set('core.draw.remove', removeDrawAtSelection)
 
   const insertVega = vegaBlock ? () => createInsertVegaCommand(vegaBlock) : () => () => false
   const updateVegaAtSelection = vegaBlock ? (spec: string) => createUpdateVegaCommand(vegaBlock, spec) : () => () => false
@@ -321,6 +334,7 @@ export function createCoreCommands(schema: Schema) {
     setImageAttrsAtSelection,
     setFileAttrsAtSelection,
     setTableCellAttr,
+    setTableCellFormula,
     setTableCellAlignment,
     setTableCellBackground,
     insertMermaid,

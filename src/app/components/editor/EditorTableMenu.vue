@@ -16,6 +16,7 @@ import {
   PaintBucket,
   Plus,
   Rows3,
+  Sigma,
   Split,
   SquareCode,
   Table,
@@ -37,6 +38,7 @@ const emit = defineEmits<{
   cellAlignment: [alignment: string | null]
   cellBackground: [color: string | null]
   cellAttr: [name: string, value: string | null]
+  cellFormula: []
 }>()
 
 const { t } = useI18n()
@@ -74,6 +76,7 @@ const groups = computed<TableMenuGroup[]>(() => {
     {
       label: t('editor.table.categories.cells'),
       items: [
+        { label: t('editor.table.formula'), icon: Sigma, action: () => emit('cellFormula') },
         { label: t('editor.table.mergeCells'), icon: Combine, hint: Table, action: () => emit('command', 'core.table.merge'), disabled: !ctx?.canMerge },
         { label: t('editor.table.splitCell'), icon: Split, hint: Table, action: () => emit('command', 'core.table.split'), disabled: !ctx?.canSplit },
         { label: t('editor.table.toggleHeaderRow'), icon: Rows3, hint: Heading1, action: () => emit('command', 'core.table.header.toggle.row') },

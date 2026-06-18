@@ -19,5 +19,19 @@ export const useServerConfigStore = defineStore('serverConfig', () => {
     localStorage.setItem(STORAGE_KEY, serverUrl.value)
   }
 
-  return { serverUrl, wsBase, setServerUrl }
+  async function checkServerHealth(url: string): Promise<boolean> {
+    const normalized = url.trim().replace(/\/$/, '')
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5000)
+    try {
+      const res = await fetch(`${normalized}/health`, { signal: controller.signal })
+      return res.ok
+    } catch {
+      return false
+    } finally {
+      clearTimeout(timeoutId)
+    }
+  }
+
+  return { serverUrl, wsBase, setServerUrl, checkServerHealth }
 })

@@ -240,7 +240,7 @@ export function normalizeAppConfig(input: unknown): AppConfig {
     focusRingStyle: raw.focusRingStyle === 'high-contrast' ? 'high-contrast' : defaults.focusRingStyle,
     windowChromeStyle: raw.windowChromeStyle === 'immersive' || raw.windowChromeStyle === 'minimal' ? raw.windowChromeStyle : defaults.windowChromeStyle,
     interfaceZoom: clampZoom(raw.interfaceZoom ?? defaults.interfaceZoom),
-    reduceTransparency: raw.reduceTransparency === true,
+    reduceTransparency: typeof raw.reduceTransparency === 'boolean' ? raw.reduceTransparency : undefined,
     interfaceRoundness: raw.interfaceRoundness === 'sharp' || raw.interfaceRoundness === 'soft' ? raw.interfaceRoundness : defaults.interfaceRoundness,
     themeSchedule: normalizeThemeSchedule(raw.themeSchedule, defaults.themeSchedule),
   }

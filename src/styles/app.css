@@ -25,9 +25,9 @@
 .workspace-drawer-toggle { min-width: 28px; padding: 0 8px; }
 
 .workspace-body { flex: 1; display: flex; min-height: 0; overflow: hidden; position: relative; }
-.workspace-sidebar-shell { flex: 0 0 var(--app-sidebar-width, 272px); width: var(--app-sidebar-width, 272px); overflow: hidden; transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), flex-basis 0.22s cubic-bezier(0.4, 0, 0.2, 1); }
+.workspace-sidebar-shell { flex: 0 0 var(--app-sidebar-width, 272px); width: var(--app-sidebar-width, 272px); overflow: hidden; transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), flex-basis 0.22s cubic-bezier(0.4, 0, 0.2, 1); contain: layout paint; }
 .workspace-sidebar-shell--hidden { flex-basis: 0; width: 0; }
-.workspace-right-panel-shell { flex: 0 0 280px; width: 280px; overflow: hidden; transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), flex-basis 0.22s cubic-bezier(0.4, 0, 0.2, 1); }
+.workspace-right-panel-shell { flex: 0 0 280px; width: 280px; overflow: hidden; transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), flex-basis 0.22s cubic-bezier(0.4, 0, 0.2, 1); contain: layout paint; }
 .workspace-right-panel-shell--hidden { flex-basis: 0; width: 0; }
 .workspace-sidebar-toggle { min-width: 28px; padding: 0 8px; opacity: 0.7; transition: opacity 0.15s; }
 .workspace-sidebar-toggle:hover { opacity: 1; }
@@ -1428,9 +1428,12 @@
   min-height: 0;
   flex: 1;
   overflow: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  /* Isolate paint so scrolling the tree doesn't repaint the rest of the sidebar. */
+  contain: paint;
 }
 
 .sidebar-boards {

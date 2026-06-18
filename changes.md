@@ -1,46 +1,50 @@
-## [2026-06-12]
-- Улучшено: изменена лицензия проекта с MIT на AGPL-3.0; обновлен файл [LICENSE](file:///home/malinka/projects/nevo_new/nevo/LICENSE), добавлены поля `license` в [package.json](file:///home/malinka/projects/nevo_new/nevo/package.json) и [src-tauri/Cargo.toml](file:///home/malinka/projects/nevo_new/nevo/src-tauri/Cargo.toml), а также обновлена информация о лицензии и бейджи в [README.md](file:///home/malinka/projects/nevo_new/nevo/README.md) и [readme/README_EN.md](file:///home/malinka/projects/nevo_new/nevo/readme/README_EN.md).
+## [2026-06-18]
+- Исправлено отображение эмодзи в `NvIconPicker`: добавлена проверка поддержки через Canvas API для скрытия отсутствующих символов ("tofu").
+- Оптимизирована скорость загрузки `NvIconPicker` благодаря асинхронной фоновой фильтрации эмодзи.
 
-## [2026-06-12]
-- Исправлено: AppImage падал с `EGL_BAD_PARAMETER` (серый экран) на современных GPU/Wayland (напр. AMD Phoenix) — забандленная WebKitGTK из Ubuntu 22.04 не поднимала EGL-дисплей; в `release.yml` Linux-раннер переведён с `ubuntu-22.04` на `ubuntu-24.04` (WebKitGTK ~2.44+ с поддержкой свежих GPU/Wayland). Внимание: AppImage теперь требует glibc ≥ 2.39, не запустится на старых дистрибутивах (Debian 12, Ubuntu 22.04 и старее). Шаг внедрения libav не менялся — зависимости резолвятся через `ldd`, поэтому версии ffmpeg на 24.04 подхватываются автоматически. Для совместимости с noble пакет `libappindicator3-dev` заменён на `libayatana-appindicator3-dev` (старый удалён из Ubuntu 24.04). Подтверждено: локальная сборка с системной (новой) WebKitGTK рисует UI — корень именно в версии WebKit, а не в упаковке AppImage
-- Улучшено: устойчивость релизной сборки macOS к флаке `bundle_dmg.sh` (hdiutil + Finder AppleScript падают на headless-раннере) — в `release.yml` шаг публикации разделён на обычный `tauri-action` для не-macOS и обёрнутый в `Wandalen/wretry.action@v3` (3 попытки, задержка 15с) для macOS; проверенный путь Linux/Windows не затронут
-- Исправлено: падение CI-сборки на `ubuntu-22.04` (`libgstreamer1.0-dev : Depends: libunwind-dev`, held broken packages) — убраны лишние `-dev`-пакеты GStreamer (`libgstreamer1.0-dev`, `*-plugins-base/bad1.0-dev`) из `release.yml`; они не нужны (Rust не линкуется с gstreamer-крейтами напрямую, WebKit идёт из `libwebkit2gtk-4.1-dev`), оставлены только runtime-плагины
-- Добавлено: внедрение `libgstlibav.so` + `libgstvideoparsersbad.so` (h264parse) и полной ffmpeg-цепочки зависимостей в Linux AppImage — `bundleMediaFramework` (linuxdeploy-plugin-gstreamer) не включает libav, поэтому mp4/H.264/AAC не декодировались; в `.github/workflows/release.yml` добавлен CI-шаг «Stage libav for the AppImage»: собирает плагины + их `ldd`-зависимости (минус host-либы по AppImage excludelist), патчит `RUNPATH` (`$ORIGIN/..` для плагинов, `$ORIGIN` для либ) и докидывает их через `bundle.linux.appimage.files`; добавлен пост-шаг «Verify libav is bundled», падающий при отсутствии/неразрешённых зависимостях (релиз остаётся draft). Реализовано только для Ubuntu-раннера, локальные сборки не затронуты
-- Исправлено: серый/пустой экран AppImage из-за падения рендера WebKitGTK (`Could not create default EGL display: EGL_BAD_PARAMETER. Aborting.`) — DMABUF-рендерер через EGL/GBM конфликтовал с драйверами/забандленными либами; добавлена Linux-функция `configure_webkit_rendering` в `src-tauri/src/lib.rs`, которая при старте выставляет `WEBKIT_DISABLE_DMABUF_RENDERER=1` (если не задано пользователем)
-- Исправлено: AppImage показывал серый фон, т.к. WebKitGTK не находил GStreamer-плагины (раньше приходилось вручную экспортировать `GST_PLUGIN_*` перед каждым запуском) — добавлена Linux-функция `configure_bundled_gstreamer` в `src-tauri/src/lib.rs`, которая при старте (до инициализации WebKit) выставляет `GST_PLUGIN_SYSTEM_PATH_1_0`/`GST_PLUGIN_PATH_1_0`/`GST_PLUGIN_SCANNER` на забандленные плагины внутри `$APPDIR`; теперь AppImage самодостаточен
-- Исправлено: AppImage из GitHub Actions собирался без GStreamer (меньше по размеру, серый/пустой фон вместо видео) — опция `bundleMediaFramework: true` работала вхолостую, т.к. на раннере не были установлены GStreamer-плагины; в `.github/workflows/release.yml` в степ установки Linux-зависимостей добавлены runtime-плагины (`gstreamer1.0-plugins-base/good/bad/ugly`, `libav`, `pulseaudio`, `gl`, `x`, `tools`)
+## [2026-06-18]
+- Добавлена иконка `Palette` для блоков рисования (`draw_block`) в боковом меню и slash-меню.
 
-- Исправлено: настройки AI `apiKind` и `baseUrl` (тип API и endpoint) сбрасывались к дефолтам при перезапуске — Rust-функция `normalize_settings_value` (workspace/settings.rs) пересобирает настройки вручную и не копировала эти два новых поля при save/load; теперь они читаются и сохраняются
-- Добавлены регрессионные тесты на сохранение AI-провайдера через нормализацию (54 теста всего)
-- Исправлено: добавлены недостающие ключи локализации для AI команд в слэш-меню редактора (`slashMenu.items.ai_continue`, `slashMenu.items.ai_summarize`, `slashMenu.items.ai_ask`) в файлы `en.json` и `ru.json`
-- Добавлена анимация стриминга AI: мигающий каретный курсор (`.ai-streaming-caret`) и плавное появление текста (`.ai-streaming-text`) через ProseMirror Decoration — без изменения документа и без влияния на сохранение/коллаб
-- Создан плагин `src/editor-core/plugins/ai-streaming.ts` с `PluginKey`, маппингом диапазона при каждой транзакции и хелперами `startAiStreaming` / `stopAiStreaming`
-- Плагин подключён в `src/editor-core/state.ts` (рядом с остальными custom-плагинами)
-- `src/app/composables/editor/aiSlashItems.ts`: все три команды (`ai-continue`, `ai-summarize`, `ai-ask`) вызывают `startAiStreaming` перед генерацией и `stopAiStreaming` в `onDone` / `onError`
-- Стили добавлены в `src/styles/editor-prose.css`; используют токен `--accent`; анимации обёрнуты в `@media (prefers-reduced-motion: no-preference)` со статическим fallback
-- Все 335 тестов проходят, `pnpm build` (vue-tsc) без ошибок
-- Исправлено: потоковый вывод AI обрывался ошибкой UTF-8 на не-ASCII тексте (кириллица) — многобайтовый символ резался границей сетевого чанка; теперь стрим буферизует байты и декодирует только целые строки (`drain_complete_lines`), обе ветки ollama/openai
-- Добавлены юнит-тесты на разрезанный по чанкам многобайтовый символ и частичную хвостовую строку (52 теста всего)
-- Добавлено: селектор типа API (`apiKind: 'ollama' | 'openai'`) в настройки AI на фронтенде (SettingsAiPanel.vue) — NvSelect над полем эндпоинта
-- Добавлен тип `AIApiKind` и поле `apiKind` в интерфейс `AISettings` (`src/types/workspace.ts`)
-- Обновлены defaults и normalizer для `apiKind` (дефолт — `'ollama'`)
-- При смене типа API автоматически подставляется URL по умолчанию для нового провайдера, если текущий URL пуст или совпадает с дефолтом другого провайдера
-- `aiCommands.listModels` теперь принимает второй аргумент `providerKind` и передаёт его в `ai_list_models`
-- `AiCompleteRequest` дополнен полями `providerKind` и опциональным `apiKey`
-- Обновлён `useAiCompletion.ts`: передаёт `providerKind` в запрос и в `testConnection`
-- Добавлены строки локализации `settings.ai.apiKind.*` в `en.json` и `ru.json`
-- Обновлён тестовый фикстур `WorkspaceEditorPane.test.ts` — добавлено поле `apiKind`
-- Все 335 тестов проходят, `pnpm build` (vue-tsc) без ошибок
-- Добавлено: поддержка OpenAI-совместимых локальных серверов (LM Studio, llama.cpp, Jan) в Rust/Tauri AI бэкенде наряду с существующим Ollama
-- Расширен `AiCompleteRequest` полями `providerKind` (default "ollama") и `apiKey` (опционально)
-- Добавлен `parse_sse_line` — парсер Server-Sent Events для OpenAI-стриминга (`SseParsed::Token/Done/Ignore`)
-- `ai_list_models` получила параметр `provider_kind`: openai → GET /models (поле `data[].id`), ollama → GET /api/tags (поле `models[].name`)
-- `ai_complete` и `ai_complete_stream` диспатчатся по `provider_kind`: openai ветка использует `/chat/completions` с `messages[]`, опциональным `Authorization: Bearer` заголовком; ollama ветка без изменений
-- В `AISettings` (Rust, `types.rs`) добавлено поле `api_kind` (serde rename `apiKind`, default "ollama") с обратной совместимостью для старых settings.json
-- 5 новых юнит-тестов для `parse_sse_line`; все 50 тестов проходят без предупреждений
-- Добавлено: рабочая интеграция AI-панели с локальным Ollama (полный путь настройки → генерация в редакторе с потоковым выводом)
-- Backend: новый модуль `src-tauri/src/commands/ai.rs` (`ai_list_models`, `ai_complete`, `ai_complete_stream` со стримингом через `Channel<AiStreamEvent>`), NDJSON-парсинг, guard приватности (privacy_mode блокирует нелокальные эндпоинты); добавлена зависимость `reqwest 0.12` (rustls-tls); поле `baseUrl` в `AISettings` (Rust) с serde-default; 15 юнит-тестов
-- Настройки: `SettingsAiPanel.vue` стала функциональной — мастер-тоггл включения ИИ, поле Ollama endpoint, кнопка «Проверить соединение» с live-статусом и счётчиком моделей, динамический список моделей, `NvNumberInput` для лимита токенов; все поля сохраняются через `updateSettings`
-- Типы/обёртки: поле `baseUrl` в `AISettings` (TS) + дефолт + нормализация; новая Tauri-обёртка `src/tauri/ai.ts` (`aiCommands`); composable `src/composables/useAiCompletion.ts` (live-настройки, стрим/единовременная генерация)
-- Редактор: три AI slash-команды (`ai-continue`, `ai-summarize`, `ai-ask`) с потоковой вставкой в позицию курсора, включаются при `ai.enabled && ai.slashCommands && editor.slashCommands`; параметр `aiSlashItems` в `CreateNevoEditorStateOptions`; модальный диалог «Ask AI» в `WorkspaceEditorPane.vue`
-- Локализация: ключи `settings.ai.*` (enabled/endpoint/testConnection/maxTokens), `editor.slash.ai.*`, `editor.aiAsk.*` в `en.json` и `ru.json`
+## [2026-06-18]
+- Добавлен экспорт рисунков (`draw_block`) в PDF через интеграцию с Typst (внедрение SVG в качестве inline-ассетов).
+- Исправлено сохранение рисунков: обновление `draw_block` переведено на транзакции ProseMirror и интеграцию с Y.Doc.
+- Добавлено отображение ошибок сохранения рисунков в шапке холста.
+- Исправлен поиск рисунков во вложенных блоках (рекурсивный обход дерева документа).
+- Добавлены автотесты для сохранения рисунков (`useDrawEditor`) и Rust-тесты `save_draw_asset_*` для бэкенда.
+- Добавлены недостающие ключи локализации `common.back` и `common.loading` в локализации `en` и `ru`.
+
+## [2026-06-18]
+- Обеспечено надежное сохранение рисунков перед навигацией назад/Escape (ожидание записи ассета и патча заметки).
+- Исправлен возврат назад с холста рисования (устранена ложная блокировка в `openNote`).
+- Исправлено сохранение `draw_block` при размонтированном редакторе (прямой патч документа в сторе).
+- Исправлен фон холста рисования (теперь всегда светлый для читаемости темных чернил).
+- Исправлено смещение курсора на холсте рисования (учет `getScreenCTM()` и `viewBox` SVG).
+- Исправлено закрытие настроек и истории по Escape (добавлен `immediate: true` во `watch`).
+
+## [2026-06-17]
+- Добавлены формулы таблиц на базе `hyperformula` (автовычисления, поповер ввода, поддержка экспорта в MD/HTML/Typst).
+- Добавлено контекстное меню форматирования таблицы по клику ПКМ и улучшено позиционирование.
+- Добавлена поддержка wiki-ссылок `[[Note]]` (алиасы, якоря с переходом к заголовкам, подсветка битых ссылок, парсинг импорта).
+- Исправлен перезапуск редактора при внешнем ресинке идентичного контента.
+- Добавлены тесты для формул, wiki-ссылок и таблиц.
+- Настройка снижения прозрачности (`reduceTransparency`) теперь по умолчанию отключена на Linux.
+
+## [2026-06-16]
+- Исправлены лаги скролла на Linux: аппаратное ускорение возвращено для dev-сборок, а отключение DMABUF оставлено только для AppImage.
+- Оптимизирована производительность прокрутки (will-change, скругления, `contain: paint` для контейнеров).
+- Исправлено схлопывание сайдбара (`contain: layout paint`).
+- Оптимизирован редактор на больших заметках (200k+ символов) за счет локального обновления fold-плагинов.
+- Ускорена сериализация заметок, автосохранение и плагины ProseMirror через отказ от глубокой реактивности Vue.
+- Переведен транспорт Yjs на бинарный `ArrayBuffer` в Tauri v2 (IPC ускорен в 3-4 раза).
+- Оптимизирован композитинг WebKitGTK при включенной опции непрозрачности.
+
+## [2026-06-15]
+- Исправлены лаги интерфейса на Linux/WebKitGTK, оптимизирован режим снижения прозрачности.
+- Добавлена настройка URL self-hosted сервера при создании облачного хранилища и проверка его доступности.
+- Реализована привязка адреса сервера к конкретному облачному воркспейсу.
+
+## [2026-06-13]
+- Добавлена ленивая загрузка панелей настроек, тяжелых модальных окон и KaTeX.
+- Оптимизирована производительность редактора и сторов (O(1) поиск по Map, переход на `shallowRef` для настроек).
+- CI Linux: сборка AppImage заменена на Flatpak для совместимости со свежими версиями WebKitGTK.
+

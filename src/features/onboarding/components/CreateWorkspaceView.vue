@@ -8,6 +8,7 @@ import { useWorkspaceStore } from '../../../stores/workspace'
 import { useTreeStore } from '../../../stores/tree'
 import { useAuthStore } from '../../../stores/auth'
 import { useSharedStorageStore } from '../../../stores/sharedStorage'
+import { useServerConfigStore } from '../../../stores/serverConfig'
 import type { WorkspaceConfig } from '../../../types/workspace'
 import { appLogger } from '../../../utils/logger'
 import { WORKSPACE_GRADIENTS } from '../../../utils/workspaceGradients'
@@ -28,6 +29,10 @@ const selectedGradient = ref(0)
 const selectedTemplate = ref<typeof TEMPLATES[number]>('empty')
 const hasInteractedWithTemplates = ref(false)
 const location = ref('~/Documents/Nevo/')
+const serverUrl = ref('http://localhost:8080')
+const healthState = ref<'idle' | 'checking' | 'ok' | 'fail'>('idle')
+
+const isValidServerUrl = computed(() => /^https?:\/\/.+/.test(serverUrl.value.trim()))
 
 const locationBaseWithSeparator = computed(() => {
   const loc = location.value
@@ -56,17 +61,30 @@ async function browsePath() {
 
 const isCreating = ref(false)
 
+async function checkConnection() {
+  if (!isValidServerUrl.value) {
+    healthState.value = 'fail'
+    return
+  }
+  healthState.value = 'checking'
+  const server = useServerConfigStore()
+  const ok = await server.checkServerHealth(serverUrl.value)
+  healthState.value = ok ? 'ok' : 'fail'
+}
+
 async function createCloud() {
+  const server = useServerConfigStore()
+  server.setServerUrl(serverUrl.value)
   const auth = useAuthStore()
-  if (!auth.isAuthenticated) {
-    // Sign in first (relay-configured provider); resolves via the loopback flow.
+  if (!auth.isAuthenticated || auth.sessionServerUrl !== server.serverUrl) {
     await auth.login('github')
   }
   const shared = useSharedStorageStore()
+  await shared.loadStorages()
   const storage = await shared.createStorage(
     name.value.trim(), GLYPHS[selectedGlyph.value], GRADIENTS[selectedGradient.value],
   )
-  await workspaceStore.openCloudWorkspace(storage.id)
+  await workspaceStore.openCloudWorkspace(storage.id, server.serverUrl)
   emit('done')
 }
 
@@ -175,6 +193,42 @@ async function create() {
               :class="{ 'storage-type__btn--active': storageType === 'cloud' }"
               @click="storageType = 'cloud'"
             >{{ t('workspace.cloudWorkspace') }}</button>
+          </div>
+        </div>
+
+        <!-- Server URL (cloud only) -->
+        <div v-if="storageType === 'cloud'" class="form-group">
+          <div class="form-label-row">
+            <span class="form-label">{{ t('onboarding.create.serverLabel') }}</span>
+            <span class="form-hint">{{ t('onboarding.create.serverHint') }}</span>
+          </div>
+          <div class="location-field">
+            <input
+              v-model="serverUrl"
+              class="server-url-input"
+              :placeholder="t('onboarding.create.serverPlaceholder')"
+              @input="healthState = 'idle'"
+            />
+            <button
+              class="nv-btn nv-btn--ghost browse-btn"
+              :disabled="healthState === 'checking'"
+              @click="checkConnection"
+            >
+              {{ healthState === 'checking' ? t('onboarding.create.serverChecking') : t('onboarding.create.serverCheck') }}
+            </button>
+          </div>
+          <div
+            v-if="healthState !== 'idle'"
+            class="server-health-status"
+            :class="{
+              'server-health-status--ok': healthState === 'ok',
+              'server-health-status--fail': healthState === 'fail',
+              'server-health-status--checking': healthState === 'checking',
+            }"
+          >
+            <span v-if="healthState === 'checking'">{{ t('onboarding.create.serverChecking') }}</span>
+            <span v-else-if="healthState === 'ok'">{{ t('onboarding.create.serverOk') }}</span>
+            <span v-else-if="healthState === 'fail'">{{ t('onboarding.create.serverFail') }}</span>
           </div>
         </div>
 
@@ -287,7 +341,7 @@ async function create() {
           </button>
           <div class="spacer" />
           <span class="encryption-label">{{ t('onboarding.create.encryption') }}</span>
-          <button class="nv-btn nv-btn--primary footer-btn-create" :class="{ 'nv-btn--loading': isCreating }" :disabled="isCreating" @click="create">
+          <button class="nv-btn nv-btn--primary footer-btn-create" :class="{ 'nv-btn--loading': isCreating }" :disabled="isCreating || (storageType === 'cloud' && !isValidServerUrl)" @click="create">
             <span v-if="isCreating" class="nv-btn__spinner" aria-hidden="true" />
             {{ t('onboarding.create.create') }}
             <ArrowRight v-if="!isCreating" :size="12" />
@@ -328,5 +382,31 @@ async function create() {
   color: var(--accent);
   border-color: oklch(from var(--accent) l c h / 0.18);
   box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.05);
+}
+.server-url-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.83rem;
+  color: var(--text-1);
+  min-width: 0;
+}
+.server-url-input::placeholder {
+  color: var(--text-4);
+}
+.server-health-status {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--text-3);
+}
+.server-health-status--ok {
+  color: var(--green, #34c759);
+}
+.server-health-status--fail {
+  color: var(--red, #ff3b30);
+}
+.server-health-status--checking {
+  color: var(--text-3);
 }
 </style>

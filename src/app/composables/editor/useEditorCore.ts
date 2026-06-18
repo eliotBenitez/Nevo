@@ -1,6 +1,7 @@
 import { EditorView } from 'prosemirror-view'
 import { AllSelection, NodeSelection, TextSelection, type Command, type EditorState, type Transaction } from 'prosemirror-state'
 import { Slice, type Node } from 'prosemirror-model'
+import { cellAround, CellSelection } from 'prosemirror-tables'
 import * as Y from 'yjs'
 import { Awareness } from 'y-protocols/awareness'
 import type { NevoCoreCommands } from '../../../editor-core/commands'
@@ -20,6 +21,7 @@ import {
   getSlashMenuState,
   getLinkPickerState,
   nevoSlashPluginKey,
+  brokenLinkPluginKey,
   parseNoteContentToDoc,
   serializeDocToNoteContent,
   setActivePluginSerialization,
@@ -62,6 +64,9 @@ export interface EditorCore {
   isApplyingExternalState: boolean
   lastSerializedContent: string
   lastSerializedContentRef: NoteDocument['content'] | null
+  /** Defers serializing the editor doc: lastSerializedContent is computed on first
+   *  read instead of eagerly on every note open. */
+  setLastSerializedFromDoc: (doc: Node) => void
   lastLoadedNoteId: string | null
   ydoc: Y.Doc | null
   awareness: Awareness | null
@@ -69,6 +74,9 @@ export interface EditorCore {
    *  must not be destroyed by the editor on teardown. */
   ownsYdoc: boolean
   workspacePath: string | null
+  /** Force broken-link decorations to be recomputed against the latest note
+   *  existence state. No-op when the editor view is not ready. */
+  refreshBrokenLinks: () => void
 }
 
 export interface EditorCoreCallbacks {
@@ -78,6 +86,12 @@ export interface EditorCoreCallbacks {
   onDocDirty?: () => void
   onDocChanged?: (doc: Node) => void
   onInternalLinkOpen: (noteId: string, anchor: string | null) => void
+  /** Existence check used to mark `internal_link` marks pointing at missing
+   *  notes as broken. When omitted, no broken-link decoration is applied. */
+  internalLinkExists?: (noteId: string) => boolean
+  /** Resolves a wiki-link title to a note id for Markdown paste/import.
+   *  When omitted, pasted `[[Title]]` links become broken links. */
+  resolveWikiLink?: (title: string) => string | null
   onLinkPickerEnter?: () => boolean
   onImagePickerRequest: (pos: number) => void
   resolveAssetSrc?: (relativeSrc: string) => string
@@ -98,6 +112,7 @@ export interface EditorCoreCallbacks {
   onNoteEmbedContentLoad?: (ctx: { noteId: string; setHtml: (html: string) => void; setLoading: (v: boolean) => void }) => void
   onNoteEmbedOpen: (noteId: string) => void
   onMathEditRequest: (pos: number, rect?: DOMRect) => void
+  onFormulaEditRequest: (cellPos: number, formula: string, rect?: DOMRect) => void
   onMathInlineInsert: () => boolean
   onMathBlockInsert: () => boolean
   onSlashMathItemRan: () => void
@@ -105,6 +120,8 @@ export interface EditorCoreCallbacks {
   onMermaidEditRequest: (pos: number, rect?: DOMRect) => void
   onMarkmapEditRequest: (pos: number, rect?: DOMRect) => void
   onVegaEditRequest: (pos: number, rect?: DOMRect) => void
+  /** Open the full-canvas draw editor for a draw_block (drawId). */
+  onDrawOpen?: (drawId: string) => void
   onPluginNodeEditRequest: (pos: number, nodeName: string, rect?: DOMRect) => void
   onCalloutIconPickRequest: (pos: number, rect: DOMRect, icon: string) => void
   onTemplateInsertRequest?: () => void
@@ -159,7 +176,13 @@ function collectRemovedAssetSrcs(prevDoc: Node, transaction: Transaction): strin
 }
 
 export function createEditorCore(): EditorCore {
-  return {
+  // lastSerializedContent is derived lazily from the editor doc. Serializing a
+  // large document on every note open is wasted work because the reference check
+  // (lastSerializedContentRef) already short-circuits the common case; the string
+  // is only needed for the rare structural-equality fallback comparison.
+  let serializedCache: string | null = ''
+  let serializedDoc: Node | null = null
+  const core: EditorCore = {
     editorView: null,
     pluginHost: null,
     schema: createSchemaWithPluginExtensions(),
@@ -173,14 +196,33 @@ export function createEditorCore(): EditorCore {
     pendingMediaKind: null,
     lastSlashPluginState: { open: false, query: '', range: null, activeIndex: 0, itemIds: [] },
     isApplyingExternalState: false,
-    lastSerializedContent: '',
+    get lastSerializedContent() {
+      if (serializedCache === null) {
+        serializedCache = serializedDoc ? JSON.stringify(serializeDocToNoteContent(serializedDoc)) : ''
+      }
+      return serializedCache
+    },
+    set lastSerializedContent(value: string) {
+      serializedCache = value
+      serializedDoc = null
+    },
+    setLastSerializedFromDoc(doc: Node) {
+      serializedDoc = doc
+      serializedCache = null
+    },
     lastSerializedContentRef: null,
     lastLoadedNoteId: null,
     ydoc: null,
     awareness: null,
     ownsYdoc: false,
     workspacePath: null,
+    refreshBrokenLinks() {
+      const view = core.editorView
+      if (!view) return
+      view.dispatch(view.state.tr.setMeta(brokenLinkPluginKey, true))
+    },
   }
+  return core
 }
 
 function toEditorPluginManifest(manifest: PluginManifest): NevoEditorPluginManifest {
@@ -572,6 +614,25 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     return true
   }
 
+  /**
+   * Right-click inside a table cell: suppress the browser context menu and
+   * place a single-cell CellSelection on the clicked cell. The table
+   * formatting menu (driven by getTableMenuContext) only renders for a
+   * CellSelection, so this is what makes the popup appear on right-click.
+   */
+  function handleTableContextMenu(view: EditorView, event: MouseEvent): boolean {
+    const coords = { left: event.clientX, top: event.clientY }
+    const posAtCoords = view.posAtCoords(coords)
+    if (!posAtCoords) return false
+
+    const $cell = cellAround(view.state.doc.resolve(posAtCoords.pos))
+    if (!$cell) return false
+
+    event.preventDefault()
+    view.dispatch(view.state.tr.setSelection(CellSelection.create(view.state.doc, $cell.pos)))
+    return true
+  }
+
   async function setupEditorForContent(
     content: NoteDocument['content'],
     documentId: string,
@@ -609,6 +670,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
         : undefined,
       enableVega: settings.features?.vega !== false,
       enableMarkmap: settings.features?.markmap !== false,
+      enableDraw: settings.features?.draw !== false,
       pluginHost: core.pluginHost ?? undefined,
       yFragment: options.yFragment,
       awareness: options.yFragment ? core.awareness ?? undefined : undefined,
@@ -623,9 +685,11 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
         onRequestFileAsset: ({ position }) => callbacks.onFilePickerRequest(position),
         onOpenFileAsset: ({ src }) => callbacks.onFileOpenRequest(src),
         onRequestMathEdit: ({ position, anchorRect }) => callbacks.onMathEditRequest(position, anchorRect),
+        onRequestFormulaEdit: ({ cellPos, formula, anchorRect }) => callbacks.onFormulaEditRequest(cellPos, formula, anchorRect),
         onRequestMermaidEdit: ({ position, anchorRect }) => callbacks.onMermaidEditRequest(position, anchorRect),
         onRequestMarkmapEdit: ({ position, anchorRect }) => callbacks.onMarkmapEditRequest(position, anchorRect),
         onRequestVegaEdit: ({ position, anchorRect }) => callbacks.onVegaEditRequest(position, anchorRect),
+        onRequestDrawOpen: ({ node }) => callbacks.onDrawOpen?.(node.attrs.drawId),
         onRequestMediaAsset: ({ position, kind }) => callbacks.onMediaPickerRequest(position, kind),
         onRequestNoteEmbedPick: ({ position, anchorRect }) => callbacks.onNoteEmbedPickRequest(position, anchorRect),
         onRequestEmbedUrl: ({ position, anchorRect }) => callbacks.onEmbedUrlRequest(position, anchorRect),
@@ -634,12 +698,13 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
         t: (key: string) => i18n.global.t(key),
       },
       aiSlashItems,
+      internalLinkExists: callbacks.internalLinkExists,
     })
 
     core.commandRegistry = setup.commands
     core.coreCommands = setup.coreCommands
     core.slashItems = setup.slashItems
-    core.lastSerializedContent = JSON.stringify(serializeDocToNoteContent(setup.state.doc))
+    core.setLastSerializedFromDoc(setup.state.doc)
     core.lastSerializedContentRef = content
     core.lastLoadedNoteId = documentId
 
@@ -724,6 +789,9 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
           click(view, event) {
             return handleInternalLinkClick(view, event)
           },
+          contextmenu(view, event) {
+            return handleTableContextMenu(view, event)
+          },
         },
         handlePaste(_view, event) {
           if (settings.editor.pasteBehavior !== 'plain-text') {
@@ -731,7 +799,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
             if (html) return false
             const mdText = event.clipboardData?.getData('text/plain')
             if (mdText && looksLikeMarkdown(mdText)) {
-              const slice = parseMarkdownToSlice(mdText, _view.state.schema)
+              const slice = parseMarkdownToSlice(mdText, _view.state.schema, callbacks.resolveWikiLink)
               if (slice) {
                 event.preventDefault()
                 _view.dispatch(_view.state.tr.replaceSelection(slice).scrollIntoView())
@@ -834,7 +902,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
       try {
         const bytes = await collabCommands.loadYjsState(workspacePath, noteId)
         if (bytes.length > 0) {
-          ydoc = restoreYDocFromBinary(new Uint8Array(bytes))
+          ydoc = restoreYDocFromBinary(bytes)
           try {
             ydoc.getXmlFragment(Y_FRAGMENT_NAME)
           } catch {
@@ -859,7 +927,9 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
         const persistYjsState = () => {
           if (core.ydoc !== ydoc) return
           const state = encodeYDocState(ydoc)
-          void collabCommands.saveYjsState(workspacePath, noteId, Array.from(state)).catch(() => {
+          // `state` is a Uint8Array; the command wrapper forwards it as a raw
+          // IPC body, so no Array.from conversion (which would JSON-inflate it).
+          void collabCommands.saveYjsState(workspacePath, noteId, state).catch(() => {
             /* non-critical */
           })
         }

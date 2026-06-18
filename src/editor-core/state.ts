@@ -26,7 +26,9 @@ import { createActiveBlockEmphasisPlugin } from './plugins/active-block-emphasis
 import { createListMarkerPlugin } from './plugins/list-markers'
 import { headingFoldingPlugin } from './plugins/heading-folding'
 import { createToggleFoldingPlugin } from './plugins/toggle-folding'
+import { createTableFormulaPlugin } from './plugins/table-formula'
 import { createAiStreamingPlugin } from './plugins/ai-streaming'
+import { createBrokenLinkDecorationPlugin } from './plugins/broken-link-decoration'
 
 export interface CreateNevoEditorStateOptions {
   schema: Schema
@@ -39,9 +41,13 @@ export interface CreateNevoEditorStateOptions {
   onTemplateInsertRequest?: () => void
   enableVega?: boolean
   enableMarkmap?: boolean
+  enableDraw?: boolean
   yFragment?: XmlFragment
   awareness?: Awareness
   aiSlashItems?: NevoSlashItem[]
+  /** Existence check for `internal_link` marks; when provided, links pointing
+   *  at non-existent notes are decorated with the `.is-broken` class. */
+  internalLinkExists?: (noteId: string) => boolean
 }
 
 export interface NevoEditorStateSetup {
@@ -106,6 +112,7 @@ export function createCoreSlashItems(commands: Map<string, Command>): NevoSlashI
     { id: 'file', title: 'File Attachment', category: 'media', keywords: ['attach', 'upload', 'pdf', 'zip', 'document'], run: command('core.file.insert') },
     { id: 'table', title: 'Table', category: 'media', keywords: ['grid', 'cells'], run: command('core.table.insert') },
     { id: 'mermaid', title: 'Mermaid Diagram', category: 'media', keywords: ['diagram', 'flowchart', 'chart', 'graph', 'sequence'], run: command('core.mermaid.insert') },
+    { id: 'draw', title: 'Drawing', category: 'media', keywords: ['sketch', 'draw', 'excalidraw', 'canvas', 'hand', 'paint', 'whiteboard'], run: command('core.draw.insert') },
     { id: 'markmap', title: 'Mind Map', category: 'media', keywords: ['mindmap', 'markmap', 'map', 'outline', 'tree', 'brainstorm'], run: command('core.markmap.insert') },
     { id: 'chart', title: 'Chart', category: 'media', keywords: ['vega', 'vega-lite', 'chart', 'graph', 'visualization', 'plot', 'bar', 'line', 'pie'], run: command('core.vega.insert') },
     { id: 'note-embed', title: 'Note Embed', category: 'media', keywords: ['embed', 'reference', 'card', 'page'], run: command('core.noteEmbed.insert') },
@@ -188,6 +195,10 @@ export function createNevoEditorState(options: CreateNevoEditorStateOptions): Ne
     const markmapIdx = slashItems.findIndex(item => item.id === 'markmap')
     if (markmapIdx !== -1) slashItems.splice(markmapIdx, 1)
   }
+  if (options.enableDraw === false) {
+    const drawIdx = slashItems.findIndex(item => item.id === 'draw')
+    if (drawIdx !== -1) slashItems.splice(drawIdx, 1)
+  }
   if (commandRegistry.has('core.template.insert')) {
     slashItems.push({
       id: 'insert-template',
@@ -210,6 +221,7 @@ export function createNevoEditorState(options: CreateNevoEditorStateOptions): Ne
 
   plugins.push(columnResizing({ cellMinWidth: 80, defaultCellMinWidth: 120 }))
   plugins.push(tableEditing())
+  plugins.push(createTableFormulaPlugin({ onRequestFormulaEdit: options.nodeViewOptions?.onRequestFormulaEdit }))
   plugins.push(createColumnDropPlugin())
   plugins.push(createBlockSelectionPlugin())
   plugins.push(createActiveBlockEmphasisPlugin())
@@ -221,6 +233,9 @@ export function createNevoEditorState(options: CreateNevoEditorStateOptions): Ne
     plugins.push(createSlashCommandPlugin(() => slashItems))
   }
   plugins.push(createLinkPickerPlugin())
+  if (options.internalLinkExists) {
+    plugins.push(createBrokenLinkDecorationPlugin({ exists: options.internalLinkExists }))
+  }
   plugins.push(keymap(baseKeymap))
 
   const doc = parseNoteContentToDoc(options.schema, options.content)

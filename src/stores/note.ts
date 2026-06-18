@@ -41,7 +41,10 @@ export const useNoteStore = defineStore('note', () => {
       && a.icon === b.icon
       && a.cover === b.cover
       && a.folderId === b.folderId
-      && JSON.stringify(a.content) === JSON.stringify(b.content)
+      // Content identity is preserved across setContent (mutates in place) and
+      // saveNote (spreads meta only), so a reference check is sufficient and
+      // avoids O(document) JSON.stringify on large notes.
+      && a.content === b.content
     )
   }
 
@@ -157,8 +160,14 @@ export const useNoteStore = defineStore('note', () => {
   }
 
   function setContent(content: NoteDocument['content']) {
-    if (!activeNote.value) return
-    activeNote.value = { ...activeNote.value, content }
+    const note = activeNote.value
+    if (!note) return
+    // Mutate content in place instead of spreading a new note object: this
+    // preserves content identity (so isSameDraft/saveNote stay O(1)) and
+    // avoids invalidating every watcher keyed on `activeNote.value` identity
+    // (e.g. WorkspaceShell, WorkspaceEditorPane props.note) on each debounced
+    // flush during typing on large documents.
+    note.content = content
     isDirty.value = true
     saveStatus.value = 'unsaved'
   }

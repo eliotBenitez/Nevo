@@ -4,6 +4,11 @@ import { NodeSelection } from 'prosemirror-state'
 import { CellSelection } from 'prosemirror-tables'
 import { getSlashMenuState, getTableMenuContext, getLinkPickerState } from '../../../editor-core'
 import type { NevoNodePopoverField, NevoSlashItem, NevoTableContext } from '../../../types/editor-plugin'
+import {
+  getEditorOverlayBoundaryRect,
+  placeEditorPopoverNearAnchor,
+  type ClampOverlayPosition,
+} from './editorPopoverPosition'
 import type { EditorCore } from './useEditorCore'
 
 export interface OverlayPosition {
@@ -46,6 +51,13 @@ export interface MathPopoverState {
   isInline: boolean
   position: OverlayPosition
   nodePos: number | null
+}
+
+export interface FormulaPopoverState {
+  open: boolean
+  formula: string
+  position: OverlayPosition
+  cellPos: number | null
 }
 
 export interface MermaidPopoverState {
@@ -148,6 +160,13 @@ export function useEditorOverlays(
     nodePos: null,
   })
 
+  const formulaPopover = reactive<FormulaPopoverState>({
+    open: false,
+    formula: '',
+    position: { top: 0, left: 0 },
+    cellPos: null,
+  })
+
   const mermaidPopover = reactive<MermaidPopoverState>({
     open: false,
     code: '',
@@ -235,6 +254,8 @@ export function useEditorOverlays(
     linkPopover.error = ''
     mathPopover.open = false
     mathPopover.nodePos = null
+    formulaPopover.open = false
+    formulaPopover.cellPos = null
     mermaidPopover.open = false
     mermaidPopover.nodePos = null
     markmapPopover.open = false
@@ -303,18 +324,26 @@ export function useEditorOverlays(
   function updateActiveMarks(view: EditorView) {
     const markNames = ['strong', 'em', 'strike', 'underline', 'code', 'link', 'superscript', 'subscript', 'highlight', 'text_color']
     const { selection, storedMarks } = view.state
-    const next = new Set<string>()
+    const current = activeMarkNames.value
+    let next: Set<string> | null = null
+    let changed = current.size === 0
     for (const name of markNames) {
       const markType = view.state.schema.marks[name]
       if (!markType) continue
-      if (selection.empty) {
-        const activeMarks = storedMarks ?? selection.$from.marks()
-        if (markType.isInSet(activeMarks) !== null) next.add(name)
-      } else {
-        if (view.state.doc.rangeHasMark(selection.from, selection.to, markType)) next.add(name)
+      const isActive = selection.empty
+        ? markType.isInSet(storedMarks ?? selection.$from.marks()) !== null
+        : view.state.doc.rangeHasMark(selection.from, selection.to, markType)
+      if (isActive !== current.has(name)) changed = true
+      if (isActive) {
+        next ??= new Set<string>()
+        next.add(name)
       }
     }
-    activeMarkNames.value = next
+    // Rebuild the ref only when the mark set actually differs from the previous
+    // one. Keeps EditorFloatingToolbar (13 :class bindings) from re-rendering
+    // on every cursor move that doesn't change any marks.
+    if (!changed) return
+    activeMarkNames.value = next ?? new Set<string>()
   }
 
   function updateToolbarOverlay(view: EditorView) {
@@ -355,6 +384,19 @@ export function useEditorOverlays(
     })
   }
 
+  function getCellAnchorRect(view: EditorView, cellPos: number | null): DOMRect | null {
+    if (cellPos == null) return null
+    const cellDom = view.nodeDOM(cellPos)
+    if (cellDom instanceof HTMLElement) return cellDom.getBoundingClientRect()
+    const coords = view.coordsAtPos(cellPos)
+    return new DOMRect(
+      coords.left,
+      coords.top,
+      Math.max(coords.right - coords.left, 1),
+      Math.max(coords.bottom - coords.top, 1),
+    )
+  }
+
   function updateTableMenuOverlay(view: EditorView) {
     const context = getTableMenuContext(view.state)
     if (!context) {
@@ -362,14 +404,33 @@ export function useEditorOverlays(
       tableMenuOverlay.context = null
       return
     }
-    const anchorPos = context.activeCell?.pos ?? view.state.selection.from
-    const anchor = view.coordsAtPos(anchorPos)
+    const anchorRect = getCellAnchorRect(view, context.activeCell?.pos ?? null)
     tableMenuOverlay.visible = true
     tableMenuOverlay.context = context
-    tableMenuOverlay.position = { top: anchor.top - 10, left: anchor.left }
+    if (anchorRect) {
+      // Horizontal anchor at the cell center; vertical will be flipped
+      // above/below by placeEditorPopoverNearAnchor depending on available room.
+      tableMenuOverlay.position = {
+        top: anchorRect.bottom,
+        left: anchorRect.left + anchorRect.width / 2,
+      }
+    } else {
+      const anchorPos = context.activeCell?.pos ?? view.state.selection.from
+      const anchor = view.coordsAtPos(anchorPos)
+      tableMenuOverlay.position = { top: anchor.bottom, left: anchor.left }
+    }
     nextTick(() => {
       const tableMenuEl = firstChildEl(elRefs.getTableMenuEl())
       if (!tableMenuOverlay.visible || !tableMenuEl) return
+      if (anchorRect) {
+        tableMenuOverlay.position = placeEditorPopoverNearAnchor(
+          tableMenuEl,
+          anchorRect,
+          clampOverlayPosition as ClampOverlayPosition,
+          getEditorOverlayBoundaryRect(core),
+        )
+        return
+      }
       const next = clampOverlayPosition(tableMenuOverlay.position, tableMenuEl)
       if (next.top !== tableMenuOverlay.position.top || next.left !== tableMenuOverlay.position.left) {
         tableMenuOverlay.position = next
@@ -423,6 +484,7 @@ export function useEditorOverlays(
     highlightPicker,
     textColorPicker,
     mathPopover,
+    formulaPopover,
     mermaidPopover,
     markmapPopover,
     vegaPopover,

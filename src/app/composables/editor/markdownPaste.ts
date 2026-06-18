@@ -1,5 +1,5 @@
 import { Fragment, Slice, type Schema } from 'prosemirror-model'
-import { parseMarkdownToBlockNode } from '../../../utils/noteImport/markdownParser'
+import { parseMarkdownToBlockNode, type WikiLinkResolver } from '../../../utils/noteImport/markdownParser'
 
 export function looksLikeMarkdown(text: string): boolean {
   const lines = text.split('\n')
@@ -19,8 +19,8 @@ export function looksLikeMarkdown(text: string): boolean {
   )
 }
 
-export function parseMarkdownToSlice(text: string, schema: Schema): Slice | null {
-  const parsed = parseMarkdownToBlockNode(text, '')
+export function parseMarkdownToSlice(text: string, schema: Schema, resolver?: WikiLinkResolver): Slice | null {
+  const parsed = parseMarkdownToBlockNode(text, '', resolver)
   const blocks = parsed.content.content ?? []
   const nodes = blocks.flatMap(block => {
     try {

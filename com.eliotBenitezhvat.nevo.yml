@@ -1,0 +1,57 @@
+app-id: com.eliotBenitezhvat.nevo
+runtime: org.gnome.Platform
+# GNOME 48 ships a recent WebKitGTK (newer than the system webkit2gtk on the
+# build runner) and the same version reaches every user regardless of distro.
+runtime-version: '48'
+sdk: org.gnome.Sdk
+command: nevo
+
+finish-args:
+  - --share=ipc
+  - --share=network            # collab relay, updater, OAuth, localhost media server
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  - --device=dri               # WebKit GPU compositing + GStreamer GL
+  - --filesystem=home          # workspaces live under $HOME (assetProtocol scope is $HOME/**)
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.kde.StatusNotifierWatcher   # ayatana app-indicator tray
+
+# H.264/AAC playback: gst-libav in the runtime loads the codecs from the
+# ffmpeg-full extension. This replaces the manual libav staging we do for the
+# AppImage — Flatpak gets the full ffmpeg from Flathub instead.
+add-extensions:
+  org.freedesktop.Platform.ffmpeg-full:
+    directory: lib/ffmpeg
+    add-ld-path: .
+    version: '24.08'
+    autodelete: false
+    no-autodownload: false
+
+modules:
+  - name: nevo
+    buildsystem: simple
+    sources:
+      # Unpacked from the .deb produced by `tauri build` in CI (renamed to a
+      # fixed name so this path does not depend on the version string).
+      - type: file
+        path: flatpak-source.deb
+    build-commands:
+      - ar -x *.deb
+      - tar -xf data.tar.*
+      # Single binary -> /app/bin/nevo (matches `command:` above).
+      - install -Dm755 "$(find usr/bin -maxdepth 1 -type f | head -1)" /app/bin/nevo
+      # Desktop file must be named after the app-id; point it at our binary/icon.
+      - |
+        desktop=$(ls usr/share/applications/*.desktop | head -1)
+        install -Dm644 "$desktop" /app/share/applications/com.eliotBenitezhvat.nevo.desktop
+        sed -i 's/^Exec=.*/Exec=nevo/'                         /app/share/applications/com.eliotBenitezhvat.nevo.desktop
+        sed -i 's/^Icon=.*/Icon=com.eliotBenitezhvat.nevo/'    /app/share/applications/com.eliotBenitezhvat.nevo.desktop
+      # Icons: keep the size/category dirs, rename the basename to the app-id.
+      - |
+        for f in $(find usr/share/icons -name '*.png'); do
+          rel=${f#usr/share/icons/}
+          install -Dm644 "$f" "/app/share/icons/$(dirname "$rel")/com.eliotBenitezhvat.nevo.png"
+        done
+      # Mount point for the ffmpeg-full extension declared above.
+      - mkdir -p /app/lib/ffmpeg
