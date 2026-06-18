@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/logo.png" width="120" alt="Nevo Logo">
+  <img src="../public/logo.png" width="120" alt="Nevo Logo">
 </p>
 
 <h1 align="center">Nevo</h1>
@@ -31,16 +31,16 @@
 
 <table align="center">
   <tr>
-    <td><img src="settings/Screen Shot 2026-05-15 at 00.33.36.png" width="400"></td>
-    <td><img src="settings/Screen Shot 2026-05-15 at 00.33.38.png" width="400"></td>
+    <td><img src="../settings/Screen Shot 2026-05-15 at 00.33.36.png" width="400"></td>
+    <td><img src="../settings/Screen Shot 2026-05-15 at 00.33.38.png" width="400"></td>
   </tr>
   <tr>
-    <td><img src="settings/Screen Shot 2026-05-15 at 00.33.45.png" width="400"></td>
-    <td><img src="settings/Screen Shot 2026-05-15 at 00.33.49.png" width="400"></td>
+    <td><img src="../settings/Screen Shot 2026-05-15 at 00.33.45.png" width="400"></td>
+    <td><img src="../settings/Screen Shot 2026-05-15 at 00.33.49.png" width="400"></td>
   </tr>
   <tr>
-    <td><img src="settings/Screen Shot 2026-05-15 at 00.33.54.png" width="400"></td>
-    <td><img src="settings/Screen Shot 2026-05-15 at 00.34.02.png" width="400"></td>
+    <td><img src="../settings/Screen Shot 2026-05-15 at 00.33.54.png" width="400"></td>
+    <td><img src="../settings/Screen Shot 2026-05-15 at 00.34.02.png" width="400"></td>
   </tr>
 </table>
 
