@@ -132,6 +132,7 @@ export interface AppearanceSettings {
   editorLineWidth: EditorLineWidth
   customCssEnabled: boolean
   customCssFileName: string
+  accentColoredHeadings: boolean
 }
 
 export interface EditorSettings {

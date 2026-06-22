@@ -1,0 +1,196 @@
+/* src/app/components/editor/DocAppearance.vue */
+.doc-appearance {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  width: 100%;
+}
+
+.doc-cover {
+  width: 100%;
+  height: 200px;
+  border-radius: 0;
+  border: 1px solid var(--line-2);
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.doc-appearance-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 20px;
+}
+
+.doc-appearance-actions--on-cover {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  padding: 0;
+  z-index: 2;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .doc-appearance-actions--on-cover {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(6px);
+    transition:
+      opacity 0.16s ease,
+      visibility 0.16s ease,
+      transform 0.16s ease;
+  }
+
+  .doc-cover:hover .doc-appearance-actions--on-cover,
+  .doc-cover:focus-within .doc-appearance-actions--on-cover {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+}
+
+.doc-appearance-btn {
+  height: 30px;
+  border-radius: calc(8px * var(--radius-scale, 1));
+  border: 1px solid var(--line-2);
+  background: var(--glass-2);
+  color: var(--text-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: var(--shadow-subtle);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.doc-appearance-btn:active {
+  transform: scale(0.96);
+}
+
+.doc-appearance-actions--on-cover .doc-appearance-btn {
+  background: oklch(0.18 0.02 258 / 0.66);
+  border-color: oklch(1 0 0 / 0.3);
+  color: oklch(0.96 0.01 258);
+  backdrop-filter: blur(10px) saturate(130%);
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
+  box-shadow: var(--shadow-1);
+}
+
+.doc-appearance-actions--on-cover .doc-appearance-btn:hover {
+  background: oklch(0.22 0.03 258 / 0.8);
+  color: white;
+}
+
+.doc-appearance-btn:hover {
+  background: var(--hover);
+  color: var(--text-1);
+}
+
+.doc-appearance-btn.nv-btn--icon {
+  padding: 0;
+  width: 32px;
+  min-width: 0;
+  justify-content: center;
+}
+
+.doc-icon-picker-popover {
+  position: absolute;
+  left: 20px;
+  top: calc(100% + 8px);
+  margin: 0;
+  z-index: 20;
+}
+
+.doc-cover-panel {
+  position: absolute;
+  left: 20px;
+  top: calc(100% + 8px);
+  width: min(430px, calc(100vw - 40px));
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  margin: 0;
+  border-radius: calc(10px * var(--radius-scale, 1));
+  border: 1px solid var(--line-2);
+  background: var(--glass-3);
+}
+
+.doc-cover-panel__group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.doc-cover-panel__label {
+  margin: 0;
+  color: var(--text-4);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.doc-cover-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.doc-cover-swatch {
+  height: 34px;
+  border: 1px solid var(--line-2);
+  border-radius: calc(8px * var(--radius-scale, 1));
+  cursor: pointer;
+}
+
+.doc-cover-swatch--active {
+  box-shadow: 0 0 0 2px var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.doc-cover-upload {
+  height: 30px;
+  border-radius: calc(8px * var(--radius-scale, 1));
+  border: 1px solid var(--line-2);
+  background: var(--glass-2);
+  color: var(--text-2);
+  padding: 0 10px;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.doc-cover-upload:hover {
+  background: var(--hover);
+  color: var(--text-1);
+}
+
+@media (max-width: 900px) {
+  .doc-appearance-actions {
+    padding: 0 12px;
+  }
+
+  .doc-cover {
+    height: 152px;
+  }
+
+  .doc-icon-picker-popover,
+  .doc-cover-panel {
+    left: 12px;
+    width: min(400px, calc(100vw - 24px));
+  }
+
+  .doc-cover-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+

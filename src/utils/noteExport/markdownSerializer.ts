@@ -195,6 +195,47 @@ function nodeToMd(node: BlockNode, ctx: SerializeCtx): string {
       const markdown = String(node.attrs?.markdown ?? '')
       return `\`\`\`markmap\n${markdown}\n\`\`\``
     }
+    case 'vega_block': {
+      const spec = String(node.attrs?.spec ?? '')
+      return `\`\`\`vega-lite\n${spec}\n\`\`\``
+    }
+    case 'draw_block': {
+      const svg = String(node.attrs?.svgPreview ?? '')
+      const title = String(node.attrs?.title ?? '')
+      if (!svg.trim()) return title.trim() ? `_${title}_` : ''
+      const dataUri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+      return `![${title.trim() || 'Drawing'}](${dataUri})`
+    }
+    case 'media_block': {
+      const src = String(node.attrs?.src ?? '')
+      const name = String(node.attrs?.name ?? (node.attrs?.kind === 'video' ? 'Video' : 'Audio'))
+      if (!src) return ''
+      if (!ctx.assetSrcs.includes(src)) ctx.assetSrcs.push(src)
+      const basename = src.split('/').pop() ?? src
+      return `[${name}](${ctx.assetsSubfolderName}/${basename})`
+    }
+    case 'note_embed': {
+      const title = String(node.attrs?.title ?? 'Note')
+      const previewText = String(node.attrs?.previewText ?? '')
+      const head = `> **${title}**`
+      return previewText.trim() ? `${head}\n>\n> ${previewText}` : head
+    }
+    case 'embed_block': {
+      const url = String(node.attrs?.url ?? '')
+      const title = String(node.attrs?.title ?? '')
+      if (!url) return ''
+      return `[${title.trim() || url}](${url})`
+    }
+    case 'toggle': {
+      const children = node.content ?? []
+      const titleNode = children.find(child => child.type === 'toggle_title')
+      const bodyNodes = children.filter(child => child.type !== 'toggle_title')
+      const summary = titleNode ? inlineContent(titleNode, ctx) : 'Toggle'
+      const body = bodyNodes.map(child => nodeToMd(child, ctx)).filter(Boolean).join('\n\n')
+      return `<details>\n<summary>${summary}</summary>\n\n${body}\n</details>`
+    }
+    case 'toggle_title':
+      return inlineContent(node, ctx)
     case 'column_list':
     case 'column': {
       // Markdown has no columns — flatten to sequential blocks.

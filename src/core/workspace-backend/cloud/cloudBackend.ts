@@ -462,6 +462,9 @@ export class CloudBackend implements WorkspaceBackend {
   readDrawAsset(): Promise<number[]> {
     return Promise.reject(new Error('Drawing assets are not supported on cloud workspaces yet'))
   }
+  readLatestDrawAsset(): Promise<number[]> {
+    return Promise.reject(new Error('Drawing assets are not supported on cloud workspaces yet'))
+  }
   getDiagnostics(): Promise<WorkspaceDiagnostics> {
     const snap = readManifest(this.map)
     let noteCount = snap?.rootNotes.length ?? 0

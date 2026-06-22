@@ -1,0 +1,170 @@
+/* src/app/components/editor/EditorCollabPanel.vue */
+.cp {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  width: 288px;
+  background: var(--surface-2, rgba(30, 30, 35, 0.92));
+  border: 1px solid var(--border-subtle, rgba(255,255,255,0.08));
+  border-radius: calc(12px * var(--radius-scale, 1));
+  backdrop-filter: blur(12px);
+}
+
+.cp__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cp__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+}
+
+.cp__close {
+  background: none;
+  border: none;
+  color: var(--text-muted, rgba(255,255,255,0.4));
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: calc(4px * var(--radius-scale, 1));
+}
+.cp__close:hover { color: var(--text-primary, #fff); }
+
+.cp__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cp__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--text-muted, rgba(255,255,255,0.3));
+}
+.cp__dot--connected  { background: #10B981; }
+.cp__dot--syncing    { background: #F59E0B; animation: pulse 1s infinite; }
+.cp__dot--connecting { background: #F59E0B; animation: pulse 1s infinite; }
+.cp__dot--disconnected,
+.cp__dot--error { background: #EF4444; }
+
+@keyframes pulse { 50% { opacity: 0.4; } }
+
+.cp__status-label {
+  font-size: 12px;
+  color: var(--text-secondary, rgba(255,255,255,0.6));
+}
+
+.cp__tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--surface-1, rgba(255,255,255,0.04));
+  border-radius: calc(8px * var(--radius-scale, 1));
+  padding: 3px;
+}
+
+.cp__tab {
+  flex: 1;
+  padding: 5px 0;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  border-radius: calc(6px * var(--radius-scale, 1));
+  background: transparent;
+  color: var(--text-muted, rgba(255,255,255,0.4));
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.cp__tab--active {
+  background: var(--surface-3, rgba(255,255,255,0.1));
+  color: var(--text-primary, #fff);
+}
+
+.cp__section { display: flex; flex-direction: column; gap: 6px; }
+
+.cp__label {
+  font-size: 11px;
+  color: var(--text-muted, rgba(255,255,255,0.4));
+  margin: 0;
+}
+
+.cp__url-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.cp__url {
+  flex: 1;
+  font-size: 10px;
+  padding: 6px 8px;
+  background: var(--surface-1, rgba(255,255,255,0.05));
+  border-radius: calc(6px * var(--radius-scale, 1));
+  color: var(--text-primary, #fff);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.cp__copy {
+  padding: 5px 10px;
+  font-size: 11px;
+  background: var(--surface-3, rgba(255,255,255,0.1));
+  border: none;
+  border-radius: calc(6px * var(--radius-scale, 1));
+  color: var(--text-primary, #fff);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.cp__copy:hover { background: var(--surface-4, rgba(255,255,255,0.15)); }
+
+.cp__join-row {
+  display: flex;
+  gap: 6px;
+}
+
+.cp__input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  font-size: 11px;
+  background: var(--surface-1, rgba(255,255,255,0.05));
+  border: 1px solid var(--border-subtle, rgba(255,255,255,0.08));
+  border-radius: calc(6px * var(--radius-scale, 1));
+  color: var(--text-primary, #fff);
+  outline: none;
+  box-sizing: border-box;
+}
+.cp__input:focus { border-color: var(--accent, rgba(99,102,241,0.6)); }
+.cp__input::placeholder { color: var(--text-muted, rgba(255,255,255,0.3)); }
+
+.cp__btn {
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--accent, rgba(99,102,241,0.8));
+  border: none;
+  border-radius: calc(7px * var(--radius-scale, 1));
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.cp__btn:hover { opacity: 0.85; }
+.cp__btn:disabled { opacity: 0.4; cursor: default; }
+.cp__btn--danger { background: rgba(239,68,68,0.7); }
+.cp__btn--sm { padding: 7px 12px; white-space: nowrap; flex-shrink: 0; }
+
+.cp__divider {
+  height: 1px;
+  background: var(--border-subtle, rgba(255,255,255,0.07));
+  margin: 2px 0;
+}
+

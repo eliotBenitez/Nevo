@@ -127,6 +127,31 @@ describe('serializeNoteToHtml', () => {
     expect(html).toContain('<article class="note-embed" data-note-id="n2"><a href="nevo://note/n2">Other note</a><p>Preview &lt;text&gt;</p></article>')
   })
 
+  it('renders drawings, embeds and toggles', async () => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>'
+    const { html } = await serializeNoteToHtml(note({
+      type: 'doc',
+      content: [
+        { type: 'draw_block', attrs: { drawId: 'd1', svgPreview: svg, title: 'Sketch' } },
+        { type: 'draw_block', attrs: { drawId: 'd2', svgPreview: '', title: '' } },
+        { type: 'embed_block', attrs: { url: 'https://youtu.be/x', title: 'Clip' } },
+        {
+          type: 'toggle',
+          content: [
+            { type: 'toggle_title', content: [{ type: 'text', text: 'Summary' }] },
+            { type: 'paragraph', content: [{ type: 'text', text: 'Hidden body' }] },
+          ],
+        },
+      ],
+    }), 'Doc_assets')
+
+    expect(html).toContain('<figure class="draw-block"><div class="draw-render"><img class="draw-svg" src="data:image/svg+xml;charset=utf-8,')
+    expect(html).toContain('<figcaption>Sketch</figcaption>')
+    expect(html).toContain('<figure class="embed-block"><a href="https://youtu.be/x">Clip</a></figure>')
+    expect(html).toContain('<details open><summary>Summary</summary>')
+    expect(html).toContain('<p>Hidden body</p>')
+  })
+
   it('renders KaTeX output and exports local cover images', async () => {
     const { html, assetSrcs } = await serializeNoteToHtml(note({
       type: 'doc',

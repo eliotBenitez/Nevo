@@ -124,6 +124,8 @@ function toggleMenu() {
 
 function onDocPointerDown(e: PointerEvent) {
   const target = e.target as Node
+  // Ignore clicks inside a teleported NvSelect dropdown rendered by content in this menu.
+  if (target instanceof Element && target.closest('.nv-select__menu')) return
   if (!menuRef.value?.contains(target) && !triggerWrapRef.value?.contains(target)) {
     closeMenu(false)
   }

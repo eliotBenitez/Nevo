@@ -150,7 +150,35 @@ fn collect_referenced_assets(workspace_path: &str) -> Result<HashSet<String>, St
     collect_asset_refs_recursive(&nevo_dir.join("collab"), &mut refs);
     collect_asset_refs_recursive(&nevo_dir.join("snapshots"), &mut refs);
     collect_asset_refs_recursive(&nevo_dir.join("boards"), &mut refs);
+    // Drawings keep their image references inside `.draw.json` payloads, which
+    // live in `.nevo/assets/` — a directory none of the scanners above visit.
+    // Without this, an image used only by a drawing looks orphaned and gets
+    // reaped on cleanup (the drawing survives via the note's `src`, but its
+    // embedded images vanish on app re-entry).
+    collect_draw_payload_refs(&assets_dir_path(workspace_path), &mut refs);
     Ok(refs)
+}
+
+/// Pull nested `.nevo/assets/...` references out of every `.draw.json` payload in
+/// the assets directory. Only the small JSON drawings are read (not the binary
+/// assets), so this stays cheap even on large workspaces.
+fn collect_draw_payload_refs(assets_dir: &Path, refs: &mut HashSet<String>) {
+    let Ok(entries) = std::fs::read_dir(assets_dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let is_draw = path
+            .file_name()
+            .and_then(|value| value.to_str())
+            .map(|name| name.ends_with(".draw.json"))
+            .unwrap_or(false);
+        if is_draw {
+            if let Ok(bytes) = std::fs::read(&path) {
+                extract_asset_refs_from_bytes(&bytes, refs);
+            }
+        }
+    }
 }
 
 // Offload to a blocking thread: recursively scans assets/snapshots/collab and
@@ -387,4 +415,85 @@ pub fn cleanup_orphaned_assets(workspace_path: String) -> Result<WorkspaceCleanu
     );
 
     Ok(report)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::commands::note::{create_note, save_note};
+    use crate::commands::workspace::create_workspace;
+    use chrono::Utc;
+    use serde_json::json;
+    use uuid::Uuid;
+
+    struct TestWorkspace {
+        path: std::path::PathBuf,
+    }
+
+    impl TestWorkspace {
+        fn new() -> Self {
+            let path = std::env::temp_dir().join(format!("nevo-maint-{}", Uuid::new_v4()));
+            create_workspace(
+                path.to_string_lossy().into_owned(),
+                "Maint".to_string(),
+                "N".to_string(),
+                "violet".to_string(),
+            )
+            .expect("create workspace");
+            Self { path }
+        }
+        fn path_string(&self) -> String {
+            self.path.to_string_lossy().into_owned()
+        }
+    }
+
+    impl Drop for TestWorkspace {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.path);
+        }
+    }
+
+    #[test]
+    fn cleanup_keeps_images_referenced_only_by_a_drawing() {
+        // Regression: re-entering the app reaped draw_block images because their
+        // only reference lives inside the drawing's `.draw.json` payload, which
+        // the asset scanner never read.
+        let workspace = TestWorkspace::new();
+        let workspace_path = workspace.path_string();
+        let assets_dir = assets_dir_path(&workspace_path);
+        std::fs::create_dir_all(&assets_dir).expect("create assets dir");
+
+        // The image asset + the drawing payload that references it, both in assets.
+        let image_path = assets_dir.join("pasted-pic.png");
+        std::fs::write(&image_path, b"png-bytes").expect("write image");
+        let draw_name = "draw-d1-abc.draw.json";
+        std::fs::write(
+            assets_dir.join(draw_name),
+            br#"{"version":1,"strokes":[{"type":"image","points":[{"x":0,"y":0},{"x":9,"y":9}],"color":"transparent","size":1,"assetSrc":".nevo/assets/pasted-pic.png"}]}"#,
+        )
+        .expect("write draw payload");
+
+        // A note references the drawing payload so the `.draw.json` itself survives.
+        let mut note = create_note(
+            workspace_path.clone(),
+            None,
+            "Has drawing".to_string(),
+            "📄".to_string(),
+        )
+        .expect("create note");
+        note.content = json!({
+            "type": "doc",
+            "content": [{
+                "type": "draw_block",
+                "attrs": { "drawId": "d1", "src": format!(".nevo/assets/{}", draw_name), "svgPreview": "", "title": "" }
+            }]
+        });
+        note.updated_at = Utc::now().to_rfc3339();
+        save_note(workspace_path.clone(), note).expect("save note");
+
+        cleanup_orphaned_assets(workspace_path).expect("cleanup");
+
+        assert!(image_path.exists(), "drawing image must survive cleanup");
+        assert!(assets_dir.join(draw_name).exists(), "drawing payload must survive");
+    }
 }

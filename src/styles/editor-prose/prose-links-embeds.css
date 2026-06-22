@@ -1,0 +1,372 @@
+/* Internal links, shared embed base, note embed, media block */
+
+
+/* Internal links (wiki-style [[page]] links) */
+.doc-editor .nv-prosemirror .nv-internal-link {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in oklab, var(--accent) 60%, transparent);
+  cursor: pointer;
+  transition: border-color 0.12s ease, opacity 0.12s ease;
+}
+
+.doc-editor .nv-prosemirror .nv-internal-link:hover {
+  border-bottom-color: var(--accent);
+  opacity: 0.85;
+}
+
+/* Broken internal links — target note no longer exists. Marked via the
+ * broken-link-decoration plugin (inline decoration adds `.is-broken`). */
+.doc-editor .nv-prosemirror .nv-internal-link.is-broken,
+.doc-editor .nv-prosemirror .nv-internal-link .is-broken {
+  color: var(--danger, #e0533d);
+  border-bottom: 1px dashed color-mix(in oklab, var(--danger, #e0533d) 70%, transparent);
+}
+.doc-editor .nv-prosemirror .nv-internal-link.is-broken:hover,
+.doc-editor .nv-prosemirror .nv-internal-link:hover .is-broken {
+  border-bottom-style: solid;
+  opacity: 1;
+}
+
+/* ---- Shared embed button / input base ---- */
+.doc-editor .nv-prosemirror .nv-embed-btn {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line-2);
+  border-radius: calc(8px * var(--radius-scale, 1));
+  background: color-mix(in oklab, var(--hover) 84%, transparent);
+  color: var(--text-2);
+  font: 12px/1.2 var(--font-ui);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.14s;
+}
+.doc-editor .nv-prosemirror .nv-embed-btn:hover {
+  background: var(--hover-strong);
+}
+.doc-editor .nv-prosemirror .nv-embed-btn--remove {
+  color: var(--text-3);
+}
+.doc-editor .nv-prosemirror .nv-embed-input {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line-2);
+  border-radius: calc(8px * var(--radius-scale, 1));
+  background: color-mix(in oklab, var(--hover) 84%, transparent);
+  color: var(--text-2);
+  font: 13px/1.2 var(--font-ui);
+  box-sizing: border-box;
+  min-width: 0;
+  transition: border-color 0.15s, background 0.15s;
+}
+.doc-editor .nv-prosemirror .nv-embed-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent-soft) 60%, transparent);
+}
+.doc-editor .nv-prosemirror .nv-embed-input::placeholder {
+  color: var(--text-4);
+}
+
+/* ---- Note Embed ---- */
+.doc-editor .nv-prosemirror .nv-note-embed-block {
+  margin: 16px 0;
+  border-radius: calc(12px * var(--radius-scale, 1));
+}
+.doc-editor .nv-prosemirror .nv-note-embed-block.ProseMirror-selectednode .nv-note-embed-card {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-card {
+  border: 1px solid var(--line-2);
+  border-radius: calc(12px * var(--radius-scale, 1));
+  padding: 14px;
+  background: var(--glass-2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: default;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+.doc-editor .nv-prosemirror .nv-note-embed-card:hover {
+  background: var(--glass-3);
+  border-color: var(--line-3);
+  box-shadow: var(--shadow-md);
+}
+.doc-editor .nv-prosemirror .nv-note-embed-block[data-has-note='false'] .nv-note-embed-card {
+  border: 1.5px dashed var(--line-strong);
+  background: color-mix(in oklab, var(--glass-1) 40%, transparent);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  padding: 20px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-more-container,
+.doc-editor .nv-prosemirror .nv-media-more-container,
+.doc-editor .nv-prosemirror .nv-file-more-container {
+  margin-left: 4px;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-more-btn,
+.doc-editor .nv-prosemirror .nv-embed-more-btn,
+.doc-editor .nv-prosemirror .nv-media-more-btn,
+.doc-editor .nv-prosemirror .nv-file-more-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  border-radius: calc(6px * var(--radius-scale, 1));
+  color: var(--text-3);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-more-btn:hover,
+.doc-editor .nv-prosemirror .nv-embed-more-btn:hover,
+.doc-editor .nv-prosemirror .nv-media-more-btn:hover,
+.doc-editor .nv-prosemirror .nv-file-more-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-1);
+}
+.doc-editor .nv-prosemirror .nv-note-embed-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-block[data-has-note='false'] .nv-note-embed-icon {
+  color: var(--text-4);
+}
+.doc-editor .nv-prosemirror .nv-note-embed-title {
+  flex: 1;
+  min-width: 0;
+  font: 600 14.5px/1.3 var(--font-ui);
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-block[data-has-note='false'] .nv-note-embed-title {
+  color: var(--text-3);
+  font-weight: 500;
+  font-size: 14px;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-divider {
+  height: 1px;
+  background: var(--line-1);
+  margin: 0 -2px;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 0;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-content {
+  max-height: 220px;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+  pointer-events: none;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+.doc-editor .nv-prosemirror .nv-note-embed-content h1,
+.doc-editor .nv-prosemirror .nv-note-embed-content h2,
+.doc-editor .nv-prosemirror .nv-note-embed-content h3,
+.doc-editor .nv-prosemirror .nv-note-embed-content h4,
+.doc-editor .nv-prosemirror .nv-note-embed-content h5,
+.doc-editor .nv-prosemirror .nv-note-embed-content h6 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 3px;
+  line-height: 1.4;
+  color: var(--text-1);
+}
+.doc-editor .nv-prosemirror .nv-note-embed-content p {
+  margin: 0 0 3px;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-content ul,
+.doc-editor .nv-prosemirror .nv-note-embed-content ol {
+  margin: 0 0 3px;
+  padding-left: 18px;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-content pre {
+  font-size: 11.5px;
+  border-radius: calc(6px * var(--radius-scale, 1));
+  padding: 8px 10px;
+  margin: 0 0 4px;
+  overflow: hidden;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-content blockquote {
+  margin: 0 0 3px;
+  padding-left: 10px;
+  border-left: 2px solid var(--accent);
+}
+.doc-editor .nv-prosemirror .nv-note-embed-content table {
+  font-size: 12px;
+  margin: 0 0 4px;
+}
+.doc-editor .nv-prosemirror .nv-note-embed-content img {
+  max-height: 80px;
+  border-radius: calc(4px * var(--radius-scale, 1));
+}
+.nv-embed-error {
+  font-size: 12px;
+  color: var(--danger);
+}
+/* ---- Media Block ---- */
+.doc-editor .nv-prosemirror .nv-media-block {
+  border: 1px solid var(--line-2);
+  border-radius: calc(12px * var(--radius-scale, 1));
+  margin: 16px 0;
+  background: var(--glass-2);
+  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+.doc-editor .nv-prosemirror .nv-media-block.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.doc-editor .nv-prosemirror .nv-media-block:hover {
+  background: var(--glass-3);
+  border-color: var(--line-3);
+  box-shadow: var(--shadow-md);
+}
+
+.doc-editor .nv-prosemirror .nv-media-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+}
+.doc-editor .nv-prosemirror .nv-media-pick-btn {
+  height: 38px;
+  padding: 0 20px;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: calc(10px * var(--radius-scale, 1));
+  background: color-mix(in oklab, var(--glass-1) 40%, transparent);
+  color: var(--text-3);
+  font: 500 13.5px/1 var(--font-ui);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.doc-editor .nv-prosemirror .nv-media-pick-btn:hover {
+  background: var(--hover-strong);
+  color: var(--text-2);
+  border-color: var(--accent);
+  border-style: solid;
+  transform: translateY(-1px);
+}
+
+.doc-editor .nv-prosemirror .nv-media-player {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.doc-editor .nv-prosemirror .nv-media-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 8px;
+}
+.doc-editor .nv-prosemirror .nv-media-kind-label {
+  padding: 8px 14px 6px;
+  font: 500 10px/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-4);
+}
+.doc-editor .nv-prosemirror .nv-media-block[data-kind='audio'] .nv-media-kind-label {
+  color: oklch(0.74 0.11 295);
+}
+.doc-editor .nv-prosemirror .nv-media-block[data-kind='video'] .nv-media-kind-label {
+  color: oklch(0.68 0.12 155);
+}
+
+.doc-editor .nv-prosemirror .nv-media-audio-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px 10px;
+}
+.doc-editor .nv-prosemirror .nv-media-play-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.14s, transform 0.1s;
+}
+.doc-editor .nv-prosemirror .nv-media-play-btn:hover {
+  background: color-mix(in oklab, var(--accent) 85%, white 15%);
+  transform: scale(1.06);
+}
+.doc-editor .nv-prosemirror .nv-media-play-btn:active {
+  transform: scale(0.94);
+}
+.doc-editor .nv-prosemirror .nv-media-progress {
+  flex: 1;
+  height: 4px;
+  cursor: pointer;
+  accent-color: var(--accent);
+  border-radius: 999px;
+}
+.doc-editor .nv-prosemirror .nv-media-time {
+  flex-shrink: 0;
+  font: 11px/1 var(--font-mono);
+  color: var(--text-4);
+  white-space: nowrap;
+}
+.doc-editor .nv-prosemirror .nv-media-video {
+  width: 100%;
+  display: block;
+  max-height: 420px;
+  background: oklch(0.10 0.008 270);
+  accent-color: var(--accent);
+}
+
+.doc-editor .nv-prosemirror .nv-media-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--line-1);
+}
+.doc-editor .nv-prosemirror .nv-media-name {
+  flex: 1;
+  min-width: 0;
+  font: 500 12.5px/1.3 var(--font-ui);
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.doc-editor .nv-prosemirror .nv-media-size {
+  font: 11px/1 var(--font-ui);
+  color: var(--text-4);
+  flex-shrink: 0;
+}

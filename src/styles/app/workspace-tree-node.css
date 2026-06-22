@@ -1,0 +1,85 @@
+/* src/app/components/WorkspaceTreeNode.vue */
+.tree-row {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  height: 30px;
+  border-radius: calc(8px * var(--radius-scale, 1));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  padding-right: 10px;
+  transition: background 0.12s, color 0.12s;
+}
+
+.tree-row:hover {
+  background: var(--hover);
+  color: var(--text-1);
+}
+
+.tree-row--active {
+  background: var(--accent-soft);
+  color: var(--text-1);
+  box-shadow: inset 0 0 0 1px oklch(0.66 0.10 258 / 0.2);
+}
+
+.tree-arrow {
+  width: 12px;
+  height: 12px;
+  display: grid;
+  place-items: center;
+  color: var(--text-4);
+}
+
+.tree-title {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+.tree-folder-add {
+  width: 20px;
+  height: 20px;
+  border-radius: calc(6px * var(--radius-scale, 1));
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-4);
+  font-size: 14px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s, color 0.12s;
+}
+
+.tree-row:hover .tree-folder-add,
+.tree-row--active .tree-folder-add {
+  opacity: 1;
+}
+
+.tree-folder-add:hover {
+  background: var(--hover-strong);
+  color: var(--text-1);
+}
+
+.tree-note-emoji {
+  width: 18px;
+  display: inline-flex;
+  justify-content: center;
+  flex: 0 0 auto;
+  line-height: 1;
+}
+
+.tree-children {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
+}

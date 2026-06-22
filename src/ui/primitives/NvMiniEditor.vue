@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, toRaw } from 'vue'
 import EditorSurface from '../../app/components/editor/EditorSurface.vue'
 import { createDefaultWorkspaceSettings } from '../../utils/workspace-settings'
 import type { BlockNode } from '../../types/note'
@@ -21,6 +21,18 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{ 'update:modelValue': [value: unknown] }>()
+
+// Reference identity must survive the editor→parent→prop round-trip so that
+// EditorSurface can short-circuit its content watcher instead of rebuilding the
+// editor (which would reset the cursor to the document start). We migrate legacy
+// marks only for genuinely external values, and pass our own emitted value back
+// through unchanged.
+let lastEmittedValue: unknown
+
+function onEditorUpdate(value: unknown) {
+  lastEmittedValue = value
+  emit('update:modelValue', value)
+}
 
 const LEGACY_MARK_RENAMES: Record<string, string> = { bold: 'strong', italic: 'em' }
 const EMPTY_DOC: BlockNode = { type: 'doc', content: [] }
@@ -54,6 +66,11 @@ function migrateLegacyMarks(node: JsonNode): BlockNode {
 
 const editorContent = computed<BlockNode>(() => {
   const value = props.modelValue
+  // The parent stores our emitted value in a deep `ref`, so it returns as a
+  // reactive proxy. Compare/return the raw object to keep reference identity
+  // that EditorSurface relies on to avoid rebuilding (and resetting the cursor).
+  const raw = value && typeof value === 'object' ? toRaw(value) : value
+  if (raw === lastEmittedValue) return lastEmittedValue as BlockNode
   if (!value || typeof value !== 'object') return EMPTY_DOC
   const node = value as JsonNode
   if (node.type !== 'doc') return EMPTY_DOC
@@ -71,7 +88,7 @@ const editorContent = computed<BlockNode>(() => {
       :workspace-path="workspacePath"
       :plugin-manifests="pluginManifests"
       :settings="settings"
-      @update:content="value => emit('update:modelValue', value)"
+      @update:content="onEditorUpdate"
     />
   </div>
 </template>

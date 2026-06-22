@@ -88,7 +88,7 @@ const emit = defineEmits<{
   'consumed-draw-update': []
   'open-note': [noteId: string, anchor?: string | null]
   'open-folder': [folderId: string]
-  'request-export': [format: 'markdown' | 'html' | 'typst' | 'pdf']
+  'request-export': [format: 'markdown' | 'html' | 'docx' | 'typst' | 'pdf']
   'request-import-md': []
   'open-draw': [noteId: string, drawId: string]
 }>()
@@ -428,6 +428,7 @@ const editorSetup = useEditorCore(core, {
       imageInputRef.value?.click()
     }
   },
+  onImagePaste: (event) => imageUpload.onEditorPaste(event),
   onImageContextMenuRequest: (ctx) => {
     openImageContextMenu(ctx)
   },
@@ -1261,6 +1262,10 @@ const breadcrumbMenuItems = computed<NvMenuItemDef[]>(() => [
         action: () => emit('request-export', 'html'),
       },
       {
+        label: t('export.formatDocx'),
+        action: () => emit('request-export', 'docx'),
+      },
+      {
         label: t('export.formatTypst'),
         action: () => emit('request-export', 'typst'),
       },
@@ -1457,6 +1462,7 @@ defineExpose({ editorRoot, flushPendingContent, updateDrawBlock })
               <div
                 ref="editorRoot"
                 class="doc-editor"
+                :class="{ 'colored-headings': props.settings.appearance.accentColoredHeadings }"
                 :aria-label="t('workspace.contentPlaceholder')"
                 @dragover="imageUpload.onEditorDragOver"
                 @drop="imageUpload.onEditorDrop"

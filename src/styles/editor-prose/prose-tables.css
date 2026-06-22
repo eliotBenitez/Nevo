@@ -1,0 +1,134 @@
+/* Tables, formula cells and block selection */
+
+
+.doc-editor .nv-prosemirror .tableWrapper {
+  max-width: 100%;
+  overflow-x: clip;
+  margin: 12px 0;
+  border-radius: calc(11px * var(--radius-scale, 1));
+  border: 1px solid var(--line-2);
+  background: var(--glass-2);
+}
+
+.doc-editor .nv-prosemirror table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+  margin: 0;
+}
+
+.doc-editor .nv-prosemirror td,
+.doc-editor .nv-prosemirror th {
+  border-right: 1px solid var(--line-1);
+  border-bottom: 1px solid var(--line-1);
+  padding: 7px 10px;
+  vertical-align: top;
+  min-width: 0;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  position: relative;
+  background: transparent;
+  transition: background 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+}
+
+.doc-editor .nv-prosemirror th {
+  background: var(--hover);
+  color: var(--text-4);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: 600;
+  border-bottom: 1px solid var(--line-2);
+}
+
+.doc-editor .nv-prosemirror td > p,
+.doc-editor .nv-prosemirror th > p {
+  margin: 0;
+}
+
+/* Formula cells render their computed value via a widget decoration; the
+   underlying (empty) cell content is hidden so only the result is shown. */
+.doc-editor .nv-prosemirror td.nv-formula-cell > :not(.nv-formula-value),
+.doc-editor .nv-prosemirror th.nv-formula-cell > :not(.nv-formula-value) {
+  display: none;
+}
+
+.doc-editor .nv-prosemirror .nv-formula-value {
+  display: inline-block;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.doc-editor .nv-prosemirror td.nv-formula-cell,
+.doc-editor .nv-prosemirror th.nv-formula-cell {
+  background: color-mix(in oklab, var(--accent, #4f8cff) 7%, transparent);
+}
+
+.doc-editor .nv-prosemirror .nv-formula-cell[data-error='true'] .nv-formula-value {
+  color: rgba(239, 68, 68, 0.95);
+}
+
+.doc-editor .nv-prosemirror tr > *:last-child {
+  border-right: none;
+}
+
+.doc-editor .nv-prosemirror tbody tr:last-child > td,
+.doc-editor .nv-prosemirror tbody tr:last-child > th {
+  border-bottom: none;
+}
+
+.doc-editor .nv-prosemirror table colgroup col {
+  width: auto !important;
+}
+
+.doc-editor .nv-prosemirror td[data-align='center'],
+.doc-editor .nv-prosemirror th[data-align='center'] {
+  text-align: center;
+}
+
+.doc-editor .nv-prosemirror td[data-align='right'],
+.doc-editor .nv-prosemirror th[data-align='right'] {
+  text-align: right;
+}
+
+.doc-editor .nv-prosemirror td[data-align='justify'],
+.doc-editor .nv-prosemirror th[data-align='justify'] {
+  text-align: justify;
+}
+
+.doc-editor .nv-prosemirror td.selectedCell,
+.doc-editor .nv-prosemirror th.selectedCell {
+  background: var(--accent-soft);
+  outline: 1.5px solid var(--accent);
+  outline-offset: -1px;
+  z-index: 1;
+  border-color: color-mix(in oklab, var(--accent) 34%, var(--line-1));
+}
+
+.doc-editor .nv-prosemirror th.selectedCell {
+  background: color-mix(in oklab, var(--accent-soft) 82%, var(--hover) 18%);
+}
+
+.doc-editor .nv-prosemirror .column-resize-handle {
+  background-color: color-mix(in oklab, var(--accent) 55%, transparent);
+  width: 3px;
+}
+
+.doc-editor .nv-prosemirror .nv-block-selected {
+  background: color-mix(in oklab, var(--accent) 11%, transparent);
+  border-radius: calc(6px * var(--radius-scale, 1));
+  outline: 1px solid color-mix(in oklab, var(--accent) 18%, transparent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 9%, transparent);
+}
+
+.doc-editor .nv-prosemirror .nv-block-selection-range::selection,
+.doc-editor .nv-prosemirror .nv-block-selection-range *::selection {
+  background: color-mix(in oklab, var(--accent) 25%, transparent);
+  color: var(--text-1);
+}

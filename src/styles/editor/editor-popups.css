@@ -1,0 +1,107 @@
+/* src/app/components/editor/EditorPopupPanel.vue */
+.editor-overlay {
+  position: fixed;
+  z-index: 60;
+}
+
+.editor-popup-panel {
+  width: min(520px, calc(100vw - 24px));
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid color-mix(in oklab, var(--line-2) 78%, var(--surface-2));
+  border-radius: calc(14px * var(--radius-scale, 1));
+  background: color-mix(in oklab, var(--surface) 94%, var(--surface-2) 6%);
+  box-shadow:
+    0 18px 42px rgb(17 24 39 / 0.22),
+    0 1px 0 color-mix(in oklab, white 18%, transparent) inset;
+  backdrop-filter: blur(10px) saturate(110%);
+  transform: translateX(-50%);
+}
+
+.math-popover,
+.vega-popover {
+  width: min(480px, calc(100vw - 24px));
+}
+
+.editor-popup-panel__label {
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.editor-popup-panel__input {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--line-2);
+  border-radius: calc(10px * var(--radius-scale, 1));
+  background: color-mix(in oklab, var(--surface) 96%, var(--surface-2) 4%);
+  color: var(--text-1);
+  font: 13px/1.6 var(--font-mono);
+  padding: 10px 12px;
+  outline: none;
+}
+
+.editor-popup-panel__input:focus {
+  border-color: color-mix(in oklab, var(--accent) 55%, var(--line-2));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent-soft) 65%, transparent);
+}
+
+.editor-popup-panel__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-4);
+  font-size: 11px;
+}
+
+.editor-popup-panel__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* src/app/components/editor/EditorMathPopover.vue */
+.math-popover__suggestions {
+  display: grid;
+  gap: 6px;
+  padding: 6px;
+  max-height: min(240px, 38vh);
+  overflow-y: auto;
+  border: 1px solid var(--line-1);
+  border-radius: calc(12px * var(--radius-scale, 1));
+  background: color-mix(in oklab, var(--surface) 94%, white 6%);
+}
+
+.math-popover__suggestion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: calc(8px * var(--radius-scale, 1));
+  background: transparent;
+  color: var(--text-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.math-popover__suggestion.is-active {
+  background: color-mix(in oklab, var(--accent-soft) 58%, white 42%);
+}
+
+.math-popover__suggestion-command,
+.math-popover__suggestion-preview {
+  font: 12px/1.4 var(--font-mono);
+}
+
+.math-popover__suggestion-preview {
+  color: var(--text-4);
+}
+

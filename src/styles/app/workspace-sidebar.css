@@ -1,0 +1,290 @@
+/* src/app/components/WorkspaceSidebar.vue */
+.sidebar {
+  width: 272px;
+  flex: 0 0 272px;
+  height: 100%;
+  border-right: 1px solid var(--line-1);
+  background: var(--glass-1);
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px;
+  position: relative;
+  z-index: 3;
+}
+
+.workspace-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: calc(10px * var(--radius-scale, 1));
+  background: var(--hover);
+  border: 1px solid var(--line-1);
+}
+
+.workspace-glyph {
+  width: 32px;
+  height: 32px;
+  border-radius: calc(9px * var(--radius-scale, 1));
+  background: linear-gradient(135deg, var(--accent), oklch(0.55 0.1 295));
+  display: grid;
+  place-items: center;
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.25), 0 4px 12px var(--accent-glow);
+}
+
+.workspace-meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.workspace-head-back {
+  margin-left: auto;
+  flex-shrink: 0;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+.workspace-head-back:hover { opacity: 1; }
+
+.workspace-name {
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 560;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workspace-subtitle {
+  color: var(--text-4);
+  font-size: 11px;
+}
+
+.sidebar-actionbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sidebar-actionbar__new-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-actionbar__new-wrap .nv-popup-menu__trigger-wrap {
+  display: block;
+  width: 100%;
+}
+
+.sidebar-actionbar__new {
+  width: 100%;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in oklab, var(--accent) 26%, transparent);
+  border-radius: calc(9px * var(--radius-scale, 1));
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 540;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, transform 140ms ease;
+}
+
+.sidebar-actionbar__new:hover {
+  background: color-mix(in oklab, var(--accent) 18%, transparent);
+  border-color: color-mix(in oklab, var(--accent) 38%, transparent);
+}
+
+.sidebar-actionbar__new:active {
+  transform: translateY(1px);
+}
+
+.sidebar-actionbar__new span {
+  flex: 1;
+  text-align: left;
+}
+
+.sidebar-actionbar__caret {
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.sidebar-actionbar__tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.sidebar-actionbar__icon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: calc(8px * var(--radius-scale, 1));
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.sidebar-actionbar__icon:hover {
+  background: var(--hover);
+  color: var(--text-1);
+}
+
+.sidebar-actionbar__icon.is-active {
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+}
+
+.tree-wrap {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* Isolate paint so scrolling the tree doesn't repaint the rest of the sidebar. */
+  contain: paint;
+}
+
+.sidebar-boards {
+  padding: 4px 0;
+  border-top: 1px solid var(--line-1);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sidebar-boards__header {
+  display: flex;
+  align-items: center;
+  padding: 2px 10px 4px;
+}
+
+.sidebar-boards__label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-4);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex: 1;
+}
+
+.sidebar-boards__add {
+  width: 24px;
+  height: 24px;
+  padding: 0 !important;
+  display: grid;
+  place-items: center;
+  color: var(--text-4);
+  border: none;
+  border-radius: calc(7px * var(--radius-scale, 1));
+  background: transparent;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.sidebar-boards__add:hover {
+  color: var(--text-1);
+  background: var(--hover);
+}
+
+.sidebar-board-item {
+  width: 100%;
+  height: 30px;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  border-radius: calc(8px * var(--radius-scale, 1));
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  font-size: 12.5px;
+  text-align: left;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.sidebar-board-item:hover {
+  background: var(--hover);
+  color: var(--text-1);
+}
+
+.sidebar-board-item--active {
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.sidebar-board-item__icon {
+  font-size: 13px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.sidebar-board-item__title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-board-item--empty {
+  color: var(--text-4);
+  font-size: 12px;
+  gap: 6px;
+}
+
+.sidebar-system {
+  margin-top: auto;
+  padding-top: 4px;
+  border-top: 1px solid var(--line-1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-system__item {
+  width: 100%;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  border-radius: calc(9px * var(--radius-scale, 1));
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  font-size: 12.5px;
+  text-align: left;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.sidebar-system__item:hover {
+  background: var(--hover);
+  color: var(--text-1);
+}
+
+.sidebar-system__item--active {
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.tree-empty {
+  padding: 10px 8px;
+  color: var(--text-4);
+  font-size: 12px;
+}
+

@@ -226,6 +226,35 @@ function nodeToTypst(node: BlockNode, ctx: SerializeCtx): string {
       const name = registerDraw(svg, ctx)
       return `#figure(image(${quote(name)}, width: 70%))`
     }
+    case 'note_embed': {
+      const title = String(node.attrs?.title ?? 'Note')
+      const previewText = String(node.attrs?.previewText ?? '')
+      const body = previewText.trim()
+        ? `#strong[${escapeText(title)}] \\ ${escapeText(previewText)}`
+        : `#strong[${escapeText(title)}]`
+      return `#block(fill: luma(244), inset: 10pt, radius: 6pt, width: 100%)[${body}]`
+    }
+    case 'media_block': {
+      const name = String(node.attrs?.name ?? (node.attrs?.kind === 'video' ? 'Video' : 'Audio'))
+      return `#emph[${node.attrs?.kind === 'video' ? '🎬' : '🔊'} ${escapeText(name)}]`
+    }
+    case 'embed_block': {
+      const url = String(node.attrs?.url ?? '')
+      if (!url) return ''
+      const title = String(node.attrs?.title ?? '')
+      return `#link(${quote(url)})[${escapeText(title.trim() || url)}]`
+    }
+    case 'toggle': {
+      const children = node.content ?? []
+      const titleNode = children.find(child => child.type === 'toggle_title')
+      const bodyNodes = children.filter(child => child.type !== 'toggle_title')
+      const summary = titleNode ? inlineContent(titleNode, ctx).trim() : ''
+      const body = bodyNodes.map(child => nodeToTypst(child, ctx)).filter(Boolean).join('\n\n')
+      const heading = summary ? `#strong[${summary}]\n\n` : ''
+      return `${heading}${body}`
+    }
+    case 'toggle_title':
+      return inlineContent(node, ctx)
     case 'table':
       return tableToTypst(node, ctx)
     case 'column_list': {

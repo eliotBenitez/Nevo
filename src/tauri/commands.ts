@@ -171,6 +171,9 @@ export const noteCommands = {
   readDrawAsset: (workspacePath: string, src: string) =>
     invokeCommand<number[]>('read_draw_asset', { workspacePath, src }),
 
+  readLatestDrawAsset: (workspacePath: string, drawId: string) =>
+    invokeCommand<number[]>('read_latest_draw_asset', { workspacePath, drawId }),
+
   getMediaServerInfo: () =>
     invokeCommand<{ port: number; token: string }>('get_media_server_info'),
 
@@ -183,11 +186,17 @@ export const noteCommands = {
   exportNoteHtml: (workspacePath: string, exportPath: string, content: string, assetSrcs: string[]) =>
     invokeCommand<void>('export_note_html', { workspacePath, exportPath, content, assetSrcs }),
 
+  exportNoteDocx: (exportPath: string, bytes: number[]) =>
+    invokeCommand<void>('export_note_docx', { exportPath, bytes }),
+
   exportNotePdf: (workspacePath: string, exportPath: string, typstSource: string, assets: TypstAsset[]) =>
     invokeCommand<void>('export_note_pdf', { workspacePath, exportPath, typstSource, assets }),
 
   exportNoteTypstArchive: (workspacePath: string, exportPath: string, typstSource: string, assets: TypstAsset[]) =>
     invokeCommand<void>('export_note_typst_archive', { workspacePath, exportPath, typstSource, assets }),
+
+  exportDrawFile: (exportPath: string, bytes: number[]) =>
+    invokeCommand<void>('export_draw_file', { exportPath, bytes }),
 
   renderNotePdfPreview: (workspacePath: string, typstSource: string, assets: TypstAsset[]) =>
     invokeCommand<string[]>('render_note_pdf_preview', { workspacePath, typstSource, assets }),
@@ -286,6 +295,7 @@ export const kanbanCommands = {
     columnOrder?: number
     progress?: number
     priority?: string
+    links?: unknown
   }) => invokeCommand<KanbanCard>('kanban_update_card', { workspacePath, boardId, cardId, ...updates }),
 
   deleteCard: (workspacePath: string, boardId: string, cardId: string) =>

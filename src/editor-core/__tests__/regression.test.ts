@@ -782,7 +782,7 @@ describe('editor regression', () => {
       expect(listItem?.getAttribute('data-nevo-list-marker')).toBe('•')
       expect(paragraph?.textContent).toBe('')
 
-      const editorProseCss = readFileSync('src/styles/editor-prose.css', 'utf8')
+      const editorProseCss = readFileSync('src/styles/editor-prose/prose-text.css', 'utf8')
       expect(editorProseCss).toContain('.doc-editor .nv-prosemirror li > p')
       expect(editorProseCss).toContain('min-height: 1.72em')
     } finally {
@@ -1243,7 +1243,7 @@ describe('editor regression', () => {
   })
 
   it('renders list marker styles from DOM attributes', () => {
-    const editorProseCss = readFileSync('src/styles/editor-prose.css', 'utf8')
+    const editorProseCss = readFileSync('src/styles/editor-prose/prose-text.css', 'utf8')
 
     expect(editorProseCss).toContain('list-style: none')
     expect(editorProseCss).toContain('.doc-editor .nv-prosemirror li::before')
@@ -1252,7 +1252,7 @@ describe('editor regression', () => {
   })
 
   it('contains editor styles for divider and lower heading levels', () => {
-    const editorProseCss = readFileSync('src/styles/editor-prose.css', 'utf8')
+    const editorProseCss = readFileSync('src/styles/editor-prose/prose-text.css', 'utf8')
 
     expect(editorProseCss).toContain('.doc-editor .nv-prosemirror h5')
     expect(editorProseCss).toContain('.doc-editor .nv-prosemirror h6')

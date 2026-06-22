@@ -341,6 +341,7 @@ const editorSetup = useEditorCore(core, {
       imageInputRef.value?.click()
     }
   },
+  onImagePaste: (event) => imageUpload.onEditorPaste(event),
   onImageContextMenuRequest: openImageContextMenu,
   onFilePickerRequest: (pos) => {
     if (backendSupportsPathImport()) {
@@ -789,6 +790,7 @@ defineExpose({
     <div
       ref="editorRoot"
       class="doc-editor editor-surface__editor"
+      :class="{ 'colored-headings': props.settings.appearance.accentColoredHeadings }"
       @dragover="imageUpload.onEditorDragOver"
       @drop="imageUpload.onEditorDrop"
     />

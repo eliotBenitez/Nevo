@@ -171,6 +171,7 @@ pub fn run() {
         })
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
             logging::log_frontend_event,
@@ -223,15 +224,18 @@ pub fn run() {
             note::delete_unreferenced_asset,
             note::save_draw_asset,
             note::read_draw_asset,
+            note::read_latest_draw_asset,
             note::open_file_path,
             media_server::get_media_server_info,
             note::search_workspace_blocks,
             note::export_note_markdown,
             note::export_note_html,
+            note::export_note_docx,
             typst_export::export_note_pdf,
             typst_export::export_note_typst_archive,
             typst_export::render_note_pdf_preview,
             note::read_text_file,
+            note::export_draw_file,
             note::save_yjs_state,
             note::load_yjs_state,
             collab::server::start_collab_server,

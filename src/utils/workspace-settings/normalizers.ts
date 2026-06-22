@@ -125,6 +125,9 @@ export function normalizeWorkspaceSettings(input: unknown): WorkspaceSettings {
   normalized.appearance.customCssFileName = typeof appearance.customCssFileName === 'string' && appearance.customCssFileName.trim()
     ? appearance.customCssFileName.trim()
     : defaults.appearance.customCssFileName
+  normalized.appearance.accentColoredHeadings = typeof appearance.accentColoredHeadings === 'boolean'
+    ? appearance.accentColoredHeadings
+    : defaults.appearance.accentColoredHeadings
 
   normalized.editor.spellCheck = typeof editor.spellCheck === 'boolean'
     ? editor.spellCheck

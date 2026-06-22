@@ -5,7 +5,7 @@ import type { WorkspaceManifest, WorkspaceSettings } from '../../types/workspace
 import { noteCommands } from '../../tauri/commands'
 
 type TreeMenuAction = 'rename' | 'delete' | 'search' | 'history' | 'export'
-type ExportFormat = 'markdown' | 'html' | 'typst' | 'pdf'
+type ExportFormat = 'markdown' | 'html' | 'docx' | 'typst' | 'pdf'
 export type TreeMenuTarget = { kind: 'folder' | 'note'; id: string; title: string; folderId: string | null }
 
 function isTauriRuntime(): boolean {
@@ -51,6 +51,7 @@ interface ContextMenuHandlers {
   navigateToWorkspaceRoot: () => Promise<void>
   exportAsMarkdown: (note: NoteDocument, path: string) => Promise<void>
   exportAsHtml: (note: NoteDocument, path: string) => Promise<void>
+  exportAsDocx: (note: NoteDocument, path: string) => Promise<void>
   exportAsTypst: (note: NoteDocument, path: string) => Promise<void>
   exportAsPdf: (note: NoteDocument, path: string) => void
 }
@@ -92,6 +93,7 @@ export function useTreeContextMenu(deps: ContextMenuDeps, handlers: ContextMenuH
     if (!note) note = await noteCommands.loadNote(path, target.id)
     if (format === 'markdown') await handlers.exportAsMarkdown(note, path)
     else if (format === 'html') await handlers.exportAsHtml(note, path)
+    else if (format === 'docx') await handlers.exportAsDocx(note, path)
     else if (format === 'typst') await handlers.exportAsTypst(note, path)
     else handlers.exportAsPdf(note, path)
   }

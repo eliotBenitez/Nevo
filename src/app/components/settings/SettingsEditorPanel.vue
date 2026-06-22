@@ -98,6 +98,16 @@ const editorStatsOptions = ['off', 'corner'].map(v => ({ value: v, label: opt('e
               @update:model-value="u(d => { d.appearance.editorFontFamily = $event })"
             />
           </div>
+          <div class="settings-row settings-row--border">
+            <div class="row-copy">
+              <div class="row-title">{{ t('settings.editor.accentColoredHeadings.title') }}</div>
+              <div class="row-sub">{{ t('settings.editor.accentColoredHeadings.description') }}</div>
+            </div>
+            <NvToggle
+              :model-value="settings.appearance.accentColoredHeadings"
+              @update:model-value="v => u(d => { d.appearance.accentColoredHeadings = v })"
+            />
+          </div>
         </div>
       </div>
 

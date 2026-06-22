@@ -1,0 +1,470 @@
+/* Diagram blocks: math, mermaid, draw, vega, markmap */
+
+
+.doc-editor .nv-prosemirror .nv-math-inline,
+.doc-editor .nv-prosemirror .nv-math-block {
+  border: 1px solid var(--line-2);
+  border-radius: calc(8px * var(--radius-scale, 1));
+  background: color-mix(in oklab, var(--hover) 70%, transparent);
+}
+
+.doc-editor .nv-prosemirror .nv-math-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 9px;
+  cursor: pointer;
+}
+
+.doc-editor .nv-prosemirror .nv-math-block {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  margin: 10px 0;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.doc-editor .nv-prosemirror .nv-math-render {
+  min-width: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-math-block .nv-math-render {
+  width: 100%;
+  text-align: center;
+}
+
+.doc-editor .nv-prosemirror .nv-math-inline[data-empty='true'] .nv-math-render,
+.doc-editor .nv-prosemirror .nv-math-block[data-empty='true'] .nv-math-render {
+  opacity: 0.5;
+}
+
+.doc-editor .nv-prosemirror .nv-math-inline[data-error='true'],
+.doc-editor .nv-prosemirror .nv-math-block[data-error='true'] {
+  border-color: color-mix(in oklab, #c84e4e 55%, var(--line-2));
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-block {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  margin: 12px 0;
+  border: 1px solid var(--line-2);
+  border-radius: calc(12px * var(--radius-scale, 1));
+  background: color-mix(in oklab, var(--surface) 55%, transparent);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-block:hover {
+  border-color: var(--line-1);
+  box-shadow: 0 4px 20px color-mix(in oklab, var(--accent) 6%, transparent),
+              0 1px 4px rgb(0 0 0 / 0.06);
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--line-2);
+  background: color-mix(in oklab, var(--hover) 55%, transparent);
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-header-icon {
+  width: 13px;
+  height: 13px;
+  opacity: 0.65;
+  flex-shrink: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-edit-hint {
+  color: var(--accent);
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-block:hover .nv-mermaid-edit-hint {
+  opacity: 1;
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-render {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  padding: 16px 20px;
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-render svg {
+  max-width: 100%;
+  height: auto;
+  background: transparent !important;
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-block[data-empty='true'] .nv-mermaid-render,
+.doc-editor .nv-prosemirror .nv-mermaid-block[data-error='true'] .nv-mermaid-render {
+  color: var(--text-4);
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* --- Draw block (hand-drawn diagrams) --- */
+.doc-editor .nv-prosemirror .nv-draw-block {
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-1);
+  cursor: pointer;
+  transition: border-color 0.12s ease;
+}
+.doc-editor .nv-prosemirror .nv-draw-block:hover {
+  border-color: var(--accent);
+}
+.doc-editor .nv-prosemirror .nv-draw-block.ProseMirror-selectednode {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 35%, transparent);
+}
+.doc-editor .nv-prosemirror .nv-draw-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  font-size: 12px;
+  color: var(--text-3);
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border-2);
+}
+.doc-editor .nv-prosemirror .nv-draw-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.doc-editor .nv-prosemirror .nv-draw-header-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-3);
+}
+.doc-editor .nv-prosemirror .nv-draw-open-hint {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.doc-editor .nv-prosemirror .nv-draw-block:hover .nv-draw-open-hint {
+  opacity: 1;
+}
+.doc-editor .nv-prosemirror .nv-draw-render {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  padding: 16px 20px;
+}
+.doc-editor .nv-prosemirror .nv-draw-render svg {
+  max-width: 100%;
+  height: auto;
+}
+.doc-editor .nv-prosemirror .nv-draw-empty {
+  color: var(--text-4);
+  font-size: 13px;
+  font-style: italic;
+}
+.doc-editor .nv-prosemirror .nv-draw-caption {
+  padding: 6px 14px 10px;
+  font-size: 13px;
+  color: var(--text-3);
+  text-align: center;
+}
+.doc-editor .nv-prosemirror .nv-draw-caption[data-visible='false'] {
+  display: none;
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-block[data-error='true'] {
+  border-color: color-mix(in oklab, #c84e4e 45%, var(--line-2));
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-block[data-error='true'] .nv-mermaid-header {
+  background: color-mix(in oklab, #c84e4e 7%, transparent);
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-block.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent-soft) 25%, transparent);
+}
+
+.doc-editor .nv-prosemirror .nv-vega-block {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  margin: 12px 0;
+  border: 1px solid var(--line-2);
+  border-radius: calc(12px * var(--radius-scale, 1));
+  background: color-mix(in oklab, var(--surface) 55%, transparent);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.doc-editor .nv-prosemirror .nv-vega-block:hover {
+  border-color: var(--line-1);
+  box-shadow: 0 4px 20px color-mix(in oklab, var(--accent) 6%, transparent),
+              0 1px 4px rgb(0 0 0 / 0.06);
+}
+
+.doc-editor .nv-prosemirror .nv-vega-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--line-2);
+  background: color-mix(in oklab, var(--hover) 55%, transparent);
+}
+
+.doc-editor .nv-prosemirror .nv-vega-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.doc-editor .nv-prosemirror .nv-vega-header-icon {
+  width: 13px;
+  height: 13px;
+  opacity: 0.65;
+  flex-shrink: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-vega-edit-hint {
+  color: var(--accent);
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.doc-editor .nv-prosemirror .nv-vega-block:hover .nv-vega-edit-hint {
+  opacity: 1;
+}
+
+.doc-editor .nv-prosemirror .nv-vega-render {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  padding: 16px 20px;
+}
+
+.doc-editor .nv-prosemirror .nv-vega-render svg {
+  max-width: 100%;
+  height: auto;
+  background: transparent !important;
+}
+
+.doc-editor .nv-prosemirror .nv-vega-render.nv-vega-landscape svg {
+  width: 100%;
+}
+
+.doc-editor .nv-prosemirror .nv-vega-block[data-empty='true'] .nv-vega-render,
+.doc-editor .nv-prosemirror .nv-vega-block[data-error='true'] .nv-vega-render {
+  color: var(--text-4);
+  font-size: 13px;
+  font-style: italic;
+}
+
+.doc-editor .nv-prosemirror .nv-vega-block[data-error='true'] {
+  border-color: color-mix(in oklab, #c84e4e 45%, var(--line-2));
+}
+
+.doc-editor .nv-prosemirror .nv-vega-block[data-error='true'] .nv-vega-header {
+  background: color-mix(in oklab, #c84e4e 7%, transparent);
+}
+
+.doc-editor .nv-prosemirror .nv-vega-block.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent-soft) 25%, transparent);
+}
+
+/* Markmap mind map block */
+.doc-editor .nv-prosemirror .nv-markmap-block {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  margin: 12px 0;
+  border: 1px solid var(--line-2);
+  border-radius: calc(12px * var(--radius-scale, 1));
+  background: color-mix(in oklab, var(--surface) 55%, transparent);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  /* Atom node edited via popover, not inline. Suppress native selection so the
+     NodeSelection on click doesn't paint the foreignObject label text blue. */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-block:hover {
+  border-color: var(--line-1);
+  box-shadow: 0 4px 20px color-mix(in oklab, var(--accent) 6%, transparent),
+              0 1px 4px rgb(0 0 0 / 0.06);
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--line-2);
+  background: color-mix(in oklab, var(--hover) 55%, transparent);
+  cursor: pointer;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-header-icon {
+  width: 13px;
+  height: 13px;
+  opacity: 0.65;
+  flex-shrink: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-edit-hint {
+  color: var(--accent);
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-block:hover .nv-markmap-edit-hint {
+  opacity: 1;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-render {
+  position: relative;
+  width: 100%;
+  height: 360px;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: var(--text-2);
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign {
+  color: var(--text-2);
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-4);
+  font-size: 13px;
+  font-style: italic;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-block[data-empty='true'] .nv-markmap-svg {
+  display: none;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-block[data-error='true'] {
+  border-color: color-mix(in oklab, #c84e4e 45%, var(--line-2));
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-block[data-error='true'] .nv-markmap-header {
+  background: color-mix(in oklab, #c84e4e 7%, transparent);
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-block.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent-soft) 25%, transparent);
+}
+
+/* Isolate markmap's foreignObject (rich HTML labels) from editor prose styles:
+   the node-view lives inside .nv-prosemirror, so editor table/image rules would
+   otherwise inflate node content to full width and break markmap's layout.
+   Crucially, the editor's `td/th { position: relative }` rule must be reset to
+   static here: WebKitGTK (Tauri's Linux renderer) positions any `position`ed
+   descendant of an SVG <foreignObject> against the SVG root, so a relatively
+   positioned cell collapses the whole table to the map's top-left corner. */
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign table,
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign thead,
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign tbody,
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign tr,
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign th,
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign td {
+  position: static;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign table {
+  width: auto;
+  max-width: 100%;
+  table-layout: auto;
+  margin: 0;
+  font-size: inherit;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign th,
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign td {
+  padding: 1px 6px;
+  transition: none;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign img {
+  display: inline;
+  max-width: 100%;
+  margin: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign .nv-markmap-katex-mathml {
+  position: static;
+  font-size: 1em;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign .nv-markmap-katex-mathml math {
+  display: inline;
+}
+
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign pre,
+.doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign p {
+  margin: 0;
+}

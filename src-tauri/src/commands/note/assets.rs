@@ -116,7 +116,33 @@ fn collect_current_asset_refs(workspace_path: &str) -> HashSet<String> {
     let nevo_dir = Path::new(workspace_path).join(".nevo");
     collect_asset_refs_recursive(&nevo_dir.join("collab"), &mut refs);
     collect_asset_refs_recursive(&nevo_dir.join("boards"), &mut refs);
+    // Drawings keep their image references inside `.draw.json` payloads (in
+    // `.nevo/assets/`), which the scanners above never visit — so an image used
+    // only by a drawing would look unreferenced and get deleted.
+    collect_draw_payload_refs(&assets_dir_path(workspace_path), &mut refs);
     refs
+}
+
+/// Pull nested `.nevo/assets/...` references out of every `.draw.json` payload in
+/// the assets directory. Only the small JSON drawings are read (not binary
+/// assets), keeping this cheap.
+fn collect_draw_payload_refs(assets_dir: &Path, refs: &mut HashSet<String>) {
+    let Ok(entries) = std::fs::read_dir(assets_dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let is_draw = path
+            .file_name()
+            .and_then(|value| value.to_str())
+            .map(|name| name.ends_with(".draw.json"))
+            .unwrap_or(false);
+        if is_draw {
+            if let Ok(bytes) = std::fs::read(&path) {
+                extract_asset_refs_from_bytes(&bytes, refs);
+            }
+        }
+    }
 }
 
 fn normalize_workspace_asset_src(asset_src: &str) -> Result<(String, PathBuf), String> {
@@ -762,6 +788,82 @@ fn read_draw_asset_inner(workspace_path: String, src: String) -> Result<Vec<u8>,
     Ok(bytes)
 }
 
+/// Read the latest drawing payload for a `draw_id`, ignoring the `src` recorded
+/// in the note document. This recovers a drawing whose note reference went
+/// stale — e.g. the app was closed straight from the canvas, so the freshly
+/// written asset's `src` never reached the note (the editor pane that applies
+/// the update is unmounted while the canvas is open). `save_draw_asset` keeps
+/// exactly one `draw-<drawId>-<hash>.draw.json` per id on disk, so the most
+/// recently modified match is the current drawing.
+#[tauri::command]
+pub async fn read_latest_draw_asset(
+    workspace_path: String,
+    draw_id: String,
+) -> Result<Vec<u8>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        read_latest_draw_asset_inner(workspace_path, draw_id)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+fn read_latest_draw_asset_inner(workspace_path: String, draw_id: String) -> Result<Vec<u8>, String> {
+    let logger = crate::logging::logger();
+    let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
+        let _ = logger.error(
+            "tauri.note",
+            "read_latest_draw_asset",
+            "Failed to normalize workspace path",
+            LogContext::default().with_error(LogError {
+                kind: Some("path".to_string()),
+                message: message.clone(),
+                details: None,
+            }),
+        );
+        message
+    })?;
+    let workspace_path = workspace_path.to_string_lossy().into_owned();
+    let assets_dir = assets_dir_path(&workspace_path);
+
+    let safe_draw_id = sanitize_file_stem(&draw_id);
+    if safe_draw_id.is_empty() {
+        return Err("Invalid draw id".to_string());
+    }
+    let prefix = format!("draw-{}-", safe_draw_id);
+
+    let Ok(entries) = std::fs::read_dir(&assets_dir) else {
+        return Err("No drawing payload found".to_string());
+    };
+    let mut best: Option<(std::time::SystemTime, PathBuf)> = None;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let name = path.file_name().and_then(|v| v.to_str()).unwrap_or("");
+        if name.starts_with(&prefix) && name.ends_with(".draw.json") {
+            let mtime = entry
+                .metadata()
+                .and_then(|m| m.modified())
+                .unwrap_or(std::time::UNIX_EPOCH);
+            if best.as_ref().map_or(true, |(t, _)| mtime >= *t) {
+                best = Some((mtime, path));
+            }
+        }
+    }
+
+    let Some((_, path)) = best else {
+        return Err("No drawing payload found".to_string());
+    };
+    std::fs::read(&path).map_err(|error| {
+        let message = error.to_string();
+        let _ = logger.error(
+            "tauri.note",
+            "read_latest_draw_asset",
+            "Failed to read draw asset",
+            note_error_context(&workspace_path, "io", message.clone()),
+        );
+        message
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -871,6 +973,31 @@ mod tests {
     }
 
     #[test]
+    fn delete_unreferenced_asset_keeps_images_referenced_by_a_drawing() {
+        // Regression: an image inserted into a draw_block is referenced only from
+        // inside the drawing's `.draw.json` payload (which lives in .nevo/assets).
+        // The ref scanner must read those payloads, otherwise the image looks
+        // orphaned and gets reaped while the drawing still uses it.
+        let workspace = TestWorkspace::new();
+        let workspace_path = workspace.path_string();
+        let image_path = write_asset(&workspace_path, "pasted-pic.png");
+
+        // Persist a drawing whose payload references the image by assetSrc.
+        let payload = br#"{"version":1,"strokes":[{"type":"image","points":[{"x":0,"y":0},{"x":10,"y":10}],"color":"transparent","size":1,"assetSrc":".nevo/assets/pasted-pic.png"}]}"#.to_vec();
+        save_draw_asset_inner(workspace_path.clone(), "draw-img".to_string(), payload)
+            .expect("save draw asset");
+
+        let deleted = delete_unreferenced_asset_inner(
+            workspace_path,
+            ".nevo/assets/pasted-pic.png".to_string(),
+        )
+        .expect("delete asset");
+
+        assert!(!deleted, "image referenced by a drawing must not be deleted");
+        assert!(image_path.exists());
+    }
+
+    #[test]
     fn save_draw_asset_writes_and_returns_relative_src() {
         let workspace = TestWorkspace::new();
         let workspace_path = workspace.path_string();
@@ -903,6 +1030,44 @@ mod tests {
 
         let read = read_draw_asset_inner(workspace_path, src).expect("read draw asset");
         assert_eq!(read, payload);
+    }
+
+    #[test]
+    fn read_latest_draw_asset_recovers_by_id_when_src_is_stale() {
+        let workspace = TestWorkspace::new();
+        let workspace_path = workspace.path_string();
+
+        // First save → src #1. Then a second save with different content replaces
+        // the file (new content-hash name), making src #1 stale on disk.
+        let stale_src = save_draw_asset_inner(
+            workspace_path.clone(),
+            "draw-recover".to_string(),
+            br#"{"version":1,"strokes":[{"type":"line"}]}"#.to_vec(),
+        )
+        .expect("first save");
+        let current = br#"{"version":1,"strokes":[{"type":"rectangle"}]}"#.to_vec();
+        save_draw_asset_inner(
+            workspace_path.clone(),
+            "draw-recover".to_string(),
+            current.clone(),
+        )
+        .expect("second save");
+
+        // Reading by the stale src now fails (the file was reaped)...
+        assert!(read_draw_asset_inner(workspace_path.clone(), stale_src).is_err());
+        // ...but reading by draw_id recovers the current payload.
+        let read = read_latest_draw_asset_inner(workspace_path, "draw-recover".to_string())
+            .expect("read latest by id");
+        assert_eq!(read, current);
+    }
+
+    #[test]
+    fn read_latest_draw_asset_errors_when_no_payload_exists() {
+        let workspace = TestWorkspace::new();
+        let workspace_path = workspace.path_string();
+        assert!(
+            read_latest_draw_asset_inner(workspace_path, "draw-missing".to_string()).is_err()
+        );
     }
 
     #[test]

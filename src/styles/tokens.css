@@ -48,6 +48,7 @@
   --line-1: oklch(1 0 0 / 0.06);
   --line-2: oklch(1 0 0 / 0.10);
   --line-strong: oklch(1 0 0 / 0.16);
+  --shadow: oklch(0 0 0);
   --shadow-1: 0 1px 0 0 oklch(1 0 0 / 0.04) inset, 0 1px 2px oklch(0 0 0 / 0.3);
   --shadow-2: 0 12px 40px -8px oklch(0 0 0 / 0.45), 0 2px 6px oklch(0 0 0 / 0.3);
   --shadow-pop: 0 24px 60px -12px oklch(0 0 0 / 0.6), 0 2px 8px oklch(0 0 0 / 0.4), inset 0 1px 0 oklch(1 0 0 / 0.06);
@@ -62,6 +63,12 @@
   --hover-strong: oklch(1 0 0 / 0.07);
   --press: oklch(1 0 0 / 0.10);
   --selection: color-mix(in oklab, var(--accent) 32%, transparent);
+
+  /* Compatibility aliases for older bg/border variables */
+  --bg-1: var(--canvas-0);
+  --bg-2: var(--canvas-1);
+  --bg-3: var(--hover-strong);
+  --border-2: var(--line-2);
 }
 
 .theme-light {
@@ -78,6 +85,7 @@
   --line-1: oklch(0 0 0 / 0.06);
   --line-2: oklch(0 0 0 / 0.09);
   --line-strong: oklch(0 0 0 / 0.14);
+  --shadow: oklch(0.3 0.02 268);
   --shadow-1: 0 1px 0 0 oklch(1 0 0 / 0.8) inset, 0 1px 2px oklch(0 0 0 / 0.05);
   --shadow-2: 0 12px 40px -8px oklch(0.3 0.02 268 / 0.18), 0 2px 6px oklch(0.3 0.02 268 / 0.08);
   --shadow-pop: 0 24px 60px -12px oklch(0.3 0.02 268 / 0.25), 0 2px 8px oklch(0 0 0 / 0.08), inset 0 1px 0 oklch(1 0 0 / 0.9);
@@ -92,4 +100,10 @@
   --hover-strong: oklch(0 0 0 / 0.05);
   --press: oklch(0 0 0 / 0.07);
   --selection: color-mix(in oklab, var(--accent) 20%, transparent);
+
+  /* Compatibility aliases for older bg/border variables */
+  --bg-1: var(--canvas-0);
+  --bg-2: var(--canvas-1);
+  --bg-3: var(--hover-strong);
+  --border-2: var(--line-2);
 }

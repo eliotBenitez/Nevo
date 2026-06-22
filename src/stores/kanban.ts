@@ -275,24 +275,39 @@ export const useKanbanStore = defineStore('kanban', () => {
     boards.value.set(boardId, { ...board, automations: (board.automations ?? []).filter(a => a.id !== automationId) })
   }
 
-  function linkCards(boardId: string, cardId: string, targetId: string, kind: KanbanLink['kind']) {
+  async function persistCardLinks(boardId: string, cardId: string, nextLinks: KanbanLink[]) {
+    const backend = workspaceStore.backend
+    const board = boards.value.get(boardId)
     const boardCards = cards.value.get(boardId)
     if (!boardCards) return
-    cards.value.set(boardId, boardCards.map(c => {
-      if (c.id !== cardId) return c
-      const existing = c.links ?? []
-      if (existing.some(l => l.cardId === targetId && l.kind === kind)) return c
-      return { ...c, links: [...existing, { cardId: targetId, kind }] }
-    }))
+
+    // Optimistic update so the modal reflects the change immediately.
+    const previous = boardCards
+    cards.value.set(boardId, boardCards.map(c => c.id === cardId ? { ...c, links: nextLinks } : c))
+
+    if (!backend) return
+    try {
+      const card = await backend.kanbanUpdateCard(boardId, cardId, { links: nextLinks })
+      const nextCard = board ? normalizeCard(board, card) : card
+      const current = cards.value.get(boardId) ?? []
+      cards.value.set(boardId, current.map(c => c.id === cardId ? nextCard : c))
+    } catch {
+      cards.value.set(boardId, previous)
+    }
   }
 
-  function unlinkCards(boardId: string, cardId: string, targetId: string, kind: KanbanLink['kind']) {
-    const boardCards = cards.value.get(boardId)
-    if (!boardCards) return
-    cards.value.set(boardId, boardCards.map(c => {
-      if (c.id !== cardId) return c
-      return { ...c, links: (c.links ?? []).filter(l => !(l.cardId === targetId && l.kind === kind)) }
-    }))
+  async function linkCards(boardId: string, cardId: string, targetId: string, kind: KanbanLink['kind']) {
+    const card = cards.value.get(boardId)?.find(c => c.id === cardId)
+    if (!card) return
+    const existing = card.links ?? []
+    if (existing.some(l => l.cardId === targetId && l.kind === kind)) return
+    await persistCardLinks(boardId, cardId, [...existing, { cardId: targetId, kind }])
+  }
+
+  async function unlinkCards(boardId: string, cardId: string, targetId: string, kind: KanbanLink['kind']) {
+    const card = cards.value.get(boardId)?.find(c => c.id === cardId)
+    if (!card) return
+    await persistCardLinks(boardId, cardId, (card.links ?? []).filter(l => !(l.cardId === targetId && l.kind === kind)))
   }
 
   return {

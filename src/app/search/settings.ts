@@ -137,6 +137,13 @@ export function buildWorkspaceSettingsSearchItems(options: BuildWorkspaceSetting
         : settings.appearance.editorFontFamily,
     },
     {
+      type: 'setting', id: 'editor.accentColoredHeadings', section: 'editor',
+      sectionLabel: sectionLabel(t, 'editor'),
+      title: t('settings.editor.accentColoredHeadings.title'),
+      description: t('settings.editor.accentColoredHeadings.description'),
+      value: booleanLabel(t, settings.appearance.accentColoredHeadings),
+    },
+    {
       type: 'setting', id: 'editor.spellcheck', section: 'editor',
       sectionLabel: sectionLabel(t, 'editor'),
       title: t('settings.editor.spellcheck.title'),

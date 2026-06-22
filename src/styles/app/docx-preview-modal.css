@@ -1,0 +1,715 @@
+/* src/app/components/DocxPreviewModal.vue */
+.docx-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: oklch(0 0 0 / 0.32);
+  backdrop-filter: blur(6px) saturate(0.7);
+  -webkit-backdrop-filter: blur(6px) saturate(0.7);
+}
+
+.docx-modal {
+  width: min(1120px, calc(100vw - 36px));
+  height: min(780px, calc(100vh - 36px));
+  display: flex;
+  flex-direction: column;
+  border-radius: calc(16px * var(--radius-scale, 1));
+  border: 1px solid var(--line-strong);
+  background: var(--glass-2);
+  box-shadow:
+    0 40px 100px -20px oklch(0 0 0 / 0.55),
+    0 8px 24px oklch(0 0 0 / 0.35),
+    inset 0 1px 0 oklch(1 0 0 / 0.08);
+  overflow: hidden;
+}
+
+.docx-modal__titlebar {
+  height: 34px;
+  flex: 0 0 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 0 40px;
+  border-bottom: 1px solid var(--line-1);
+  background: color-mix(in oklab, var(--glass-titlebar) 92%, transparent);
+  color: var(--text-4);
+  font-size: 12px;
+}
+
+.docx-modal__close {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-3);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.docx-modal__shell {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  background:
+    radial-gradient(55% 60% at 0% 0%, color-mix(in oklab, var(--accent-soft) 80%, transparent), transparent 72%),
+    radial-gradient(45% 55% at 100% 100%, color-mix(in oklab, oklch(0.7 0.11 32 / 0.12) 85%, transparent), transparent 72%),
+    var(--glass-2);
+}
+
+.docx-settings {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-right: 1px solid var(--line-1);
+  background: var(--glass-1);
+  overflow-y: auto;
+}
+
+.docx-settings__header {
+  padding-bottom: 4px;
+}
+
+.docx-settings__header h2 {
+  margin: 0;
+  color: var(--text-1);
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.docx-group {
+  display: grid;
+  gap: 11px;
+  padding: 12px 12px 13px;
+  border: 1px solid var(--line-1);
+  border-radius: calc(10px * var(--radius-scale, 1));
+  background: var(--glass-2);
+}
+
+.docx-group__title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-4);
+}
+
+.docx-field {
+  display: grid;
+  gap: 7px;
+}
+
+.docx-field--row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.docx-field__label {
+  color: var(--text-4);
+  font-size: 11px;
+}
+
+.docx-select-wrap {
+  position: relative;
+}
+
+.docx-select {
+  width: 100%;
+  height: 30px;
+  padding: 0 28px 0 9px;
+  border: 1px solid var(--line-1);
+  border-radius: calc(7px * var(--radius-scale, 1));
+  background: var(--glass-1);
+  color: var(--text-2);
+  font: 500 12px var(--font-ui);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23888' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.docx-select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.docx-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-2);
+  user-select: none;
+}
+
+.docx-toggle__label {
+  font-size: 12.5px;
+  color: var(--text-3);
+  transition: color 0.15s ease;
+}
+
+.docx-toggle--active .docx-toggle__label {
+  color: var(--text-1);
+}
+
+.docx-toggle input {
+  accent-color: var(--accent);
+}
+
+.docx-segment {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: calc(7px * var(--radius-scale, 1));
+  background: var(--hover);
+  border: 1px solid var(--line-1);
+}
+
+.docx-segment--stack {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.docx-segment--stack .docx-segment__btn {
+  padding: 0 4px;
+  font-size: 11px;
+  justify-content: center;
+}
+
+.docx-segment__btn {
+  min-width: 0;
+  height: 24px;
+  padding: 0 9px;
+  border: none;
+  border-radius: calc(5px * var(--radius-scale, 1));
+  background: transparent;
+  color: var(--text-3);
+  font: 500 11.5px var(--font-ui);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.12s, color 0.12s;
+}
+
+.docx-segment__btn-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  text-align: center;
+}
+
+.docx-segment__btn--icon {
+  justify-content: center;
+}
+
+.docx-segment__btn--active {
+  background: var(--glass-3);
+  color: var(--text-1);
+}
+
+.docx-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line-1);
+  border-radius: calc(7px * var(--radius-scale, 1));
+  background: var(--hover);
+  overflow: hidden;
+}
+
+.docx-stepper__btn {
+  width: 28px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.12s, color 0.12s;
+}
+
+.docx-stepper__btn:hover:not(:disabled) {
+  background: var(--hover-strong);
+  color: var(--text-1);
+}
+
+.docx-stepper__btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.docx-stepper__value {
+  min-width: 54px;
+  text-align: center;
+  color: var(--text-2);
+  font: 500 11.5px var(--font-mono);
+  border-left: 1px solid var(--line-1);
+  border-right: 1px solid var(--line-1);
+  padding: 0 4px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Interactive Preview Styles */
+.docx-preview {
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  background: oklch(0.12 0.01 270 / 0.48);
+  overflow: hidden;
+}
+
+.docx-preview__surface {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  gap: 20px;
+}
+
+/* Document Page Simulation */
+.docx-page {
+  background: #ffffff;
+  color: #1a1a1a;
+  box-shadow: 0 12px 36px oklch(0 0 0 / 0.4);
+  border-radius: calc(4px * var(--radius-scale, 1));
+  transition: width 0.3s ease, min-height 0.3s ease, padding 0.3s ease;
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  
+  /* Defaults */
+  --docx-font-family: 'Calibri', sans-serif;
+  --docx-font-size: 11px;
+  --docx-line-height: 1.15;
+  --docx-padding-top: 24px;
+  --docx-padding-right: 24px;
+  --docx-padding-bottom: 24px;
+  --docx-padding-left: 24px;
+  
+  font-family: var(--docx-font-family);
+  font-size: var(--docx-font-size);
+  line-height: var(--docx-line-height);
+  padding: var(--docx-padding-top) var(--docx-padding-right) var(--docx-padding-bottom) var(--docx-padding-left);
+}
+
+/* Formats & Orientations */
+.docx-page.A4.portrait {
+  width: 480px;
+  min-height: 678px; /* A4 Ratio 1:1.414 */
+}
+
+.docx-page.A4.landscape {
+  width: 678px;
+  min-height: 480px;
+}
+
+.docx-page.Letter.portrait {
+  width: 490px;
+  min-height: 634px; /* Letter Ratio 1:1.294 */
+}
+
+.docx-page.Letter.landscape {
+  width: 634px;
+  min-height: 490px;
+}
+
+/* Margins grid */
+.docx-margins-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* Page Elements */
+.docx-page__header {
+  position: absolute;
+  top: 8px;
+  left: var(--docx-padding-left);
+  right: var(--docx-padding-right);
+  border-bottom: 0.5px solid #dddddd;
+  padding-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+  color: #777777;
+  font-size: calc(var(--docx-font-size) - 2px);
+  pointer-events: none;
+}
+
+.docx-page__footer {
+  position: absolute;
+  bottom: 8px;
+  left: var(--docx-padding-left);
+  right: var(--docx-padding-right);
+  border-top: 0.5px solid #dddddd;
+  padding-top: 4px;
+  display: flex;
+  justify-content: flex-end;
+  color: #777777;
+  font-size: calc(var(--docx-font-size) - 2px);
+  pointer-events: none;
+}
+
+.docx-page__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Title Page Layout */
+.docx-page__title-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  text-align: center;
+  min-height: 240px;
+}
+
+.docx-page__title {
+  margin: 0 0 16px 0;
+  font-size: calc(var(--docx-font-size) * 2.2);
+  font-weight: 700;
+  color: #111111;
+}
+
+.docx-page__title-inline {
+  margin: 0 0 20px 0;
+  font-size: calc(var(--docx-font-size) * 2.2);
+  font-weight: 700;
+  color: #111111;
+  border-bottom: 2px solid #eaeaea;
+  padding-bottom: 6px;
+}
+
+/* Page Break Indicator */
+.docx-page__page-break-indicator {
+  width: 100%;
+  margin: 20px 0;
+  border-bottom: 1px dashed var(--line-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-4);
+  user-select: none;
+  height: 0;
+}
+
+.docx-page__page-break-indicator::before {
+  content: attr(data-label);
+  background: var(--glass-1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  position: relative;
+  top: -1px;
+}
+
+/* Table of Contents */
+.docx-page__toc {
+  margin-bottom: 24px;
+}
+
+.docx-page__toc-title {
+  font-size: calc(var(--docx-font-size) * 1.3);
+  font-weight: bold;
+  margin: 0 0 12px 0;
+  border-bottom: 1px solid #eaeaea;
+  padding-bottom: 4px;
+}
+
+.docx-page__toc-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: calc(var(--docx-font-size) - 0.5px);
+}
+
+.docx-page__toc-item .dots {
+  flex-grow: 1;
+  border-bottom: 1px dotted #888888;
+  margin: 0 8px;
+}
+
+/* Main Content Styles */
+.docx-page__content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.docx-page__heading {
+  margin: 14px 0 4px 0;
+  font-weight: 700;
+  color: #222222;
+  line-height: 1.25;
+}
+
+.docx-page__heading.h1 {
+  font-size: calc(var(--docx-font-size) * 1.6);
+}
+
+.docx-page__heading.h2 {
+  font-size: calc(var(--docx-font-size) * 1.3);
+}
+
+.docx-page__paragraph {
+  margin: 0 0 var(--docx-paragraph-spacing, 8pt);
+  text-align: justify;
+}
+
+.docx-state {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  color: var(--text-4);
+  font-size: 12.5px;
+}
+
+.docx-state--error,
+.docx-footer-error {
+  color: #d15959;
+}
+
+.docx-modal__footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line-1);
+  background: color-mix(in oklab, var(--glass-titlebar) 92%, transparent);
+}
+
+.docx-footer-error {
+  min-width: 0;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.docx-modal__footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 719px) {
+  .docx-backdrop {
+    padding:
+      max(var(--safe-area-top), 0px)
+      max(var(--safe-area-right), 0px)
+      max(var(--safe-area-bottom), 0px)
+      max(var(--safe-area-left), 0px);
+  }
+
+  .docx-modal {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+    border: none;
+  }
+
+  .docx-modal__shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .docx-settings {
+    max-height: 42dvh;
+    border-right: none;
+    border-bottom: 1px solid var(--line-1);
+  }
+
+  .docx-modal__footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* Simulated Document Elements & Marks */
+.docx-mark-strong {
+  font-weight: bold;
+}
+
+.docx-mark-em {
+  font-style: italic;
+}
+
+.docx-mark-strike {
+  text-decoration: line-through;
+}
+
+.docx-mark-underline {
+  text-decoration: underline;
+}
+
+.docx-mark-code {
+  font-family: var(--font-mono);
+  background: #f1f3f5;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.docx-page__code-block {
+  background: #27272a;
+  color: #f4f4f5;
+  padding: 10px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: calc(var(--docx-font-size) - 1px);
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+.docx-page__blockquote {
+  border-left: 4px solid #cbd5e1;
+  padding-left: 12px;
+  margin: 10px 0;
+  color: #4b5563;
+  font-style: italic;
+}
+
+.docx-page__bullet-list,
+.docx-page__ordered-list {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+
+.docx-page__bullet-list + .docx-page__bullet-list,
+.docx-page__ordered-list + .docx-page__ordered-list {
+  margin-top: -6px;
+}
+
+.docx-page__bullet-list {
+  list-style-type: disc;
+}
+
+.docx-page__ordered-list {
+  list-style-type: decimal;
+}
+
+.docx-page__checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+.docx-page__checklist-item input[type="checkbox"] {
+  margin-top: 4px;
+}
+
+.docx-page__divider {
+  border: 0;
+  border-top: 1px solid #e4e4e7;
+  margin: 12px 0;
+}
+
+.docx-page__callout {
+  border-left: 4px solid #3b82f6;
+  background: #f0fdf4;
+  padding: 10px 12px;
+  border-radius: 0 6px 6px 0;
+  margin: 10px 0;
+  display: flex;
+  gap: 8px;
+}
+
+.docx-page__callout.warning {
+  border-left-color: #f59e0b;
+  background: #fffbef;
+}
+
+.docx-page__callout.danger {
+  border-left-color: #ef4444;
+  background: #fef2f2;
+}
+
+.docx-page__callout.success {
+  border-left-color: #22c55e;
+  background: #f0fdf4;
+}
+
+.docx-page__callout-icon {
+  font-size: 1.1em;
+}
+
+.docx-page__callout-body {
+  flex: 1;
+}
+
+.docx-page__table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+}
+
+.docx-page__th,
+.docx-page__td {
+  border: 1px solid #e4e4e7;
+  padding: 6px 8px;
+  font-size: calc(var(--docx-font-size) - 0.5px);
+  text-align: left;
+}
+
+.docx-page__th {
+  background: #f4f4f5;
+  font-weight: 700;
+}
+
+.docx-page__draw-block {
+  border: 1px solid #e4e4e7;
+  border-radius: 6px;
+  padding: 6px;
+  background: #fafafa;
+  display: flex;
+  justify-content: center;
+  margin: 10px 0;
+}
+
+.docx-page__draw-block svg {
+  max-width: 100%;
+  height: auto;
+}
+

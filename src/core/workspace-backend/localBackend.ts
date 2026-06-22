@@ -103,6 +103,9 @@ export class LocalBackend implements WorkspaceBackend {
   readDrawAsset(src: string): Promise<number[]> {
     return noteCommands.readDrawAsset(this.path, src)
   }
+  readLatestDrawAsset(drawId: string): Promise<number[]> {
+    return noteCommands.readLatestDrawAsset(this.path, drawId)
+  }
 
   listNoteSnapshots(noteId: string): Promise<NoteSnapshotMeta[]> {
     return noteCommands.listNoteSnapshots(this.path, noteId)

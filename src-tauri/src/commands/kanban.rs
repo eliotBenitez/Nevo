@@ -43,6 +43,8 @@ pub struct KanbanCard {
     pub progress: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub priority: Option<String>,
+    #[serde(default = "empty_links")]
+    pub links: Value,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -68,6 +70,10 @@ fn empty_doc() -> Value {
 }
 
 fn empty_fields() -> Value {
+    Value::Array(Vec::new())
+}
+
+fn empty_links() -> Value {
     Value::Array(Vec::new())
 }
 
@@ -270,6 +276,7 @@ pub fn kanban_create_card(
         column_order,
         progress: None,
         priority: None,
+        links: empty_links(),
         created_at: now.clone(),
         updated_at: now,
     };
@@ -293,6 +300,7 @@ pub fn kanban_update_card(
     column_order: Option<i64>,
     progress: Option<f64>,
     priority: Option<String>,
+    links: Option<Value>,
 ) -> Result<KanbanCard, String> {
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
@@ -323,6 +331,9 @@ pub fn kanban_update_card(
     }
     if let Some(pr) = priority {
         card.priority = Some(pr);
+    }
+    if let Some(l) = links {
+        card.links = l;
     }
     card.updated_at = Utc::now().to_rfc3339();
 

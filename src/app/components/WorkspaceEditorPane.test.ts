@@ -252,6 +252,7 @@ vi.mock('../composables/editor/useImageUpload', () => ({
   useImageUpload: () => ({
     onEditorDragOver: vi.fn(),
     onEditorDrop: vi.fn(),
+    onEditorPaste: vi.fn(() => false),
     onImageInputChange: vi.fn(),
     requestImagePicker: vi.fn(),
     pickAndInsertImage: vi.fn(),
@@ -312,6 +313,7 @@ const defaultSettings: WorkspaceSettings = {
     editorLineWidth: 'medium',
     customCssEnabled: false,
     customCssFileName: 'custom.css',
+    accentColoredHeadings: false,
   },
   editor: {
     spellCheck: true,

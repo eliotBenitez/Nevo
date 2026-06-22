@@ -94,6 +94,10 @@ export interface EditorCoreCallbacks {
   resolveWikiLink?: (title: string) => string | null
   onLinkPickerEnter?: () => boolean
   onImagePickerRequest: (pos: number) => void
+  /** Synchronously inspect a paste event for image files. Returns true when at
+   *  least one image was found (and import was kicked off asynchronously), so
+   *  handlePaste can block the default text/markdown insertion. */
+  onImagePaste?: (event: ClipboardEvent) => boolean
   resolveAssetSrc?: (relativeSrc: string) => string
   resolveMediaSrc?: (relativeSrc: string) => string | null
   onImageContextMenuRequest: (ctx: {
@@ -794,6 +798,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
           },
         },
         handlePaste(_view, event) {
+          if (callbacks.onImagePaste?.(event)) return true
           if (settings.editor.pasteBehavior !== 'plain-text') {
             const html = event.clipboardData?.getData('text/html')
             if (html) return false

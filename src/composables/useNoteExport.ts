@@ -6,6 +6,7 @@ import { serializeNoteToMarkdown } from '../utils/noteExport/markdownSerializer'
 import { serializeNoteToHtml } from '../utils/noteExport/htmlSerializer'
 import { buildTypstExport } from '../utils/noteExport/buildTypstExport'
 import { loadHyperformula } from '../editor-core/tableFormula'
+import type { DocxExportOptions } from '../utils/noteExport/docxOptions'
 
 function sanitizeFilename(title: string, fallback: string): string {
   const safe = title.replace(/[/\\?%*:|"<>]/g, '-').trim()
@@ -38,6 +39,12 @@ export function useNoteExport() {
     workspacePath: '',
   })
 
+  const docxPreview = reactive({
+    open: false,
+    note: null as NoteDocument | null,
+    workspacePath: '',
+  })
+
   async function exportAsMarkdown(note: NoteDocument, workspacePath: string): Promise<void> {
     const safeName = sanitizeFilename(note.title, `note-${note.id}`)
     const assetsSubfolderName = `${safeName}_assets`
@@ -58,6 +65,46 @@ export function useNoteExport() {
     if (!savePath) return
 
     await noteCommands.exportNoteMarkdown(workspacePath, savePath, markdown, assetSrcs)
+  }
+
+  function exportAsDocx(note: NoteDocument, workspacePath: string): void {
+    docxPreview.note = cloneNote(note)
+    docxPreview.workspacePath = workspacePath
+    docxPreview.open = true
+  }
+
+  function closeDocxPreview(): void {
+    docxPreview.open = false
+    docxPreview.note = null
+  }
+
+  async function saveDocxWithOptions(note: NoteDocument, workspacePath: string, options: DocxExportOptions): Promise<void> {
+    const safeName = sanitizeFilename(note.title, `note-${note.id}`)
+
+    let savePath: string | null | undefined
+    try {
+      const { save } = await import('@tauri-apps/plugin-dialog')
+      savePath = await save({
+        title: t('export.saveDocxDialogTitle'),
+        defaultPath: `${safeName}.docx`,
+        filters: [{ name: 'Word', extensions: ['docx'] }],
+      })
+    } catch {
+      return
+    }
+    if (!savePath) return
+
+    await loadHyperformula()
+    const [{ serializeNoteToDocx }, { createDocxExportHelpers }, { Packer }] = await Promise.all([
+      import('../utils/noteExport/docxSerializer'),
+      import('../utils/noteExport/docxAssets'),
+      import('docx'),
+    ])
+    const helpers = createDocxExportHelpers(workspacePath)
+    const doc = await serializeNoteToDocx(note, helpers, options)
+    const blob = await Packer.toBlob(doc)
+    const bytes = Array.from(new Uint8Array(await blob.arrayBuffer()))
+    await noteCommands.exportNoteDocx(savePath, bytes)
   }
 
   async function exportAsHtml(note: NoteDocument, workspacePath: string): Promise<void> {
@@ -117,5 +164,16 @@ export function useNoteExport() {
     pdfPreview.note = null
   }
 
-  return { exportAsMarkdown, exportAsHtml, exportAsTypst, exportAsPdf, pdfPreview, closePdfPreview }
+  return {
+    exportAsMarkdown,
+    exportAsHtml,
+    exportAsDocx,
+    exportAsTypst,
+    exportAsPdf,
+    pdfPreview,
+    closePdfPreview,
+    docxPreview,
+    closeDocxPreview,
+    saveDocxWithOptions,
+  }
 }

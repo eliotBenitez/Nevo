@@ -1,39 +1,36 @@
 <script setup lang="ts">
-import { Pencil, Eraser, Square, Minus, ArrowUpRight, Circle, Undo2, Redo2, Trash2 } from 'lucide-vue-next'
+import { MousePointer2, Pencil, Highlighter, Eraser, Square, Minus, ArrowUpRight, Circle, Diamond, Type, Undo2, Redo2, Trash2, Hand } from 'lucide-vue-next'
 import type { DrawTool } from '../../utils/draw/drawEngine'
 import type { DrawEditorTool } from './useDrawEditor'
 
 defineProps<{
   tool: DrawEditorTool
-  color: string
-  size: number
-  palette: string[]
   canUndo: boolean
   canRedo: boolean
 }>()
 
 const emit = defineEmits<{
   'update:tool': [tool: DrawEditorTool]
-  'update:color': [color: string]
-  'update:size': [size: number]
   undo: []
   redo: []
   clear: []
 }>()
 
-const tools: { id: DrawEditorTool; icon: typeof Pencil; label: string }[] = [
-  { id: 'freehand', icon: Pencil, label: 'Pencil' },
-  { id: 'rectangle', icon: Square, label: 'Rectangle' },
-  { id: 'line', icon: Minus, label: 'Line' },
-  { id: 'arrow', icon: ArrowUpRight, label: 'Arrow' },
-  { id: 'ellipse', icon: Circle, label: 'Ellipse' },
-  { id: 'eraser', icon: Eraser, label: 'Eraser' },
+const tools: { id: DrawEditorTool; icon: typeof Pencil; label: string; shortcut?: string }[] = [
+  { id: 'select', icon: MousePointer2, label: 'Select', shortcut: '1' },
+  { id: 'freehand', icon: Pencil, label: 'Pencil', shortcut: '2' },
+  { id: 'highlighter', icon: Highlighter, label: 'Highlighter', shortcut: '3' },
+  { id: 'rectangle', icon: Square, label: 'Rectangle', shortcut: '4' },
+  { id: 'line', icon: Minus, label: 'Line', shortcut: '5' },
+  { id: 'arrow', icon: ArrowUpRight, label: 'Arrow', shortcut: '6' },
+  { id: 'ellipse', icon: Circle, label: 'Ellipse', shortcut: '7' },
+  { id: 'diamond', icon: Diamond, label: 'Diamond', shortcut: '8' },
+  { id: 'text', icon: Type, label: 'Text', shortcut: '9' },
+  { id: 'hand', icon: Hand, label: 'Pan', shortcut: 'H' },
+  { id: 'eraser', icon: Eraser, label: 'Eraser', shortcut: '0' },
 ]
 
-// Re-export the stroke-tool subset for callers that need it.
 export type { DrawTool }
-
-const sizes = [2, 4, 8, 14]
 </script>
 
 <template>
@@ -45,43 +42,12 @@ const sizes = [2, 4, 8, 14]
         type="button"
         class="draw-toolbar__btn"
         :class="{ 'is-active': tool === t.id }"
-        :title="t.label"
+        :title="t.shortcut ? `${t.label} (${t.shortcut})` : t.label"
         :aria-pressed="tool === t.id"
         @click="emit('update:tool', t.id)"
       >
         <component :is="t.icon" :size="16" />
-      </button>
-    </div>
-
-    <div class="draw-toolbar__divider" />
-
-    <div class="draw-toolbar__group">
-      <button
-        v-for="c in palette"
-        :key="c"
-        type="button"
-        class="draw-toolbar__swatch"
-        :class="{ 'is-active': color === c }"
-        :style="{ backgroundColor: c }"
-        :title="c"
-        :aria-label="`Color ${c}`"
-        @click="emit('update:color', c)"
-      />
-    </div>
-
-    <div class="draw-toolbar__divider" />
-
-    <div class="draw-toolbar__group">
-      <button
-        v-for="s in sizes"
-        :key="s"
-        type="button"
-        class="draw-toolbar__size"
-        :class="{ 'is-active': size === s }"
-        :title="`${s}px`"
-        @click="emit('update:size', s)"
-      >
-        <span class="draw-toolbar__size-dot" :style="{ width: `${s + 2}px`, height: `${s + 2}px` }" />
+        <span v-if="t.shortcut" class="draw-toolbar__shortcut">{{ t.shortcut }}</span>
       </button>
     </div>
 
@@ -98,5 +64,7 @@ const sizes = [2, 4, 8, 14]
         <Trash2 :size="16" />
       </button>
     </div>
+
+    <slot name="tools-trailing" />
   </div>
 </template>

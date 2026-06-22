@@ -97,6 +97,7 @@ export function createDefaultWorkspaceSettings(): WorkspaceSettings {
       editorLineWidth: 'medium',
       customCssEnabled: false,
       customCssFileName: 'custom.css',
+      accentColoredHeadings: false,
     },
     editor: {
       spellCheck: false,

@@ -33,10 +33,25 @@ export function useImageUpload(
       return
     }
 
-    const imageBlockType = core.editorView.state.schema.nodes.image_block
+    const { state } = core.editorView
+    const imageBlockType = state.schema.nodes.image_block
     if (!imageBlockType) return
     const imageNode = imageBlockType.create(nextAttrs)
-    core.editorView.dispatch(core.editorView.state.tr.replaceSelectionWith(imageNode, false).scrollIntoView())
+
+    // When the cursor sits in an empty textblock (e.g. a freshly created
+    // paragraph), replace that paragraph in place so the block type flips to
+    // image_block instead of leaving an empty paragraph behind the new node.
+    // Mirrors createInsertBlockCommand in editor-core/commands/utils.ts.
+    const { selection } = state
+    let tr
+    if (selection.empty && selection.$from.parent.isTextblock && selection.$from.parent.content.size === 0) {
+      const from = selection.$from.before()
+      const to = from + selection.$from.parent.nodeSize
+      tr = state.tr.replaceWith(from, to, imageNode)
+    } else {
+      tr = state.tr.replaceSelectionWith(imageNode, false)
+    }
+    core.editorView.dispatch(tr.scrollIntoView())
     onOverlaysUpdate()
   }
 
@@ -119,6 +134,32 @@ export function useImageUpload(
     return null
   }
 
+  // Paste from clipboard: turns pasted image files into image_block nodes
+  // instead of letting ProseMirror render them as an empty paragraph.
+  function readPastedImages(event: ClipboardEvent): File[] {
+    const files = event.clipboardData?.files
+    if (!files || files.length === 0) return []
+    const images: File[] = []
+    for (let i = 0; i < files.length; i++) {
+      const file = files.item(i)
+      if (file && file.type.startsWith('image/')) images.push(file)
+    }
+    return images
+  }
+
+  function onEditorPaste(event: ClipboardEvent): boolean {
+    const images = readPastedImages(event)
+    if (images.length === 0 || !core.editorView) return false
+    event.preventDefault()
+    void (async () => {
+      for (const file of images) {
+        await importAndApplyImage(file, null)
+      }
+      core.editorView?.focus()
+    })()
+    return true
+  }
+
   function onEditorDragOver(event: DragEvent) {
     const file = readDroppedImage(event)
     if (!file) return
@@ -140,5 +181,5 @@ export function useImageUpload(
     core.editorView.focus()
   }
 
-  return { requestImagePicker, pickAndInsertImage, onImageInputChange, onEditorDragOver, onEditorDrop }
+  return { requestImagePicker, pickAndInsertImage, onImageInputChange, onEditorDragOver, onEditorDrop, onEditorPaste }
 }

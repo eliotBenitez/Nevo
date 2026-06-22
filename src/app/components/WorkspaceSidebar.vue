@@ -34,7 +34,7 @@ const route = useRoute()
 const isGraphActive = computed(() => route.path === '/workspace/graph')
 
 type TreeMenuAction = 'rename' | 'delete' | 'search' | 'history' | 'export'
-type ExportFormat = 'markdown' | 'html' | 'typst' | 'pdf'
+type ExportFormat = 'markdown' | 'html' | 'docx' | 'typst' | 'pdf'
 type TreeMenuTarget = {
   kind: 'folder' | 'note'
   id: string
@@ -207,6 +207,10 @@ const exportMenuItems = computed<NvMenuItemDef[]>(() => [
   {
     label: t('export.formatHtml'),
     action: () => runExportContextAction('html'),
+  },
+  {
+    label: t('export.formatDocx'),
+    action: () => runExportContextAction('docx'),
   },
   {
     label: t('export.formatTypst'),

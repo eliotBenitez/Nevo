@@ -14,7 +14,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
-const { appConfig } = storeToRefs(workspaceStore)
+const { appConfig, appMetadata } = storeToRefs(workspaceStore)
 
 function toggleLocale() {
   void workspaceStore.setAppLocale(appConfig.value.locale === 'en' ? 'ru' : 'en')
@@ -69,7 +69,7 @@ function toggleLocale() {
     </div>
 
     <PrivacyBadge />
-    <div class="version-badge">{{ t('version') }}</div>
+    <div class="version-badge">{{ t('version', { version: appMetadata?.version ?? '0.1.8' }) }}</div>
     <button class="lang-toggle" @click="toggleLocale">
       {{ appConfig.locale === 'en' ? 'RU' : 'EN' }}
     </button>

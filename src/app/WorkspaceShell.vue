@@ -12,6 +12,7 @@ import WorkspaceEditorPane from './components/WorkspaceEditorPane.vue'
 const WorkspaceHistoryModal = defineAsyncComponent(() => import('./components/WorkspaceHistoryModal.vue'))
 const WorkspaceTrashBin = defineAsyncComponent(() => import('./components/WorkspaceTrashBin.vue'))
 const PdfPreviewModal = defineAsyncComponent(() => import('./components/PdfPreviewModal.vue'))
+const DocxPreviewModal = defineAsyncComponent(() => import('./components/DocxPreviewModal.vue'))
 const WorkspaceSettingsModal = defineAsyncComponent(() => import('./components/WorkspaceSettingsModal.vue'))
 import WorkspaceRenameModal from './components/WorkspaceRenameModal.vue'
 import UpdateDialog from './components/UpdateDialog.vue'
@@ -54,7 +55,18 @@ const workspaceStore = useWorkspaceStore()
 const treeStore = useTreeStore()
 const noteStore = useNoteStore()
 const themeStore = useThemeStore()
-const { exportAsMarkdown, exportAsHtml, exportAsTypst, exportAsPdf, pdfPreview, closePdfPreview } = useNoteExport()
+const {
+  exportAsMarkdown,
+  exportAsHtml,
+  exportAsDocx,
+  exportAsTypst,
+  exportAsPdf,
+  pdfPreview,
+  closePdfPreview,
+  docxPreview,
+  closeDocxPreview,
+  saveDocxWithOptions,
+} = useNoteExport()
 const { importMarkdownFile, importMarkdownIntoNote } = useMarkdownImport()
 
 const appUpdater = useAppUpdater()
@@ -355,7 +367,7 @@ async function importMdIntoNote(noteId: string) {
 
 const { renameModal, onTreeAction, handleRequestExport, submitRename, closeRenameModal } = useTreeContextMenu(
   { settings, manifest, activeNoteId, activeFolderId, activeNote, workspacePath: computed(() => workspaceStore.activePath), treeOps: { deleteNote: treeStore.deleteNote, deleteFolder: treeStore.deleteFolder, renameFolder: treeStore.renameFolder, renameNote: treeStore.renameNote, syncNoteMeta: treeStore.syncNoteMeta }, clearNote: noteStore.clearNote, setTitle: noteStore.setTitle, flushSave, t, renameInputRef },
-  { openHistory, runSearch: async (seed) => { await runWorkspaceSearch(seed) }, navigateToWorkspaceRoot: async () => { await router.push('/workspace') }, exportAsMarkdown, exportAsHtml, exportAsTypst, exportAsPdf },
+  { openHistory, runSearch: async (seed) => { await runWorkspaceSearch(seed) }, navigateToWorkspaceRoot: async () => { await router.push('/workspace') }, exportAsMarkdown, exportAsHtml, exportAsDocx: async (note, path) => { exportAsDocx(note, path) }, exportAsTypst, exportAsPdf },
 )
 
 useWorkspaceKeymap(settings, { createNote, createFolder, saveNote: flushSave, runSearch: () => runWorkspaceSearch(), toggleSidebar: () => uiStore.toggleSidebar(), toggleRightPanel: () => uiStore.toggleRightPanel(), openGraph: () => openGraph(), openHistory: () => openHistory(), openTrash: () => openTrash(), openSettings: () => openSettings() })
@@ -530,6 +542,7 @@ onBeforeUnmount(() => {
 
   <WorkspaceSettingsModal v-if="settingsModalOpen" :open="settingsModalOpen" :initial-section="settingsModalSection" @close="() => { settingsModalOpen = false; settingsModalSection = null }" />
   <PdfPreviewModal v-if="pdfPreview.open && pdfPreview.note" :note="pdfPreview.note" :workspace-path="pdfPreview.workspacePath" @close="closePdfPreview" />
+  <DocxPreviewModal v-if="docxPreview.open && docxPreview.note" :note="docxPreview.note" :workspace-path="docxPreview.workspacePath" @close="closeDocxPreview" @save="(opts) => { void saveDocxWithOptions(docxPreview.note!, docxPreview.workspacePath, opts); closeDocxPreview() }" />
   <TemplatePickerModal
     v-if="templateCreatePickerOpen"
     :open="templateCreatePickerOpen"

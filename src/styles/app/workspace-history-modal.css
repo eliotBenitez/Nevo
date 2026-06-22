@@ -1,0 +1,347 @@
+/* src/app/components/WorkspaceHistoryModal.vue */
+.history-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: oklch(0 0 0 / 0.32);
+  backdrop-filter: blur(6px) saturate(0.7);
+  -webkit-backdrop-filter: blur(6px) saturate(0.7);
+}
+
+.history-modal {
+  width: min(1240px, calc(100vw - 36px));
+  height: min(820px, calc(100vh - 36px));
+  display: flex;
+  flex-direction: column;
+  border-radius: calc(16px * var(--radius-scale, 1));
+  border: 1px solid var(--line-strong);
+  background: var(--glass-2);
+  box-shadow:
+    0 40px 100px -20px oklch(0 0 0 / 0.55),
+    0 8px 24px oklch(0 0 0 / 0.35),
+    inset 0 1px 0 oklch(1 0 0 / 0.08);
+  overflow: hidden;
+}
+
+.history-modal__titlebar {
+  height: 34px;
+  flex: 0 0 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-4);
+  background: color-mix(in oklab, var(--glass-titlebar) 92%, transparent);
+  border-bottom: 1px solid var(--line-1);
+  position: relative;
+  padding: 0 40px;
+}
+
+.history-modal__close {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-3);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.history-modal__shell {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 1.5fr);
+  background:
+    radial-gradient(55% 60% at 0% 0%, color-mix(in oklab, var(--accent-soft) 80%, transparent), transparent 72%),
+    radial-gradient(45% 55% at 100% 100%, color-mix(in oklab, oklch(0.7 0.11 32 / 0.12) 85%, transparent), transparent 72%),
+    var(--glass-2);
+}
+
+.history-modal__footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line-1);
+  background: color-mix(in oklab, var(--glass-titlebar) 92%, transparent);
+}
+
+.history-state { margin: auto; padding: 24px; color: var(--text-4); text-align: center; font-size: 12.5px; }
+.history-state--error { color: #d15959; }
+.history-state--footer { margin: 0; padding: 0; text-align: left; }
+.history-modal__footer-actions { display: flex; align-items: center; gap: 10px; }
+.history-confirm { display: flex; align-items: center; gap: 10px; color: var(--text-2); }
+
+@media (max-width: 1100px) {
+  .history-modal { width: min(960px, calc(100vw - 24px)); height: calc(100vh - 24px); }
+  .history-modal__shell { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 719px) {
+  .history-modal { width: 100vw; height: 100dvh; border-radius: 0; border: none; }
+  .history-modal__footer { padding-left: 16px; padding-right: 16px; }
+}
+
+/* src/app/components/WorkspaceHistoryModal/HistoryFileList.vue */
+.history-column {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--line-1);
+  background: var(--glass-1);
+}
+
+.history-column__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--line-1);
+}
+
+.history-column__header h3 {
+  margin: 0;
+  color: var(--text-1);
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.history-column__header span {
+  color: var(--text-4);
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.history-search {
+  margin: 12px 14px;
+}
+
+.history-list {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding: 8px 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.history-list__item {
+  width: 100%;
+  padding: 9px 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border: none;
+  border-radius: calc(8px * var(--radius-scale, 1));
+  background: transparent;
+  color: var(--text-2);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.history-list__item:hover {
+  background: color-mix(in oklab, var(--accent-soft) 55%, transparent);
+  color: var(--text-1);
+}
+
+.history-list__item--active {
+  background: color-mix(in oklab, var(--accent-soft) 88%, transparent);
+  color: var(--text-1);
+}
+
+.history-list__icon {
+  width: 26px;
+  height: 26px;
+  border-radius: calc(8px * var(--radius-scale, 1));
+  background: var(--hover-strong);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  font-size: 14px;
+}
+
+.history-list__body {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.history-list__body strong,
+.history-list__body span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-list__body strong {
+  color: inherit;
+  font-size: 12.5px;
+}
+
+.history-list__body span {
+  color: var(--text-4);
+  font-size: 11px;
+}
+
+/* src/app/components/WorkspaceHistoryModal/HistoryPreviewPane.vue */
+.history-column--wide {
+  border-right: none;
+  background: transparent;
+}
+
+.history-preview,
+.history-compare {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding: 16px 20px 20px;
+}
+
+.history-preview__meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line-1);
+}
+
+.history-preview__meta h4 {
+  margin: 0 0 4px;
+  color: var(--text-1);
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.history-preview__meta span,
+.history-preview__cover {
+  color: var(--text-4);
+  font-size: 12px;
+}
+
+.history-preview__icon {
+  width: 46px;
+  height: 46px;
+  border-radius: calc(14px * var(--radius-scale, 1));
+  background: var(--hover-strong);
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  flex: 0 0 auto;
+}
+
+.history-preview__cover {
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border-radius: calc(10px * var(--radius-scale, 1));
+  background: var(--hover);
+  border: 1px solid var(--line-1);
+}
+
+.history-preview__blocks,
+.history-compare__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-preview__block,
+.history-diff-row,
+.history-compare__meta-row {
+  padding: 12px 14px;
+  border-radius: calc(10px * var(--radius-scale, 1));
+  border: 1px solid var(--line-2);
+  background: color-mix(in oklab, var(--glass-2) 92%, transparent);
+  color: var(--text-2);
+  font-size: 12.5px;
+}
+
+.history-compare__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.history-diff-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-diff-row__badge {
+  width: fit-content;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.history-diff-row__badge--added {
+  background: oklch(0.88 0.12 145 / 0.45);
+  color: oklch(0.42 0.14 145);
+}
+
+.history-diff-row__badge--removed {
+  background: oklch(0.9 0.12 28 / 0.46);
+  color: oklch(0.52 0.16 28);
+}
+
+.history-diff-row__badge--changed {
+  background: oklch(0.92 0.1 85 / 0.46);
+  color: oklch(0.54 0.14 85);
+}
+
+.theme-dark .history-diff-row__badge--added {
+  background: oklch(0.64 0.14 145 / 0.24);
+  color: oklch(0.84 0.13 145);
+}
+
+.theme-dark .history-diff-row__badge--removed {
+  background: oklch(0.62 0.16 28 / 0.26);
+  color: oklch(0.82 0.13 28);
+}
+
+.theme-dark .history-diff-row__badge--changed {
+  background: oklch(0.72 0.12 85 / 0.24);
+  color: oklch(0.88 0.11 85);
+}
+
+.history-diff-row__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.history-diff-row__label {
+  margin-bottom: 6px;
+  color: var(--text-4);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 600;
+}
+

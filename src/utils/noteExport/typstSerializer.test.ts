@@ -178,6 +178,30 @@ describe('serializeNoteToTypst', () => {
     expect(source).toContain('columns: 2')
   })
 
+  it('renders note embeds, media, embeds and toggles', () => {
+    const { source } = serializeNoteToTypst(note({
+      type: 'doc',
+      content: [
+        { type: 'note_embed', attrs: { noteId: 'n2', title: 'Other', previewText: 'Preview' } },
+        { type: 'media_block', attrs: { kind: 'audio', src: '.nevo/assets/a.mp3', name: 'Track' } },
+        { type: 'embed_block', attrs: { url: 'https://youtu.be/x', title: 'Clip' } },
+        {
+          type: 'toggle',
+          content: [
+            { type: 'toggle_title', content: [{ type: 'text', text: 'Summary' }] },
+            { type: 'paragraph', content: [{ type: 'text', text: 'Hidden body' }] },
+          ],
+        },
+      ],
+    }))
+    expect(source).toContain('#strong[Other]')
+    expect(source).toContain('Preview')
+    expect(source).toContain('#emph[🔊 Track]')
+    expect(source).toContain('#link("https://youtu.be/x")[Clip]')
+    expect(source).toContain('#strong[Summary]')
+    expect(source).toContain('Hidden body')
+  })
+
   it('renders bullet and ordered lists with items', () => {
     const { source } = serializeNoteToTypst(note({
       type: 'doc',

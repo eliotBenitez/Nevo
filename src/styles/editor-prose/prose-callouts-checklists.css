@@ -1,0 +1,100 @@
+/* Callout and checklist blocks */
+
+
+.doc-editor .nv-prosemirror .nv-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid oklch(0.66 0.10 258 / 0.22);
+  border-radius: calc(10px * var(--radius-scale, 1));
+  background: oklch(0.66 0.10 258 / 0.1);
+  margin: 12px 0;
+}
+
+.doc-editor .nv-prosemirror .nv-callout-icon {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  border-radius: calc(7px * var(--radius-scale, 1));
+  border: none;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-size: 14px;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, transform 0.12s ease;
+}
+
+.doc-editor .nv-prosemirror .nv-callout-icon:hover {
+  background: color-mix(in oklab, var(--accent-soft) 72%, white);
+  transform: translateY(-1px);
+}
+
+.doc-editor .nv-prosemirror .nv-callout-icon:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--accent) 74%, white);
+  outline-offset: 2px;
+}
+
+.doc-editor .nv-prosemirror .nv-callout-content {
+  display: block;
+  min-width: 0;
+  flex: 1;
+  color: var(--text-2);
+  line-height: 1.6;
+}
+
+.doc-editor .nv-prosemirror .nv-callout-content > :first-child {
+  margin-top: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-callout-content > :last-child {
+  margin-bottom: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 6px 0;
+  line-height: 1.55;
+}
+
+.doc-editor .nv-prosemirror .nv-checklist-checkbox {
+  width: 16px;
+  height: 16px;
+  margin-top: 4px;
+  border-radius: calc(5px * var(--radius-scale, 1));
+  border: 1.5px solid var(--line-strong);
+  background: transparent;
+  color: transparent;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font-size: 0;
+  cursor: pointer;
+}
+
+.doc-editor .nv-prosemirror .nv-checklist-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.doc-editor .nv-prosemirror .nv-checklist-item[data-checked='true'] .nv-checklist-checkbox {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.doc-editor .nv-prosemirror .nv-checklist-item[data-checked='true'] .nv-checklist-checkbox::after {
+  content: '✓';
+  font-size: 11px;
+  line-height: 1;
+}
+
+.doc-editor .nv-prosemirror .nv-checklist-item[data-checked='true'] .nv-checklist-content {
+  color: var(--text-3);
+  text-decoration: line-through;
+}

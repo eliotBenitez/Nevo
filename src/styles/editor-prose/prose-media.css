@@ -1,0 +1,194 @@
+/* Image and file blocks */
+
+
+.doc-editor .nv-prosemirror .nv-image-block {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin: 12px 0;
+}
+
+.doc-editor .nv-prosemirror .nv-image-block[data-align='left']   { align-items: flex-start; }
+.doc-editor .nv-prosemirror .nv-image-block[data-align='center'] { align-items: center; }
+.doc-editor .nv-prosemirror .nv-image-block[data-align='right']  { align-items: flex-end; }
+
+.doc-editor .nv-prosemirror .nv-image-preview {
+  border-radius: calc(6px * var(--radius-scale, 1));
+  object-fit: contain;
+  display: block;
+  max-width: 100%;
+  max-height: 600px;
+}
+
+.doc-editor .nv-prosemirror .nv-image-block[data-size-preset='small']  .nv-image-preview { width: 320px; }
+.doc-editor .nv-prosemirror .nv-image-block[data-size-preset='medium'] .nv-image-preview { width: 560px; }
+.doc-editor .nv-prosemirror .nv-image-block[data-size-preset='large']  .nv-image-preview { width: 760px; }
+.doc-editor .nv-prosemirror .nv-image-block[data-size-preset='full']   .nv-image-preview { width: 100%; }
+
+.doc-editor .nv-prosemirror .nv-image-caption {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-3);
+  padding: 6px 0 2px;
+  outline: none;
+  min-width: 40px;
+  max-width: 100%;
+  word-break: break-word;
+}
+
+.doc-editor .nv-prosemirror .nv-image-caption:empty:not(:focus)::before {
+  content: attr(data-placeholder);
+  color: var(--text-4);
+  pointer-events: none;
+}
+
+.doc-editor .nv-prosemirror .nv-image-caption:empty:not(:focus):not([data-force-show]) {
+  display: none;
+}
+
+.doc-editor .nv-prosemirror .nv-image-menu-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  background: var(--glass-2);
+  border: 1px solid var(--line-2);
+  border-radius: calc(6px * var(--radius-scale, 1));
+  padding: 2px 8px;
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1.4;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.doc-editor .nv-prosemirror .nv-image-menu-btn:hover {
+  background: var(--hover);
+  color: var(--text-1);
+}
+
+.doc-editor .nv-prosemirror .nv-image-block:hover .nv-image-menu-btn,
+.doc-editor .nv-prosemirror .nv-image-block.ProseMirror-selectednode .nv-image-menu-btn {
+  opacity: 1;
+}
+
+.doc-editor .nv-prosemirror .nv-image-placeholder {
+  border: 1px dashed var(--line-2);
+  border-radius: calc(8px * var(--radius-scale, 1));
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--text-3);
+  width: 100%;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.doc-editor .nv-prosemirror .nv-image-placeholder:hover {
+  background: var(--hover);
+  border-color: var(--line-1);
+  color: var(--text-2);
+}
+
+/* ---- File Block ---- */
+.doc-editor .nv-prosemirror .nv-file-block {
+  border: 1px solid var(--line-2);
+  border-radius: calc(11px * var(--radius-scale, 1));
+  padding: 10px 12px;
+  margin: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--glass-2);
+}
+
+.doc-editor .nv-prosemirror .nv-file-block.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.doc-editor .nv-prosemirror .nv-file-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.doc-editor .nv-prosemirror .nv-file-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: calc(8px * var(--radius-scale, 1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 600 9px/1 var(--font-ui);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
+.doc-editor .nv-prosemirror .nv-file-icon[data-category='pdf'] {
+  background: oklch(0.48 0.15 25 / 0.16);
+  color: oklch(0.72 0.12 25);
+}
+
+.doc-editor .nv-prosemirror .nv-file-icon[data-category='audio'] {
+  background: oklch(0.50 0.14 295 / 0.16);
+  color: oklch(0.74 0.11 295);
+}
+
+.doc-editor .nv-prosemirror .nv-file-icon[data-category='video'] {
+  background: oklch(0.50 0.14 155 / 0.16);
+  color: oklch(0.68 0.12 155);
+}
+
+.doc-editor .nv-prosemirror .nv-file-icon[data-category='archive'] {
+  background: oklch(0.50 0.14 65 / 0.16);
+  color: oklch(0.70 0.12 65);
+}
+
+.doc-editor .nv-prosemirror .nv-file-icon[data-category='spreadsheet'] {
+  background: oklch(0.50 0.14 145 / 0.16);
+  color: oklch(0.65 0.14 145);
+}
+
+.doc-editor .nv-prosemirror .nv-file-icon[data-category='slides'] {
+  background: oklch(0.50 0.14 35 / 0.16);
+  color: oklch(0.72 0.13 35);
+}
+
+.doc-editor .nv-prosemirror .nv-file-icon[data-category='image'] {
+  background: oklch(0.50 0.14 220 / 0.16);
+  color: oklch(0.68 0.12 220);
+}
+
+.doc-editor .nv-prosemirror .nv-file-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.doc-editor .nv-prosemirror .nv-file-name {
+  font: 500 13px/1.3 var(--font-ui);
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-editor .nv-prosemirror .nv-file-block[data-has-file='false'] .nv-file-name {
+  color: var(--text-3);
+}
+
+.doc-editor .nv-prosemirror .nv-file-size {
+  font: 11px/1.2 var(--font-ui);
+  color: var(--text-4);
+}

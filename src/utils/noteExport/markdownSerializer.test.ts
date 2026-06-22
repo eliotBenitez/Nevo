@@ -65,3 +65,50 @@ describe('serializeNoteToMarkdown — internal_link', () => {
     expect(serializeNoteToMarkdown(note, 'assets').markdown).not.toContain('[[Ideas|')
   })
 })
+
+describe('serializeNoteToMarkdown — block types', () => {
+  it('embeds a drawing svgPreview as a data-uri image', () => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>'
+    const note = noteWith([{ type: 'draw_block', attrs: { drawId: 'd1', svgPreview: svg, title: 'Sketch' } }])
+    const md = serializeNoteToMarkdown(note, 'assets').markdown
+    expect(md).toContain('![Sketch](data:image/svg+xml;charset=utf-8,')
+    expect(md).toContain(encodeURIComponent(svg))
+  })
+
+  it('skips an empty drawing but keeps its title', () => {
+    const note = noteWith([{ type: 'draw_block', attrs: { drawId: 'd1', svgPreview: '', title: 'Empty' } }])
+    expect(serializeNoteToMarkdown(note, 'assets').markdown).toContain('_Empty_')
+  })
+
+  it('emits a fenced block for vega charts', () => {
+    const note = noteWith([{ type: 'vega_block', attrs: { spec: '{"mark":"bar"}' } }])
+    expect(serializeNoteToMarkdown(note, 'assets').markdown).toContain('```vega-lite\n{"mark":"bar"}\n```')
+  })
+
+  it('links media assets through the assets folder', () => {
+    const note = noteWith([{ type: 'media_block', attrs: { kind: 'audio', src: '.nevo/assets/a.mp3', name: 'Track' } }])
+    const { markdown, assetSrcs } = serializeNoteToMarkdown(note, 'assets')
+    expect(markdown).toContain('[Track](assets/a.mp3)')
+    expect(assetSrcs).toEqual(['.nevo/assets/a.mp3'])
+  })
+
+  it('renders note embeds, external embeds and toggles', () => {
+    const note = noteWith([
+      { type: 'note_embed', attrs: { noteId: 'n2', title: 'Other', previewText: 'Preview' } },
+      { type: 'embed_block', attrs: { url: 'https://youtu.be/x', title: 'Clip' } },
+      {
+        type: 'toggle',
+        content: [
+          { type: 'toggle_title', content: [{ type: 'text', text: 'Summary' }] },
+          { type: 'paragraph', content: [{ type: 'text', text: 'Hidden body' }] },
+        ],
+      },
+    ])
+    const md = serializeNoteToMarkdown(note, 'assets').markdown
+    expect(md).toContain('> **Other**')
+    expect(md).toContain('> Preview')
+    expect(md).toContain('[Clip](https://youtu.be/x)')
+    expect(md).toContain('<summary>Summary</summary>')
+    expect(md).toContain('Hidden body')
+  })
+})

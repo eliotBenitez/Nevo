@@ -700,6 +700,10 @@
         "description": "Typography scale used in the writing surface",
         "panelDescription": "Current body text scale in pages"
       },
+      "accentColoredHeadings": {
+        "title": "Colored headings",
+        "description": "Color headings (H1-H6) in the workspace accent color"
+      },
       "spellcheck": {
         "title": "Spellcheck",
         "description": "Uses native system spellcheck dictionaries when available"
@@ -1238,7 +1242,98 @@
     "draw": {
       "label": "Drawing",
       "openCanvas": "Open canvas",
-      "empty": "Empty drawing — click to open the canvas"
+      "empty": "Empty drawing — click to open the canvas",
+      "settings": {
+        "title": "Canvas",
+        "bgColor": "Background color",
+        "gridType": "Grid",
+        "gridNone": "No grid",
+        "gridSquare": "Square",
+        "gridLines": "Lines",
+        "gridDots": "Dots",
+        "autoDetect": "Auto-detect shapes"
+      },
+      "export": {
+        "title": "Export Drawing",
+        "format": "Format",
+        "scope": "Area",
+        "scopeAll": "All drawing",
+        "scopeViewport": "Visible area",
+        "scopeSelection": "Selected",
+        "transparent": "Transparent background",
+        "button": "Export",
+        "errorSelectionEmpty": "Nothing selected!",
+        "exporting": "Exporting..."
+      },
+      "props": {
+        "stroke": "Stroke",
+        "fill": "Fill",
+        "width": "Width",
+        "lineStyle": "Line style",
+        "sloppiness": "Sloppiness",
+        "opacity": "Opacity",
+        "none": "None",
+        "solid": "Solid",
+        "dashed": "Dashed",
+        "dotted": "Dotted",
+        "hachure": "Hachure",
+        "fillSolid": "Solid",
+        "crossHatch": "Cross-hatch",
+        "architect": "Architect",
+        "artist": "Artist",
+        "cartoonist": "Cartoonist",
+        "arrowShape": "Arrow type",
+        "arrowStraight": "Straight",
+        "arrowElbow": "Elbow",
+        "arrowCurved": "Curved",
+        "arrowEnds": "Arrow ends",
+        "capStart": "Start",
+        "capEnd": "End",
+        "capArrow": "Arrow",
+        "capDot": "Dot",
+        "capNone": "None",
+        "fontFamily": "Font family",
+        "sansSerif": "Sans-serif",
+        "serif": "Serif",
+        "monospace": "Monospace",
+        "fontSize": "Font size"
+      },
+      "actions": {
+        "title": "Actions",
+        "alignLeft": "Align left",
+        "alignCenterH": "Align center",
+        "alignRight": "Align right",
+        "alignTop": "Align top",
+        "alignCenterV": "Align middle",
+        "alignBottom": "Align bottom",
+        "distributeH": "Distribute horizontally",
+        "distributeV": "Distribute vertically",
+        "flipH": "Flip horizontal",
+        "flipV": "Flip vertical",
+        "group": "Group",
+        "ungroup": "Ungroup",
+        "lock": "Lock",
+        "unlock": "Unlock"
+      },
+      "templates": {
+        "title": "Components",
+        "open": "Component library",
+        "close": "Close",
+        "ui": "UI elements",
+        "diagram": "Flowchart",
+        "button": "Button",
+        "input": "Input field",
+        "checkbox": "Checkbox",
+        "card": "Card",
+        "browser": "Browser window",
+        "phone": "Mobile screen",
+        "process": "Process",
+        "decision": "Decision",
+        "terminator": "Start / End",
+        "connector": "Connector",
+        "sticky": "Sticky note",
+        "person": "Person"
+      }
     },
     "slash": {
       "ai": {
@@ -1260,7 +1355,7 @@
       "cancel": "Cancel"
     }
   },
-  "version": "v0.9.4 · Tauri",
+  "version": "v{version} · Tauri",
   "graph": {
     "title": "Graph",
     "localGraph": "Local graph",
@@ -1300,10 +1395,12 @@
     "modalTitle": "Export as",
     "formatMarkdown": "Markdown (.md)",
     "formatHtml": "HTML (.html)",
+    "formatDocx": "Word (.docx)",
     "formatTypst": "Typst archive (.zip)",
     "formatPdf": "PDF",
     "saveDialogTitle": "Export as Markdown",
     "saveHtmlDialogTitle": "Export as HTML",
+    "saveDocxDialogTitle": "Export as Word",
     "saveTypstDialogTitle": "Export as Typst archive",
     "savePdfDialogTitle": "Export as PDF",
     "savePdf": "Save PDF",
@@ -1323,6 +1420,12 @@
     "fontFamily": "Typeface",
     "fontDefault": "Default",
     "margins": "Margins",
+    "marginTop": "Top",
+    "marginRight": "Right",
+    "marginBottom": "Bottom",
+    "marginLeft": "Left",
+    "paragraphSpacing": "Paragraph spacing",
+    "exportNoteTitle": "Note title",
     "marginPresets": {
       "narrow": "Narrow",
       "normal": "Normal",
@@ -1344,7 +1447,13 @@
     "pdfGenerating": "Generating PDF…",
     "pdfGenerateError": "Failed to generate PDF preview.",
     "pdfSaveError": "Failed to save PDF.",
-    "pdfPreviewTitle": "PDF preview"
+    "pdfPreviewTitle": "PDF preview",
+    "saveDocx": "Save DOCX",
+    "docxPreviewTitle": "Word preview",
+    "docxGenerating": "Preparing Word document…",
+    "docxSaveError": "Failed to save DOCX.",
+    "pageBreak": "Page break",
+    "formatDocxModalTitle": "Format Word"
   },
   "media": {
     "attachVideo": "Attach video",
@@ -1555,6 +1664,7 @@
       "viewTable": "Table",
       "viewCalendar": "Calendar",
       "filters": "{n} filters",
+      "sorts": "{n} sorts",
       "display": "Display",
       "displayProperties": "Card properties",
       "showPreview": "Show preview",
@@ -1563,6 +1673,48 @@
       "densityCompact": "Compact",
       "noProperties": "No card properties yet",
       "boardSettings": "Board settings"
+    },
+    "filter": {
+      "empty": "No filters yet. Add a rule to narrow down cards.",
+      "where": "Where",
+      "and": "And",
+      "addRule": "Add filter",
+      "clearAll": "Clear all",
+      "removeRule": "Remove filter",
+      "valuePlaceholder": "Value…",
+      "selectValue": "Select…",
+      "checked": "Checked",
+      "unchecked": "Unchecked",
+      "noOptions": "No options",
+      "op": {
+        "contains": "contains",
+        "not_contains": "does not contain",
+        "is": "is",
+        "is_not": "is not",
+        "is_empty": "is empty",
+        "is_not_empty": "is not empty",
+        "eq": "=",
+        "neq": "≠",
+        "gt": ">",
+        "lt": "<",
+        "gte": "≥",
+        "lte": "≤",
+        "before": "before",
+        "after": "after",
+        "has_any": "has any of",
+        "has_all": "has all of",
+        "has_none": "has none of"
+      }
+    },
+    "sort": {
+      "empty": "No sorting yet. Add a field to sort cards.",
+      "sortBy": "Sort by",
+      "then": "Then by",
+      "addRule": "Add sort",
+      "clearAll": "Clear all",
+      "removeRule": "Remove sort",
+      "asc": "Asc",
+      "desc": "Desc"
     },
     "calendar": {
       "today": "Today",

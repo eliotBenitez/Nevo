@@ -1,0 +1,65 @@
+/* src/app/components/editor/EditorBlockHandle.vue */
+.block-handle {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  transform: translateX(-100%);
+}
+
+.block-handle__btn {
+  width: 16px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: calc(5px * var(--radius-scale, 1));
+  color: var(--text-4);
+  padding: 0;
+  transition: background 80ms ease, color 80ms ease;
+  flex-shrink: 0;
+}
+
+.block-handle__btn:hover {
+  background: var(--hover);
+  color: var(--text-2);
+}
+
+.block-handle__drag {
+  cursor: grab;
+}
+
+.block-handle__drag:active {
+  cursor: grabbing;
+}
+
+.block-handle__type {
+  cursor: pointer;
+}
+
+/* src/app/components/editor/EditorBlockTypeMenu.vue */
+.editor-overlay {
+  position: fixed;
+  z-index: 60;
+}
+
+.block-type-menu {
+  width: 220px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border: 1px solid var(--line-2);
+  border-radius: calc(12px * var(--radius-scale, 1));
+  background: var(--glass-3);
+  backdrop-filter: blur(32px) saturate(160%);
+  -webkit-backdrop-filter: blur(32px) saturate(160%);
+  box-shadow: var(--shadow-pop);
+  max-height: min(420px, calc(100vh - 24px));
+  overflow-y: auto;
+}
+
+

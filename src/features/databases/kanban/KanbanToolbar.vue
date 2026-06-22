@@ -4,7 +4,10 @@ import { useI18n } from 'vue-i18n'
 import { LayoutGrid, Table2, Calendar, Layers, Filter, ArrowUpDown, Search, Plus, Settings2, Eye, Rows3 } from 'lucide-vue-next'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import NvPopupMenu from '../../../ui/primitives/NvPopupMenu.vue'
+import KanbanFilterPanel from './KanbanFilterPanel.vue'
+import KanbanSortPanel from './KanbanSortPanel.vue'
 import type { KanbanBoardCardViewSettings, KanbanCardDensity } from '../../../types/kanban'
+import type { KanbanFilterField, KanbanFilterRule, KanbanSortRule } from './kanbanFilterSort'
 
 export type KanbanViewMode = 'board' | 'table' | 'calendar'
 export type KanbanGroupBy = 'status' | 'priority' | 'tag' | 'owner' | 'date'
@@ -12,8 +15,10 @@ export type KanbanGroupBy = 'status' | 'priority' | 'tag' | 'owner' | 'date'
 interface Props {
   view: KanbanViewMode
   groupBy: KanbanGroupBy
-  filterCount: number
   searchQuery: string
+  filterFields?: KanbanFilterField[]
+  filterRules?: KanbanFilterRule[]
+  sortRules?: KanbanSortRule[]
   boardTitle?: string
   cardCount?: number
   boardSettings?: KanbanBoardCardViewSettings
@@ -23,6 +28,9 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   boardSettings: () => ({ showCardPreview: true, cardDensity: 'comfortable' }),
   cardPropertyOptions: () => [],
+  filterFields: () => [],
+  filterRules: () => [],
+  sortRules: () => [],
   boardTitle: undefined,
   cardCount: undefined,
 })
@@ -31,13 +39,23 @@ const emit = defineEmits<{
   'update:view': [view: KanbanViewMode]
   'update:groupBy': [groupBy: KanbanGroupBy]
   'update:searchQuery': [q: string]
-  'open-filters': []
+  'update:filterRules': [rules: KanbanFilterRule[]]
+  'update:sortRules': [rules: KanbanSortRule[]]
   'new-card': []
   'add-column': []
   'update:boardSettings': [settings: KanbanBoardCardViewSettings]
 }>()
 
 const { t } = useI18n()
+
+const filterMenuOpen = ref(false)
+const sortMenuOpen = ref(false)
+const filterCount = computed(() => props.filterRules.filter(rule => {
+  if (rule.operator === 'is_empty' || rule.operator === 'is_not_empty') return true
+  if (Array.isArray(rule.value)) return rule.value.length > 0
+  return rule.value.trim() !== ''
+}).length)
+const sortCount = computed(() => props.sortRules.length)
 
 const GROUP_IDS: KanbanGroupBy[] = ['status', 'priority', 'tag', 'owner', 'date']
 
@@ -109,21 +127,42 @@ function setDensity(density: KanbanCardDensity) {
     </div>
 
     <!-- Filter -->
-    <button
-      type="button"
-      class="kb-toolbar__btn"
-      :class="{ 'kb-toolbar__btn--active': filterCount > 0 }"
-      @click="emit('open-filters')"
-    >
-      <Filter :size="11" />
-      {{ filterCount > 0 ? t('kanban.toolbar.filters', { n: filterCount }) : t('kanban.toolbar.filter') }}
-    </button>
+    <NvPopupMenu v-model:open="filterMenuOpen" placement="bottom-start" width="auto">
+      <template #trigger>
+        <button
+          type="button"
+          class="kb-toolbar__btn"
+          :class="{ 'kb-toolbar__btn--active': filterCount > 0 || filterMenuOpen }"
+        >
+          <Filter :size="11" />
+          {{ filterCount > 0 ? t('kanban.toolbar.filters', { n: filterCount }) : t('kanban.toolbar.filter') }}
+        </button>
+      </template>
+      <KanbanFilterPanel
+        :fields="filterFields"
+        :model-value="filterRules"
+        @update:model-value="emit('update:filterRules', $event)"
+      />
+    </NvPopupMenu>
 
-    <!-- Sort (static for now) -->
-    <button type="button" class="kb-toolbar__btn">
-      <ArrowUpDown :size="11" />
-      {{ t('kanban.toolbar.sort') }}
-    </button>
+    <!-- Sort -->
+    <NvPopupMenu v-model:open="sortMenuOpen" placement="bottom-start" width="360px">
+      <template #trigger>
+        <button
+          type="button"
+          class="kb-toolbar__btn"
+          :class="{ 'kb-toolbar__btn--active': sortCount > 0 || sortMenuOpen }"
+        >
+          <ArrowUpDown :size="11" />
+          {{ sortCount > 0 ? t('kanban.toolbar.sorts', { n: sortCount }) : t('kanban.toolbar.sort') }}
+        </button>
+      </template>
+      <KanbanSortPanel
+        :fields="filterFields"
+        :model-value="sortRules"
+        @update:model-value="emit('update:sortRules', $event)"
+      />
+    </NvPopupMenu>
 
     <NvPopupMenu v-model:open="displayMenuOpen" placement="bottom-start" width="250px">
       <template #trigger>

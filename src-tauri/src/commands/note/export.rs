@@ -119,3 +119,37 @@ fn export_note_with_assets(
     );
     Ok(())
 }
+
+#[tauri::command]
+pub fn export_draw_file(
+    export_path: String,
+    bytes: Vec<u8>,
+) -> Result<(), String> {
+    std::fs::write(&export_path, bytes).map_err(|error| error.to_string())
+}
+
+/// Write a fully-assembled .docx (built in the webview via the `docx` library)
+/// to disk. The document already embeds its images, so no asset copying is
+/// needed here.
+#[tauri::command]
+pub fn export_note_docx(
+    export_path: String,
+    bytes: Vec<u8>,
+) -> Result<(), String> {
+    let logger = crate::logging::logger();
+    std::fs::write(&export_path, bytes).map_err(|error| {
+        let message = error.to_string();
+        let _ = logger.error(
+            "tauri.note",
+            "export_note_docx",
+            "Failed to write docx export",
+            LogContext::default().with_error(LogError {
+                kind: Some("io".to_string()),
+                message: message.clone(),
+                details: None,
+            }),
+        );
+        message
+    })
+}
+

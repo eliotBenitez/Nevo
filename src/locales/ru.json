@@ -700,6 +700,10 @@
         "description": "Размер типографики в рабочей области письма",
         "panelDescription": "Текущий размер основного текста на страницах"
       },
+      "accentColoredHeadings": {
+        "title": "Цветные заголовки",
+        "description": "Окрашивать заголовки (H1-H6) в акцентный цвет рабочей области"
+      },
       "spellcheck": {
         "title": "Проверка орфографии",
         "description": "Использует нативные системные словари, если они доступны"
@@ -1238,7 +1242,98 @@
     "draw": {
       "label": "Рисунок",
       "openCanvas": "Открыть холст",
-      "empty": "Пустой рисунок — нажмите, чтобы открыть холст"
+      "empty": "Пустой рисунок — нажмите, чтобы открыть холст",
+      "settings": {
+        "title": "Холст",
+        "bgColor": "Цвет фона",
+        "gridType": "Сетка",
+        "gridNone": "Без сетки",
+        "gridSquare": "Квадрат",
+        "gridLines": "Линии",
+        "gridDots": "Точки",
+        "autoDetect": "Распознавание фигур"
+      },
+      "export": {
+        "title": "Экспорт рисунка",
+        "format": "Формат",
+        "scope": "Область",
+        "scopeAll": "Весь рисунок",
+        "scopeViewport": "Видимая область",
+        "scopeSelection": "Выделенное",
+        "transparent": "Прозрачный фон",
+        "button": "Экспортировать",
+        "errorSelectionEmpty": "Ничего не выделено!",
+        "exporting": "Экспорт..."
+      },
+      "props": {
+        "stroke": "Контур",
+        "fill": "Заливка",
+        "width": "Толщина",
+        "lineStyle": "Стиль линии",
+        "sloppiness": "Небрежность",
+        "opacity": "Прозрачность",
+        "none": "Нет",
+        "solid": "Сплошная",
+        "dashed": "Пунктир",
+        "dotted": "Точки",
+        "hachure": "Штриховка",
+        "fillSolid": "Сплошная",
+        "crossHatch": "Сетка",
+        "architect": "Аккуратно",
+        "artist": "Обычно",
+        "cartoonist": "Небрежно",
+        "arrowShape": "Тип стрелки",
+        "arrowStraight": "Прямая",
+        "arrowElbow": "Ломаная",
+        "arrowCurved": "Кривая",
+        "arrowEnds": "Концы стрелки",
+        "capStart": "Начало",
+        "capEnd": "Конец",
+        "capArrow": "Стрелка",
+        "capDot": "Точка",
+        "capNone": "Ничего",
+        "fontFamily": "Шрифт",
+        "sansSerif": "Без засечек",
+        "serif": "С засечками",
+        "monospace": "Моноширинный",
+        "fontSize": "Размер текста"
+      },
+      "actions": {
+        "title": "Действия",
+        "alignLeft": "Выровнять по левому краю",
+        "alignCenterH": "Выровнять по центру",
+        "alignRight": "Выровнять по правому краю",
+        "alignTop": "Выровнять по верху",
+        "alignCenterV": "Выровнять по середине",
+        "alignBottom": "Выровнять по низу",
+        "distributeH": "Распределить по горизонтали",
+        "distributeV": "Распределить по вертикали",
+        "flipH": "Отразить по горизонтали",
+        "flipV": "Отразить по вертикали",
+        "group": "Сгруппировать",
+        "ungroup": "Разгруппировать",
+        "lock": "Заблокировать",
+        "unlock": "Разблокировать"
+      },
+      "templates": {
+        "title": "Компоненты",
+        "open": "Библиотека компонентов",
+        "close": "Закрыть",
+        "ui": "UI-элементы",
+        "diagram": "Блок-схема",
+        "button": "Кнопка",
+        "input": "Поле ввода",
+        "checkbox": "Чекбокс",
+        "card": "Карточка",
+        "browser": "Окно браузера",
+        "phone": "Экран телефона",
+        "process": "Процесс",
+        "decision": "Решение",
+        "terminator": "Начало / Конец",
+        "connector": "Коннектор",
+        "sticky": "Стикер",
+        "person": "Человечек"
+      }
     },
     "slash": {
       "ai": {
@@ -1260,7 +1355,7 @@
       "cancel": "Отмена"
     }
   },
-  "version": "v0.9.4 · Tauri",
+  "version": "v{version} · Tauri",
   "graph": {
     "title": "Граф",
     "localGraph": "Локальный граф",
@@ -1300,10 +1395,12 @@
     "modalTitle": "Экспортировать как",
     "formatMarkdown": "Markdown (.md)",
     "formatHtml": "HTML (.html)",
+    "formatDocx": "Word (.docx)",
     "formatTypst": "Typst archive (.zip)",
     "formatPdf": "PDF",
     "saveDialogTitle": "Экспорт в Markdown",
     "saveHtmlDialogTitle": "Экспорт в HTML",
+    "saveDocxDialogTitle": "Экспорт в Word",
     "saveTypstDialogTitle": "Экспорт в Typst-архив",
     "savePdfDialogTitle": "Экспорт в PDF",
     "savePdf": "Сохранить PDF",
@@ -1323,6 +1420,12 @@
     "fontFamily": "Гарнитура",
     "fontDefault": "По умолчанию",
     "margins": "Поля",
+    "marginTop": "Сверху",
+    "marginRight": "Справа",
+    "marginBottom": "Снизу",
+    "marginLeft": "Слева",
+    "paragraphSpacing": "Интервал абзацев",
+    "exportNoteTitle": "Название заметки",
     "marginPresets": {
       "narrow": "Узкие",
       "normal": "Обычные",
@@ -1344,7 +1447,13 @@
     "pdfGenerating": "Генерация PDF…",
     "pdfGenerateError": "Не удалось создать превью PDF.",
     "pdfSaveError": "Не удалось сохранить PDF.",
-    "pdfPreviewTitle": "Предпросмотр PDF"
+    "pdfPreviewTitle": "Предпросмотр PDF",
+    "saveDocx": "Сохранить DOCX",
+    "docxPreviewTitle": "Предпросмотр Word",
+    "docxGenerating": "Подготовка Word документа…",
+    "docxSaveError": "Не удалось сохранить DOCX.",
+    "pageBreak": "Разрыв страницы",
+    "formatDocxModalTitle": "Настройка Word"
   },
   "media": {
     "attachVideo": "Прикрепить видео",
@@ -1555,6 +1664,7 @@
       "viewTable": "Таблица",
       "viewCalendar": "Календарь",
       "filters": "{n} фильтров",
+      "sorts": "{n} сортировок",
       "display": "Вид",
       "displayProperties": "Свойства карточки",
       "showPreview": "Показывать превью",
@@ -1563,6 +1673,48 @@
       "densityCompact": "Компактная",
       "noProperties": "Свойств пока нет",
       "boardSettings": "Настройки доски"
+    },
+    "filter": {
+      "empty": "Фильтров пока нет. Добавьте правило, чтобы отфильтровать карточки.",
+      "where": "Где",
+      "and": "И",
+      "addRule": "Добавить фильтр",
+      "clearAll": "Очистить всё",
+      "removeRule": "Удалить фильтр",
+      "valuePlaceholder": "Значение…",
+      "selectValue": "Выбрать…",
+      "checked": "Отмечено",
+      "unchecked": "Не отмечено",
+      "noOptions": "Нет вариантов",
+      "op": {
+        "contains": "содержит",
+        "not_contains": "не содержит",
+        "is": "равно",
+        "is_not": "не равно",
+        "is_empty": "пусто",
+        "is_not_empty": "не пусто",
+        "eq": "=",
+        "neq": "≠",
+        "gt": ">",
+        "lt": "<",
+        "gte": "≥",
+        "lte": "≤",
+        "before": "до",
+        "after": "после",
+        "has_any": "содержит любой из",
+        "has_all": "содержит все из",
+        "has_none": "не содержит ни одного из"
+      }
+    },
+    "sort": {
+      "empty": "Сортировки пока нет. Добавьте поле для сортировки карточек.",
+      "sortBy": "Сортировать по",
+      "then": "Затем по",
+      "addRule": "Добавить сортировку",
+      "clearAll": "Очистить всё",
+      "removeRule": "Удалить сортировку",
+      "asc": "По возр.",
+      "desc": "По убыв."
     },
     "calendar": {
       "today": "Сегодня",

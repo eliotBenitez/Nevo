@@ -1,0 +1,93 @@
+/* src/app/components/WorkspaceEditorPane.vue — note-embed picker overlay */
+.note-embed-picker {
+  position: fixed;
+  z-index: 60;
+  width: 280px;
+  max-width: min(280px, calc(100vw - 24px));
+  max-height: min(340px, calc(100vh - 24px));
+  display: flex;
+  flex-direction: column;
+  border-radius: calc(12px * var(--radius-scale, 1));
+  border: 1px solid var(--line-2);
+  background: var(--glass-3);
+  backdrop-filter: blur(32px) saturate(160%);
+  -webkit-backdrop-filter: blur(32px) saturate(160%);
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+}
+
+.note-embed-picker__search {
+  flex: 0 0 auto;
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--line-1);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-1);
+  font: 13px/1 var(--font-ui);
+  padding: 10px 14px;
+  outline: none;
+}
+
+.note-embed-picker__search::placeholder {
+  color: var(--text-4);
+}
+
+.note-embed-picker__list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 0;
+}
+
+.note-embed-picker__item {
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-2);
+  font: 13px/1.35 var(--font-ui);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-align: left;
+  padding: 7px 12px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.note-embed-picker__item:hover {
+  background: var(--accent-soft);
+}
+
+.note-embed-picker__icon {
+  font-size: 14px;
+  flex: 0 0 18px;
+  text-align: center;
+  line-height: 1;
+}
+
+.note-embed-picker__title {
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.note-embed-picker__empty {
+  padding: 20px 14px;
+  text-align: center;
+  color: var(--text-4);
+  font: 12.5px/1.4 var(--font-ui);
+}
+
+/* Editor overlays are teleported to body and must stay above modal backdrops,
+   including compact editors inside Kanban card dialogs. */
+.editor-overlay,
+.callout-icon-picker,
+.note-embed-picker {
+  z-index: 1300;
+}

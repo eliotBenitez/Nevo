@@ -1,0 +1,395 @@
+/* src/app/components/WorkspaceEditorPane.vue */
+.editor-pane {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+.editor-doc {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.editor-doc-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.doc-body-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.editor-empty {
+  margin: auto;
+  max-width: 520px;
+  text-align: center;
+  padding: 20px;
+}
+
+.container-overview {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 32px 24px 40px;
+}
+
+.container-overview__header {
+  width: min(100%, 960px);
+  margin: 0 auto 24px;
+  padding: 0 8px;
+}
+
+.container-overview__eyebrow {
+  margin: 0 0 8px;
+  color: var(--text-4);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.container-overview__title {
+  margin: 0;
+  color: var(--text-1);
+  font-family: var(--font-serif);
+  font-size: clamp(30px, 4vw, 44px);
+  font-weight: 400;
+  line-height: 1.08;
+}
+
+.container-overview__list {
+  width: min(100%, 960px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.container-overview__item {
+  width: 100%;
+  border: 1px solid var(--line-1);
+  background: color-mix(in oklab, var(--glass-1) 84%, transparent);
+  border-radius: calc(18px * var(--radius-scale, 1));
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--text-1);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.container-overview__item:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in oklab, var(--accent) 24%, var(--line-1));
+  background: color-mix(in oklab, var(--hover) 78%, transparent);
+}
+
+.container-overview__item-icon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border-radius: calc(12px * var(--radius-scale, 1));
+  background: color-mix(in oklab, var(--accent-soft) 68%, transparent);
+  color: var(--text-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.container-overview__item-copy {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.container-overview__item-title {
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.container-overview__item-kind {
+  color: var(--text-4);
+  font-size: 12px;
+}
+
+.container-overview__item-arrow {
+  flex: 0 0 auto;
+  color: var(--text-4);
+}
+
+.editor-empty h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 38px;
+  font-weight: 400;
+  color: var(--text-1);
+}
+
+.editor-empty p {
+  margin: 10px 0 20px;
+  color: var(--text-3);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.doc-editor .nv-search-target-block {
+  border-radius: calc(10px * var(--radius-scale, 1));
+  background: color-mix(in oklab, var(--accent) 18%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 40%, transparent);
+  transition: background 180ms ease, box-shadow 180ms ease;
+}
+
+.doc-body {
+  width: 100%;
+  margin: 0;
+  padding: 20px 0 48px;
+  min-height: 0;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scroll-behavior: auto;
+  /* Isolate paint so scrolling the doc body doesn't repaint the sidebar/right
+     panel. `contain: paint` is safe on a scrolling element (unlike `strict`). */
+  contain: paint;
+}
+
+.doc-body--smooth {
+  scroll-behavior: smooth;
+}
+
+.editor-pane--focus-soft {
+  --focus-soft-opacity: 0.92;
+}
+
+.editor-pane--focus-soft .breadcrumb-strip,
+.editor-pane--focus-soft .editor-scrollbar {
+  opacity: var(--focus-soft-opacity);
+  transition: opacity 200ms ease;
+}
+
+.editor-pane--focus-soft:focus-within .breadcrumb-strip,
+.editor-pane--focus-soft:focus-within .editor-scrollbar {
+  opacity: 1;
+}
+
+.doc-body--active-emphasis .nv-prosemirror > * {
+  opacity: 0.42;
+  transition: opacity 180ms ease;
+}
+
+.doc-body--active-emphasis .nv-prosemirror > .nv-active-block,
+.doc-body--active-emphasis .nv-prosemirror:not(:focus-within) > * {
+  opacity: 1;
+}
+
+.caret--steady {
+  caret-color: auto;
+  animation: none;
+}
+
+.caret--blink {
+  caret-color: auto;
+  animation: blink-caret 1s step-start infinite;
+}
+
+@keyframes blink-caret {
+  50% { caret-color: transparent }
+}
+
+.editor-stats-corner {
+  position: absolute;
+  bottom: 12px;
+  right: 18px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: calc(6px * var(--radius-scale, 1));
+  background: color-mix(in oklab, var(--glass-2) 80%, transparent);
+  border: 1px solid var(--line-1);
+  backdrop-filter: blur(8px);
+  color: var(--text-4);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  pointer-events: none;
+  user-select: none;
+  z-index: 2;
+}
+
+.editor-stats-sep {
+  opacity: 0.5;
+}
+
+.doc-content {
+  width: min(100%, var(--workspace-editor-line-width, 760px));
+  margin: 0 auto;
+  padding: 0 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.editor-scrollbar {
+  position: absolute;
+  top: 8px;
+  right: 3px;
+  bottom: 12px;
+  width: 6px;
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+.editor-scrollbar--visible,
+.editor-scrollbar--dragging {
+  opacity: 1;
+}
+
+.editor-scrollbar__track {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--text-2) 5%, transparent);
+}
+
+.editor-scrollbar__thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--text-2) 35%, transparent);
+  cursor: grab;
+  padding: 0;
+  transition: background 120ms ease;
+}
+
+.editor-scrollbar__thumb:hover {
+  background: color-mix(in oklab, var(--text-2) 55%, transparent);
+}
+
+.editor-scrollbar--dragging .editor-scrollbar__thumb {
+  background: color-mix(in oklab, var(--accent) 65%, var(--text-2) 35%);
+  cursor: grabbing;
+  transition: none;
+}
+
+.doc-content,
+.doc-content .nv-prosemirror {
+  font-family: var(--workspace-editor-font-family, var(--font-ui));
+}
+
+.doc-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.doc-title-emoji {
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0;
+  width: 46px;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-1);
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .container-overview {
+    padding: 24px 16px 28px;
+  }
+
+  .container-overview__item {
+    border-radius: calc(16px * var(--radius-scale, 1));
+    padding: 14px 16px;
+  }
+
+  .doc-body {
+    padding: 16px 0 32px;
+  }
+
+  .doc-content {
+    padding: 0 20px;
+  }
+
+  .editor-scrollbar {
+    right: 2px;
+  }
+
+  .doc-title-emoji {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-scrollbar,
+  .editor-scrollbar__thumb {
+    transition: none;
+  }
+}
+
+.doc-title {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-1);
+  font-family: var(--font-serif);
+  font-size: 46px;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  padding: 4px 0;
+}
+
+.doc-title::placeholder {
+  color: var(--text-4);
+}
+
+.doc-editor {
+  width: 100%;
+  min-height: 280px;
+  flex: 1;
+}
+
+.image-file-input {
+  display: none;
+}
+

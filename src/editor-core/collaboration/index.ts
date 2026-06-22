@@ -17,3 +17,40 @@ export function restoreYDocFromBinary(binary: Uint8Array): Y.Doc {
 export function encodeYDocState(ydoc: Y.Doc): Uint8Array {
   return Y.encodeStateAsUpdate(ydoc)
 }
+
+type YXmlChild = Y.XmlElement | Y.XmlFragment | Y.XmlText | Y.XmlHook
+
+function findDrawBlockElement(nodes: YXmlChild[], drawId: string): Y.XmlElement | null {
+  for (const node of nodes) {
+    if (node instanceof Y.XmlElement) {
+      if (node.nodeName === 'draw_block' && node.getAttribute('drawId') === drawId) {
+        return node
+      }
+      const found = findDrawBlockElement(node.toArray(), drawId)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+/**
+ * Patch a `draw_block`'s attributes directly inside a persisted Y.Doc, without a
+ * live `EditorView`. The full-screen canvas unmounts the editor pane, so the
+ * usual `setNodeMarkup` path is unavailable; this lets the canvas write the
+ * saved `src`/`svgPreview` straight into the note's source-of-truth Y.Doc so it
+ * survives an app exit straight from the canvas (and keeps the asset referenced
+ * against GC). Returns true if a matching node was found and updated.
+ */
+export function updateDrawBlockAttrsInYDoc(
+  ydoc: Y.Doc,
+  drawId: string,
+  attrs: Record<string, string>,
+): boolean {
+  const fragment = ydoc.getXmlFragment(Y_FRAGMENT_NAME)
+  const target = findDrawBlockElement(fragment.toArray(), drawId)
+  if (!target) return false
+  ydoc.transact(() => {
+    for (const [key, value] of Object.entries(attrs)) target.setAttribute(key, value)
+  })
+  return true
+}

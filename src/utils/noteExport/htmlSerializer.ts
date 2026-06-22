@@ -5,6 +5,7 @@ import type { NevoSerializableNode } from '../../types/editor-plugin'
 import { loadKatex, renderKatexToString } from '../katex'
 import { renderMermaidToSvg } from './mermaidToSvg'
 import { renderMarkmapToSvg } from './markmapToSvg'
+import { renderVegaToSvg } from './vegaToSvg'
 
 export interface HtmlSerializeResult {
   html: string
@@ -363,6 +364,21 @@ export async function blockNode(node: BlockNode, ctx: SerializeCtx): Promise<str
         : `<div class="markmap-error">Empty mind map</div>`
       return `<figure class="markmap-block">${rendered}<details class="source-details"><summary>Mind map source</summary><pre><code>${escapeHtml(markdown)}</code></pre></details></figure>`
     }
+    case 'draw_block': {
+      const svg = String(node.attrs?.svgPreview ?? '')
+      if (!svg.trim()) return ''
+      const title = String(node.attrs?.title ?? '')
+      const caption = title.trim() ? `<figcaption>${escapeHtml(title)}</figcaption>` : ''
+      return `<figure class="draw-block"><div class="draw-render"><img class="draw-svg" src="${escapeAttr(svgDataUri(svg))}" alt="Drawing"></div>${caption}</figure>`
+    }
+    case 'vega_block': {
+      const spec = String(node.attrs?.spec ?? '')
+      const svg = await renderVegaToSvg(spec)
+      const rendered = svg
+        ? `<div class="vega-render"><img class="vega-svg" src="${escapeAttr(svgDataUri(svg))}" alt="Chart"></div>`
+        : `<div class="vega-error">Invalid chart spec</div>`
+      return `<figure class="vega-block">${rendered}</figure>`
+    }
     case 'note_embed': {
       const noteId = String(node.attrs?.noteId ?? '')
       const title = String(node.attrs?.title ?? 'Note embed')
@@ -370,6 +386,23 @@ export async function blockNode(node: BlockNode, ctx: SerializeCtx): Promise<str
       const href = `nevo://note/${encodeURIComponent(noteId)}`
       return `<article class="note-embed" data-note-id="${escapeAttr(noteId)}"><a href="${escapeAttr(href)}">${escapeHtml(title)}</a>${previewText ? `<p>${escapeHtml(previewText)}</p>` : ''}</article>`
     }
+    case 'embed_block': {
+      const url = String(node.attrs?.url ?? '')
+      if (!url) return ''
+      const title = String(node.attrs?.title ?? '')
+      const label = title.trim() || url
+      return `<figure class="embed-block"><a href="${escapeAttr(url)}">${escapeHtml(label)}</a></figure>`
+    }
+    case 'toggle': {
+      const children = node.content ?? []
+      const titleNode = children.find(child => child.type === 'toggle_title')
+      const bodyNodes = children.filter(child => child.type !== 'toggle_title')
+      const summary = titleNode ? inlineContent(titleNode, ctx) : ''
+      const body = (await Promise.all(bodyNodes.map(child => blockNode(child, ctx)))).filter(Boolean).join('\n')
+      return `<details open><summary>${summary || 'Toggle'}</summary>\n${body}\n</details>`
+    }
+    case 'toggle_title':
+      return inlineContent(node, ctx)
     case 'media_block': {
       const kind = String(node.attrs?.kind ?? 'audio') === 'video' ? 'video' : 'audio'
       const src = String(node.attrs?.src ?? '')
@@ -632,6 +665,31 @@ figcaption {
 .mermaid-error {
   color: #991b1b;
   background: #fef2f2;
+  border-radius: 6px;
+  padding: 0.8em 1em;
+}
+.draw-block, .vega-block {
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fff;
+}
+.draw-render, .vega-render {
+  overflow-x: auto;
+  text-align: center;
+}
+.draw-svg, .vega-svg {
+  max-width: 100%;
+  height: auto;
+}
+.vega-error {
+  color: #991b1b;
+  background: #fef2f2;
+  border-radius: 6px;
+  padding: 0.8em 1em;
+}
+.embed-block {
+  border: 1px solid #d8dee8;
   border-radius: 6px;
   padding: 0.8em 1em;
 }

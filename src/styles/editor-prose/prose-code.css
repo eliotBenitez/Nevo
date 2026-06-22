@@ -1,0 +1,235 @@
+/* Code block: layout, syntax highlight, light theme */
+
+.doc-editor .nv-prosemirror .nv-code-block {
+  border: 1px solid color-mix(in oklab, var(--line-2) 90%, transparent);
+  border-radius: calc(12px * var(--radius-scale, 1));
+  overflow: hidden;
+  margin: 12px 0;
+  background: oklch(0.16 0.012 270 / 0.85);
+  backdrop-filter: blur(18px) saturate(140%);
+  position: relative;
+  z-index: 1;
+  box-shadow: var(--shadow-2);
+}
+
+.doc-editor .nv-prosemirror .nv-code-controls {
+  position: absolute;
+  top: 6px;
+  right: 16px;
+  z-index: 10;
+  opacity: 0.4;
+  transition: opacity 0.16s ease;
+}
+
+.doc-editor .nv-prosemirror .nv-code-block:hover .nv-code-controls {
+  opacity: 1;
+}
+
+/* Style NvSelect trigger to be a minimalist label */
+.doc-editor .nv-prosemirror .nv-code-controls .nv-select__trigger {
+  height: auto;
+  min-height: unset;
+  padding: 3px 6px;
+  background: color-mix(in oklab, var(--canvas-1) 40%, transparent);
+  border: none;
+  border-radius: calc(4px * var(--radius-scale, 1));
+  box-shadow: none;
+  min-width: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-code-controls .nv-select__trigger:hover {
+  background: color-mix(in oklab, var(--canvas-1) 80%, transparent);
+}
+
+.doc-editor .nv-prosemirror .nv-code-controls .nv-select__value {
+  font: 10px/1 var(--font-mono);
+  color: var(--text-4);
+}
+
+.doc-editor .nv-prosemirror .nv-code-controls .nv-select__trigger:hover .nv-select__value {
+  color: var(--text-2);
+}
+
+.doc-editor .nv-prosemirror .nv-code-controls .nv-select__chevron {
+  display: none;
+}
+
+.doc-editor .nv-prosemirror .nv-code-surface {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-code-editor,
+.doc-editor .nv-prosemirror .nv-code-highlight {
+  margin: 0;
+  padding: 14px 18px 18px;
+  font: 12.8px/1.65 var(--font-mono);
+  overflow-x: auto;
+  white-space: pre;
+  tab-size: 2;
+}
+
+.doc-editor .nv-prosemirror .nv-code-editor {
+  position: relative;
+  z-index: 2;
+  background: transparent;
+  color: transparent;
+  caret-color: oklch(0.9 0 0);
+  padding-left: 54px;
+}
+
+.doc-editor .nv-prosemirror .nv-code-block[data-editing='true'] .nv-code-editor {
+  color: oklch(0.92 0 0);
+}
+
+.doc-editor .nv-prosemirror .nv-code-block[data-editing='true'] .nv-code-line-content {
+  opacity: 0;
+}
+
+.doc-editor .nv-prosemirror .nv-code-highlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: oklch(0.92 0 0);
+  z-index: 1;
+}
+
+.doc-editor .nv-prosemirror .nv-code-highlight code {
+  display: block;
+  min-height: 1.6em;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  line-height: inherit;
+  white-space: inherit;
+  background: transparent;
+}
+
+.doc-editor .nv-prosemirror .nv-code-content {
+  display: block;
+  min-height: 1.6em;
+}
+
+.doc-editor .nv-prosemirror .nv-code-line {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 14px;
+  align-items: baseline;
+  margin-left: -14px;
+  margin-right: -14px;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+.doc-editor .nv-prosemirror .nv-code-line-no {
+  width: 18px;
+  text-align: right;
+  color: var(--text-4);
+  font-size: 12px;
+  opacity: 0.7;
+  user-select: none;
+}
+
+.doc-editor .nv-prosemirror .nv-code-line-content {
+  white-space: pre;
+}
+
+.doc-editor .nv-prosemirror .nv-code-line.is-active {
+  background: oklch(0.66 0.1 258 / 0.08);
+}
+
+.doc-editor .nv-prosemirror .nv-code-line.is-active::before {
+  content: '';
+  position: absolute;
+  left: -18px;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.doc-editor .nv-prosemirror .nv-code-block[data-wrap='true'] .nv-code-editor,
+.doc-editor .nv-prosemirror .nv-code-block[data-wrap='true'] .nv-code-highlight {
+  white-space: pre-wrap;
+}
+
+.doc-editor .nv-prosemirror .nv-code-block[data-wrap='true'] .nv-code-line-content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.doc-editor .nv-prosemirror .nv-code-highlight .hljs-keyword {
+  color: oklch(0.72 0.08 305);
+}
+
+.doc-editor .nv-prosemirror .nv-code-highlight .hljs-string {
+  color: oklch(0.78 0.08 78);
+}
+
+.doc-editor .nv-prosemirror .nv-code-highlight .hljs-number {
+  color: oklch(0.66 0.1 258);
+}
+
+.doc-editor .nv-prosemirror .nv-code-highlight .hljs-title,
+.doc-editor .nv-prosemirror .nv-code-highlight .hljs-function .hljs-title {
+  color: oklch(0.72 0.06 210);
+}
+
+.doc-editor .nv-prosemirror .nv-code-highlight .hljs-type,
+.doc-editor .nv-prosemirror .nv-code-highlight .hljs-built_in {
+  color: oklch(0.72 0.05 155);
+}
+
+.doc-editor .nv-prosemirror .nv-code-highlight .hljs-comment {
+  color: var(--text-4);
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-block {
+  background: oklch(0.90 0.008 270 / 0.88);
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-editor {
+  caret-color: oklch(0.22 0.012 270);
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-block[data-editing='true'] .nv-code-editor {
+  color: oklch(0.22 0.012 270);
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-block[data-editing='true'] .nv-code-line-content {
+  opacity: 0;
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-highlight {
+  color: oklch(0.22 0.012 270);
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-highlight .hljs-keyword {
+  color: oklch(0.46 0.13 305);
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-highlight .hljs-string {
+  color: oklch(0.50 0.10 60);
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-highlight .hljs-number {
+  color: oklch(0.43 0.12 258);
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-highlight .hljs-title,
+.theme-light .doc-editor .nv-prosemirror .nv-code-highlight .hljs-function .hljs-title {
+  color: oklch(0.40 0.09 210);
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-highlight .hljs-type,
+.theme-light .doc-editor .nv-prosemirror .nv-code-highlight .hljs-built_in {
+  color: oklch(0.42 0.08 155);
+}
+
+.theme-light .doc-editor .nv-prosemirror .nv-code-highlight .hljs-comment {
+  color: var(--text-4);
+  font-style: italic;
+}

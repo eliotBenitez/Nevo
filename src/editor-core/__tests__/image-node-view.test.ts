@@ -104,7 +104,7 @@ describe('image node view', () => {
   })
 
   it('uses fixed widths for image size presets', () => {
-    const css = readFileSync('src/styles/editor-prose.css', 'utf8')
+    const css = readFileSync('src/styles/editor-prose/prose-media.css', 'utf8')
 
     expect(css).toContain(".nv-image-block[data-size-preset='small']  .nv-image-preview { width: 320px; }")
     expect(css).toContain(".nv-image-block[data-size-preset='medium'] .nv-image-preview { width: 560px; }")

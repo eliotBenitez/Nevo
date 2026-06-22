@@ -1,0 +1,168 @@
+/* src/app/components/TitleBarSearch.vue */
+.titlebar-search {
+  position: relative;
+  width: min(380px, 34vw);
+  justify-self: end;
+  -webkit-app-region: no-drag;
+}
+
+.titlebar-search__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line-1);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--glass-1) 96%, var(--canvas-1));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 26px -20px oklch(0 0 0 / 0.3);
+}
+
+.titlebar-search__field.is-open {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 55%, transparent);
+}
+
+.titlebar-search__icon {
+  color: var(--text-4);
+  flex-shrink: 0;
+}
+
+.titlebar-search__input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-1);
+  font-size: 12px;
+}
+
+.titlebar-search__input::placeholder {
+  color: var(--text-4);
+}
+
+.titlebar-search__hints {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding-left: 8px;
+  border-left: 1px solid var(--line-1);
+}
+
+.titlebar-search__hint-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.titlebar-search__hint-key {
+  min-width: 18px;
+  color: var(--text-4);
+}
+
+.titlebar-search__dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  max-height: min(68vh, 520px);
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid var(--line-2);
+  border-radius: calc(18px * var(--radius-scale, 1));
+  background: color-mix(in oklab, var(--glass-2) 98%, var(--canvas-1));
+  box-shadow:
+    0 28px 70px oklch(0 0 0 / 0.28),
+    inset 0 1px 0 oklch(1 0 0 / 0.06);
+  backdrop-filter: blur(28px) saturate(155%);
+  -webkit-backdrop-filter: blur(28px) saturate(155%);
+}
+
+.titlebar-search__group + .titlebar-search__group {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-1);
+}
+
+.titlebar-search__group-title {
+  margin-bottom: 6px;
+  color: var(--text-4);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.titlebar-search__result {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: calc(12px * var(--radius-scale, 1));
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.titlebar-search__result:hover,
+.titlebar-search__result.is-active {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+}
+
+.titlebar-search__result-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.titlebar-search__result-title {
+  color: var(--text-1);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.titlebar-search__result-subtitle {
+  color: var(--text-4);
+  font-size: 11px;
+}
+
+.titlebar-search__result-body {
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.titlebar-search__empty {
+  padding: 14px 12px;
+}
+
+.titlebar-search__empty-title {
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.titlebar-search__empty-subtitle {
+  margin-top: 4px;
+  color: var(--text-4);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+@media (max-width: 960px) {
+  .titlebar-search {
+    width: min(100%, 320px);
+  }
+
+  .titlebar-search__hints {
+    display: none;
+  }
+}
+

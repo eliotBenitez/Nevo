@@ -301,6 +301,6 @@ async function onDrop(e: DragEvent) {
     </Transition>
 
     <PrivacyBadge />
-    <div class="version-badge">{{ t('version') }}</div>
+    <div class="version-badge">{{ t('version', { version: workspaceStore.appMetadata?.version ?? '0.1.8' }) }}</div>
   </div>
 </template>

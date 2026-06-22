@@ -46,6 +46,7 @@ export function createCodeBlockNodeView(node: PMNode, view: EditorView, getPos: 
   const wrapEnabled = false
   let lastHighlightText: string | null = null
   let lastHighlightLanguage: string | null = null
+  let lastActiveLineIndex: number | null = null
 
   const selectableLanguages = options?.codeLanguages ?? ['javascript', 'typescript', 'json', 'css', 'html', 'markdown', 'rust', 'python', 'go', 'sql']
   const languageOptions = [
@@ -107,14 +108,16 @@ export function createCodeBlockNodeView(node: PMNode, view: EditorView, getPos: 
   const syncHighlight = () => {
     const sourceText = currentNode.textContent
     const languageAttr = getStringAttr(currentNode, 'language').trim() || null
-    if (sourceText === lastHighlightText && languageAttr === lastHighlightLanguage) {
+    const activeIndex = getActiveLineIndex()
+    if (sourceText === lastHighlightText && languageAttr === lastHighlightLanguage && activeIndex === lastActiveLineIndex) {
       return
     }
     lastHighlightText = sourceText
     lastHighlightLanguage = languageAttr
+    lastActiveLineIndex = activeIndex
 
     const highlighted = getCodeHighlight(sourceText, languageAttr)
-    highlightCode.innerHTML = renderHighlightedCodeLines(highlighted.html || '&nbsp;', getActiveLineIndex())
+    highlightCode.innerHTML = renderHighlightedCodeLines(highlighted.html || '&nbsp;', activeIndex)
     updateSelect()
   }
 

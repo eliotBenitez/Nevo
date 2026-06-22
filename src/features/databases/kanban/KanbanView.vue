@@ -14,9 +14,17 @@ import KanbanCalendarView from './KanbanCalendarView.vue'
 import KanbanGroupView from './KanbanGroupView.vue'
 import KanbanAutomations from './KanbanAutomations.vue'
 import KanbanAddCardModal from './KanbanAddCardModal.vue'
-import type { KanbanBoard, KanbanBoardCardViewSettings } from '../../../types/kanban'
+import type { KanbanBoard, KanbanBoardCardViewSettings, KanbanCard } from '../../../types/kanban'
 import type { KanbanViewMode, KanbanGroupBy } from './KanbanToolbar.vue'
 import { createKanbanId } from './kanbanFields'
+import {
+  applyFilters,
+  applySort,
+  buildFilterSortContext,
+  getFilterableFields,
+  type KanbanFilterRule,
+  type KanbanSortRule,
+} from './kanbanFilterSort'
 import { useKanbanPointerDrag } from './composables/useKanbanPointerDrag'
 
 interface Props { boardId: string }
@@ -43,7 +51,8 @@ const statusPropertyId = computed(() =>
 // View state
 const activeView = ref<KanbanViewMode>('board')
 const groupBy = ref<KanbanGroupBy>('status')
-const filterCount = ref(0)
+const filterRules = ref<KanbanFilterRule[]>([])
+const sortRules = ref<KanbanSortRule[]>([])
 const searchQuery = ref('')
 
 // Modals
@@ -76,12 +85,43 @@ const {
   },
 })
 
-// Filtered cards for search
-const filteredBoardCards = computed(() => {
-  const q = searchQuery.value.toLowerCase().trim()
-  if (!q) return boardCards.value
-  return boardCards.value.filter(c => c.title.toLowerCase().includes(q))
+// Filter / sort fields and context
+const filterFields = computed(() => {
+  if (!board.value) return []
+  return getFilterableFields(board.value, boardCards.value, {
+    title: t('kanban.table.title'),
+    status: t('kanban.groups.status'),
+    priority: t('kanban.card.priority'),
+    progress: t('kanban.card.progress'),
+    created: t('kanban.card.createdAt'),
+    updated: t('kanban.card.updatedAt'),
+    priorityLevels: {
+      none: t('kanban.card.priorityLevels.none'),
+      low: t('kanban.card.priorityLevels.low'),
+      medium: t('kanban.card.priorityLevels.medium'),
+      high: t('kanban.card.priorityLevels.high'),
+      urgent: t('kanban.card.priorityLevels.urgent'),
+    },
+  })
 })
+const filterSortContext = computed(() =>
+  board.value ? buildFilterSortContext(board.value, filterFields.value) : null
+)
+
+function processCards(cards: KanbanCard[]): KanbanCard[] {
+  const ctx = filterSortContext.value
+  let result = cards
+  const q = searchQuery.value.toLowerCase().trim()
+  if (q) result = result.filter(c => c.title.toLowerCase().includes(q))
+  if (ctx) {
+    if (filterRules.value.length) result = applyFilters(result, filterRules.value, ctx)
+    if (sortRules.value.length) result = applySort(result, sortRules.value, ctx)
+  }
+  return result
+}
+
+// Filtered + sorted cards for non-column views
+const filteredBoardCards = computed(() => processCards(boardCards.value))
 const boardCardSettings = computed<KanbanBoardCardViewSettings>(() => ({
   showCardPreview: true,
   cardDensity: 'comfortable',
@@ -95,8 +135,9 @@ const cardPropertyOptions = computed(() =>
     return map
   }, new Map<string, string>()).entries()).map(([id, name]) => ({ id, name }))
 )
+const hasActiveQuery = computed(() => searchQuery.value.trim().length > 0 || filterRules.value.length > 0)
 const noSearchResults = computed(() =>
-  activeView.value === 'board' && searchQuery.value.trim().length > 0 && filteredBoardCards.value.length === 0
+  activeView.value === 'board' && hasActiveQuery.value && filteredBoardCards.value.length === 0 && boardCards.value.length > 0
 )
 
 // Computed: which view to show for 'board' mode
@@ -110,9 +151,7 @@ watch(() => boards.value.get(props.boardId) ?? null, nextBoard => {
 function cardsForColumn(columnId: string) {
   if (!board.value || !statusPropertyId.value) return []
   const all = kanbanStore.cardsForColumn(props.boardId, columnId, statusPropertyId.value)
-  const q = searchQuery.value.toLowerCase().trim()
-  if (!q) return all
-  return all.filter(c => c.title.toLowerCase().includes(q))
+  return processCards(all)
 }
 
 function addCard(columnId?: string) {
@@ -236,6 +275,8 @@ async function resolveBoardRoute(boardId: string) {
   notFound.value = false
   loadError.value = null
   board.value = null
+  filterRules.value = []
+  sortRules.value = []
   clearDragState()
   kanbanStore.closeCard()
 
@@ -318,7 +359,9 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
       v-model:view="activeView"
       v-model:group-by="groupBy"
       v-model:search-query="searchQuery"
-      :filter-count="filterCount"
+      v-model:filter-rules="filterRules"
+      v-model:sort-rules="sortRules"
+      :filter-fields="filterFields"
       :board-title="board.title"
       :card-count="boardCards.length"
       :board-settings="boardCardSettings"

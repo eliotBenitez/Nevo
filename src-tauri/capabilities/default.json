@@ -23,6 +23,7 @@
         { "url": "http://**" }
       ]
     },
+    "clipboard-manager:allow-read-image",
     "dialog:default",
     "dialog:allow-message",
     "dialog:allow-confirm",

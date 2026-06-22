@@ -87,7 +87,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Nevo ${{ github.ref_name }}'
-          releaseBody: 'See the assets to download and install this version.'
+          releaseBody: 'See the assets to download and install this version. macOS: the app is ad-hoc signed (not notarized). After moving Nevo.app to /Applications, run "xattr -dr com.apple.quarantine /Applications/Nevo.app" once, or right-click the app and choose Open, to bypass Gatekeeper.'
           releaseDraft: true
           prerelease: false
           includeUpdaterJson: true
@@ -111,7 +111,7 @@ jobs:
           with: |
             tagName: ${{ github.ref_name }}
             releaseName: 'Nevo ${{ github.ref_name }}'
-            releaseBody: 'See the assets to download and install this version.'
+            releaseBody: 'See the assets to download and install this version. macOS: the app is ad-hoc signed (not notarized). After moving Nevo.app to /Applications, run "xattr -dr com.apple.quarantine /Applications/Nevo.app" once, or right-click the app and choose Open, to bypass Gatekeeper.'
             releaseDraft: true
             prerelease: false
             includeUpdaterJson: true

@@ -11,7 +11,7 @@ import type {
 } from '../../types/workspace'
 import type { FolderMeta, NoteDocument, NoteSnapshotMeta, ImportedImageAsset } from '../../types/note'
 import type { TemplateFieldValues } from '../../types/template'
-import type { KanbanBoard, KanbanCard, KanbanPropertyDef, KanbanCardField } from '../../types/kanban'
+import type { KanbanBoard, KanbanCard, KanbanPropertyDef, KanbanCardField, KanbanLink } from '../../types/kanban'
 import type { WorkspaceBlockSearchItem } from '../../types/search'
 import type { BacklinkRef, GraphEdge, ExtractedEdge } from '../../types/graph'
 
@@ -34,6 +34,7 @@ export interface KanbanCardUpdate {
   sprint?: string
   progress?: number
   priority?: string
+  links?: KanbanLink[]
 }
 
 /** Identifies an open workspace and which backend serves it. */
@@ -84,6 +85,9 @@ export interface WorkspaceBackend {
   saveDrawAsset(drawId: string, bytes: number[]): Promise<string>
   /** Read a draw_block payload back as JSON bytes. */
   readDrawAsset(src: string): Promise<number[]>
+  /** Read the latest payload for a draw_block by its id, regardless of the
+   *  note's stored `src` — recovers drawings whose note reference went stale. */
+  readLatestDrawAsset(drawId: string): Promise<number[]>
 
   // --- snapshots / history ---
   listNoteSnapshots(noteId: string): Promise<NoteSnapshotMeta[]>
