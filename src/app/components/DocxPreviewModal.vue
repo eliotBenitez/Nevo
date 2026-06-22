@@ -217,7 +217,7 @@ const pages = computed<PreviewPage[]>(() => {
       contentPageIndex: undefined
     })
   } else {
-    contentPages.value.forEach((cPage, index) => {
+    contentPages.value.forEach((_page, index) => {
       list.push({
         id: `content-${index}`,
         type: 'content',

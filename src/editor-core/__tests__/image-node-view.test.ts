@@ -1,4 +1,3 @@
-// @ts-expect-error Vitest runs in Node; the app tsconfig does not include Node types.
 import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 import { EditorView } from 'prosemirror-view'

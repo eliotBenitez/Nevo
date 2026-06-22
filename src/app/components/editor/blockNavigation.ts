@@ -2,7 +2,7 @@ import type { WorkspaceBlockNavigationTarget } from '../../../types/search'
 
 export const BLOCK_SEARCH_HIGHLIGHT_CLASS = 'nv-search-target-block'
 
-const highlightTimers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>()
+const highlightTimers = new WeakMap<HTMLElement, number>()
 
 export function focusBlockSearchTarget(
   editorRoot: HTMLElement | null,
