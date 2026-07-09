@@ -10,6 +10,7 @@ mod collab;
 mod crud;
 mod export;
 mod search;
+mod sidebar;
 mod snapshots;
 mod trash;
 
@@ -24,6 +25,7 @@ pub use collab::*;
 pub use crud::*;
 pub use export::*;
 pub use search::*;
+pub use sidebar::*;
 pub use snapshots::*;
 pub use trash::*;
 
@@ -39,7 +41,50 @@ pub struct NoteDocument {
     pub created_at: String,
     #[serde(rename = "updatedAt")]
     pub updated_at: String,
+    pub properties: Option<NoteProperties>,
     pub content: Value,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct NoteProperties {
+    #[serde(rename = "type")]
+    pub note_type: Option<NoteType>,
+    pub tags: Vec<String>,
+    pub date: Option<String>,
+    pub status: Option<NoteStatus>,
+}
+
+impl NoteProperties {
+    pub fn empty() -> Self {
+        Self {
+            note_type: None,
+            tags: Vec::new(),
+            date: None,
+            status: None,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum NoteType {
+    Note,
+    Task,
+    Idea,
+    Meeting,
+    Project,
+    Research,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum NoteStatus {
+    None,
+    Draft,
+    Active,
+    Waiting,
+    Done,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

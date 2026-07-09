@@ -1,14 +1,36 @@
 import type { EditorView } from 'prosemirror-view'
-import { NodeSelection } from 'prosemirror-state'
+import { NodeSelection, TextSelection } from 'prosemirror-state'
 import type {
   NevoEditorCapability,
   NevoEditorContext,
   NevoEditorEventBus,
   NevoEditorEventMap,
   NevoEditorPluginManifest,
+  NevoPluginCapability,
   NevoEditorRegistries,
+  NevoUiCapability,
+  NevoWorkspaceCapability,
 } from '../../types/editor-plugin'
 import { makeBlockNodeView } from './blockNodeView'
+
+const WORKSPACE_COMMAND_CAPABILITIES: Record<string, NevoWorkspaceCapability> = {
+  template_list: 'template.read',
+  template_get: 'template.read',
+  template_create: 'template.write',
+  template_update: 'template.write',
+  template_delete: 'template.write',
+  template_create_note: 'template.write',
+  kanban_list_boards: 'kanban.read',
+  kanban_list_cards: 'kanban.read',
+  kanban_create_board: 'kanban.write',
+  kanban_update_board: 'kanban.write',
+  kanban_delete_board: 'kanban.write',
+  kanban_create_card: 'kanban.write',
+  kanban_update_card: 'kanban.write',
+  kanban_delete_card: 'kanban.write',
+  kanban_move_card: 'kanban.write',
+  kanban_save_board_schema: 'kanban.write',
+}
 
 export function buildPluginContext(
   manifest: NevoEditorPluginManifest,
@@ -17,9 +39,27 @@ export function buildPluginContext(
   emit: <K extends keyof NevoEditorEventMap>(event: K, payload: NevoEditorEventMap[K]) => void,
   on: <K extends keyof NevoEditorEventMap>(event: K, listener: (payload: NevoEditorEventMap[K]) => void) => () => void,
   requestNodeEdit: (view: EditorView, position: number, anchorRect?: DOMRect) => void,
+  runtime: {
+    invoke?: <T = unknown>(commandId: string, args?: Record<string, unknown>) => Promise<T>
+    openRoute?: (route: string) => void
+    backToWorkspace?: () => void
+    t?: (key: string, params?: Record<string, unknown>) => string
+    getPluginSetting?: <T = unknown>(pluginId: string, key: string) => T | undefined
+    setPluginSetting?: (pluginId: string, key: string, value: unknown) => void
+  } = {},
 ): NevoEditorContext {
   const ensureCapability = (capability: NevoEditorCapability) => {
     if (!manifest.editorCapabilities.includes(capability)) {
+      throw new Error(`Plugin ${manifest.id} requires capability ${capability}`)
+    }
+  }
+  const ensureUiCapability = (capability: NevoUiCapability) => {
+    if (!(manifest.uiCapabilities ?? []).includes(capability)) {
+      throw new Error(`Plugin ${manifest.id} requires capability ${capability}`)
+    }
+  }
+  const ensureWorkspaceCapability = (capability: NevoWorkspaceCapability) => {
+    if (!(manifest.workspaceCapabilities ?? []).includes(capability)) {
       throw new Error(`Plugin ${manifest.id} requires capability ${capability}`)
     }
   }
@@ -39,7 +79,11 @@ export function buildPluginContext(
 
   const context: NevoEditorContext = {
     pluginId: manifest.id,
-    capabilities: new Set(manifest.editorCapabilities),
+    capabilities: new Set<NevoPluginCapability>([
+      ...manifest.editorCapabilities,
+      ...(manifest.uiCapabilities ?? []),
+      ...(manifest.workspaceCapabilities ?? []),
+    ]),
     registerNode: (name, spec) => {
       ensureCapability('editor.write')
       if (registries.nodes.has(name)) throw new Error(`Node already registered: ${name}`)
@@ -64,15 +108,30 @@ export function buildPluginContext(
       if (registries.slashItems.has(item.id)) throw new Error(`Slash item already registered: ${item.id}`)
       registries.slashItems.set(item.id, item)
     },
+    registerWorkspaceView: (view) => {
+      ensureUiCapability('workspace.view.register')
+      if (registries.workspaceViews.has(view.id)) throw new Error(`Workspace view already registered: ${view.id}`)
+      registries.workspaceViews.set(view.id, { ...view, pluginId: manifest.id })
+    },
+    registerSidebarItem: (item) => {
+      ensureUiCapability('workspace.view.register')
+      if (registries.sidebarItems.has(item.id)) throw new Error(`Sidebar item already registered: ${item.id}`)
+      registries.sidebarItems.set(item.id, { ...item, pluginId: manifest.id })
+    },
+    registerModal: (modal) => {
+      ensureUiCapability('workspace.view.register')
+      if (registries.modals.has(modal.id)) throw new Error(`Modal already registered: ${modal.id}`)
+      registries.modals.set(modal.id, { ...modal, pluginId: manifest.id })
+    },
     registerNodeView: (nodeName, nodeView) => {
       ensureCapability('editor.write')
       if (registries.nodeViews.has(nodeName)) throw new Error(`NodeView already registered for node: ${nodeName}`)
       registries.nodeViews.set(nodeName, nodeView)
     },
-    registerDecorationProvider: (id, provider) => {
+    registerDecorationProvider: (id, provider, options) => {
       ensureCapability('editor.write')
       if (registries.decorationProviders.has(id)) throw new Error(`Decoration provider already registered: ${id}`)
-      registries.decorationProviders.set(id, provider)
+      registries.decorationProviders.set(id, { provider, dependsOnSelection: options?.dependsOnSelection ?? false })
     },
     registerToolbarAction: (action) => {
       ensureCapability('editor.write')
@@ -111,10 +170,16 @@ export function buildPluginContext(
           run: ({ state, dispatch }) => {
             const nodeType = state.schema.nodes[config.name]
             if (!nodeType) return
-            const node = nodeType.create(defaultAttrs ?? null)
-            const tr = state.tr.replaceSelectionWith(node, false)
+            const node = nodeType.createAndFill(defaultAttrs ?? null) ?? nodeType.create(defaultAttrs ?? null)
+            let tr = state.tr.replaceSelectionWith(node, false)
             const insertPos = tr.mapping.map(state.selection.from)
-            dispatch(tr.setSelection(NodeSelection.create(tr.doc, insertPos)).scrollIntoView())
+            if (node.isLeaf) {
+              tr = tr.setSelection(NodeSelection.create(tr.doc, insertPos))
+            } else {
+              const inside = Math.min(insertPos + 1, tr.doc.content.size)
+              tr = tr.setSelection(TextSelection.create(tr.doc, inside))
+            }
+            dispatch(tr.scrollIntoView())
           },
         })
       }
@@ -124,6 +189,32 @@ export function buildPluginContext(
       get: <T>(key: string) => getStorageBucket().get(key) as T | undefined,
       set: (key, value) => { getStorageBucket().set(key, value) },
       delete: (key) => { getStorageBucket().delete(key) },
+    },
+    settings: {
+      get: <T = unknown>(key: string) => runtime.getPluginSetting?.<T>(manifest.id, key),
+      set: (key, value) => { runtime.setPluginSetting?.(manifest.id, key, value) },
+    },
+    workspace: {
+      invoke: async <T = unknown>(commandId: string, args?: Record<string, unknown>) => {
+        const requiredCapability = WORKSPACE_COMMAND_CAPABILITIES[commandId]
+        if (!requiredCapability) throw new Error(`Workspace command is not exposed to plugins: ${commandId}`)
+        ensureWorkspaceCapability(requiredCapability)
+        if (!runtime.invoke) throw new Error('Workspace invoke runtime is not available')
+        return runtime.invoke<T>(commandId, args)
+      },
+    },
+    navigation: {
+      open: (route) => {
+        ensureUiCapability('workspace.navigation')
+        runtime.openRoute?.(route)
+      },
+      backToWorkspace: () => {
+        ensureUiCapability('workspace.navigation')
+        runtime.backToWorkspace?.()
+      },
+    },
+    i18n: {
+      t: (key, params) => runtime.t?.(key, params) ?? key,
     },
   }
 

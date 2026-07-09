@@ -8,9 +8,9 @@ import type { WorkspaceBlockSearchItem } from '../../types/search'
 import type { BacklinkRef, GraphEdge, ExtractedEdge } from '../../types/graph'
 import type { KanbanBoardUpdate, KanbanCardUpdate } from './types'
 import type {
-  WorkspaceManifest, WorkspaceSettings, WorkspaceDiagnostics, WorkspaceCleanupReport, PluginManifest,
+  WorkspaceManifest, WorkspaceSettings, WorkspaceDiagnostics, WorkspaceCleanupReport, PluginManifest, MarketplaceCatalog,
 } from '../../types/workspace'
-import type { FolderMeta, NoteDocument, NoteSnapshotMeta, ImportedImageAsset } from '../../types/note'
+import type { FolderMeta, NoteDocument, NoteSnapshotMeta, ImportedImageAsset, SidebarNotePreview } from '../../types/note'
 import type { TemplateFieldValues } from '../../types/template'
 import type { WorkspaceBackend, WorkspaceHandle } from './types'
 
@@ -46,6 +46,21 @@ export class LocalBackend implements WorkspaceBackend {
   }
   setPluginEnabled(pluginId: string, enabled: boolean): Promise<void> {
     return workspaceCommands.setPluginEnabled(this.path, pluginId, enabled)
+  }
+  marketplaceListPlugins(forceRefresh?: boolean): Promise<MarketplaceCatalog> {
+    return workspaceCommands.marketplaceListPlugins(this.path, forceRefresh)
+  }
+  marketplaceInstallPlugin(pluginId: string, version?: string): Promise<PluginManifest> {
+    return workspaceCommands.marketplaceInstallPlugin(this.path, pluginId, version)
+  }
+  marketplaceUpdatePlugin(pluginId: string): Promise<PluginManifest> {
+    return workspaceCommands.marketplaceUpdatePlugin(this.path, pluginId)
+  }
+  marketplaceRemovePlugin(pluginId: string): Promise<void> {
+    return workspaceCommands.marketplaceRemovePlugin(this.path, pluginId)
+  }
+  marketplaceRefreshCache(): Promise<MarketplaceCatalog> {
+    return workspaceCommands.marketplaceRefreshCache(this.path)
   }
   getDiagnostics(): Promise<WorkspaceDiagnostics> {
     return workspaceCommands.getWorkspaceDiagnostics(this.path)
@@ -87,12 +102,18 @@ export class LocalBackend implements WorkspaceBackend {
   moveNote(noteId: string, targetFolderId: string | null): Promise<void> {
     return noteCommands.moveNote(this.path, noteId, targetFolderId)
   }
+  listSidebarNotePreviews(): Promise<SidebarNotePreview[]> {
+    return noteCommands.listSidebarNotePreviews(this.path)
+  }
 
   importImageAsset(fileName: string, bytes: number[]): Promise<ImportedImageAsset> {
     return noteCommands.importImageAsset(this.path, fileName, bytes)
   }
   importAssetByPath(sourcePath: string, fileName: string): Promise<ImportedImageAsset> {
     return noteCommands.importAssetByPath(this.path, sourcePath, fileName)
+  }
+  importImageFromUrl(url: string): Promise<ImportedImageAsset> {
+    return noteCommands.importAssetFromUrl(this.path, url)
   }
   deleteUnreferencedAsset(assetSrc: string): Promise<boolean> {
     return noteCommands.deleteUnreferencedAsset(this.path, assetSrc)

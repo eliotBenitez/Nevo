@@ -33,7 +33,7 @@ impl Drop for TestWorkspace {
 }
 
 fn create_saved_note(workspace_path: &str) -> NoteDocument {
-    let mut note = create_note(
+    let mut note = create_note_impl(
         workspace_path.to_string(),
         None,
         "History note".to_string(),
@@ -50,7 +50,7 @@ fn create_saved_note(workspace_path: &str) -> NoteDocument {
         ]
     });
     note.updated_at = Utc::now().to_rfc3339();
-    save_note(workspace_path.to_string(), note.clone()).expect("save note");
+    save_note_impl(workspace_path.to_string(), note.clone()).expect("save note");
     note
 }
 
@@ -60,7 +60,7 @@ fn load_note_snapshot_returns_snapshot_document() {
     let workspace_path = workspace.path_string();
     let note = create_saved_note(&workspace_path);
     let snapshots =
-        list_note_snapshots(workspace_path.clone(), note.id.clone()).expect("list snapshots");
+        list_note_snapshots_impl(workspace_path.clone(), note.id.clone()).expect("list snapshots");
     let snapshot_id = snapshots.first().expect("snapshot metadata").id.clone();
 
     let snapshot =
@@ -89,7 +89,7 @@ fn restore_note_snapshot_creates_a_fresh_latest_snapshot() {
     let workspace_path = workspace.path_string();
     let mut note = create_saved_note(&workspace_path);
     let original_snapshots =
-        list_note_snapshots(workspace_path.clone(), note.id.clone()).expect("list snapshots");
+        list_note_snapshots_impl(workspace_path.clone(), note.id.clone()).expect("list snapshots");
     let original_snapshot_id = original_snapshots
         .first()
         .expect("original snapshot")
@@ -106,10 +106,10 @@ fn restore_note_snapshot_creates_a_fresh_latest_snapshot() {
         ]
     });
     note.updated_at = Utc::now().to_rfc3339();
-    save_note(workspace_path.clone(), note.clone()).expect("save overwrite");
+    save_note_impl(workspace_path.clone(), note.clone()).expect("save overwrite");
 
-    let before_restore =
-        list_note_snapshots(workspace_path.clone(), note.id.clone()).expect("list before restore");
+    let before_restore = list_note_snapshots_impl(workspace_path.clone(), note.id.clone())
+        .expect("list before restore");
     std::thread::sleep(std::time::Duration::from_millis(5));
     let restored = restore_note_snapshot(
         workspace_path.clone(),
@@ -117,7 +117,8 @@ fn restore_note_snapshot_creates_a_fresh_latest_snapshot() {
         original_snapshot_id.clone(),
     )
     .expect("restore snapshot");
-    let after_restore = list_note_snapshots(workspace_path, note.id).expect("list after restore");
+    let after_restore =
+        list_note_snapshots_impl(workspace_path, note.id).expect("list after restore");
 
     assert_eq!(
         restored.content,
@@ -143,7 +144,7 @@ fn search_workspace_blocks_finds_matches_across_multiple_notes() {
     let workspace = TestWorkspace::new();
     let workspace_path = workspace.path_string();
 
-    let mut first_note = create_note(
+    let mut first_note = create_note_impl(
         workspace_path.clone(),
         None,
         "Alpha note".to_string(),
@@ -160,9 +161,9 @@ fn search_workspace_blocks_finds_matches_across_multiple_notes() {
         ]
     });
     first_note.updated_at = Utc::now().to_rfc3339();
-    save_note(workspace_path.clone(), first_note.clone()).expect("save first note");
+    save_note_impl(workspace_path.clone(), first_note.clone()).expect("save first note");
 
-    let mut second_note = create_note(
+    let mut second_note = create_note_impl(
         workspace_path.clone(),
         None,
         "Beta note".to_string(),
@@ -179,11 +180,13 @@ fn search_workspace_blocks_finds_matches_across_multiple_notes() {
         ]
     });
     second_note.updated_at = Utc::now().to_rfc3339();
-    save_note(workspace_path.clone(), second_note.clone()).expect("save second note");
+    save_note_impl(workspace_path.clone(), second_note.clone()).expect("save second note");
 
-    let results =
-        crate::commands::note::search::search_workspace_blocks_sync(workspace_path, "alpha".to_string())
-            .expect("search blocks");
+    let results = crate::commands::note::search::search_workspace_blocks_sync(
+        workspace_path,
+        "alpha".to_string(),
+    )
+    .expect("search blocks");
 
     assert_eq!(results.len(), 2);
     assert_eq!(results[0].note_id, first_note.id);
@@ -195,7 +198,7 @@ fn search_workspace_blocks_returns_block_metadata_and_snippet() {
     let workspace = TestWorkspace::new();
     let workspace_path = workspace.path_string();
 
-    let mut note = create_note(
+    let mut note = create_note_impl(
         workspace_path.clone(),
         None,
         "Snippet note".to_string(),
@@ -212,11 +215,13 @@ fn search_workspace_blocks_returns_block_metadata_and_snippet() {
         ]
     });
     note.updated_at = Utc::now().to_rfc3339();
-    save_note(workspace_path.clone(), note.clone()).expect("save note");
+    save_note_impl(workspace_path.clone(), note.clone()).expect("save note");
 
-    let results =
-        crate::commands::note::search::search_workspace_blocks_sync(workspace_path, "alpha".to_string())
-            .expect("search blocks");
+    let results = crate::commands::note::search::search_workspace_blocks_sync(
+        workspace_path,
+        "alpha".to_string(),
+    )
+    .expect("search blocks");
     let first = results.first().expect("match");
 
     assert_eq!(first.note_title, "Snippet note");
@@ -233,7 +238,7 @@ fn search_workspace_blocks_skips_malformed_and_empty_note_content() {
     let malformed_path = note_path(&workspace_path, "broken").expect("valid note id");
     std::fs::write(&malformed_path, "{ this is not valid json").expect("write malformed note");
 
-    let mut empty_note = create_note(
+    let mut empty_note = create_note_impl(
         workspace_path.clone(),
         None,
         "Empty note".to_string(),
@@ -245,11 +250,13 @@ fn search_workspace_blocks_skips_malformed_and_empty_note_content() {
         "content": []
     });
     empty_note.updated_at = Utc::now().to_rfc3339();
-    save_note(workspace_path.clone(), empty_note).expect("save empty note");
+    save_note_impl(workspace_path.clone(), empty_note).expect("save empty note");
 
-    let results =
-        crate::commands::note::search::search_workspace_blocks_sync(workspace_path, "alpha".to_string())
-            .expect("search blocks");
+    let results = crate::commands::note::search::search_workspace_blocks_sync(
+        workspace_path,
+        "alpha".to_string(),
+    )
+    .expect("search blocks");
 
     assert!(results.is_empty());
 }

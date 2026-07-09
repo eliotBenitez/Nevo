@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use super::kanban::{KanbanBoard, KanbanCard};
-use super::path_utils::normalize_workspace_path;
+use super::path_utils::{normalize_workspace_path, validate_id, write_atomic};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
@@ -91,6 +91,8 @@ pub fn kanban_move_card(
     to_column_option_id: String,
     target_index: i64,
 ) -> Result<Vec<KanbanCard>, String> {
+    validate_id(&board_id)?;
+    validate_id(&card_id)?;
     let wp = normalize_workspace_path(&workspace_path)?
         .to_string_lossy()
         .into_owned();
@@ -170,6 +172,7 @@ pub fn kanban_save_board_schema(
     property_definitions: Value,
     column_remap: Option<Value>,
 ) -> Result<KanbanBoard, String> {
+    validate_id(&board_id)?;
     let wp = normalize_workspace_path(&workspace_path)?
         .to_string_lossy()
         .into_owned();
@@ -341,7 +344,49 @@ pub fn kanban_save_board_schema(
     board.property_definitions = property_definitions;
     board.updated_at = now;
     let content = serde_json::to_string_pretty(&board).map_err(|e| e.to_string())?;
-    std::fs::write(board_file(&wp, &board_id), content).map_err(|e| e.to_string())?;
+    write_atomic(&board_file(&wp, &board_id), content.as_bytes()).map_err(|e| e.to_string())?;
 
     Ok(board)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn kanban_ops_reject_path_traversal_ids() {
+        let base = std::env::temp_dir().join(format!(
+            "nevo-kanban-ops-traversal-{}",
+            uuid::Uuid::new_v4()
+        ));
+        let workspace = base.join("workspace");
+        std::fs::create_dir_all(&workspace).unwrap();
+
+        let victim = base.join("victim");
+        std::fs::create_dir_all(&victim).unwrap();
+        std::fs::write(victim.join("secret.txt"), b"do not touch").unwrap();
+
+        let ws = workspace.to_string_lossy().into_owned();
+        let evil = "../../victim".to_string();
+
+        assert!(kanban_move_card(ws.clone(), evil.clone(), "c".into(), "col".into(), 0).is_err());
+        assert!(kanban_move_card(
+            ws.clone(),
+            "valid-board".into(),
+            evil.clone(),
+            "col".into(),
+            0
+        )
+        .is_err());
+        assert!(
+            kanban_save_board_schema(ws.clone(), evil.clone(), Value::Array(vec![]), None).is_err()
+        );
+
+        assert!(
+            victim.join("secret.txt").exists(),
+            "victim file must remain untouched by rejected calls"
+        );
+
+        std::fs::remove_dir_all(&base).ok();
+    }
 }

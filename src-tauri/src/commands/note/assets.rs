@@ -317,6 +317,161 @@ pub fn import_image_asset(
     })
 }
 
+/// Dedupe (by SHA-256) and write raw bytes into the workspace assets directory,
+/// returning the workspace-relative `.nevo/assets/...` source. Shared by the
+/// bytes/path/URL importers.
+fn store_asset_bytes(
+    workspace_path: &str,
+    file_name: &str,
+    bytes: &[u8],
+) -> Result<ImportedImageAsset, String> {
+    let assets_dir = assets_dir_path(workspace_path);
+    std::fs::create_dir_all(&assets_dir).map_err(|error| error.to_string())?;
+
+    let hash = hash_bytes(bytes);
+    if let Some(existing_path) = find_existing_asset_path(&assets_dir, &hash) {
+        let existing_name = existing_path
+            .file_name()
+            .and_then(|value| value.to_str())
+            .ok_or_else(|| "Unable to resolve existing asset path".to_string())?;
+        return Ok(ImportedImageAsset {
+            src: format!(".nevo/assets/{}", existing_name),
+            hash,
+            deduplicated: true,
+            bytes: bytes.len(),
+        });
+    }
+
+    let extension = normalize_extension(file_name);
+    let stem = sanitize_file_stem(file_name);
+    let safe_stem = if stem.is_empty() {
+        "asset".to_string()
+    } else {
+        stem
+    };
+    let final_name = format!("{}-{}.{}", hash, safe_stem, extension);
+    let final_path = assets_dir.join(&final_name);
+    std::fs::write(&final_path, bytes).map_err(|error| error.to_string())?;
+
+    Ok(ImportedImageAsset {
+        src: format!(".nevo/assets/{}", final_name),
+        hash,
+        deduplicated: false,
+        bytes: bytes.len(),
+    })
+}
+
+fn extension_from_content_type(content_type: &str) -> Option<&'static str> {
+    match content_type.split(';').next().unwrap_or("").trim() {
+        "image/png" => Some("png"),
+        "image/jpeg" | "image/jpg" => Some("jpg"),
+        "image/gif" => Some("gif"),
+        "image/webp" => Some("webp"),
+        "image/svg+xml" => Some("svg"),
+        "image/avif" => Some("avif"),
+        "image/bmp" => Some("bmp"),
+        _ => None,
+    }
+}
+
+fn derive_download_file_name(url: &str, content_type: Option<&str>) -> String {
+    let path = url.split(|c| c == '?' || c == '#').next().unwrap_or(url);
+    let last = path.rsplit('/').next().unwrap_or("");
+    if !last.is_empty() && Path::new(last).extension().is_some() {
+        return last.to_string();
+    }
+    let ext = content_type
+        .and_then(extension_from_content_type)
+        .unwrap_or("png");
+    let stem = if last.is_empty() { "image" } else { last };
+    format!("{}.{}", stem, ext)
+}
+
+/// Download a remote image and import it into the workspace assets directory.
+///
+/// Pasting an `<img>` from the web only yields a URL; loading that URL directly
+/// in the webview often 404s (auth/hotlink/expiring signed URLs), so we fetch
+/// the bytes server-side (reqwest follows redirects) and store them locally.
+#[tauri::command]
+pub async fn import_asset_from_url(
+    workspace_path: String,
+    url: String,
+) -> Result<ImportedImageAsset, String> {
+    let logger = crate::logging::logger();
+    if !(url.starts_with("http://") || url.starts_with("https://")) {
+        return Err("Only http(s) URLs are supported".to_string());
+    }
+
+    let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
+        let _ = logger.error(
+            "tauri.note",
+            "import_asset_from_url",
+            "Failed to normalize workspace path",
+            LogContext::default().with_error(LogError {
+                kind: Some("path".to_string()),
+                message: message.clone(),
+                details: None,
+            }),
+        );
+        message
+    })?;
+    let workspace_path = workspace_path.to_string_lossy().into_owned();
+
+    let client = reqwest::Client::builder()
+        .user_agent(
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) \
+             Chrome/122.0 Safari/537.36",
+        )
+        .build()
+        .map_err(|error| error.to_string())?;
+    let response = client.get(&url).send().await.map_err(|error| {
+        let message = error.to_string();
+        let _ = logger.error(
+            "tauri.note",
+            "import_asset_from_url",
+            "Failed to fetch remote image",
+            note_error_context(&workspace_path, "network", message.clone()),
+        );
+        message
+    })?;
+
+    if !response.status().is_success() {
+        return Err(format!("Download failed: HTTP {}", response.status()));
+    }
+
+    let content_type = response
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .map(|value| value.to_string());
+
+    // Reject obvious non-images (e.g. a pasted webpage link) so they don't end
+    // up as a broken image block. Missing/binary content types are allowed.
+    if let Some(content_type) = content_type.as_deref() {
+        let main = content_type.split(';').next().unwrap_or("").trim();
+        if main.starts_with("text/") {
+            return Err(format!(
+                "Remote resource is not an image (content-type: {})",
+                main
+            ));
+        }
+    }
+
+    let file_name = derive_download_file_name(&url, content_type.as_deref());
+
+    let bytes = response.bytes().await.map_err(|error| error.to_string())?;
+    if bytes.is_empty() {
+        return Err("Downloaded file is empty".to_string());
+    }
+    let bytes = bytes.to_vec();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        store_asset_bytes(&workspace_path, &file_name, &bytes)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
 /// Import a file into the workspace assets directory.
 ///
 /// The blocking work (whole-file read, SHA-256 hash, write) runs on the
@@ -435,8 +590,8 @@ fn delete_unreferenced_asset_inner(
 }
 
 /// Open a file at the given path using the default OS handler.
-/// 
-/// This is a fallback for the `opener` plugin which can have restrictive 
+///
+/// This is a fallback for the `opener` plugin which can have restrictive
 /// ACL scopes in Tauri v2.
 #[tauri::command]
 pub async fn open_file_path(path: String) -> Result<(), String> {
@@ -726,15 +881,10 @@ fn remove_previous_draw_payloads(assets_dir: &Path, draw_stem: &str, keep_name: 
 /// must not stall the WebKitGTK main thread (same rationale as
 /// `import_asset_by_path`).
 #[tauri::command]
-pub async fn read_draw_asset(
-    workspace_path: String,
-    src: String,
-) -> Result<Vec<u8>, String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        read_draw_asset_inner(workspace_path, src)
-    })
-    .await
-    .map_err(|error| error.to_string())?
+pub async fn read_draw_asset(workspace_path: String, src: String) -> Result<Vec<u8>, String> {
+    tauri::async_runtime::spawn_blocking(move || read_draw_asset_inner(workspace_path, src))
+        .await
+        .map_err(|error| error.to_string())?
 }
 
 fn read_draw_asset_inner(workspace_path: String, src: String) -> Result<Vec<u8>, String> {
@@ -774,13 +924,15 @@ fn read_draw_asset_inner(workspace_path: String, src: String) -> Result<Vec<u8>,
             "tauri.note",
             "read_draw_asset",
             "Failed to read draw asset",
-            note_context(&workspace_path.to_string_lossy()).with_payload(serde_json::json!({
-                "src": relative_src,
-            })).with_error(LogError {
-                kind: Some("io".to_string()),
-                message: message.clone(),
-                details: None,
-            }),
+            note_context(&workspace_path.to_string_lossy())
+                .with_payload(serde_json::json!({
+                    "src": relative_src,
+                }))
+                .with_error(LogError {
+                    kind: Some("io".to_string()),
+                    message: message.clone(),
+                    details: None,
+                }),
         );
         message
     })?;
@@ -807,7 +959,10 @@ pub async fn read_latest_draw_asset(
     .map_err(|error| error.to_string())?
 }
 
-fn read_latest_draw_asset_inner(workspace_path: String, draw_id: String) -> Result<Vec<u8>, String> {
+fn read_latest_draw_asset_inner(
+    workspace_path: String,
+    draw_id: String,
+) -> Result<Vec<u8>, String> {
     let logger = crate::logging::logger();
     let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
         let _ = logger.error(
@@ -867,11 +1022,34 @@ fn read_latest_draw_asset_inner(workspace_path: String, draw_id: String) -> Resu
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::commands::note::{create_note, save_note};
+    use crate::commands::note::{create_note_impl, save_note_impl};
     use crate::commands::workspace::create_workspace;
     use chrono::Utc;
     use serde_json::json;
     use uuid::Uuid;
+
+    #[test]
+    fn derive_download_file_name_uses_url_extension() {
+        assert_eq!(
+            derive_download_file_name("https://example.com/a/b/pic.PNG?token=1", None),
+            "pic.PNG"
+        );
+    }
+
+    #[test]
+    fn derive_download_file_name_falls_back_to_content_type() {
+        assert_eq!(
+            derive_download_file_name(
+                "https://example.com/user-attachments/assets/uuid",
+                Some("image/jpeg; charset=binary")
+            ),
+            "uuid.jpg"
+        );
+        assert_eq!(
+            derive_download_file_name("https://example.com/download", None),
+            "download.png"
+        );
+    }
 
     struct TestWorkspace {
         path: std::path::PathBuf,
@@ -914,7 +1092,7 @@ mod tests {
         let workspace_path = workspace.path_string();
         let asset_path = write_asset(&workspace_path, "old-cover.jpg");
 
-        let mut note = create_note(
+        let mut note = create_note_impl(
             workspace_path.clone(),
             None,
             "Cover note".to_string(),
@@ -923,11 +1101,11 @@ mod tests {
         .expect("create note");
         note.cover = Some("image:.nevo/assets/old-cover.jpg".to_string());
         note.updated_at = Utc::now().to_rfc3339();
-        save_note(workspace_path.clone(), note.clone()).expect("save note with cover");
+        save_note_impl(workspace_path.clone(), note.clone()).expect("save note with cover");
 
         note.cover = None;
         note.updated_at = Utc::now().to_rfc3339();
-        save_note(workspace_path.clone(), note).expect("save note without cover");
+        save_note_impl(workspace_path.clone(), note).expect("save note without cover");
 
         let deleted = delete_unreferenced_asset_inner(
             workspace_path,
@@ -945,7 +1123,7 @@ mod tests {
         let workspace_path = workspace.path_string();
         let asset_path = write_asset(&workspace_path, "shared-cover.jpg");
 
-        let mut note = create_note(
+        let mut note = create_note_impl(
             workspace_path.clone(),
             None,
             "Current reference".to_string(),
@@ -960,7 +1138,7 @@ mod tests {
             }]
         });
         note.updated_at = Utc::now().to_rfc3339();
-        save_note(workspace_path.clone(), note).expect("save note");
+        save_note_impl(workspace_path.clone(), note).expect("save note");
 
         let deleted = delete_unreferenced_asset_inner(
             workspace_path,
@@ -993,7 +1171,10 @@ mod tests {
         )
         .expect("delete asset");
 
-        assert!(!deleted, "image referenced by a drawing must not be deleted");
+        assert!(
+            !deleted,
+            "image referenced by a drawing must not be deleted"
+        );
         assert!(image_path.exists());
     }
 
@@ -1024,9 +1205,12 @@ mod tests {
         let workspace_path = workspace.path_string();
 
         let payload = br#"{"version":1,"strokes":[{"type":"line"}]}"#.to_vec();
-        let src =
-            save_draw_asset_inner(workspace_path.clone(), "draw-xyz".to_string(), payload.clone())
-                .expect("save draw asset");
+        let src = save_draw_asset_inner(
+            workspace_path.clone(),
+            "draw-xyz".to_string(),
+            payload.clone(),
+        )
+        .expect("save draw asset");
 
         let read = read_draw_asset_inner(workspace_path, src).expect("read draw asset");
         assert_eq!(read, payload);
@@ -1065,9 +1249,7 @@ mod tests {
     fn read_latest_draw_asset_errors_when_no_payload_exists() {
         let workspace = TestWorkspace::new();
         let workspace_path = workspace.path_string();
-        assert!(
-            read_latest_draw_asset_inner(workspace_path, "draw-missing".to_string()).is_err()
-        );
+        assert!(read_latest_draw_asset_inner(workspace_path, "draw-missing".to_string()).is_err());
     }
 
     #[test]
@@ -1122,10 +1304,7 @@ mod tests {
     #[test]
     fn read_draw_asset_rejects_non_asset_path() {
         let workspace = TestWorkspace::new();
-        let result = read_draw_asset_inner(
-            workspace.path_string(),
-            "/etc/passwd".to_string(),
-        );
+        let result = read_draw_asset_inner(workspace.path_string(), "/etc/passwd".to_string());
         assert!(result.is_err());
     }
 }

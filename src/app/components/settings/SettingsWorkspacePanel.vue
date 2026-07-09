@@ -2,9 +2,10 @@
 import { reactive, watch, computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
+import { Save } from 'lucide-vue-next'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { COVER_GRADIENTS } from '../../../utils/workspaceGradients'
-import type { WorkspaceManifest } from '../../../types/workspace'
+import type { SidebarContentMode, WorkspaceManifest } from '../../../types/workspace'
 import { ACCENT_PRESETS, createDefaultWorkspaceSettings } from '../../../utils/workspace-settings'
 import WorkspaceNavigationGroup from './workspace/WorkspaceNavigationGroup.vue'
 import WorkspaceStructureGroup from './workspace/WorkspaceStructureGroup.vue'
@@ -23,7 +24,6 @@ const workspaceStore = useWorkspaceStore()
 const { manifest, settings } = storeToRefs(workspaceStore)
 
 const gradientOptions = COVER_GRADIENTS
-const colorOptions = COVER_GRADIENTS.map(c => ({ color: c }))
 
 const workspaceDraft = reactive({
   name: manifest.value?.name ?? '',
@@ -76,15 +76,7 @@ function opt(key: string, value: string): string {
   return t(`settings.options.${key}.${value}`)
 }
 
-const workspaceTypeOptions = ['general', 'research', 'writing', 'product', 'knowledge-base'].map(v => ({
-  value: v,
-  label: opt('workspaceType', v),
-}))
 
-const statusOptions = ['active', 'archived', 'draft'].map(v => ({
-  value: v,
-  label: opt('workspaceStatus', v),
-}))
 
 // Appearance Settings
 const accentLabelKeys: Record<string, string> = {
@@ -102,7 +94,18 @@ function accentLabel(preset: string): string {
 const backgroundSceneOptions = ['aurora', 'paper', 'studio', 'plain'].map(v => ({ value: v, label: opt('backgroundScene', v) }))
 const surfaceStyleOptions = ['glass', 'solid', 'tinted'].map(v => ({ value: v, label: opt('surfaceStyle', v) }))
 const contrastModeOptions = ['soft', 'balanced', 'high'].map(v => ({ value: v, label: opt('contrastMode', v) }))
-const sidebarStyleOptions = ['floating', 'solid', 'minimal'].map(v => ({ value: v, label: opt('sidebarStyle', v) }))
+const sidebarContentModeOptions: Array<{ value: SidebarContentMode; label: string; description: string }> = [
+  {
+    value: 'tree',
+    label: opt('sidebarContentMode', 'tree'),
+    description: t('settings.workspace.sidebarContentMode.treeDescription'),
+  },
+  {
+    value: 'tag-preview',
+    label: opt('sidebarContentMode', 'tag-preview'),
+    description: t('settings.workspace.sidebarContentMode.tagPreviewDescription'),
+  },
+]
 
 const accentColors = Object.entries(ACCENT_PRESETS).map(([id, tokens]) => ({
   color: tokens.accent,
@@ -134,6 +137,12 @@ function resetWorkspaceStyle() {
   })
 }
 
+function setSidebarContentMode(mode: SidebarContentMode) {
+  workspaceStore.updateSettings(draft => {
+    draft.workspace.sidebarContentMode = mode
+  })
+}
+
 
 </script>
 
@@ -147,11 +156,46 @@ function resetWorkspaceStyle() {
     </header>
 
     <div class="panel-body">
-      <!-- ── Identity ────────────────────────────────── -->
+      <!-- ── Sidebar content ─────────────────────────── -->
       <div class="group">
-        <div class="group-label">{{ t('settings.workspace.groups.identity') }}</div>
+        <div class="group-label">{{ t('settings.workspace.groups.sidebarMode') }}</div>
         <div class="settings-card">
           <div class="settings-row settings-row--stack">
+            <div class="row-copy">
+              <div class="row-title">{{ t('settings.workspace.sidebarContentMode.title') }}</div>
+              <div class="row-sub">{{ t('settings.workspace.sidebarContentMode.description') }}</div>
+            </div>
+            <div class="sidebar-mode-grid">
+              <button
+                v-for="mode in sidebarContentModeOptions"
+                :key="mode.value"
+                type="button"
+                class="sidebar-mode-card"
+                :class="{ 'sidebar-mode-card--active': settings.workspace.sidebarContentMode === mode.value }"
+                :aria-pressed="settings.workspace.sidebarContentMode === mode.value"
+                @click="setSidebarContentMode(mode.value)"
+              >
+                <span class="sidebar-mode-card__preview" :class="`sidebar-mode-card__preview--${mode.value}`">
+                  <span class="sidebar-mode-card__rail">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                  <span class="sidebar-mode-card__body">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                </span>
+                <span class="sidebar-mode-card__copy">
+                  <span class="sidebar-mode-card__title">{{ mode.label }}</span>
+                  <span class="sidebar-mode-card__description">{{ mode.description }}</span>
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div class="settings-row settings-row--stack settings-row--border">
             <div class="row-copy">
               <div class="row-title">{{ t('settings.workspace.identity.title') }}</div>
               <div class="row-sub">{{ t('settings.workspace.identity.panelDescription') }}</div>
@@ -159,15 +203,14 @@ function resetWorkspaceStyle() {
             <div class="workspace-inputs">
               <input v-model="workspaceDraft.name" class="ui-input" :placeholder="t('settings.workspace.identity.namePlaceholder')">
               <div ref="glyphPickerRef" class="glyph-field">
-                <button
-                  type="button"
+                <NvButton
                   class="glyph-trigger"
                   :class="{ 'is-active': glyphPickerOpen }"
                   :title="t('settings.workspace.identity.glyphLabel')"
                   @click="toggleGlyphPicker"
                 >
                   <NvNoteIcon :value="workspaceDraft.glyph" :size="20" />
-                </button>
+                </NvButton>
                 <NvIconPicker
                   v-if="glyphPickerOpen"
                   class="glyph-picker-popover"
@@ -177,43 +220,23 @@ function resetWorkspaceStyle() {
                 />
               </div>
             </div>
-            <NvColorPicker
-              v-model="workspaceDraft.gradient"
-              :colors="colorOptions"
-              display="inline"
-            />
+            <div class="workspace-identity-strip">
+              <span class="workspace-identity-strip__mark">
+                <NvNoteIcon :value="workspaceDraft.glyph" :size="20" />
+              </span>
+              <span class="workspace-identity-strip__copy">
+                <strong>{{ workspaceDraft.name || manifest?.name || t('settings.workspace.identity.namePlaceholder') }}</strong>
+                <span>{{ t('settings.workspace.identity.preview') }}</span>
+              </span>
+            </div>
             <div class="card-actions">
-              <NvButton variant="primary" @click="saveWorkspaceIdentity">{{ t('settings.workspace.identity.save') }}</NvButton>
+              <NvButton variant="primary" @click="saveWorkspaceIdentity">
+                <Save :size="14" />
+                {{ t('settings.workspace.identity.save') }}
+              </NvButton>
             </div>
           </div>
 
-          <div class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.workspace.workspaceType.title') }}</div>
-              <div class="row-sub">{{ t('settings.workspace.workspaceType.description') }}</div>
-            </div>
-            <div class="inline-actions">
-              <NvSelect
-                :model-value="settings.workspace.workspaceType"
-                :options="workspaceTypeOptions"
-                @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.workspaceType = v as any })"
-              />
-            </div>
-          </div>
-
-          <div class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.workspace.workspaceStatus.title') }}</div>
-              <div class="row-sub">{{ t('settings.workspace.workspaceStatus.description') }}</div>
-            </div>
-            <div class="inline-actions">
-              <NvSelect
-                :model-value="settings.workspace.status"
-                :options="statusOptions"
-                @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.status = v as any })"
-              />
-            </div>
-          </div>
         </div>
       </div>
 
@@ -277,19 +300,6 @@ function resetWorkspaceStyle() {
               :model-value="settings.appearance.contrastMode"
               :options="contrastModeOptions"
               @update:model-value="v => workspaceStore.updateSettings(draft => { draft.appearance.contrastMode = v as any })"
-            />
-          </div>
-
-          <!-- Sidebar style -->
-          <div class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.appearance.sidebarStyle.title') }}</div>
-              <div class="row-sub">{{ t('settings.appearance.sidebarStyle.description') }}</div>
-            </div>
-            <NvSelect
-              :model-value="settings.appearance.sidebarStyle"
-              :options="sidebarStyleOptions"
-              @update:model-value="v => workspaceStore.updateSettings(draft => { draft.appearance.sidebarStyle = v as any })"
             />
           </div>
 

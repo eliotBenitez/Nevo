@@ -1,7 +1,6 @@
 import type { Node as PMNode } from 'prosemirror-model'
-import { NodeSelection } from 'prosemirror-state'
 import type { EditorView, NodeView } from 'prosemirror-view'
-import { resolveNodePosition, getStringAttr, type CoreNodeViewOptions, type NodeViewPosition } from './utils'
+import { resolveNodePosition, getStringAttr, selectNodeAt, type CoreNodeViewOptions, type NodeViewPosition } from './utils'
 
 function buildHeader(): HTMLElement {
   const header = document.createElement('div')
@@ -92,7 +91,7 @@ export function createDrawNodeView(node: PMNode, view: EditorView, getPos: NodeV
     event.stopPropagation()
     const position = resolveNodePosition(getPos)
     if (typeof position === 'number') {
-      view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, position)))
+      selectNodeAt(view, position)
     }
     requestOpen()
   }

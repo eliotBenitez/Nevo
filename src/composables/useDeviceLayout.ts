@@ -9,12 +9,22 @@ const coarsePointer = ref(false)
 const hoverCapable = ref(true)
 let listenersBound = false
 let activeConsumers = 0
+let rafId: number | null = null
 
 function updateViewport() {
   if (typeof window === 'undefined') return
   viewportWidth.value = window.innerWidth
   viewportHeight.value = window.innerHeight
   updatePointerCapabilities()
+}
+
+function scheduleUpdateViewport() {
+  if (typeof window === 'undefined') return
+  if (rafId !== null) return
+  rafId = window.requestAnimationFrame(() => {
+    rafId = null
+    updateViewport()
+  })
 }
 
 function updatePointerCapabilities() {
@@ -28,15 +38,19 @@ function bindGlobalListeners() {
   listenersBound = true
   updateViewport()
   updatePointerCapabilities()
-  window.addEventListener('resize', updateViewport)
-  window.addEventListener('orientationchange', updateViewport)
+  window.addEventListener('resize', scheduleUpdateViewport)
+  window.addEventListener('orientationchange', scheduleUpdateViewport)
 }
 
 function unbindGlobalListeners() {
   if (!listenersBound || typeof window === 'undefined') return
   listenersBound = false
-  window.removeEventListener('resize', updateViewport)
-  window.removeEventListener('orientationchange', updateViewport)
+  window.removeEventListener('resize', scheduleUpdateViewport)
+  window.removeEventListener('orientationchange', scheduleUpdateViewport)
+  if (rafId !== null) {
+    window.cancelAnimationFrame(rafId)
+    rafId = null
+  }
 }
 
 export function useDeviceLayout() {

@@ -66,20 +66,19 @@
   cursor: col-resize;
 }
 
-/* ── Drop indicators (set by the column-drop plugin) ─────────────────── */
-/* Rendered as inset box-shadows so they hug the target's inner edge and are
-   never clipped by a block's own overflow (e.g. the table's .tableWrapper). */
-.doc-editor .nv-prosemirror .nv-drop-left {
-  box-shadow: inset 3px 0 0 var(--accent), inset 9px 0 9px -6px color-mix(in oklab, var(--accent) 55%, transparent);
-}
-.doc-editor .nv-prosemirror .nv-drop-right {
-  box-shadow: inset -3px 0 0 var(--accent), inset -9px 0 9px -6px color-mix(in oklab, var(--accent) 55%, transparent);
-}
-.doc-editor .nv-prosemirror .nv-drop-top {
-  box-shadow: inset 0 3px 0 var(--accent);
-}
-.doc-editor .nv-prosemirror .nv-drop-bottom {
-  box-shadow: inset 0 -3px 0 var(--accent);
+/* ── Drop indicator overlay (column-drop plugin) ─────────────────────── */
+/* Fixed overlay appended to body — not scoped under .doc-editor. */
+.nv-drop-indicator {
+  position: fixed;
+  background: var(--accent);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 9001;
+  display: none;
+  /* Isolate from document layout so per-frame geometry updates during a drag
+     don't force a full reflow of large notes (read-after-write thrashing). */
+  contain: strict;
+  will-change: transform;
 }
 
 /* ── Toggle Block ──────────────────────────────────────────────────── */

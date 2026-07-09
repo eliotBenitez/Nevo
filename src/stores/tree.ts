@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { FolderMeta, NoteMeta, TreeNode } from '../types/note'
 import type { TemplateFieldValues } from '../types/template'
 import { useWorkspaceStore } from './workspace'
+import { moveItemInArray } from '../utils/sidebar/reorder'
 
 export const useTreeStore = defineStore('tree', () => {
   const workspaceStore = useWorkspaceStore()
@@ -95,6 +96,7 @@ export const useTreeStore = defineStore('tree', () => {
       workspaceStore.manifest.rootNotes.push(meta)
       workspaceStore.manifest.rootOrder.push(note.id)
     }
+    void workspaceStore.refreshSidebarNotePreviews()
     return note
   }
 
@@ -109,6 +111,7 @@ export const useTreeStore = defineStore('tree', () => {
       workspaceStore.manifest.rootNotes.push(meta)
       workspaceStore.manifest.rootOrder.push(note.id)
     }
+    void workspaceStore.refreshSidebarNotePreviews()
     return note
   }
 
@@ -119,6 +122,7 @@ export const useTreeStore = defineStore('tree', () => {
     const updatedAt = new Date().toISOString()
     await backend.saveNote({ ...note, title, updatedAt })
     syncNoteMeta(noteId, { title }, updatedAt)
+    void workspaceStore.refreshSidebarNotePreviews()
   }
 
   function syncNoteMeta(noteId: string, updates: Partial<Pick<NoteMeta, 'title' | 'icon'>>, updatedAt?: string) {
@@ -151,13 +155,15 @@ export const useTreeStore = defineStore('tree', () => {
         type: 'note',
         title: noteMeta.title,
         deletedAt: new Date().toISOString(),
-        originalParentId: noteMeta.folderId
+        originalParentId: noteMeta.folderId,
+        icon: noteMeta.icon
       })
     }
 
     manifest.rootNotes = manifest.rootNotes.filter(n => n.id !== noteId)
     manifest.rootOrder = manifest.rootOrder.filter(id => id !== noteId)
     _removeNoteFromTree(manifest.tree, noteId)
+    void workspaceStore.refreshSidebarNotePreviews()
   }
 
   async function moveNote(noteId: string, targetFolderId: string | null) {
@@ -173,6 +179,94 @@ export const useTreeStore = defineStore('tree', () => {
       workspaceStore.manifest.rootNotes.push(meta)
       workspaceStore.manifest.rootOrder.push(noteId)
     }
+    void workspaceStore.refreshSidebarNotePreviews()
+  }
+
+  async function moveNoteToPosition(
+    noteId: string,
+    targetId: string,
+    position: 'before' | 'after',
+    targetParentId: string | null,
+  ) {
+    const backend = workspaceStore.backend
+    const manifest = workspaceStore.manifest
+    if (!backend || !manifest || noteId === targetId) return
+
+    if (targetParentId === null) {
+      if (!manifest.rootOrder.includes(targetId)) return
+    } else {
+      const targetFolder = folderById.value.get(targetParentId)
+      if (!targetFolder?.notes.some((n) => n.id === targetId)) return
+    }
+
+    await backend.moveNote(noteId, targetParentId)
+    const meta = _extractNote(manifest, noteId)
+    if (!meta) return
+    meta.folderId = targetParentId
+
+    if (targetParentId === null) {
+      const targetIdx = manifest.rootOrder.indexOf(targetId)
+      const insertIdx = position === 'after' ? targetIdx + 1 : targetIdx
+      manifest.rootNotes.push(meta)
+      manifest.rootOrder.splice(insertIdx, 0, noteId)
+    } else {
+      const folder = folderById.value.get(targetParentId)
+      if (!folder) return
+      const targetIdx = folder.notes.findIndex((n) => n.id === targetId)
+      const insertIdx = position === 'after' ? targetIdx + 1 : targetIdx
+      folder.notes.splice(insertIdx, 0, meta)
+    }
+
+    await backend.saveManifest(manifest)
+    void workspaceStore.refreshSidebarNotePreviews()
+  }
+
+  /** Переупорядочивает элемент (заметку или папку) внутри одного уровня дерева.
+   *  `targetParentId === null` — корневой уровень (мутируется `rootOrder`);
+   *  иначе переупорядочивание внутри массивов `folder.notes`/`folder.children`.
+   *  `targetId` — элемент-ориентир, относительно которого вставлен перетаскиваемый;
+   *  `position` — 'before' или 'after'. Не работает для вложения (используйте moveNote). */
+  async function reorderItem(
+    itemId: string,
+    targetId: string,
+    position: 'before' | 'after',
+    targetParentId: string | null,
+  ) {
+    const backend = workspaceStore.backend
+    const manifest = workspaceStore.manifest
+    if (!backend || !manifest) return
+
+    if (targetParentId === null) {
+      const fromIdx = manifest.rootOrder.indexOf(itemId)
+      const targetIdx = manifest.rootOrder.indexOf(targetId)
+      if (fromIdx === -1 || targetIdx === -1 || fromIdx === targetIdx) return
+      const adjustedTarget = position === 'after' ? targetIdx + 1 : targetIdx
+      manifest.rootOrder = moveItemInArray(
+        manifest.rootOrder.map((id) => ({ id })),
+        itemId,
+        adjustedTarget,
+      ).map((entry) => entry.id)
+    } else {
+      const folder = folderById.value.get(targetParentId)
+      if (!folder) return
+      const container = folder.notes as NoteMeta[]
+      const fromIdx = container.findIndex((n) => n.id === itemId)
+      const targetIdx = container.findIndex((n) => n.id === targetId)
+      if (fromIdx === -1 || targetIdx === -1 || fromIdx === targetIdx) return
+      const adjustedTarget = position === 'after' ? targetIdx + 1 : targetIdx
+      const reordered = moveItemInArray(container, itemId, adjustedTarget)
+      folder.notes.splice(0, folder.notes.length, ...reordered)
+    }
+    await backend.saveManifest(manifest)
+  }
+
+  /** Сохраняет пользовательский порядок заметок для режима tag-preview. */
+  async function setSidebarNoteOrder(order: string[]) {
+    const backend = workspaceStore.backend
+    const manifest = workspaceStore.manifest
+    if (!backend || !manifest) return
+    manifest.sidebarNoteOrder = order
+    await backend.saveManifest(manifest)
   }
 
   async function restoreFromTrash(itemId: string) {
@@ -188,7 +282,7 @@ export const useTreeStore = defineStore('tree', () => {
       const meta: NoteMeta = {
         id: item.id,
         title: item.title,
-        icon: '📄',
+        icon: item.icon ?? '📄',
         folderId: item.originalParentId,
         updatedAt: new Date().toISOString()
       }
@@ -230,7 +324,7 @@ export const useTreeStore = defineStore('tree', () => {
     return null
   }
 
-  return { tree, folderById, noteById, resolveNoteIdByTitle, createFolder, renameFolder, deleteFolder, createNote, createNoteFromTemplate, renameNote, syncNoteMeta, deleteNote, moveNote, restoreFromTrash, permanentlyDeleteFromTrash, emptyTrash }
+  return { tree, folderById, noteById, resolveNoteIdByTitle, createFolder, renameFolder, deleteFolder, createNote, createNoteFromTemplate, renameNote, syncNoteMeta, deleteNote, moveNote, moveNoteToPosition, reorderItem, setSidebarNoteOrder, restoreFromTrash, permanentlyDeleteFromTrash, emptyTrash }
 })
 
 // --- tree mutation helpers ---

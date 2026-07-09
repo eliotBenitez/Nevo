@@ -60,11 +60,15 @@ export function useGraphSimulation(snapshot: Ref<GraphSnapshot | null>, width: R
       .force('center', forceCenter(cx, cy).strength(0.05))
       .force('collide', forceCollide<SimNode>(d => nodeRadius(d) + 8))
       .alphaDecay(0.02)
-      .on('tick', () => {
-        simNodes.value = [...nodes]
-      })
 
-    simNodes.value = [...nodes]
+    // Publish the live node array once. Rendering is driven by GraphCanvas's own
+    // requestAnimationFrame loop, which reads these node objects directly while
+    // d3 mutates their x/y in place — so we don't republish a fresh array on
+    // every simulation tick. That avoided ~60×/sec array allocations plus the
+    // cascade of reactive recomputations they triggered during settling
+    // (focusGraph computed + useGraphFocus's O(N) graph watch), none of which
+    // depend on node positions.
+    simNodes.value = nodes
   }
 
   watch(snapshot, (data) => {

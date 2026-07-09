@@ -16,3 +16,8 @@ export const secureStore = {
   delete: (key: string) =>
     invoke<void>('secure_store_delete', { key }),
 }
+
+/** Namespaced secure-store key for a plugin settings field marked `secret: true`. */
+export function pluginSecretKey(pluginId: string, fieldKey: string): string {
+  return `${pluginId}.${fieldKey}`
+}

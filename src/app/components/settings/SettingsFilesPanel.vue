@@ -2,6 +2,7 @@
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener'
+import { Archive, Database, FileText, Folder, FolderOpen, HardDrive, Image, Plug, Trash2 } from 'lucide-vue-next'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvNumberInput from '../../../ui/primitives/NvNumberInput.vue'
@@ -90,10 +91,22 @@ async function setSnapshotRetentionCount(value: number) {
               <div class="row-sub">{{ t('settings.files.paths.description') }}</div>
             </div>
             <div class="path-grid">
-              <NvButton variant="ghost" class="path-button" @click="revealPath(activePath ?? undefined)">{{ t('settings.files.paths.revealWorkspace') }}</NvButton>
-              <NvButton variant="ghost" class="path-button" @click="openFolder(diagnostics?.notesFolderPath)">{{ t('settings.files.paths.openNotes') }}</NvButton>
-              <NvButton variant="ghost" class="path-button" @click="openFolder(diagnostics?.assetsFolderPath)">{{ t('settings.files.paths.openAssets') }}</NvButton>
-              <NvButton variant="ghost" class="path-button" @click="openFolder(diagnostics?.nevoFolderPath)">{{ t('settings.files.paths.openNevo') }}</NvButton>
+              <NvButton variant="ghost" class="path-button" @click="revealPath(activePath ?? undefined)">
+                <FolderOpen :size="14" />
+                {{ t('settings.files.paths.revealWorkspace') }}
+              </NvButton>
+              <NvButton variant="ghost" class="path-button" @click="openFolder(diagnostics?.notesFolderPath)">
+                <FileText :size="14" />
+                {{ t('settings.files.paths.openNotes') }}
+              </NvButton>
+              <NvButton variant="ghost" class="path-button" @click="openFolder(diagnostics?.assetsFolderPath)">
+                <Image :size="14" />
+                {{ t('settings.files.paths.openAssets') }}
+              </NvButton>
+              <NvButton variant="ghost" class="path-button" @click="openFolder(diagnostics?.nevoFolderPath)">
+                <Database :size="14" />
+                {{ t('settings.files.paths.openNevo') }}
+              </NvButton>
             </div>
           </div>
         </div>
@@ -114,7 +127,10 @@ async function setSnapshotRetentionCount(value: number) {
                 :max="200"
                 @update:model-value="setSnapshotRetentionCount"
               />
-              <NvButton @click="runSnapshotCleanup">{{ t('settings.files.snapshotRetention.pruneNow') }}</NvButton>
+              <NvButton @click="runSnapshotCleanup">
+                <Archive :size="14" />
+                {{ t('settings.files.snapshotRetention.pruneNow') }}
+              </NvButton>
             </div>
           </div>
 
@@ -136,7 +152,10 @@ async function setSnapshotRetentionCount(value: number) {
               <div class="row-title">{{ t('settings.files.orphanedAssets.title') }}</div>
               <div class="row-sub">{{ t('settings.files.orphanedAssets.description') }}</div>
             </div>
-            <NvButton @click="runAssetCleanup">{{ t('settings.files.orphanedAssets.clean') }}</NvButton>
+            <NvButton @click="runAssetCleanup">
+              <Trash2 :size="14" />
+              {{ t('settings.files.orphanedAssets.clean') }}
+            </NvButton>
           </div>
         </div>
       </div>
@@ -144,12 +163,12 @@ async function setSnapshotRetentionCount(value: number) {
       <div class="group">
         <div class="group-label">{{ t('settings.files.groups.diagnostics') }}</div>
         <div class="stats-grid">
-          <div class="stat-card"><span>{{ t('settings.files.diagnostics.notes') }}</span><strong>{{ diagnostics?.noteCount ?? 0 }}</strong></div>
-          <div class="stat-card"><span>{{ t('settings.files.diagnostics.folders') }}</span><strong>{{ diagnostics?.folderCount ?? 0 }}</strong></div>
-          <div class="stat-card"><span>{{ t('settings.files.diagnostics.plugins') }}</span><strong>{{ diagnostics?.pluginCount ?? 0 }}</strong></div>
-          <div class="stat-card"><span>{{ t('settings.files.diagnostics.snapshots') }}</span><strong>{{ diagnostics?.snapshotCount ?? 0 }}</strong></div>
-          <div class="stat-card"><span>{{ t('settings.files.diagnostics.assets') }}</span><strong>{{ diagnostics?.assetCount ?? 0 }}</strong></div>
-          <div class="stat-card"><span>{{ t('settings.files.diagnostics.workspaceSize') }}</span><strong>{{ formatBytes(diagnostics?.workspaceBytes) }}</strong></div>
+          <div class="stat-card"><FileText :size="15" /><span>{{ t('settings.files.diagnostics.notes') }}</span><strong>{{ diagnostics?.noteCount ?? 0 }}</strong></div>
+          <div class="stat-card"><Folder :size="15" /><span>{{ t('settings.files.diagnostics.folders') }}</span><strong>{{ diagnostics?.folderCount ?? 0 }}</strong></div>
+          <div class="stat-card"><Plug :size="15" /><span>{{ t('settings.files.diagnostics.plugins') }}</span><strong>{{ diagnostics?.pluginCount ?? 0 }}</strong></div>
+          <div class="stat-card"><Archive :size="15" /><span>{{ t('settings.files.diagnostics.snapshots') }}</span><strong>{{ diagnostics?.snapshotCount ?? 0 }}</strong></div>
+          <div class="stat-card"><Image :size="15" /><span>{{ t('settings.files.diagnostics.assets') }}</span><strong>{{ diagnostics?.assetCount ?? 0 }}</strong></div>
+          <div class="stat-card"><HardDrive :size="15" /><span>{{ t('settings.files.diagnostics.workspaceSize') }}</span><strong>{{ formatBytes(diagnostics?.workspaceBytes) }}</strong></div>
         </div>
       </div>
     </div>

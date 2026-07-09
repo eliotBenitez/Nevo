@@ -45,6 +45,26 @@
   border-color: color-mix(in oklab, #c84e4e 55%, var(--line-2));
 }
 
+.doc-editor .nv-prosemirror .nv-math-error {
+  color: #c84e4e;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.doc-editor .nv-prosemirror .nv-math-block .nv-math-error {
+  width: 100%;
+  text-align: left;
+  padding-top: 6px;
+  border-top: 1px dashed color-mix(in oklab, #c84e4e 35%, var(--line-2));
+}
+
+.doc-editor .nv-prosemirror .nv-math-inline .nv-math-error {
+  font-size: 11px;
+}
+
 .doc-editor .nv-prosemirror .nv-mermaid-block {
   display: flex;
   flex-direction: column;

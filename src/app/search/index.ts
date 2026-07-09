@@ -43,8 +43,9 @@ function scoreOrderedFuzzy(query: string, text: string): number | null {
   return 1_000 - firstMatchIndex * 6 - densityPenalty * 8
 }
 
-function scoreSearchText(query: string, text: string): number | null {
-  const normalizedQuery = normalizeSearchText(query)
+// `normalizedQuery` is expected to already be trimmed + lowercased by the
+// caller so it isn't re-normalized for every text on every keystroke.
+function scoreSearchText(normalizedQuery: string, text: string): number | null {
   const normalizedText = normalizeSearchText(text)
 
   if (!normalizedQuery || !normalizedText) return null
@@ -61,22 +62,22 @@ function scoreSearchText(query: string, text: string): number | null {
   return scoreOrderedFuzzy(normalizedQuery, normalizedText)
 }
 
-function scoreResult(query: string, result: TitleBarSearchResult): number | null {
+function scoreResult(normalizedQuery: string, result: TitleBarSearchResult): number | null {
   if (result.type === 'note' || result.type === 'folder') {
-    return scoreSearchText(query, result.title)
+    return scoreSearchText(normalizedQuery, result.title)
   }
 
   if (result.type === 'block') {
-    const blockScore = scoreSearchText(query, result.blockText)
-    const titleScore = scoreSearchText(query, result.noteTitle)
+    const blockScore = scoreSearchText(normalizedQuery, result.blockText)
+    const titleScore = scoreSearchText(normalizedQuery, result.noteTitle)
     if (blockScore === null && titleScore === null) return null
     return Math.max(blockScore ?? 0, (titleScore ?? 0) - 150)
   }
 
-  const titleScore = scoreSearchText(query, result.title)
-  const descriptionScore = scoreSearchText(query, result.description)
-  const valueScore = scoreSearchText(query, result.value)
-  const sectionScore = scoreSearchText(query, result.sectionLabel)
+  const titleScore = scoreSearchText(normalizedQuery, result.title)
+  const descriptionScore = scoreSearchText(normalizedQuery, result.description)
+  const valueScore = scoreSearchText(normalizedQuery, result.value)
+  const sectionScore = scoreSearchText(normalizedQuery, result.sectionLabel)
 
   const candidates = [titleScore, descriptionScore, valueScore, sectionScore]
     .filter((score): score is number => score !== null)
@@ -85,25 +86,30 @@ function scoreResult(query: string, result: TitleBarSearchResult): number | null
   return Math.max(...candidates)
 }
 
-function compareRankedResults(query: string, left: TitleBarSearchResult, right: TitleBarSearchResult): number {
-  const leftScore = scoreResult(query, left) ?? Number.NEGATIVE_INFINITY
-  const rightScore = scoreResult(query, right) ?? Number.NEGATIVE_INFINITY
-
-  if (leftScore !== rightScore) return rightScore - leftScore
-
-  const leftLabel = left.type === 'block' ? left.blockText : left.title
-  const rightLabel = right.type === 'block' ? right.blockText : right.title
-  return leftLabel.localeCompare(rightLabel)
+function resultLabel(result: TitleBarSearchResult): string {
+  return result.type === 'block' ? result.blockText : result.title
 }
 
 export function rankTitleBarResults(query: string, results: TitleBarSearchResult[]): TitleBarSearchResult[] {
   const normalizedQuery = normalizeSearchText(query)
   if (!normalizedQuery) return []
 
-  return results
-    .filter(result => scoreResult(normalizedQuery, result) !== null)
-    .slice()
-    .sort((left, right) => compareRankedResults(normalizedQuery, left, right))
+  // Decorate-sort-undecorate: score each result exactly once instead of
+  // recomputing scoreResult twice per comparison inside the sort (which made
+  // ranking O(N·log N) score evaluations on every keystroke over all notes,
+  // blocks and settings).
+  const scored: { result: TitleBarSearchResult; score: number }[] = []
+  for (const result of results) {
+    const score = scoreResult(normalizedQuery, result)
+    if (score !== null) scored.push({ result, score })
+  }
+
+  scored.sort((left, right) => {
+    if (left.score !== right.score) return right.score - left.score
+    return resultLabel(left.result).localeCompare(resultLabel(right.result))
+  })
+
+  return scored.map(entry => entry.result)
 }
 
 export function groupVisibleTitleBarResults(

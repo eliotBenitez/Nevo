@@ -1,13 +1,51 @@
 import { describe, expect, it, vi } from 'vitest'
 import { TextSelection } from 'prosemirror-state'
 import { EditorPluginHost } from '../plugin-host'
+import { buildPluginContext } from '../plugin-host/context'
+import { validateManifest } from '../plugin-host/utils'
 import { createNevoEditorState } from '../state'
 import { nevoBaseSchema } from '../schema'
+import type { NevoEditorPluginManifest, NevoEditorRegistries } from '../../types/editor-plugin'
 import type { BlockNode } from '../../types/note'
 
 const emptyContent: BlockNode = {
   type: 'doc',
   content: [{ type: 'paragraph', content: [{ type: 'text', text: 'plugin test' }] }],
+}
+
+function manifest(patch: Partial<NevoEditorPluginManifest> = {}): NevoEditorPluginManifest {
+  return {
+    id: 'plugin.test',
+    name: 'Plugin Test',
+    version: '1.0.0',
+    enabled: true,
+    entryPoint: 'index.js',
+    apiVersion: '1.0.0',
+    editorCapabilities: ['editor.write'],
+    uiCapabilities: [],
+    workspaceCapabilities: [],
+    ...patch,
+  }
+}
+
+function registries(): NevoEditorRegistries {
+  return {
+    commands: new Map(),
+    keymaps: [],
+    slashItems: new Map(),
+    workspaceViews: new Map(),
+    sidebarItems: new Map(),
+    modals: new Map(),
+    toolbarActions: new Map(),
+    nodeViews: new Map(),
+    decorationProviders: new Map(),
+    nodes: new Map(),
+    marks: new Map(),
+    nodeSerializers: new Map(),
+    nodeImporters: new Map(),
+    nodePopovers: new Map(),
+    extraPlugins: [],
+  }
 }
 
 describe('plugin host integration', () => {
@@ -77,5 +115,55 @@ describe('plugin host integration', () => {
     const ids = setup.slashItems.map((item) => item.id)
     expect(ids).toContain('h1')
     expect(ids).toContain('plugin.custom')
+  })
+
+  it('rejects unknown UI and workspace capabilities', () => {
+    expect(() => validateManifest(manifest({
+      uiCapabilities: ['workspace.unknown' as never],
+    }), '1.0.0')).toThrow('Unknown UI capability')
+    expect(() => validateManifest(manifest({
+      workspaceCapabilities: ['kanban.admin' as never],
+    }), '1.0.0')).toThrow('Unknown workspace capability')
+  })
+
+  it('registers workspace UI only with workspace.view.register capability', () => {
+    const registry = registries()
+    const ctx = buildPluginContext(
+      manifest({ uiCapabilities: ['workspace.view.register'] }),
+      new Map(),
+      registry,
+      () => {},
+      () => () => {},
+      () => {},
+    )
+
+    ctx.registerWorkspaceView({ id: 'view', title: 'View', route: '/workspace/plugin/test', component: 'TestView' })
+    ctx.registerSidebarItem({ id: 'side', title: 'Side', route: '/workspace/plugin/test' })
+    ctx.registerModal({ id: 'modal', component: 'TestModal' })
+
+    expect(registry.workspaceViews.get('view')?.pluginId).toBe('plugin.test')
+    expect(registry.sidebarItems.get('side')?.pluginId).toBe('plugin.test')
+    expect(registry.modals.get('modal')?.pluginId).toBe('plugin.test')
+  })
+
+  it('allows workspace.invoke only for commands covered by granular capabilities', async () => {
+    const invoke = vi.fn(async () => ['board'])
+    const runtimeInvoke = invoke as unknown as <T = unknown>(
+      commandId: string,
+      args?: Record<string, unknown>,
+    ) => Promise<T>
+    const ctx = buildPluginContext(
+      manifest({ workspaceCapabilities: ['kanban.read'] }),
+      new Map(),
+      registries(),
+      () => {},
+      () => () => {},
+      () => {},
+      { invoke: runtimeInvoke },
+    )
+
+    await expect(ctx.workspace.invoke('kanban_list_boards')).resolves.toEqual(['board'])
+    await expect(ctx.workspace.invoke('kanban_create_board')).rejects.toThrow('kanban.write')
+    await expect(ctx.workspace.invoke('unknown_command')).rejects.toThrow('not exposed')
   })
 })

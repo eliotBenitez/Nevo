@@ -1,15 +1,16 @@
 <p align="center">
-  <img src="public/logo.png" width="120" alt="Nevo Logo">
+  <img src="public/logo.png" width="128" alt="Nevo Logo">
 </p>
 
 <h1 align="center">Nevo</h1>
 
 <p align="center">
-  <strong>Премиальное рабочее пространство для знаний нового поколения</strong>
+  <strong>A premium, local-first workspace for your knowledge.</strong><br>
+  Beautiful. Fast. Yours.
 </p>
 
 <p align="center">
-  📖 <a href="readme/README_EN.md"><strong>English version of README</strong></a>
+  📖 <a href="readme/README_RU.md"><strong>Русская версия README</strong></a>
 </p>
 
 <p align="center">
@@ -19,19 +20,19 @@
   <img src="https://img.shields.io/badge/License-AGPL--3.0-blue.svg" alt="License">
 </p>
 
+<p align="center">
+  <a href="https://github.com/eliotBenitez/Nevo/releases/latest"><strong>⬇️ Download</strong></a>
+  &nbsp;·&nbsp;
+  <a href="#-features"><strong>Features</strong></a>
+  &nbsp;·&nbsp;
+  <a href="#-build-from-source"><strong>Build from source</strong></a>
+</p>
+
 ---
 
-**Nevo** — это минималистичное, десктопное приложение для организации знаний, вдохновленное Notion, Obsidian и SiYuan. Мы создаем пространство, где высокая производительность сочетается с элегантным визуальным стилем Glassmorphism.
+**Nevo** is a minimalist desktop app for organizing your knowledge — inspired by Notion, Obsidian, and SiYuan. It pairs a distraction-free writing experience with an elegant Glassmorphism interface, and everything you create stays on your own device.
 
-## ✨ Особенности
-
-- 🔒 **Local-first**: Ваши данные принадлежат только вам. Все хранится локально на вашем устройстве.
-- ✍️ **WYSIWYG Редактор**: Мощный редактор на базе ProseMirror с поддержкой Markdown "на лету".
-- ✨ **Glassmorphism Дизайн**: Современный, полупрозрачный интерфейс с мягким размытием и акцентом на контент.
-- ⌨️ **Keyboard-first**: Оптимизировано для быстрой работы без мыши через горячие клавиши и слэш-команды.
-- 🚀 **Производительность**: Невероятно быстрый запуск и работа благодаря Tauri и Vue 3.
-
-## 📸 Скриншоты
+## 📸 Screenshots
 
 <table align="center">
   <tr>
@@ -48,48 +49,72 @@
   </tr>
 </table>
 
-## 🛠 Технологический стек
+## ✨ Features
 
-- **Backend:** [Tauri](https://tauri.app/) (Rust)
-- **Frontend:** [Vue 3](https://vuejs.org/) (Composition API)
-- **Язык:** [TypeScript](https://www.typescriptlang.org/)
-- **Стилизация:** CSS design tokens и глобальные стили проекта
-- **Редактор:** [ProseMirror](https://prosemirror.net/)
-- **Стейт-менеджер:** [Pinia](https://pinia.vuejs.org/)
-- **Сборка:** [Vite](https://vitejs.dev/)
+- 🔒 **Local-first** — your notes live on your device, not in someone else's cloud.
+- ✍️ **WYSIWYG editor** — a powerful ProseMirror editor with Markdown that formats as you type.
+- 🧩 **Rich blocks** — tables with formulas, diagrams (Mermaid), math (KaTeX), drawings, graphs, and more.
+- ✨ **Glassmorphism design** — a modern, translucent interface with soft blur that keeps the focus on your content.
+- ⌨️ **Keyboard-first** — fly through everything with hotkeys and slash commands.
+- 🚀 **Fast & lightweight** — instant startup powered by Tauri and Vue 3.
 
-## 🚀 Быстрый старт
+## ⬇️ Download
 
-### Требования
+Grab the latest installer for your OS from the **[Releases page](https://github.com/eliotBenitez/Nevo/releases/latest)**:
 
-| Компонент | Версия | Назначение |
-| --- | --- | --- |
-| **Node.js** | v20+ | Сборка фронтенда (Vite) |
-| **pnpm** | актуальная | Менеджер пакетов (в репозитории `pnpm-lock.yaml`) |
-| **Rust** | stable | Бэкенд Tauri v2 |
-| **Системные библиотеки** | см. ниже | WebView-движок и GTK-стек Tauri |
+| Platform | Installer |
+| --- | --- |
+| 🪟 **Windows** | `.msi` or `.exe` |
+| 🍏 **macOS** | `.dmg` (Apple Silicon & Intel) |
+| 🐧 **Linux** | `.deb`, `.rpm`, AppImage, or Flatpak |
 
-Tauri v2 использует **системный WebView** каждой ОС: на Linux — `webkit2gtk-4.1`, на macOS — WKWebView (встроен), на Windows — WebView2. Ниже — установка для каждой платформы.
+Nevo updates itself automatically once installed. 🎉
 
-### 1. Базовые инструменты (любая ОС)
+<details>
+<summary>🍏 macOS: first launch is blocked? (unnotarized build)</summary>
+
+macOS builds are ad-hoc signed but **not notarized**, so Gatekeeper blocks the first launch. After moving **Nevo.app** to `/Applications`, do one of the following once:
+
+- Right-click the app → **Open** → **Open**, **or**
+- Run in Terminal:
+  ```bash
+  xattr -dr com.apple.quarantine /Applications/Nevo.app
+  ```
+
+</details>
+
+## 🧑‍💻 Build from Source
+
+Prefer to build it yourself? You only need three tools — **Node.js v20+**, **pnpm**, and **Rust (stable)** — plus your platform's WebView/build libraries (details below).
+
+```bash
+git clone https://github.com/eliotBenitez/Nevo.git
+cd Nevo
+
+pnpm install        # install frontend dependencies
+pnpm tauri dev      # run the app in development mode
+pnpm tauri build    # build production installers (.deb / .rpm / AppImage / .dmg / .msi / .exe)
+```
+
+<details>
+<summary>Install Rust & pnpm (all platforms)</summary>
 
 ```bash
 # Rust (rustup) — macOS / Linux
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-# pnpm через Corepack (входит в Node.js ≥ 16.10)
+# pnpm via Corepack (included in Node.js ≥ 16.10)
 corepack enable && corepack prepare pnpm@latest --activate
 ```
 
-На **Windows** Rust ставится установщиком [`rustup-init.exe`](https://rustup.rs) (см. раздел Windows ниже).
+On **Windows**, install Rust with the [`rustup-init.exe`](https://rustup.rs) installer.
 
----
+</details>
 
-## 🐧 Linux
+<details>
+<summary>🐧 Linux system libraries</summary>
 
-Нужен нативный стек **Tauri v2**: `webkit2gtk-4.1` (движок WebView), `libsoup-3.0` (HTTP, тянется зависимостью WebKit), GTK3, `librsvg2`, `openssl`, опциональный трей `libappindicator/ayatana` и build-тулчейн (`gcc`, `make`, `pkg-config`).
-
-### Системные библиотеки по дистрибутивам
+Tauri v2 needs `webkit2gtk-4.1` (WebView engine), `libsoup-3.0`, GTK3, `librsvg2`, `openssl`, an optional tray (`libappindicator/ayatana`), and a build toolchain (`gcc`, `make`, `pkg-config`).
 
 **Debian / Ubuntu (apt):**
 ```bash
@@ -109,7 +134,7 @@ sudo dnf group install -y "c-development" "development-tools"
 ```bash
 sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl \
   appmenu-gtk-module librsvg
-# Трей (опционально) — пакет из AUR:
+# Tray support (optional) — package from AUR:
 # yay -S libappindicator-gtk3
 ```
 
@@ -119,78 +144,82 @@ sudo zypper in -y webkit2gtk3-soup2-devel libopenssl-devel curl wget file \
   libappindicator3-1 librsvg-devel
 sudo zypper in -t pattern -y devel_basis
 ```
-> Если на вашей версии openSUSE пакет не найден, проверьте имя: `zypper se webkit2gtk` (для Tauri v2 нужен вариант с поддержкой soup3, в части релизов он называется `webkit2gtk3-devel`).
+> If the package is not found on your openSUSE version, check its name with `zypper se webkit2gtk` (Tauri v2 needs the soup3 variant, named `webkit2gtk3-devel` in some releases).
 
-### GStreamer — только для сборки AppImage (опционально)
+</details>
 
-Требуется лишь для `pnpm tauri build` при упаковке в **AppImage** (в `tauri.conf.json` включён `bundleMediaFramework`). Для `pnpm tauri dev` не нужен.
+<details>
+<summary>🍏 macOS build tools</summary>
 
-| Дистрибутив | Пакеты |
+The WebView (WKWebView) is built into the OS — no separate engine needed, just compilation tools.
+
+1. **Xcode Command Line Tools** (C/clang compiler, linker):
+   ```bash
+   xcode-select --install
+   ```
+2. **Node.js v20+** — via [Homebrew](https://brew.sh) or the official installer:
+   ```bash
+   brew install node
+   ```
+3. **Rust** and **pnpm** — see "Install Rust & pnpm" above.
+
+> Apple Silicon (`aarch64`) and Intel (`x86_64`) are both supported. For a universal binary, add the second target (e.g. `rustup target add x86_64-apple-darwin`) and build with `pnpm tauri build --target universal-apple-darwin`.
+
+</details>
+
+<details>
+<summary>🪟 Windows build tools</summary>
+
+1. **Microsoft C++ Build Tools** — install [Build Tools for Visual Studio](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with the **"Desktop development with C++"** workload (MSVC + Windows SDK).
+2. **WebView2 Runtime** — pre-installed on Windows 11 and recent Windows 10. If missing, get the [Evergreen WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/).
+3. **Rust** — run [`rustup-init.exe`](https://rustup.rs) (MSVC toolchain `stable-x86_64-pc-windows-msvc`).
+4. **Node.js v20+** — official installer or `winget install OpenJS.NodeJS`; then `corepack enable`.
+
+> Install everything at once with [winget](https://learn.microsoft.com/windows/package-manager/):
+> ```powershell
+> winget install Microsoft.VisualStudio.2022.BuildTools Rustlang.Rustup OpenJS.NodeJS Microsoft.EdgeWebView2Runtime
+> ```
+
+</details>
+
+<details>
+<summary>📦 GStreamer — needed only for AppImage builds</summary>
+
+Only required for `pnpm tauri build` when packaging an **AppImage** (`bundleMediaFramework` is enabled in `tauri.conf.json`). Not needed for `pnpm tauri dev`.
+
+| Distribution | Packages |
 | --- | --- |
 | Debian/Ubuntu | `libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav` |
 | Fedora | `gstreamer1-plugins-base gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-ugly-free gstreamer1-libav` |
 | Arch | `gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly gst-libav` |
 | openSUSE | `gstreamer-plugins-base gstreamer-plugins-good gstreamer-plugins-bad gstreamer-plugins-ugly gstreamer-plugins-libav` |
 
----
+</details>
 
-## 🍏 macOS
+## 🛠 Tech Stack
 
-WebView (WKWebView) встроен в систему — отдельный движок ставить не нужно. Нужны только инструменты компиляции.
+| | |
+| --- | --- |
+| **Backend** | [Tauri](https://tauri.app/) (Rust) |
+| **Frontend** | [Vue 3](https://vuejs.org/) (Composition API) |
+| **Language** | [TypeScript](https://www.typescriptlang.org/) |
+| **Editor** | [ProseMirror](https://prosemirror.net/) |
+| **State** | [Pinia](https://pinia.vuejs.org/) |
+| **Build** | [Vite](https://vitejs.dev/) |
+| **Styling** | CSS design tokens & global project styles |
 
-1. **Xcode Command Line Tools** (компилятор C/clang, линкер):
-   ```bash
-   xcode-select --install
-   ```
-2. **Node.js v20+** — через [Homebrew](https://brew.sh) или официальный установщик:
-   ```bash
-   brew install node
-   ```
-3. **Rust** и **pnpm** — см. раздел «Базовые инструменты» выше.
+## 🏗 Architecture
 
-> Поддерживаются Apple Silicon (`aarch64`) и Intel (`x86_64`). Для кросс-сборки universal-бинарника установите вторую цель, напр. `rustup target add x86_64-apple-darwin`, и собирайте с `pnpm tauri build --target universal-apple-darwin`.
+Nevo follows strict architectural boundaries to stay maintainable:
 
----
+- `src/app/` — core application shell and layouts.
+- `src/editor-core/` — isolated ProseMirror logic (schema, plugins, commands).
+- `src/features/` — modular features (graphs, databases, onboarding).
+- `src/ui/` — reusable interface primitives and animations.
+- `src-tauri/` — Rust source for the desktop backend.
 
-## 🪟 Windows
+> **Note:** ProseMirror editor state is kept strictly out of Vue/Pinia to avoid performance and reactivity issues.
 
-1. **Microsoft C++ Build Tools** — установите [Build Tools for Visual Studio](https://visualstudio.microsoft.com/visual-cpp-build-tools/) с компонентом **«Desktop development with C++»** (MSVC + Windows SDK).
-2. **WebView2 Runtime** — предустановлен в Windows 11 и актуальных Windows 10. При отсутствии скачайте [Evergreen WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/).
-3. **Rust** — запустите [`rustup-init.exe`](https://rustup.rs) (использует MSVC-тулчейн `stable-x86_64-pc-windows-msvc`).
-4. **Node.js v20+** — официальный установщик или `winget install OpenJS.NodeJS`; затем `corepack enable`.
+## 📄 License
 
-Команды ниже выполняйте в **PowerShell** или **Windows Terminal**.
-
-> Альтернатива: всё разом через [winget](https://learn.microsoft.com/windows/package-manager/):
-> ```powershell
-> winget install Microsoft.VisualStudio.2022.BuildTools Rustlang.Rustup OpenJS.NodeJS Microsoft.EdgeWebView2Runtime
-> ```
-
----
-
-## 🧩 Сборка проекта (любая ОС)
-
-```bash
-git clone https://github.com/your-username/nevo.git
-cd nevo
-
-pnpm install        # зависимости фронтенда
-pnpm tauri dev      # запуск в режиме разработки
-pnpm tauri build    # production-сборка (.deb / .rpm / AppImage / .dmg / .msi / .exe)
-```
-
-## 🏗 Архитектура
-
-Проект следует строгим архитектурным принципам для обеспечения поддерживаемости:
-
-- `src/app/`: Основная оболочка приложения и макеты.
-- `src/editor-core/`: Изолированная логика ProseMirror (схемы, плагины, команды).
-- `src/features/`: Модульные реализации функций (графы, базы данных, онбординг).
-- `src/ui/`: Многоразовые примитивы интерфейса и анимации.
-- `src-tauri/`: Исходный код Rust для десктопного бэкенда.
-
-**Важно:** Состояние редактора ProseMirror строго изолировано от Vue/Pinia для предотвращения проблем с производительностью и реактивностью.
-
-## 📄 Лицензия
-
-Этот проект распространяется под лицензией AGPL-3.0. Подробности в файле [LICENSE](LICENSE).
+Nevo is licensed under the **AGPL-3.0** License. See [LICENSE](LICENSE) for details.

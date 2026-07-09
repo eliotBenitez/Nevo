@@ -31,6 +31,10 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../app/WorkspaceShell.vue'),
   },
   {
+    path: '/workspace/plugin/nevo.kanban/:boardId',
+    component: () => import('../app/WorkspaceShell.vue'),
+  },
+  {
     path: '/workspace/draw/:noteId/:drawId',
     component: () => import('../app/WorkspaceShell.vue'),
   },

@@ -34,6 +34,11 @@ export const useCollabStore = defineStore('collab', () => {
   let _cloudProvider: CloudProvider | null = null
   let _awareness: Awareness | null = null
 
+  let _localAwarenessTarget: Awareness | null = null
+  let _localAwarenessHandler: (() => void) | null = null
+  let _cloudAwarenessTarget: Awareness | null = null
+  let _cloudAwarenessHandler: (() => void) | null = null
+
   // Dependent stores captured synchronously while Pinia is active (resolving
   // them inside an async callback can throw "no active Pinia").
   const authStore = useAuthStore()
@@ -142,10 +147,20 @@ export const useCollabStore = defineStore('collab', () => {
   // --- Private helpers ---
 
   function _destroyLocalProvider(): void {
+    if (_localAwarenessTarget && _localAwarenessHandler) {
+      _localAwarenessTarget.off('change', _localAwarenessHandler)
+    }
+    _localAwarenessTarget = null
+    _localAwarenessHandler = null
     if (_localProvider) { destroyWebSocketProvider(_localProvider); _localProvider = null }
   }
 
   function _destroyCloudProvider(): void {
+    if (_cloudAwarenessTarget && _cloudAwarenessHandler) {
+      _cloudAwarenessTarget.off('change', _cloudAwarenessHandler)
+    }
+    _cloudAwarenessTarget = null
+    _cloudAwarenessHandler = null
     if (_cloudProvider) { _cloudProvider.destroy(); _cloudProvider = null }
   }
 
@@ -163,9 +178,12 @@ export const useCollabStore = defineStore('collab', () => {
       ydoc, noteId, wsUrl, awareness,
       onStatusChange: (s) => { connectionStatus.value = s },
     })
-    _localProvider.awareness.on('change', () => {
+    const handler = () => {
       if (_localProvider) connectedPeers.value = _localProvider.awareness.getStates().size
-    })
+    }
+    _localAwarenessTarget = _localProvider.awareness
+    _localAwarenessHandler = handler
+    _localProvider.awareness.on('change', handler)
   }
 
   function _connectCloudProvider(
@@ -183,7 +201,10 @@ export const useCollabStore = defineStore('collab', () => {
       ydoc, awareness, wsUrl, key,
       onStatusChange: (s) => { connectionStatus.value = s as CollabConnectionStatus },
     })
-    awareness.on('change', () => { connectedPeers.value = awareness.getStates().size })
+    const handler = () => { connectedPeers.value = awareness.getStates().size }
+    _cloudAwarenessTarget = awareness
+    _cloudAwarenessHandler = handler
+    awareness.on('change', handler)
   }
 
   function getProvider(): WebsocketProvider | null { return _localProvider }

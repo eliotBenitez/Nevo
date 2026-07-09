@@ -100,15 +100,14 @@ export function useHistoryData(
     resetState(); filesLoading.value = true
     try {
       const notes = collectNotes(manifest)
-      const results = await Promise.all(notes.map(async (note) => {
-        try { return { note, snapshots: await noteCommands.listNoteSnapshots(workspacePath, note.id) } }
-        catch { return { note, snapshots: [] as NoteSnapshotMeta[] } }
-      }))
+      const entries = await noteCommands.listAllNoteSnapshots(workspacePath)
+      const entriesByNoteId = new Map(entries.map(entry => [entry.noteId, entry.snapshots]))
       if (token !== loadToken) return
       const nextSnapshotsMap: Record<string, NoteSnapshotMeta[]> = {}
       const nextFiles: HistoryFileListItem[] = []
-      for (const { note, snapshots } of results) {
-        if (!snapshots.length) continue
+      for (const note of notes) {
+        const snapshots = entriesByNoteId.get(note.id)
+        if (!snapshots?.length) continue
         nextSnapshotsMap[note.id] = snapshots
         nextFiles.push({ id: note.id, title: note.title, icon: note.icon, folderId: note.folderId, updatedAt: note.updatedAt, snapshotCount: snapshots.length, latestSnapshotAt: snapshots[0]?.createdAt ?? note.updatedAt })
       }

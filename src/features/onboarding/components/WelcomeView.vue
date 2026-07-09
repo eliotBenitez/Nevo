@@ -69,7 +69,7 @@ function toggleLocale() {
     </div>
 
     <PrivacyBadge />
-    <div class="version-badge">{{ t('version', { version: appMetadata?.version ?? '0.1.8' }) }}</div>
+    <div class="version-badge">{{ t('version', { version: appMetadata?.version ?? '0.1.9' }) }}</div>
     <button class="lang-toggle" @click="toggleLocale">
       {{ appConfig.locale === 'en' ? 'RU' : 'EN' }}
     </button>

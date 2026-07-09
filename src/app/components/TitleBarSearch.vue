@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Search } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { useWorkspaceStore } from '../../stores/workspace'
@@ -40,6 +40,8 @@ const isOpen = ref(false)
 const blockResults = ref<WorkspaceBlockSearchItem[]>([])
 const activeIndex = ref(-1)
 const isLoadingBlocks = ref(false)
+const instanceId = getCurrentInstance()?.uid ?? 0
+const listboxId = `titlebar-search-listbox-${instanceId}`
 
 let latestSearchToken = 0
 
@@ -59,6 +61,7 @@ const activeResultKey = computed(() => {
   const result = flatVisibleResults.value[activeIndex.value]
   return result ? `${result.type}:${result.id}` : null
 })
+const activeOptionId = computed(() => activeResultKey.value ? resultOptionId(activeResultKey.value) : undefined)
 const shortcutSegments = computed(() => {
   const shortcut = props.searchShortcut?.trim()
   if (!shortcut) return []
@@ -97,6 +100,10 @@ function resultBody(result: TitleBarSearchResult): string {
   if (result.type === 'block') return result.snippet
   if (result.type === 'setting') return result.description
   return result.title
+}
+
+function resultOptionId(key: string): string {
+  return `titlebar-search-option-${instanceId}-${key.replace(/[^a-zA-Z0-9_-]/g, '-')}`
 }
 
 function openDropdown() {
@@ -267,6 +274,11 @@ onBeforeUnmount(() => {
         v-model="query"
         class="titlebar-search__input"
         type="search"
+        role="combobox"
+        autocomplete="off"
+        :aria-expanded="isOpen"
+        :aria-controls="listboxId"
+        :aria-activedescendant="activeOptionId"
         :placeholder="t('workspace.titlebarSearch.placeholder')"
         @focus="openDropdown"
         @keydown="onKeydown"
@@ -284,16 +296,19 @@ onBeforeUnmount(() => {
       </div>
     </label>
 
-    <div v-if="isOpen" class="titlebar-search__dropdown">
+    <div v-if="isOpen" :id="listboxId" class="titlebar-search__dropdown" role="listbox">
       <template v-if="visibleGroups.length">
         <section v-for="group in visibleGroups" :key="group.id" class="titlebar-search__group">
           <div class="titlebar-search__group-title">{{ groupTitle(group.id) }}</div>
           <button
             v-for="result in group.items"
             :key="`${result.type}:${result.id}`"
+            :id="resultOptionId(`${result.type}:${result.id}`)"
             type="button"
+            role="option"
             class="titlebar-search__result"
             :class="{ 'is-active': activeResultKey === `${result.type}:${result.id}` }"
+            :aria-selected="activeResultKey === `${result.type}:${result.id}`"
             @mousedown.prevent
             @click="selectResult(result)"
           >
@@ -304,10 +319,18 @@ onBeforeUnmount(() => {
             <div class="titlebar-search__result-body">{{ resultBody(result) }}</div>
           </button>
         </section>
+        <div v-if="isLoadingBlocks" class="titlebar-search__loading" role="status" aria-live="polite">
+          <span class="titlebar-search__spinner" aria-hidden="true" />
+          <span>{{ t('workspace.titlebarSearch.loadingShort') }}</span>
+        </div>
       </template>
 
-      <div v-else-if="normalizedQuery" class="titlebar-search__empty">
-        <div class="titlebar-search__empty-title">{{ t('workspace.titlebarSearch.emptyTitle') }}</div>
+      <div v-else-if="normalizedQuery" class="titlebar-search__empty" role="status" aria-live="polite">
+        <div v-if="isLoadingBlocks" class="titlebar-search__loading titlebar-search__loading--empty">
+          <span class="titlebar-search__spinner" aria-hidden="true" />
+          <span>{{ t('workspace.titlebarSearch.loadingTitle') }}</span>
+        </div>
+        <div v-else class="titlebar-search__empty-title">{{ t('workspace.titlebarSearch.emptyTitle') }}</div>
         <div class="titlebar-search__empty-subtitle">
           {{ isLoadingBlocks ? t('workspace.titlebarSearch.loading') : t('workspace.titlebarSearch.emptyDescription') }}
         </div>

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import type { KanbanBoard, KanbanCard, KanbanPropertyDef, KanbanAutomation, KanbanLink, KanbanPropertyOption, KanbanCardField, KanbanBoardCardViewSettings } from '../types/kanban'
 import { useWorkspaceStore } from './workspace'
 import { getBoardColumns, getCardStatusValue, normalizeBoard, normalizeCard, normalizeViewSettings, serializeCardProperties } from '../features/databases/kanban/kanbanFields'
+import { appLogger } from '../utils/logger'
 
 export const useKanbanStore = defineStore('kanban', () => {
   const workspaceStore = useWorkspaceStore()
@@ -291,7 +292,13 @@ export const useKanbanStore = defineStore('kanban', () => {
       const nextCard = board ? normalizeCard(board, card) : card
       const current = cards.value.get(boardId) ?? []
       cards.value.set(boardId, current.map(c => c.id === cardId ? nextCard : c))
-    } catch {
+    } catch (error) {
+      await appLogger.error({
+        source: 'frontend.kanban',
+        event: 'update_card_links',
+        message: 'Failed to persist card links, rolling back',
+        error,
+      })
       cards.value.set(boardId, previous)
     }
   }

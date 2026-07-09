@@ -1,4 +1,9 @@
 {
+  "confirmDialog": {
+    "title": "Подтвердите действие",
+    "delete": "Удалить",
+    "discard": "Отменить изменения"
+  },
   "updater": {
     "availableTitle": "Доступна версия {version}",
     "whatsNew": "Что нового",
@@ -128,6 +133,8 @@
     "cloudWorkspace": "Облачное хранилище",
     "toggleSidebar": "Скрыть/показать боковую панель",
     "toggleRightPanel": "Скрыть/показать правую панель",
+    "openDrawer": "Открыть боковую панель",
+    "closeDrawer": "Закрыть боковую панель",
     "createNote": "Новая заметка",
     "createFolder": "Новая папка",
     "importMd": "Импорт .md",
@@ -149,6 +156,33 @@
       "noHeadings": "Заголовков нет",
       "backlinks": "Обратные ссылки",
       "noBacklinks": "Нет обратных ссылок",
+      "properties": {
+        "title": "Свойства",
+        "type": "Тип",
+        "typeNone": "Не задан",
+        "status": "Статус",
+        "date": "Дата",
+        "datePlaceholder": "Без даты",
+        "tags": "Теги",
+        "addTag": "Добавить тег",
+        "tagsPlaceholder": "Теги...",
+        "removeTag": "Удалить тег {tag}",
+        "types": {
+          "note": "Заметка",
+          "task": "Задача",
+          "idea": "Идея",
+          "meeting": "Встреча",
+          "project": "Проект",
+          "research": "Исследование"
+        },
+        "statuses": {
+          "none": "Нет статуса",
+          "draft": "Черновик",
+          "active": "Активно",
+          "waiting": "Ожидает",
+          "done": "Готово"
+        }
+      },
       "metadata": "Информация",
       "words": "{n} слов",
       "readTime": "{n} мин чтения",
@@ -162,6 +196,43 @@
     "noPath": "Путь не задан",
     "untitledNote": "Без названия",
     "newFolderPrompt": "Название папки",
+    "emptyTree": {
+      "title": "Пока нет страниц",
+      "subtitle": "Создайте заметку или папку, чтобы начать работу."
+    },
+    "sidebarPreview": {
+      "tagsLabel": "Теги заметок",
+      "allNotesTitle": "Все заметки",
+      "selectedTitle": "Выбранные теги",
+      "clear": "Сбросить",
+      "emptyPreview": "Нет текстового превью",
+      "empty": {
+        "no-notes": {
+          "title": "Заметок пока нет",
+          "subtitle": "Создайте заметку, и она появится здесь."
+        },
+        "no-matches": {
+          "title": "Нет совпадений",
+          "subtitle": "Выберите другие теги или сбросьте фильтр."
+        }
+      }
+    },
+    "boards": {
+      "title": "Доски",
+      "new": "Новая доска",
+      "emptyTitle": "Досок пока нет",
+      "emptySubtitle": "Создайте Kanban-доску для задач или проектов."
+    },
+    "tabs": {
+      "label": "Открытые заметки",
+      "close": "Закрыть {title}"
+    },
+    "createFolderModal": {
+      "title": "Создать папку",
+      "placeholder": "Название папки",
+      "submit": "Создать",
+      "emptyName": "Введите название папки."
+    },
     "emptyTitle": "Начните с первой заметки",
     "emptySubtitle": "Создайте заметку или выберите её в боковой панели.",
     "emptyFolderTitle": "Папка: {folder}",
@@ -215,12 +286,18 @@
       "searchNoResults": "Ничего не найдено",
       "importIntoNote": "Импорт .md в заметку",
       "importAsNote": "Импорт .md как заметку",
+      "openNoteMenu": "Открыть меню заметки",
       "renameModalTitle": "Переименовать",
       "renameModalPlaceholder": "Введите новое название",
       "moveUp": "Переместить выше",
       "moveDown": "Переместить ниже",
       "cancel": "Отмена",
       "confirm": "Подтвердить"
+    },
+    "drag": {
+      "moveToFolder": "Переместить в папку",
+      "reorderHint": "Перетащите для изменения порядка",
+      "manualSortRequired": "Включите ручную сортировку, чтобы перетаскивать"
     },
     "system": {
       "graph": "Граф",
@@ -231,11 +308,23 @@
     },
     "trash": {
       "title": "Корзина",
+      "description": "Восстановите удалённые элементы или удалите их навсегда.",
+      "countLabel": "Элементов в корзине: {count}",
+      "searchLabel": "Поиск в корзине",
       "emptyAction": "Очистить корзину",
-      "emptyState": "Корзина пуста",
+      "emptyTitle": "Корзина пуста",
+      "emptyState": "Удалённые заметки и папки появятся здесь.",
+      "noResultsTitle": "Ничего не найдено",
+      "noResultsDescription": "Попробуйте другое название или очистите поле поиска.",
       "deletedAt": "Удалено: {date}",
+      "folderType": "Папка",
+      "noteType": "Заметка",
+      "itemActions": "Действия для «{title}»",
       "restore": "Восстановить",
+      "restoreItem": "Восстановить «{title}»",
       "deletePermanently": "Удалить навсегда",
+      "deleteItem": "Удалить «{title}» навсегда",
+      "actionHint": "Окончательное удаление нельзя отменить.",
       "deletePermanentlyConfirm": "Вы уверены, что хотите окончательно удалить эту заметку? Это действие нельзя отменить.",
       "emptyConfirm": "Вы уверены, что хотите очистить корзину? Все заметки будут удалены навсегда."
     },
@@ -243,6 +332,8 @@
       "placeholder": "Поиск по заметкам, блокам и настройкам...",
       "rootLabel": "Корень пространства",
       "loading": "Идёт поиск по содержимому заметок во всём пространстве...",
+      "loadingShort": "Идёт поиск по заметкам...",
+      "loadingTitle": "Идёт поиск...",
       "idleTitle": "Глобальный поиск по пространству",
       "idleDescription": "Ищите заметки, папки, блоки заметок и настройки из одного поля.",
       "emptyTitle": "Совпадений не найдено",
@@ -255,15 +346,25 @@
     },
     "history": {
       "title": "История файла",
+      "description": "Просматривайте сохранённые снимки, сравнивайте изменения и возвращайте прошлую версию.",
       "files": "Файлы",
+      "filesHint": "Заметки с сохранёнными снимками",
       "versions": "Версии",
+      "versionsHint": "Снимки выбранной заметки",
       "previewCompare": "Предпросмотр / Сравнение",
+      "previewCompareHint": "Проверьте снимок или сравните его с текущей заметкой",
       "preview": "Предпросмотр",
       "compare": "Сравнение",
+      "searchLabel": "Поиск заметок в истории",
       "searchPlaceholder": "Найти заметку...",
       "snapshotCount": "{count} снимков",
+      "latestSnapshotAt": "Последний {value}",
+      "noteUpdatedAt": "Заметка обновлена {value}",
       "updatedAt": "Обновлено {value}",
+      "snapshotCreatedAt": "Снимок от {value}",
+      "noSnapshotSelection": "Версия не выбрана",
       "restore": "Восстановить снимок",
+      "restoreSelectionHint": "Восстановление заменит текущую заметку выбранным снимком.",
       "restoreConfirm": "Восстановить этот снимок в живую заметку?",
       "restoring": "Восстановление…",
       "coverValue": "Обложка: {value}",
@@ -280,14 +381,23 @@
         "changed": "Изменено"
       },
       "states": {
+        "loadingFilesTitle": "Загрузка истории",
         "loadingFiles": "Загрузка истории заметок…",
+        "noFilesTitle": "Истории пока нет",
         "noFiles": "Пока нет живых заметок с историей.",
+        "noSearchResultsTitle": "Совпадений нет",
         "noSearchResults": "По этому запросу ничего не найдено.",
+        "noFileSelectedTitle": "Выберите заметку",
         "noFileSelected": "Выберите заметку, чтобы просмотреть историю.",
+        "noSnapshotsTitle": "Версий нет",
         "noSnapshots": "У этой заметки нет снимков.",
+        "noSnapshotSelectedTitle": "Выберите версию",
         "noSnapshotSelected": "Выберите версию для предпросмотра.",
+        "loadingPreviewTitle": "Загрузка снимка",
         "loadingPreview": "Загрузка снимка…",
+        "emptySnapshotTitle": "Пустой снимок",
         "emptySnapshot": "Этот снимок пуст.",
+        "noDiffTitle": "Различий нет",
         "noDiff": "Между текущей заметкой и этим снимком нет видимых различий."
       },
       "errors": {
@@ -303,6 +413,13 @@
       "saving": "Сохранение…",
       "unsaved": "Есть несохранённые изменения",
       "error": "Ошибка сохранения"
+    },
+    "relativeTime": {
+      "justNow": "только что",
+      "hourAgo": "1 час назад",
+      "hoursAgo": "{count} ч. назад",
+      "yesterday": "вчера",
+      "daysAgo": "{count} дн. назад"
     },
     "blockMenu": {
       "turnInto": "Превратить в",
@@ -394,10 +511,13 @@
       "advanced": "Дополнительно",
       "about": "О приложении"
     },
+    "navigationLabel": "Разделы настроек",
     "search": {
+      "label": "Поиск по настройкам",
       "placeholder": "Поиск по настройкам...",
       "resultsTitle": "Результаты для «{query}»",
       "resultsCount": "Найдено настроек: {count}.",
+      "openResult": "Открыть «{title}» в разделе «{section}»",
       "emptyTitle": "Совпадений не найдено.",
       "emptyDescription": "Попробуйте поискать «тема», «плагин», «блок» или «пространство»."
     },
@@ -449,6 +569,13 @@
       "language": {
         "ru": "Русский",
         "en": "English"
+      },
+      "startupView": {
+        "editor": "Редактор (пустой)",
+        "lastNote": "Последний открытый документ",
+        "specificNote": "Определенный документ",
+        "graph": "Граф заметок",
+        "kanban": "Канбан-доска"
       },
       "focusMode": {
         "off": "Выкл.",
@@ -519,6 +646,10 @@
         "floating": "Плавающий",
         "solid": "Сплошной",
         "minimal": "Минимальный"
+      },
+      "sidebarContentMode": {
+        "tree": "Дерево",
+        "tag-preview": "Теги и превью"
       },
       "workspaceType": {
         "general": "Общее",
@@ -591,7 +722,12 @@
       },
       "startupView": {
         "title": "Стартовый вид",
-        "description": "Сейчас полностью доступен редактор. Таблица, канбан и граф пока остаются пунктами дорожной карты."
+        "description": "Выберите вид по умолчанию, который открывается при запуске приложения"
+      },
+      "startupNote": {
+        "title": "Стартовый документ",
+        "description": "Выберите документ, который будет открываться при запуске приложения",
+        "placeholder": "Выберите документ..."
       },
       "restoreLastContext": {
         "title": "Восстанавливать последний контекст",
@@ -772,6 +908,7 @@
       },
       "groups": {
         "identity": "Идентичность",
+        "sidebarMode": "Режим сайдбара",
         "navigation": "Навигация",
         "structure": "Структура",
         "creationDefaults": "Параметры создания",
@@ -782,8 +919,15 @@
         "description": "Переименовать пространство и обновить его символ или градиент",
         "panelDescription": "Переименуйте пространство и измените его символ или градиент после создания",
         "namePlaceholder": "Название пространства",
+        "preview": "Предпросмотр текущей идентичности пространства",
         "glyphLabel": "Выбрать символ",
         "save": "Сохранить"
+      },
+      "sidebarContentMode": {
+        "title": "Содержимое боковой панели",
+        "description": "Выберите привычное дерево или обзор заметок по тегам с превью текста.",
+        "treeDescription": "Папки и заметки остаются в классическом дереве.",
+        "tagPreviewDescription": "Слева теги, справа лента подходящих заметок."
       },
       "workspaceType": {
         "title": "Тип пространства",
@@ -955,8 +1099,27 @@
       "description": "Расширяйте Nevo, не выходя из редактора. Плагины работают внутри песочницы пространства.",
       "marketplace": "Каталог",
       "rescan": "Пересканировать",
+      "refreshCatalog": "Обновить каталог",
       "systemLabel": "Системные",
       "builtIn": "Встроенный",
+      "install": "Установить",
+      "update": "Обновить",
+      "remove": "Удалить",
+      "openSource": "Открыть источник",
+      "cacheNotice": "Данные из кэша",
+      "catalogLoading": "Каталог загружается…",
+      "catalogLoadingDescription": "Загружаются метаданные каталога и сравниваются с установленными плагинами.",
+      "catalogEmptyTitle": "Каталог пуст.",
+      "catalogEmptyDescription": "Репозиторий marketplace пока не содержит папок `plugins/<pluginId>` или недоступен.",
+      "installedVersion": "установлено v{version}",
+      "summary": {
+        "label": "Сводка плагинов",
+        "installed": "Установлено",
+        "enabled": "Включено",
+        "issues": "Проблемы",
+        "catalog": "Каталог",
+        "cache": "Кэш"
+      },
       "kanban": {
         "title": "Kanban-доски",
         "description": "Включить вид Kanban. При отключении доски скрываются, но данные сохраняются."
@@ -973,28 +1136,91 @@
         "title": "Интеллект-карты",
         "description": "Стройте интерактивные интеллект-карты из Markdown-структуры прямо в заметках."
       },
+      "githubSync": {
+        "title": "Синхронизация с GitHub",
+        "description": "Резервное копирование рабочего пространства в репозиторий GitHub.",
+        "fields": {
+          "repo": "Репозиторий",
+          "branch": "Ветка",
+          "token": "Токен доступа",
+          "tokenHint": "Personal access token с доступом к репозиторию",
+          "commitMessage": "Сообщение коммита",
+          "autoSync": "Автосинхронизация",
+          "intervalMinutes": "Интервал (минуты)"
+        },
+        "actions": {
+          "test": "Проверить подключение",
+          "syncNow": "Синхронизировать сейчас"
+        },
+        "status": {
+          "testing": "Проверка…",
+          "syncing": "Синхронизация…",
+          "connectionOk": "Подключение успешно",
+          "never": "Ещё не синхронизировано",
+          "lastSynced": "Последняя синхронизация: {time}",
+          "filesCount": "Файлов: {count}",
+          "failed": "Ошибка: {message}"
+        },
+        "toast": {
+          "successTitle": "Синхронизация с GitHub",
+          "success": "Воркспейс выгружен в GitHub.",
+          "successDetail": "Воркспейс выгружен в GitHub · файлов: {count}.",
+          "errorTitle": "Ошибка синхронизации с GitHub",
+          "error": "Не удалось выгрузить воркспейс в GitHub."
+        }
+      },
       "filters": {
         "all": "Все · {count}",
         "enabled": "Включены · {count}",
         "manifestIssues": "Ошибки манифеста · {count}"
       },
+      "tabs": {
+        "label": "Разделы плагинов",
+        "installed": "Установленные · {count}",
+        "catalog": "Каталог · {count}"
+      },
+      "marketplaceStatus": {
+        "notInstalled": "Не установлен",
+        "installed": "Установлен",
+        "updateAvailable": "Есть обновление",
+        "disabled": "Отключён",
+        "invalid": "Некорректный",
+        "conflict": "Конфликт"
+      },
       "noDescription": "Описание в манифесте отсутствует.",
       "fallbackDescription": "Манифест плагина пространства",
       "permissions": "Разрешения",
+      "noPermissions": "Без capabilities",
       "source": "Исходники",
       "manifestIssue": "Ошибка манифеста",
       "manifestValid": "Манифест корректен",
       "emptyTitle": "Плагины не найдены.",
-      "emptyDescription": "Добавьте папки плагинов в `.nevo/plugins` и пересканируйте это пространство."
+      "emptyDescription": "Добавьте папки плагинов в `.nevo/plugins` и пересканируйте это пространство.",
+      "settings": {
+        "configure": "Настроить",
+        "hide": "Скрыть",
+        "secretSet": "Задано",
+        "secretPlaceholder": "Введите значение",
+        "saved": "Сохранено"
+      }
     },
     "hotkeys": {
       "description": "Здесь можно записать редактируемые клавиатурные команды Nevo. Сочетания форматирования фиксируются движком редактора.",
       "resetAll": "Сбросить всё",
+      "resetOne": "Сбросить «{command}»",
+      "editable": "Редактируемые",
+      "conflictSummary": "Конфликты",
+      "searchLabel": "Поиск сочетаний",
       "searchPlaceholder": "Поиск сочетаний...",
       "matches": "{count} совпадений",
       "conflicts": "Конфликтов: {count}",
       "pressKeys": "Нажмите клавиши…",
       "fixed": "Фиксировано",
+      "table": {
+        "command": "Команда",
+        "state": "Состояние",
+        "shortcut": "Сочетание"
+      },
       "scope": {
         "workspace": "пространство",
         "app": "приложение"

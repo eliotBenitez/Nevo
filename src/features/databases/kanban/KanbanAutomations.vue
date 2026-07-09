@@ -431,8 +431,8 @@ const selectedTemplate = ref<string | null>(null)
 .ka-template:hover { border-color: var(--accent); }
 
 .ka-template--selected {
-  background: var(--accent-soft, oklch(0.66 0.10 258 / 0.10));
-  border-color: oklch(0.66 0.10 258 / 0.35);
+  background: var(--accent-soft, rgb(161 98 7 / 0.10));
+  border-color: color-mix(in oklab, var(--accent) 42%, transparent);
 }
 
 .ka-template__icon {

@@ -4,7 +4,7 @@ import { createI18n } from 'vue-i18n'
 import { nextTick } from 'vue'
 import WorkspaceHistoryModal from './WorkspaceHistoryModal.vue'
 import en from '../../locales/en.json'
-import type { NoteDocument, NoteSnapshotMeta } from '../../types/note'
+import type { NoteDocument, NoteSnapshotMeta, NoteSnapshotsEntry } from '../../types/note'
 import type { WorkspaceManifest } from '../../types/workspace'
 import { noteCommands } from '../../tauri/commands'
 
@@ -16,6 +16,7 @@ vi.mock('../../tauri/commands', () => ({
     deleteNote: vi.fn(),
     moveNote: vi.fn(),
     listNoteSnapshots: vi.fn(),
+    listAllNoteSnapshots: vi.fn(),
     loadNoteSnapshot: vi.fn(),
     restoreNoteSnapshot: vi.fn(),
     pruneNoteSnapshots: vi.fn(),
@@ -92,19 +93,30 @@ async function flushHistoryModal() {
   await nextTick()
 }
 
+function snapshotsForNote(noteId: string): NoteSnapshotMeta[] {
+  if (noteId === 'note-1') return [createSnapshotMeta('snapshot-1-old', noteId)]
+  if (noteId === 'note-2') {
+    return [
+      createSnapshotMeta('snapshot-2-new', noteId),
+      createSnapshotMeta('snapshot-2-old', noteId),
+    ]
+  }
+  return []
+}
+
 describe('WorkspaceHistoryModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    vi.mocked(noteCommands.listNoteSnapshots).mockImplementation(async (_workspacePath, noteId) => {
-      if (noteId === 'note-1') return [createSnapshotMeta('snapshot-1-old', noteId)]
-      if (noteId === 'note-2') {
-        return [
-          createSnapshotMeta('snapshot-2-new', noteId),
-          createSnapshotMeta('snapshot-2-old', noteId),
-        ]
+    vi.mocked(noteCommands.listNoteSnapshots).mockImplementation(async (_workspacePath, noteId) => snapshotsForNote(noteId))
+
+    vi.mocked(noteCommands.listAllNoteSnapshots).mockImplementation(async () => {
+      const entries: NoteSnapshotsEntry[] = []
+      for (const noteId of ['note-1', 'note-2']) {
+        const snapshots = snapshotsForNote(noteId)
+        if (snapshots.length) entries.push({ noteId, snapshots })
       }
-      return []
+      return entries
     })
 
     vi.mocked(noteCommands.loadNoteSnapshot).mockImplementation(async (_workspacePath, noteId, snapshotId) => {

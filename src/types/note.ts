@@ -6,6 +6,17 @@ export interface BlockNode {
   text?: string
 }
 
+export type NoteType = 'note' | 'task' | 'idea' | 'meeting' | 'project' | 'research'
+
+export type NoteStatus = 'none' | 'draft' | 'active' | 'waiting' | 'done'
+
+export interface NoteProperties {
+  type: NoteType | null
+  tags: string[]
+  date: string | null
+  status: NoteStatus | null
+}
+
 export interface NoteDocument {
   id: string
   title: string
@@ -14,6 +25,7 @@ export interface NoteDocument {
   folderId: string | null
   createdAt: string
   updatedAt: string
+  properties?: NoteProperties
   content: BlockNode
 }
 
@@ -25,11 +37,26 @@ export interface NoteMeta {
   updatedAt: string
 }
 
+export interface SidebarNotePreview {
+  noteId: string
+  title: string
+  icon: string
+  folderPath: string
+  updatedAt: string
+  tags: string[]
+  previewText: string
+}
+
 export interface NoteSnapshotMeta {
   id: string
   noteId: string
   createdAt: string
   updatedAt: string
+}
+
+export interface NoteSnapshotsEntry {
+  noteId: string
+  snapshots: NoteSnapshotMeta[]
 }
 
 export interface ImportedImageAsset {

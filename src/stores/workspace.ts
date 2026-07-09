@@ -1,12 +1,13 @@
 import { defineStore } from 'pinia'
 import { computed, ref, shallowRef } from 'vue'
-import { applyAppLocale } from '../i18n'
+import { applyAppLocale, i18n } from '../i18n'
 import type {
   AppMetadata,
   AppConfig,
   AppLocale,
   WorkspaceCleanupReport,
   WorkspaceDiagnostics,
+  MarketplaceCatalog,
   PluginManifest,
   RecentWorkspace,
   WorkspaceConfig,
@@ -14,7 +15,8 @@ import type {
   ThemeMode,
   WorkspaceSettings,
 } from '../types/workspace'
-import { configCommands, workspaceCommands } from '../tauri/commands'
+import type { SidebarNotePreview } from '../types/note'
+import { configCommands, githubSyncCommands, workspaceCommands } from '../tauri/commands'
 import { resolveBackend, CloudBackend, type WorkspaceBackend, type WorkspaceHandle } from '../core/workspace-backend'
 import { useSharedStorageStore } from './sharedStorage'
 import { useAuthStore } from './auth'
@@ -56,6 +58,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   // deeply proxying this large object on every nested read while staying reactive.
   const settings = shallowRef<WorkspaceSettings>(createDefaultWorkspaceSettings())
   const plugins = ref<PluginManifest[]>([])
+  const sidebarNotePreviews = ref<SidebarNotePreview[]>([])
+  const marketplaceCatalog = ref<MarketplaceCatalog | null>(null)
   const recents = ref<RecentWorkspace[]>([])
   const activeHandle = ref<WorkspaceHandle | null>(null)
   // Cloud backends need async setup (DEK fetch + live Yjs), so they are built by
@@ -78,6 +82,17 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   // Keeps the injected custom-CSS <style> as the last node so it always wins the
   // cascade, even when SFC scoped styles are appended later (dev-mode lazy inject).
   let customCssOrderObserver: MutationObserver | null = null
+  // Guards against re-entrancy: the observer's own reassert (appendChild) is
+  // itself a childList mutation, so without this it would keep re-triggering
+  // itself synchronously. Scheduling on rAF also coalesces bursts of sibling
+  // mutations (e.g. several SFC styles injected back-to-back) into one move.
+  let customCssReassertScheduled = false
+  // Debounces persisting `lastContext` to disk: navigating between notes calls
+  // updateLastContext on every open, and going through the full saveSettings
+  // path (deep clone + applyWorkspaceStyle + loadCustomCss + loadDiagnostics) on
+  // each one is unnecessary I/O for a field that only matters at app restart.
+  let lastContextPersistTimer: ReturnType<typeof setTimeout> | null = null
+  const LAST_CONTEXT_PERSIST_DEBOUNCE_MS = 700
 
   function _setHandle(handle: WorkspaceHandle | null) {
     // Tear down a previous cloud backend (closes its live Yjs sessions) when
@@ -88,6 +103,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     }
     applyCustomCssStyle('', false)
     customCss.value = ''
+    sidebarNotePreviews.value = []
     activeHandle.value = handle
   }
   const appConfig = ref<AppConfig>(createDefaultAppConfig())
@@ -179,6 +195,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       const loadedManifest = await backend.value!.open()
       manifest.value = loadedManifest
       await hydrateWorkspaceState()
+      await syncGithubAutoState()
       await _persistRecent(path, loadedManifest)
       isOnboarded.value = true
     } catch (error) {
@@ -246,7 +263,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       applyWorkspaceStyle(settings.value.appearance)
       await loadCustomCss()
       plugins.value = []
+      marketplaceCatalog.value = null
       diagnostics.value = await cloud.getDiagnostics()
+      await refreshSidebarNotePreviews()
       isOnboarded.value = true
       await _persistCloudRecent(storage)
     } catch (error) {
@@ -293,15 +312,17 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   async function hydrateWorkspaceState() {
     if (!backend.value) return
     try {
-      const [ws, pluginList, workspaceDiagnostics] = await Promise.all([
+      const [ws, pluginList, workspaceDiagnostics, previews] = await Promise.all([
         backend.value.loadSettings(),
         backend.value.listPlugins(),
         backend.value.getDiagnostics(),
+        backend.value.listSidebarNotePreviews(),
       ])
 
       settings.value = normalizeWorkspaceSettings(ws)
       applyWorkspaceStyle(settings.value.appearance)
       plugins.value = pluginList
+      sidebarNotePreviews.value = previews
       diagnostics.value = workspaceDiagnostics
       await loadCustomCss()
     } catch (error) {
@@ -406,6 +427,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       if (styleEl) styleEl.remove()
       customCssOrderObserver?.disconnect()
       customCssOrderObserver = null
+      customCssReassertScheduled = false
       return
     }
     if (!styleEl) {
@@ -422,8 +444,13 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     // Re-assert "last node" whenever something is appended to <body> after it.
     if (!customCssOrderObserver) {
       customCssOrderObserver = new MutationObserver(() => {
-        const el = document.getElementById(STYLE_ID)
-        if (el && el.nextSibling) document.body.appendChild(el)
+        if (customCssReassertScheduled) return
+        customCssReassertScheduled = true
+        requestAnimationFrame(() => {
+          customCssReassertScheduled = false
+          const el = document.getElementById(STYLE_ID)
+          if (el && el.nextSibling) document.body.appendChild(el)
+        })
       })
       customCssOrderObserver.observe(document.body, { childList: true })
     }
@@ -464,13 +491,39 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   async function updateLastContext(context: { noteId: string | null; folderId: string | null }) {
-    await updateSettings((draft) => {
-      draft.general.lastContext = {
-        kind: context.noteId ? 'note' : context.folderId ? 'folder' : 'workspace',
-        noteId: context.noteId,
-        folderId: context.folderId,
-      }
-    })
+    settings.value = {
+      ...settings.value,
+      general: {
+        ...settings.value.general,
+        lastContext: {
+          kind: context.noteId ? 'note' : context.folderId ? 'folder' : 'workspace',
+          noteId: context.noteId,
+          folderId: context.folderId,
+        },
+      },
+    }
+
+    if (lastContextPersistTimer) clearTimeout(lastContextPersistTimer)
+    lastContextPersistTimer = setTimeout(() => {
+      lastContextPersistTimer = null
+      void persistLastContext()
+    }, LAST_CONTEXT_PERSIST_DEBOUNCE_MS)
+  }
+
+  async function persistLastContext() {
+    if (!backend.value) return
+    const normalized = normalizeWorkspaceSettings(settings.value)
+    try {
+      await backend.value.saveSettings(normalized)
+    } catch (error) {
+      await appLogger.error({
+        source: 'frontend.workspace',
+        event: 'update_last_context',
+        message: 'Failed to persist last context',
+        workspacePath: activePath.value,
+        error,
+      })
+    }
   }
 
   async function saveWorkspaceManifest(nextManifest: WorkspaceManifest) {
@@ -490,6 +543,25 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         error,
       })
       throw error
+    }
+  }
+
+  async function refreshSidebarNotePreviews() {
+    if (!backend.value) {
+      sidebarNotePreviews.value = []
+      return
+    }
+    try {
+      sidebarNotePreviews.value = await backend.value.listSidebarNotePreviews()
+    } catch (error) {
+      await appLogger.warn({
+        source: 'frontend.workspace',
+        event: 'refresh_sidebar_note_previews',
+        message: 'Failed to refresh sidebar note previews',
+        workspacePath: activePath.value ?? undefined,
+        error,
+      })
+      sidebarNotePreviews.value = []
     }
   }
 
@@ -514,6 +586,94 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (!backend.value) return
     await backend.value.setPluginEnabled(pluginId, enabled)
     await reloadPlugins()
+    if (pluginId === 'nevo.github-sync') await syncGithubAutoState()
+  }
+
+  /**
+   * Start or stop the Rust-side GitHub Sync background timer to match the
+   * `nevo.github-sync` plugin's enabled state and its `autoSync`/
+   * `intervalMinutes` settings. Safe to call repeatedly (e.g. after toggling
+   * the plugin or editing its settings) — the backend command replaces any
+   * previously running timer. No-op for cloud workspaces (no `activePath`).
+   */
+  async function syncGithubAutoState(): Promise<void> {
+    if (!activePath.value) return
+    const pluginId = 'nevo.github-sync'
+    try {
+      const enabled = plugins.value.find(p => p.id === pluginId)?.enabled === true
+      const autoSync = getPluginSetting(pluginId, 'autoSync') === true
+      const interval = Number(getPluginSetting(pluginId, 'intervalMinutes')) || 15
+      if (enabled && autoSync) {
+        await githubSyncCommands.startAuto(activePath.value, interval)
+      } else {
+        await githubSyncCommands.stopAuto()
+      }
+    } catch (error) {
+      await appLogger.error({
+        source: 'frontend.workspace',
+        event: 'sync_github_auto_state',
+        message: 'Failed to update GitHub Sync background task',
+        workspacePath: activePath.value,
+        error,
+      })
+    }
+  }
+
+  function getPluginSetting<T = unknown>(pluginId: string, key: string): T | undefined {
+    const bag = settings.value.pluginSettings?.[pluginId]
+    return bag ? (bag[key] as T) : undefined
+  }
+
+  async function setPluginSetting(pluginId: string, key: string, value: unknown): Promise<void> {
+    await updateSettings(d => {
+      if (!d.pluginSettings) d.pluginSettings = {}
+      if (!d.pluginSettings[pluginId]) d.pluginSettings[pluginId] = {}
+      d.pluginSettings[pluginId][key] = value
+    })
+  }
+
+  async function loadMarketplacePlugins(forceRefresh = false): Promise<MarketplaceCatalog | null> {
+    if (!backend.value) return null
+    try {
+      marketplaceCatalog.value = await backend.value.marketplaceListPlugins(forceRefresh)
+      return marketplaceCatalog.value
+    } catch (error) {
+      await appLogger.error({
+        source: 'frontend.workspace',
+        event: 'marketplace_list_plugins',
+        message: 'Failed to load marketplace catalog',
+        workspacePath: activePath.value,
+        error,
+      })
+      throw error
+    }
+  }
+
+  async function installMarketplacePlugin(pluginId: string, version?: string) {
+    if (!backend.value) return
+    await backend.value.marketplaceInstallPlugin(pluginId, version)
+    await reloadPlugins()
+    await loadMarketplacePlugins(true)
+  }
+
+  async function updateMarketplacePlugin(pluginId: string) {
+    if (!backend.value) return
+    await backend.value.marketplaceUpdatePlugin(pluginId)
+    await reloadPlugins()
+    await loadMarketplacePlugins(true)
+  }
+
+  async function removeMarketplacePlugin(pluginId: string) {
+    if (!backend.value) return
+    await backend.value.marketplaceRemovePlugin(pluginId)
+    await reloadPlugins()
+    await loadMarketplacePlugins(true)
+  }
+
+  async function refreshMarketplaceCache(): Promise<MarketplaceCatalog | null> {
+    if (!backend.value) return null
+    marketplaceCatalog.value = await backend.value.marketplaceRefreshCache()
+    return marketplaceCatalog.value
   }
 
   async function loadDiagnostics() {
@@ -553,12 +713,12 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     const date = new Date(isoString)
     const diff = Date.now() - date.getTime()
     const h = diff / (1000 * 60 * 60)
-    if (h < 1) return 'just now'
-    if (h < 2) return '1 hour ago'
-    if (h < 24) return `${Math.floor(h)} hours ago`
-    if (h < 48) return 'yesterday'
+    if (h < 1) return i18n.global.t('workspace.relativeTime.justNow')
+    if (h < 2) return i18n.global.t('workspace.relativeTime.hourAgo')
+    if (h < 24) return i18n.global.t('workspace.relativeTime.hoursAgo', { count: Math.floor(h) })
+    if (h < 48) return i18n.global.t('workspace.relativeTime.yesterday')
     const d = Math.floor(h / 24)
-    if (d < 7) return `${d} days ago`
+    if (d < 7) return i18n.global.t('workspace.relativeTime.daysAgo', { count: d })
     return date.toLocaleDateString('en', { month: 'short', day: 'numeric' })
   }
 
@@ -566,6 +726,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     manifest,
     settings,
     plugins,
+    sidebarNotePreviews,
+    marketplaceCatalog,
     recents,
     activePath,
     activeHandle,
@@ -592,8 +754,17 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     saveCustomCss,
     updateLastContext,
     saveWorkspaceManifest,
+    refreshSidebarNotePreviews,
     reloadPlugins,
     setPluginEnabled,
+    syncGithubAutoState,
+    getPluginSetting,
+    setPluginSetting,
+    loadMarketplacePlugins,
+    installMarketplacePlugin,
+    updateMarketplacePlugin,
+    removeMarketplacePlugin,
+    refreshMarketplaceCache,
     loadDiagnostics,
     pruneSnapshots,
     cleanupOrphanedAssets,

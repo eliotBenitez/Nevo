@@ -322,7 +322,7 @@ function cancelQuickAdd() {
   flex-direction: column;
   width: 292px;
   min-width: 292px;
-  background: color-mix(in oklab, var(--glass-2, var(--surface-0)) 90%, transparent);
+  background: color-mix(in oklab, var(--glass-2, var(--surface-0)) 94%, var(--canvas-0, transparent));
   border-radius: calc(8px * var(--radius-scale, 1));
   border: 1px solid var(--line-1, var(--border-subtle));
   overflow: visible;
@@ -475,7 +475,7 @@ function cancelQuickAdd() {
   border: 1px dashed var(--line-2, var(--border-subtle));
   border-radius: calc(8px * var(--radius-scale, 1));
   margin: 4px 0;
-  background: color-mix(in oklab, var(--surface-1) 58%, transparent);
+  background: color-mix(in oklab, var(--glass-1, var(--surface-1)) 72%, transparent);
 }
 
 .kb-column__empty-hint {
@@ -496,14 +496,14 @@ function cancelQuickAdd() {
   background: color-mix(in oklab, var(--accent) 13%, transparent);
   border: 1px solid var(--accent);
   border-radius: calc(7px * var(--radius-scale, 1));
-  box-shadow: 0 0 10px var(--accent-glow, oklch(0.66 0.10 258 / 0.18));
+  box-shadow: 0 0 10px var(--accent-glow, rgb(161 98 7 / 0.18));
 }
 
 .kb-drop-zone--placeholder {
   height: 34px;
   border: 1px dashed var(--line-strong, var(--border-muted));
   border-radius: calc(7px * var(--radius-scale, 1));
-  background: color-mix(in oklab, var(--surface-1) 84%, transparent);
+  background: color-mix(in oklab, var(--glass-2, var(--surface-1)) 84%, transparent);
 }
 
 .kb-column__quick-add {

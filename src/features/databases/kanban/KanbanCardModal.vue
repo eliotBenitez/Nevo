@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { confirm } from '@tauri-apps/plugin-dialog'
 import { useI18n } from 'vue-i18n'
 import { Trash2, X } from 'lucide-vue-next'
 import type { KanbanBoard, KanbanCard, KanbanCardField, KanbanCardPriority } from '../../../types/kanban'
@@ -8,6 +7,7 @@ import { useKanbanStore } from '../../../stores/kanban'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvMiniEditor from '../../../ui/primitives/NvMiniEditor.vue'
+import { useConfirmDialog } from '../../../ui/composables/useConfirmDialog'
 import {
   getBoardStatusProperty,
   getCardStatusValue,
@@ -29,6 +29,7 @@ const emit = defineEmits<{ 'close': [] }>()
 const { t, locale } = useI18n()
 const kanbanStore = useKanbanStore()
 const workspaceStore = useWorkspaceStore()
+const { confirm } = useConfirmDialog()
 
 const localTitle = ref(props.card.title)
 const localContent = ref<unknown>(props.card.content ?? { type: 'doc', content: [] })
@@ -88,12 +89,19 @@ async function save() {
 }
 
 async function handleClose() {
-  if (isDirty.value && !await confirm(t('kanban.card.unsavedChanges'))) return
+  if (isDirty.value && !await confirm({
+    message: t('kanban.card.unsavedChanges'),
+    confirmLabel: t('confirmDialog.discard'),
+  })) return
   emit('close')
 }
 
 async function deleteCard() {
-  if (!await confirm(t('kanban.card.deleteConfirm'))) return
+  if (!await confirm({
+    message: t('kanban.card.deleteConfirm'),
+    confirmLabel: t('confirmDialog.delete'),
+    variant: 'danger',
+  })) return
   await kanbanStore.deleteCard(props.board.id, props.card.id)
   emit('close')
 }

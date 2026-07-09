@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { X } from 'lucide-vue-next'
+import { Clock, History, RotateCcw, X } from 'lucide-vue-next'
 import type { NoteDocument } from '../../types/note'
 import type { WorkspaceManifest } from '../../types/workspace'
 import { useFocusTrap } from '../../ui/composables/useFocusTrap'
@@ -60,6 +60,15 @@ const {
   (note) => emit('restored', note),
   (key, params) => t(key, params ?? {}),
 )
+
+const selectedHistoryFile = computed(() => historyFiles.value.find(file => file.id === selectedNoteId.value) ?? null)
+const selectedSnapshotMeta = computed(() => selectedSnapshots.value.find(snapshot => snapshot.id === selectedSnapshotId.value) ?? null)
+
+function formatTimestamp(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString()
+}
 </script>
 
 <template>
@@ -73,11 +82,50 @@ const {
         :aria-label="t('workspace.system.history')"
       >
         <div class="history-modal__titlebar">
-          <span>{{ t('workspace.system.history') }}</span>
+          <span class="history-modal__chrome-title">
+            <History :size="13" aria-hidden="true" />
+            {{ t('workspace.system.history') }}
+          </span>
           <button type="button" class="history-modal__close" :aria-label="t('workspace.context.cancel')" @click="emit('close')">
             <X :size="15" />
           </button>
         </div>
+
+        <header class="history-modal__hero">
+          <div class="history-modal__identity">
+            <span class="history-modal__hero-icon" aria-hidden="true">
+              <History :size="19" />
+            </span>
+            <div>
+              <h2>{{ t('workspace.history.title') }}</h2>
+              <p>{{ t('workspace.history.description') }}</p>
+            </div>
+          </div>
+          <div class="history-modal__summary" aria-live="polite">
+            <div class="history-modal__summary-item">
+              <span>{{ t('workspace.history.files') }}</span>
+              <strong>{{ historyFiles.length }}</strong>
+            </div>
+            <div class="history-modal__summary-item">
+              <span>{{ t('workspace.history.versions') }}</span>
+              <strong>{{ selectedSnapshots.length }}</strong>
+            </div>
+            <div v-if="selectedHistoryFile" class="history-modal__selection">
+              <span class="history-modal__selection-icon" aria-hidden="true">
+                <Clock :size="14" />
+              </span>
+              <div>
+                <strong>{{ selectedHistoryFile.title }}</strong>
+                <span v-if="selectedSnapshotMeta">
+                  {{ t('workspace.history.snapshotCreatedAt', { value: formatTimestamp(selectedSnapshotMeta.createdAt) }) }}
+                </span>
+                <span v-else>
+                  {{ t('workspace.history.noSnapshotSelection') }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </header>
 
         <div class="history-modal__shell">
           <HistoryFileList
@@ -108,7 +156,9 @@ const {
 
         <footer class="history-modal__footer">
           <div v-if="restoreError" class="history-state history-state--error history-state--footer">{{ restoreError }}</div>
-          <div v-else />
+          <div v-else class="history-modal__footer-hint">
+            {{ selectedSnapshotId ? t('workspace.history.restoreSelectionHint') : t('workspace.history.states.noSnapshotSelected') }}
+          </div>
           <div class="history-modal__footer-actions">
             <button type="button" class="nv-btn" @click="emit('close')">{{ t('workspace.context.cancel') }}</button>
             <button
@@ -121,7 +171,10 @@ const {
               {{ t('workspace.history.restore') }}
             </button>
             <div v-else class="history-confirm">
-              <span>{{ t('workspace.history.restoreConfirm') }}</span>
+              <span class="history-confirm__icon" aria-hidden="true">
+                <RotateCcw :size="13" />
+              </span>
+              <span class="history-confirm__text">{{ t('workspace.history.restoreConfirm') }}</span>
               <button type="button" class="nv-btn" :disabled="restoring" @click="confirmRestoreOpen = false">
                 {{ t('workspace.context.cancel') }}
               </button>

@@ -11,11 +11,20 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Mutex;
 
+use crate::commands::path_utils::write_atomic;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
+
+// Serializes read-modify-write access to the secrets file so concurrent
+// `secure_store_set`/`secure_store_delete` calls can't interleave and corrupt
+// it (a lost update, since each call reads the whole map, mutates it, and
+// writes it back). `write_atomic` alone only guarantees a single write can't
+// leave a half-written file; it doesn't prevent two writers from racing.
+static SECRETS_LOCK: Mutex<()> = Mutex::new(());
 
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -96,20 +105,27 @@ fn parse_callback_query(request: &str) -> HashMap<String, String> {
 }
 
 fn urldecode(s: &str) -> String {
-    let bytes = s.replace('+', " ");
-    let mut out = String::with_capacity(bytes.len());
-    let mut chars = bytes.chars();
-    while let Some(c) = chars.next() {
-        if c == '%' {
-            let h: String = chars.by_ref().take(2).collect();
-            if let Ok(b) = u8::from_str_radix(&h, 16) {
-                out.push(b as char);
+    // Byte-based decode (rather than pushing decoded bytes as `char`s) so that
+    // percent-encoded multi-byte UTF-8 sequences (e.g. non-ASCII redirect params)
+    // are recomposed correctly instead of being mangled into separate Latin-1 chars.
+    let replaced = s.replace('+', " ");
+    let bytes = replaced.as_bytes();
+    let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            let hi = (bytes[i + 1] as char).to_digit(16);
+            let lo = (bytes[i + 2] as char).to_digit(16);
+            if let (Some(hi), Some(lo)) = (hi, lo) {
+                out.push((hi * 16 + lo) as u8);
+                i += 3;
                 continue;
             }
         }
-        out.push(c);
+        out.push(bytes[i]);
+        i += 1;
     }
-    out
+    String::from_utf8_lossy(&out).into_owned()
 }
 
 fn secure_store_path(app: &AppHandle) -> Result<PathBuf, String> {
@@ -130,11 +146,14 @@ fn read_secrets(app: &AppHandle) -> Result<HashMap<String, String>, String> {
 fn write_secrets(app: &AppHandle, map: &HashMap<String, String>) -> Result<(), String> {
     let path = secure_store_path(app)?;
     let raw = serde_json::to_string(map).map_err(|e| e.to_string())?;
-    fs::write(&path, raw).map_err(|e| e.to_string())
+    write_atomic(&path, raw.as_bytes()).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn secure_store_set(app: AppHandle, key: String, value: String) -> Result<(), String> {
+    let _guard = SECRETS_LOCK
+        .lock()
+        .map_err(|_| "secrets lock poisoned".to_string())?;
     let mut map = read_secrets(&app)?;
     map.insert(key, value);
     write_secrets(&app, &map)
@@ -142,11 +161,17 @@ pub fn secure_store_set(app: AppHandle, key: String, value: String) -> Result<()
 
 #[tauri::command]
 pub fn secure_store_get(app: AppHandle, key: String) -> Result<Option<String>, String> {
+    let _guard = SECRETS_LOCK
+        .lock()
+        .map_err(|_| "secrets lock poisoned".to_string())?;
     Ok(read_secrets(&app)?.get(&key).cloned())
 }
 
 #[tauri::command]
 pub fn secure_store_delete(app: AppHandle, key: String) -> Result<(), String> {
+    let _guard = SECRETS_LOCK
+        .lock()
+        .map_err(|_| "secrets lock poisoned".to_string())?;
     let mut map = read_secrets(&app)?;
     map.remove(&key);
     write_secrets(&app, &map)

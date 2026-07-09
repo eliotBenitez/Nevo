@@ -4,7 +4,7 @@ use uuid::Uuid;
 use super::snapshots::store_note_snapshot;
 use super::{
     empty_doc, extract_note_from_tree, insert_note_in_folder, note_context, note_error_context,
-    note_path, update_note_meta_in_tree, NoteDocument,
+    note_path, update_note_meta_in_tree, NoteDocument, NoteProperties,
 };
 use crate::commands::folder::{load_manifest, save_manifest};
 use crate::commands::path_utils::normalize_workspace_path;
@@ -12,7 +12,20 @@ use crate::commands::workspace::{self, NoteMeta};
 use crate::logging::{LogContext, LogError};
 
 #[tauri::command]
-pub fn create_note(
+pub async fn create_note(
+    workspace_path: String,
+    folder_id: Option<String>,
+    title: String,
+    icon: String,
+) -> Result<NoteDocument, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        create_note_impl(workspace_path, folder_id, title, icon)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+pub(crate) fn create_note_impl(
     workspace_path: String,
     folder_id: Option<String>,
     title: String,
@@ -43,6 +56,7 @@ pub fn create_note(
         folder_id: folder_id.clone(),
         created_at: now.clone(),
         updated_at: now.clone(),
+        properties: Some(NoteProperties::empty()),
         content: empty_doc(),
     };
 
@@ -116,7 +130,16 @@ pub fn create_note(
 }
 
 #[tauri::command]
-pub fn load_note(workspace_path: String, note_id: String) -> Result<NoteDocument, String> {
+pub async fn load_note(workspace_path: String, note_id: String) -> Result<NoteDocument, String> {
+    tauri::async_runtime::spawn_blocking(move || load_note_impl(workspace_path, note_id))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+pub(crate) fn load_note_impl(
+    workspace_path: String,
+    note_id: String,
+) -> Result<NoteDocument, String> {
     let logger = crate::logging::logger();
     let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
         let _ = logger.error(
@@ -167,7 +190,13 @@ pub fn load_note(workspace_path: String, note_id: String) -> Result<NoteDocument
 }
 
 #[tauri::command]
-pub fn save_note(workspace_path: String, note: NoteDocument) -> Result<(), String> {
+pub async fn save_note(workspace_path: String, note: NoteDocument) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || save_note_impl(workspace_path, note))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+pub(crate) fn save_note_impl(workspace_path: String, note: NoteDocument) -> Result<(), String> {
     let logger = crate::logging::logger();
     let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
         let _ = logger.error(
@@ -265,7 +294,13 @@ pub fn save_note(workspace_path: String, note: NoteDocument) -> Result<(), Strin
 }
 
 #[tauri::command]
-pub fn delete_note(workspace_path: String, note_id: String) -> Result<(), String> {
+pub async fn delete_note(workspace_path: String, note_id: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || delete_note_impl(workspace_path, note_id))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+pub(crate) fn delete_note_impl(workspace_path: String, note_id: String) -> Result<(), String> {
     let logger = crate::logging::logger();
     let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
         let _ = logger.error(
@@ -309,6 +344,7 @@ pub fn delete_note(workspace_path: String, note_id: String) -> Result<(), String
             title: meta.title.clone(),
             deleted_at: Utc::now().to_rfc3339(),
             original_parent_id: meta.folder_id.clone(),
+            icon: Some(meta.icon.clone()),
         });
 
         save_manifest(&workspace_path, &manifest).map_err(|message| {
@@ -336,7 +372,19 @@ pub fn delete_note(workspace_path: String, note_id: String) -> Result<(), String
 }
 
 #[tauri::command]
-pub fn move_note(
+pub async fn move_note(
+    workspace_path: String,
+    note_id: String,
+    target_folder_id: Option<String>,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        move_note_impl(workspace_path, note_id, target_folder_id)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+pub(crate) fn move_note_impl(
     workspace_path: String,
     note_id: String,
     target_folder_id: Option<String>,
@@ -424,16 +472,18 @@ pub fn move_note(
             );
             message
         })?;
-        crate::commands::path_utils::write_atomic(&path, new_content.as_bytes()).map_err(|error| {
-            let message = error.to_string();
-            let _ = logger.error(
-                "tauri.note",
-                "move_note",
-                "Failed to write moved note",
-                note_error_context(&workspace_path, "io", message.clone()),
-            );
-            message
-        })?;
+        crate::commands::path_utils::write_atomic(&path, new_content.as_bytes()).map_err(
+            |error| {
+                let message = error.to_string();
+                let _ = logger.error(
+                    "tauri.note",
+                    "move_note",
+                    "Failed to write moved note",
+                    note_error_context(&workspace_path, "io", message.clone()),
+                );
+                message
+            },
+        )?;
     }
 
     save_manifest(&workspace_path, &manifest).map_err(|message| {

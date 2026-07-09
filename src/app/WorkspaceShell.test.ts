@@ -23,6 +23,7 @@ vi.mock('../tauri/commands', async () => {
       loadNote: vi.fn(),
       listNoteSnapshots: vi.fn(),
       saveNote: vi.fn(),
+      listSidebarNotePreviews: vi.fn(),
       searchWorkspaceBlocks: vi.fn(),
     },
     kanbanCommands: {
@@ -39,11 +40,14 @@ const i18n = createI18n({
 })
 
 const SidebarStub = defineComponent({
-  emits: ['tree-action', 'open-trash'],
+  emits: ['tree-action', 'open-trash', 'create-folder'],
   template: `
     <div class="sidebar-stub">
       <button class="emit-search" @click="$emit('tree-action', { action: 'search', target: { kind: 'note', id: 'note-1', title: 'Seeded title', folderId: null } })">
         Search
+      </button>
+      <button class="emit-create-folder" @click="$emit('create-folder')">
+        Create folder
       </button>
       <button class="emit-open-trash" @click="$emit('open-trash')">
         Open Trash
@@ -161,7 +165,36 @@ async function mountShell(options?: {
     ...(options?.manifestOverride ?? {}),
   }
   workspaceStore.settings = createDefaultWorkspaceSettings()
-  workspaceStore.plugins = []
+  workspaceStore.plugins = [
+    {
+      id: 'nevo.kanban',
+      name: 'Kanban Boards',
+      version: '1.0.0',
+      description: 'Kanban',
+      enabled: true,
+      kind: 'system',
+      source: 'bundled',
+      entryPoint: 'index.js',
+      apiVersion: '1.0.0',
+      editorCapabilities: [],
+      uiCapabilities: ['workspace.view.register'],
+      workspaceCapabilities: ['kanban.read', 'kanban.write'],
+    },
+    {
+      id: 'nevo.templates',
+      name: 'Templates',
+      version: '1.0.0',
+      description: 'Templates',
+      enabled: true,
+      kind: 'system',
+      source: 'bundled',
+      entryPoint: 'index.js',
+      apiVersion: '1.0.0',
+      editorCapabilities: [],
+      uiCapabilities: ['workspace.view.register'],
+      workspaceCapabilities: ['template.read', 'template.write'],
+    },
+  ]
   workspaceStore.appConfig.locale = 'en'
   workspaceStore.appMetadata = {
     version: '0.1.0',
@@ -177,6 +210,15 @@ async function mountShell(options?: {
     supportsWindowDragRegions: true,
   }
   workspaceStore.updateLastContext = vi.fn().mockResolvedValue(undefined)
+  treeStore.createFolder = vi.fn().mockResolvedValue({
+    id: 'folder-created',
+    title: 'Project docs',
+    icon: '📁',
+    parentId: null,
+    order: 0,
+    notes: [],
+    children: [],
+  })
 
   vi.mocked(noteCommands.listNoteSnapshots).mockResolvedValue([])
   vi.mocked(noteCommands.loadNote).mockResolvedValue({
@@ -188,6 +230,7 @@ async function mountShell(options?: {
     updatedAt: '2026-05-16T10:00:00.000Z',
     content: { type: 'doc', content: [] },
   })
+  vi.mocked(noteCommands.listSidebarNotePreviews).mockResolvedValue([])
   vi.mocked(noteCommands.searchWorkspaceBlocks).mockResolvedValue([
     {
       type: 'block',
@@ -210,6 +253,7 @@ async function mountShell(options?: {
       { path: '/workspace/folder/:folderId', component: { template: '<div />' } },
       { path: '/workspace/graph', component: { template: '<div />' } },
       { path: '/workspace/board/:boardId', component: { template: '<div />' } },
+      { path: '/workspace/plugin/nevo.kanban/:boardId', component: { template: '<div />' } },
       { path: '/onboarding', component: { template: '<div />' } },
     ],
   })
@@ -256,6 +300,53 @@ describe('WorkspaceShell', () => {
     const input = wrapper.get('input')
     expect(document.activeElement).toBe(input.element)
     expect(promptSpy).not.toHaveBeenCalled()
+
+    wrapper.unmount()
+  })
+
+  it('triggers createNote when workspace.new-note hotkey command is dispatched', async () => {
+    const { treeStore, wrapper } = await mountShell()
+    const createNoteSpy = vi.spyOn(treeStore, 'createNote').mockResolvedValue({
+      id: 'new-note-id',
+      title: 'Untitled',
+      icon: '📄',
+      folderId: null,
+      createdAt: '2026-05-16T10:00:00.000Z',
+      updatedAt: '2026-05-16T10:00:00.000Z',
+      content: { type: 'doc', content: [] },
+    })
+
+    dispatchHotkeyCommand('workspace.new-note')
+    await flushUi()
+
+    expect(createNoteSpy).toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+
+  it('creates folders through a modal instead of window.prompt', async () => {
+    const promptSpy = vi.spyOn(window, 'prompt')
+    const { wrapper, treeStore } = await mountShell()
+
+    await wrapper.get('.emit-create-folder').trigger('click')
+    await flushUi()
+
+    expect(promptSpy).not.toHaveBeenCalled()
+    expect(document.body.textContent ?? '').toContain('Create folder')
+
+    const input = document.body.querySelector<HTMLInputElement>('.rename-modal__input')
+    expect(input).toBeTruthy()
+    expect(document.activeElement).toBe(input)
+
+    input!.value = 'Project docs'
+    input!.dispatchEvent(new Event('input', { bubbles: true }))
+    await flushUi()
+
+    document.body.querySelector<HTMLFormElement>('.rename-modal')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    await flushUi()
+
+    expect(treeStore.createFolder).toHaveBeenCalledWith(null, 'Project docs', '📁')
+    expect(document.body.querySelector('.rename-modal')).toBeNull()
 
     wrapper.unmount()
   })

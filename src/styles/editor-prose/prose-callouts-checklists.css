@@ -6,9 +6,9 @@
   align-items: flex-start;
   gap: 12px;
   padding: 14px 16px;
-  border: 1px solid oklch(0.66 0.10 258 / 0.22);
+  border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent);
   border-radius: calc(10px * var(--radius-scale, 1));
-  background: oklch(0.66 0.10 258 / 0.1);
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
   margin: 12px 0;
 }
 

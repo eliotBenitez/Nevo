@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tauri::Manager;
 
+use crate::commands::path_utils::write_atomic;
 use crate::logging::{logger, resolve_logs_dir, LogContext, LogError};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -194,7 +195,7 @@ pub fn save_app_config(app: tauri::AppHandle, config: AppConfig) -> Result<(), S
         );
         message
     })?;
-    std::fs::write(&path, content).map_err(|error| {
+    write_atomic(&path, content.as_bytes()).map_err(|error| {
         let message = error.to_string();
         let _ = logger.error(
             "tauri.config",

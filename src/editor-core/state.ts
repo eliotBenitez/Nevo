@@ -211,7 +211,12 @@ export function createNevoEditorState(options: CreateNevoEditorStateOptions): Ne
     })
   }
   if (host) {
-    slashItems.push(...host.listSlashItems())
+    const pluginSlashItems = host.listSlashItems()
+    for (const pluginItem of pluginSlashItems) {
+      const existingIdx = slashItems.findIndex(item => item.id === pluginItem.id)
+      if (existingIdx !== -1) slashItems.splice(existingIdx, 1)
+      slashItems.push(pluginItem)
+    }
     plugins.push(host.createDecorationPlugin())
     plugins.push(...host.registries.extraPlugins)
   }

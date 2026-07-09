@@ -6,7 +6,6 @@ import { ArrowLeft, History, Menu, PanelLeft, Settings2, X } from 'lucide-vue-ne
 import { useI18n } from 'vue-i18n'
 import WindowControls from '../ui/primitives/WindowControls.vue'
 import WorkspaceRightPanel from './components/WorkspaceRightPanel.vue'
-import WorkspaceRightTrigger from './components/WorkspaceRightTrigger.vue'
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
 import WorkspaceEditorPane from './components/WorkspaceEditorPane.vue'
 const WorkspaceHistoryModal = defineAsyncComponent(() => import('./components/WorkspaceHistoryModal.vue'))
@@ -38,6 +37,7 @@ import type { TemplateDocument, TemplateFieldValues } from '../types/template'
 import type { SettingsSectionId } from '../types/workspace'
 import type { TitleBarSearchResult, WorkspaceBlockNavigationTarget } from '../types/search'
 import { ACCENT_PRESETS, resolveBindingChord } from '../utils/workspace-settings'
+import { isPluginEnabled } from '../utils/system-plugins'
 import { buildWorkspaceSettingsSearchItems } from './search/settings'
 import { useNoteExport } from '../composables/useNoteExport'
 import { useMarkdownImport } from '../composables/useMarkdownImport'
@@ -107,6 +107,9 @@ type DrawUpdatePayload = { drawId: string; svgPreview: string; src: string; titl
 const pendingDrawUpdate = ref<DrawUpdatePayload | null>(null)
 const templateCreatePickerOpen = ref(false)
 const templateCreateFolderId = ref<string | null>(null)
+const createFolderModalOpen = ref(false)
+const createFolderTitle = ref('')
+const createFolderError = ref('')
 const { runtime, useDrawerNavigation, useCompactHeader, useFullscreenDialogs, shellStyle } = useDeviceLayout()
 
 const activeFolderId = computed(() => route.params.folderId ? String(route.params.folderId) : null)
@@ -152,7 +155,9 @@ const workspaceRootClasses = computed(() => ({
 const settingsSearchItems = computed(() => buildWorkspaceSettingsSearchItems({ t, manifest: manifest.value, settings: settings.value, appConfig: appConfig.value, plugins: plugins.value, pluginValidation: {}, locale: appConfig.value.locale, themeMode: themeStore.theme }))
 const workspaceSearchShortcut = computed(() => { const b = settings.value.hotkeys.bindings.find(x => x.commandId === 'workspace.search'); return b ? resolveBindingChord(b) : 'Ctrl+P' })
 const sidebarTree = computed(() => settings.value.workspace.rootNotesVisible ? tree.value : tree.value.filter(node => node.kind !== 'note'))
-const kanbanEnabled = computed(() => settings.value.features?.kanban !== false)
+const sidebarContentMode = computed(() => settings.value.workspace.sidebarContentMode)
+const kanbanEnabled = computed(() => isPluginEnabled(plugins.value, 'nevo.kanban'))
+const templatesEnabled = computed(() => isPluginEnabled(plugins.value, 'nevo.templates'))
 const boardsMeta = computed(() => kanbanStore.boardsList.map(b => ({ id: b.id, title: b.title, icon: b.icon, updatedAt: b.updatedAt })))
 
 function buildRootOverviewItems(): TreeNode[] {
@@ -223,7 +228,7 @@ function closeTab(tabId: string) {
 }
 function openFolder(folderId: string) { mobileSidebarOpen.value = false; if (activeFolderId.value === folderId) return; flushSave(); router.push(`/workspace/folder/${folderId}`) }
 function openGraph() { mobileSidebarOpen.value = false; if (isGraphView.value) return; flushSave(); router.push('/workspace/graph') }
-function openBoard(boardId: string) { mobileSidebarOpen.value = false; flushSave(); router.push(`/workspace/board/${boardId}`) }
+function openBoard(boardId: string) { mobileSidebarOpen.value = false; flushSave(); router.push(`/workspace/plugin/nevo.kanban/${boardId}`) }
 
 // Open the full-canvas drawing editor for a draw_block. The noteId is the
 // parent note (so save-target stays valid); drawId identifies the block.
@@ -305,7 +310,7 @@ async function createTemplatedNote(folderId: string | null, templateId: string, 
 
 async function createNoteWithWorkspaceDefault(folderId: string | null) {
   mobileSidebarOpen.value = false
-  if (settings.value.features?.templates === false || !workspaceStore.activePath) {
+  if (!templatesEnabled.value || !workspaceStore.activePath) {
     await createPlainNote(folderId)
     return
   }
@@ -339,10 +344,26 @@ async function handleTemplateCreate(payload: { template: TemplateDocument; field
 }
 async function createFolder() {
   mobileSidebarOpen.value = false
-  const title = window.prompt(t('workspace.newFolderPrompt'))
-  if (!title?.trim()) return
+  createFolderTitle.value = ''
+  createFolderError.value = ''
+  createFolderModalOpen.value = true
+}
+
+function closeCreateFolderModal() {
+  createFolderModalOpen.value = false
+  createFolderTitle.value = ''
+  createFolderError.value = ''
+}
+
+async function submitCreateFolder() {
+  const title = createFolderTitle.value.trim()
+  if (!title) {
+    createFolderError.value = t('workspace.createFolderModal.emptyName')
+    return
+  }
   const icon = settings.value.workspace.defaultFolderIcon || '📁'
-  await treeStore.createFolder(resolveFolderPlacementFolder(), title.trim(), icon)
+  await treeStore.createFolder(resolveFolderPlacementFolder(), title, icon)
+  closeCreateFolderModal()
 }
 async function importMd() {
   mobileSidebarOpen.value = false
@@ -360,9 +381,17 @@ async function openImportedNote(noteId: string | null) {
 }
 async function importMdIntoNote(noteId: string) {
   mobileSidebarOpen.value = false
-  if (activeNoteId.value === noteId) await flushSave()
-  const ok = await importMarkdownIntoNote(noteId)
-  if (ok && activeNoteId.value === noteId) await noteStore.loadNote(noteId)
+  const isActiveImport = activeNoteId.value === noteId
+  if (isActiveImport) await flushSave()
+  const ok = await importMarkdownIntoNote(noteId, {
+    beforePersist: isActiveImport
+      ? async () => {
+          noteStore.clearNote()
+          await nextTick()
+        }
+      : undefined,
+  })
+  if (ok && activeNoteId.value === noteId) await noteStore.loadNote(noteId, { force: true })
 }
 
 const { renameModal, onTreeAction, handleRequestExport, submitRename, closeRenameModal } = useTreeContextMenu(
@@ -374,8 +403,11 @@ useWorkspaceKeymap(settings, { createNote, createFolder, saveNote: flushSave, ru
 
 watch(manifest, (workspace) => {
   if (!workspace) { router.replace('/onboarding'); return }
-  if (settings.value.features?.kanban !== false) kanbanStore.loadBoards()
+  if (kanbanEnabled.value) kanbanStore.loadBoards()
 }, { immediate: true })
+watch(kanbanEnabled, (enabled) => {
+  if (enabled) kanbanStore.loadBoards()
+})
 watch(() => workspaceStore.activePath, () => { restoredRouteForWorkspace.value = null; tabsStore.clear() })
 watch(() => useDrawerNavigation.value, (drawerMode) => { if (!drawerMode) mobileSidebarOpen.value = false }, { immediate: true })
 watch(() => route.fullPath, () => { mobileSidebarOpen.value = false })
@@ -389,17 +421,50 @@ watch(routeBoardId, (boardId, previousBoardId) => {
   kanbanStore.closeCard()
 }, { immediate: true })
 watch(
-  () => ({ workspacePath: workspaceStore.activePath, currentRoute: route.fullPath, restoreLastContext: settings.value.general.restoreLastContext, noteId: settings.value.general.lastContext.noteId, folderId: settings.value.general.lastContext.folderId }),
-  async ({ workspacePath, currentRoute, restoreLastContext, noteId, folderId }) => {
-    if (!workspacePath || currentRoute !== '/workspace' || !restoreLastContext || restoredRouteForWorkspace.value === workspacePath) return
+  () => ({
+    workspacePath: workspaceStore.activePath,
+    currentRoute: route.fullPath,
+    restoreLastContext: settings.value.general.restoreLastContext,
+    noteId: settings.value.general.lastContext.noteId,
+    folderId: settings.value.general.lastContext.folderId,
+    defaultStartupView: settings.value.general.defaultStartupView,
+    startupNoteId: settings.value.general.startupNoteId
+  }),
+  async ({ workspacePath, currentRoute, restoreLastContext, noteId, folderId, defaultStartupView, startupNoteId }) => {
+    if (!workspacePath || currentRoute !== '/workspace' || restoredRouteForWorkspace.value === workspacePath) return
     restoredRouteForWorkspace.value = workspacePath
-    if (noteId) {
-      const meta = treeStore.noteById.get(noteId)
-      tabsStore.openTab(noteId, meta?.title ?? t('workspace.untitledNote'), meta?.icon ?? '📄')
-      await router.replace(`/workspace/note/${noteId}`)
-      return
+
+    const shouldRestore = restoreLastContext || defaultStartupView === 'last-note'
+    if (shouldRestore) {
+      if (noteId) {
+        const meta = treeStore.noteById.get(noteId)
+        tabsStore.openTab(noteId, meta?.title ?? t('workspace.untitledNote'), meta?.icon ?? '📄')
+        await router.replace(`/workspace/note/${noteId}`)
+        return
+      }
+      if (folderId) {
+        await router.replace(`/workspace/folder/${folderId}`)
+        return
+      }
     }
-    if (folderId) await router.replace(`/workspace/folder/${folderId}`)
+
+    if (defaultStartupView === 'specific-note') {
+      if (startupNoteId) {
+        const meta = treeStore.noteById.get(startupNoteId)
+        tabsStore.openTab(startupNoteId, meta?.title ?? t('workspace.untitledNote'), meta?.icon ?? '📄')
+        await router.replace(`/workspace/note/${startupNoteId}`)
+        return
+      }
+    } else if (defaultStartupView === 'graph') {
+      await router.replace('/workspace/graph')
+    } else if (defaultStartupView === 'kanban') {
+      const firstBoard = boardsMeta.value?.[0]
+      if (firstBoard) {
+        await router.replace(`/workspace/plugin/nevo.kanban/${firstBoard.id}`)
+      } else {
+        await router.replace('/workspace')
+      }
+    }
   },
   { immediate: true },
 )
@@ -417,6 +482,13 @@ watch(() => [workspaceStore.activePath, activeNoteId.value, activeFolderId.value
   await workspaceStore.updateLastContext({ noteId: noteId ? String(noteId) : null, folderId: folderId ? String(folderId) : null })
 })
 watch(activeNoteId, async (noteId) => {
+  // Flush any pending edits on the note we're navigating away from before
+  // resetting/loading state below. This must happen centrally here (rather
+  // than relying solely on the individual navigation helpers like openNote/
+  // openFolder) so that navigation paths which bypass those helpers (browser
+  // back/forward, restored routes, programmatic router changes) don't drop
+  // in-flight drafts. flushSave() is a no-op when there's nothing dirty.
+  await flushSave()
   if (!noteId) { noteStore.clearNote(); return }
   try {
     await noteStore.loadNote(noteId)
@@ -474,7 +546,7 @@ onBeforeUnmount(() => {
 
     <header class="workspace-titlebar" :class="{ 'workspace-titlebar--compact-layout': useCompactHeader, 'workspace-titlebar--drag': runtime.supportsWindowDragRegions }">
       <div class="titlebar-leading">
-        <button v-if="useDrawerNavigation" type="button" class="nv-btn workspace-drawer-toggle" :aria-label="t('workspace.localWorkspace')" @click="mobileSidebarOpen = true"><Menu :size="15" /></button>
+        <button v-if="useDrawerNavigation" type="button" class="nv-btn workspace-drawer-toggle" :aria-label="t('workspace.openDrawer')" @click="mobileSidebarOpen = true"><Menu :size="15" /></button>
         <button v-if="!useDrawerNavigation" type="button" class="nv-btn workspace-sidebar-toggle" :aria-label="t('workspace.toggleSidebar')" :class="{ 'workspace-sidebar-toggle--collapsed': !sidebarOpen }" @click="uiStore.toggleSidebar()"><PanelLeft :size="15" /></button>
       </div>
       <TitleBarTabs :tabs="tabs" :active-tab-id="activeTabId" @select="openNote" @close="closeTab" @reorder="(from, to) => tabsStore.moveTab(from, to)" />
@@ -490,14 +562,13 @@ onBeforeUnmount(() => {
     </header>
 
     <div class="workspace-body" :class="{ 'workspace-body--drawer': useDrawerNavigation }">
-      <div v-if="!useDrawerNavigation" class="workspace-sidebar-shell workspace-sidebar-shell--desktop" :class="{ 'workspace-sidebar-shell--hidden': !sidebarOpen }">
-        <WorkspaceSidebar :workspace-name="manifest?.name ?? t('workspace.noWorkspace')" :workspace-glyph="manifest?.glyph ?? 'N'" :tree="sidebarTree" :active-note-id="activeNoteId" :active-folder-id="activeFolderId" :boards="boardsMeta" :active-board-id="activeBoardId" :kanban-enabled="kanbanEnabled" :backend-kind="workspaceStore.backendKind" @create-note="createNote" @create-note-in-folder="createNoteInFolder" @create-folder="createFolder" @import-md="importMd" @import-into-folder="importMdToFolder" @import-into-note="importMdIntoNote" @open-note="openNote" @open-folder="openFolder" @tree-action="onTreeAction" @open-history="openHistory()" @open-trash="openTrash" @open-settings="openSettings" @open-graph="openGraph" @open-board="openBoard" @create-board="createBoard" @board-action="onBoardAction" @back-to-onboarding="backToOnboarding" />
+      <div v-if="!useDrawerNavigation" class="workspace-sidebar-shell workspace-sidebar-shell--desktop" :class="{ 'workspace-sidebar-shell--hidden': !sidebarOpen, 'workspace-sidebar-shell--tag-preview': sidebarContentMode === 'tag-preview' }">
+        <WorkspaceSidebar :workspace-name="manifest?.name ?? t('workspace.noWorkspace')" :workspace-glyph="manifest?.glyph ?? 'N'" :tree="sidebarTree" :active-note-id="activeNoteId" :active-folder-id="activeFolderId" :boards="boardsMeta" :active-board-id="activeBoardId" :kanban-enabled="kanbanEnabled" :backend-kind="workspaceStore.backendKind" :sidebar-mode="sidebarContentMode" :note-previews="workspaceStore.sidebarNotePreviews" @create-note="createNote" @create-note-in-folder="createNoteInFolder" @create-folder="createFolder" @import-md="importMd" @import-into-folder="importMdToFolder" @import-into-note="importMdIntoNote" @open-note="openNote" @open-folder="openFolder" @tree-action="onTreeAction" @open-history="openHistory()" @open-trash="openTrash" @open-settings="openSettings" @open-graph="openGraph" @open-board="openBoard" @create-board="createBoard" @board-action="onBoardAction" @back-to-onboarding="backToOnboarding" />
       </div>
       <GraphView v-if="isGraphView" :workspace-path="workspaceStore.activePath" :manifest="manifest" :active-note-id="activeNoteId" @open-note="openNote" @back="() => router.push('/workspace')" />
-      <KanbanView v-else-if="isKanbanView && routeBoardId" :board-id="routeBoardId" @back="() => router.push('/workspace')" />
+      <KanbanView v-else-if="kanbanEnabled && isKanbanView && routeBoardId" :board-id="routeBoardId" @back="() => router.push('/workspace')" />
       <DrawView v-else-if="isDrawView && routeDrawId && activeNoteId" :workspace-path="workspaceStore.activePath" :note-id="activeNoteId" :draw-id="routeDrawId ? routeDrawId : ''" :is-dark="isDarkMode" @open-note="openNote" @update-draw="onUpdateDraw" @back="() => activeNoteId && openNote(activeNoteId)" />
       <WorkspaceEditorPane v-else ref="editorPaneRef" :note="activeNote" :workspace-path="workspaceStore.activePath" :workspace-name="manifest?.name ?? ''" :plugin-manifests="workspaceStore.plugins" :settings="settings" :save-status="saveStatus" :container-title="containerOverview.title" :container-kind="containerOverview.kind" :container-items="containerOverview.items" :pending-block-target="pendingBlockTarget" :pending-draw-update="pendingDrawUpdate" @update:title="updateTitle" @update:icon="updateIcon" @update:cover="updateCover" @update:content="updateContent" @content-dirty="markContentDirty" @create-note="createNote" @consumed-pending-target="consumePendingBlockTarget" @consumed-draw-update="consumePendingDrawUpdate" @open-note="openNote" @open-folder="openFolder" @request-export="handleRequestExport" @request-import-md="() => activeNoteId && importMdIntoNote(activeNoteId)" @open-draw="openDraw" />
-      <WorkspaceRightTrigger v-if="!rightPanelOpen && !isGraphView && !isKanbanView && !isDrawView && !useDrawerNavigation" />
       <div class="workspace-right-panel-shell" :class="{ 'workspace-right-panel-shell--hidden': !rightPanelOpen }">
         <WorkspaceRightPanel
           v-if="rightPanelOpen"
@@ -515,9 +586,12 @@ onBeforeUnmount(() => {
       <div class="workspace-drawer-panel">
         <div class="workspace-drawer-bar">
           <button type="button" class="nv-btn" @click="backToOnboarding"><ArrowLeft :size="12" /><span>{{ t('workspace.back') }}</span></button>
-          <button type="button" class="nv-btn" @click="mobileSidebarOpen = false">{{ t('workspace.context.cancel') }}</button>
+          <button type="button" class="nv-btn workspace-drawer-close" :aria-label="t('workspace.closeDrawer')" @click="mobileSidebarOpen = false">
+            <X :size="14" />
+            <span>{{ t('workspace.closeDrawer') }}</span>
+          </button>
         </div>
-        <WorkspaceSidebar :workspace-name="manifest?.name ?? t('workspace.noWorkspace')" :workspace-glyph="manifest?.glyph ?? 'N'" :tree="sidebarTree" :active-note-id="activeNoteId" :active-folder-id="activeFolderId" :boards="boardsMeta" :active-board-id="activeBoardId" :kanban-enabled="kanbanEnabled" :backend-kind="workspaceStore.backendKind" @create-note="createNote" @create-note-in-folder="createNoteInFolder" @create-folder="createFolder" @import-md="importMd" @import-into-folder="importMdToFolder" @import-into-note="importMdIntoNote" @open-note="openNote" @open-folder="openFolder" @tree-action="onTreeAction" @open-history="openHistory()" @open-trash="openTrash" @open-settings="openSettings" @open-graph="openGraph" @open-board="openBoard" @create-board="createBoard" @board-action="onBoardAction" @back-to-onboarding="backToOnboarding" />
+        <WorkspaceSidebar :workspace-name="manifest?.name ?? t('workspace.noWorkspace')" :workspace-glyph="manifest?.glyph ?? 'N'" :tree="sidebarTree" :active-note-id="activeNoteId" :active-folder-id="activeFolderId" :boards="boardsMeta" :active-board-id="activeBoardId" :kanban-enabled="kanbanEnabled" :backend-kind="workspaceStore.backendKind" :sidebar-mode="sidebarContentMode" :note-previews="workspaceStore.sidebarNotePreviews" @create-note="createNote" @create-note-in-folder="createNoteInFolder" @create-folder="createFolder" @import-md="importMd" @import-into-folder="importMdToFolder" @import-into-note="importMdIntoNote" @open-note="openNote" @open-folder="openFolder" @tree-action="onTreeAction" @open-history="openHistory()" @open-trash="openTrash" @open-settings="openSettings" @open-graph="openGraph" @open-board="openBoard" @create-board="createBoard" @board-action="onBoardAction" @back-to-onboarding="backToOnboarding" />
       </div>
     </div>
   </Teleport>
@@ -576,17 +650,37 @@ onBeforeUnmount(() => {
     @close="closeRenameModal"
   />
 
+  <WorkspaceRenameModal
+    :open="createFolderModalOpen"
+    :title="createFolderTitle"
+    :heading="t('workspace.createFolderModal.title')"
+    :placeholder="t('workspace.createFolderModal.placeholder')"
+    :submit-label="t('workspace.createFolderModal.submit')"
+    :error="createFolderError"
+    :submit-disabled="!createFolderTitle.trim()"
+    @update:title="(value) => { createFolderTitle = value; createFolderError = '' }"
+    @submit="submitCreateFolder"
+    @close="closeCreateFolderModal"
+  />
+
   <UpdateDialog />
 </template>
 
 <style scoped>
 .trash-modal {
-  width: min(640px, calc(100vw - 36px));
-  height: min(600px, calc(100vh - 36px));
+  width: min(720px, calc(100vw - 36px));
+  height: min(680px, calc(100vh - 36px));
 }
 
 .trash-modal :deep(.history-modal__shell) {
   display: flex;
   flex-direction: column;
+}
+
+@media (max-width: 719px) {
+  .trash-modal {
+    width: 100vw;
+    height: 100dvh;
+  }
 }
 </style>

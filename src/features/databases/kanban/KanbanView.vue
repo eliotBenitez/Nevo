@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft, Kanban, Plus } from 'lucide-vue-next'
+import { ArrowLeft, Kanban, Plus, Zap, X } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import { useKanbanStore } from '../../../stores/kanban'
@@ -315,7 +315,15 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
 <template>
   <!-- Loading -->
   <div v-if="isLoading" class="kb-view kb-view--center">
-    <span class="kb-view__state-copy">{{ t('kanban.view.loading') }}</span>
+    <div class="kb-view__loading-card" role="status" aria-live="polite">
+      <span class="kb-view__spinner" aria-hidden="true" />
+      <span class="kb-view__state-copy">{{ t('kanban.view.loading') }}</span>
+      <div class="kb-view__loading-rail" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
+    </div>
   </div>
 
   <!-- Error -->
@@ -341,7 +349,9 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
     <!-- Move error banner -->
     <div v-if="moveError" class="kb-view__error-banner">
       {{ t('kanban.view.moveFailed', { message: moveError }) }}
-      <button type="button" class="nv-btn" @click="kanbanStore.moveError = null">✕</button>
+      <button type="button" class="nv-btn kb-view__error-close" :aria-label="t('kanban.common.close')" @click="kanbanStore.moveError = null">
+        <X :size="14" />
+      </button>
     </div>
 
     <!-- Page header -->
@@ -419,21 +429,22 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
       <!-- Drop status change tooltip -->
       <Teleport v-if="dragCardId && dropTargetColumnId && dropTargetColumnId !== dragFromColumnId" to="body">
         <div class="kb-drop-tooltip">
-          <span class="kb-drop-tooltip__icon">⚡</span>
+          <Zap :size="12" class="kb-drop-tooltip__icon" />
           {{ t('kanban.board.dropHere') }}
           <strong>{{ dropStatusName }}</strong>
         </div>
       </Teleport>
 
       <!-- Add column ghost -->
-      <div
+      <button
         v-if="columns.length > 0"
+        type="button"
         class="kb-view__add-col"
         @click="addStatusColumn"
       >
         <Plus :size="11" />
         {{ t('kanban.view.addColumn') }}
-      </div>
+      </button>
 
       <div v-if="noSearchResults" class="kb-view__no-results">
         <div class="kb-view__empty-icon"><Kanban :size="18" /></div>
@@ -523,7 +534,7 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
   height: 100%;
   overflow: hidden;
   background:
-    linear-gradient(180deg, color-mix(in oklab, var(--surface-1) 62%, transparent), transparent 180px),
+    linear-gradient(180deg, color-mix(in oklab, var(--glass-2) 58%, transparent), transparent 180px),
     var(--canvas-1, var(--surface-0));
 }
 
@@ -557,6 +568,54 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
   gap: 8px;
 }
 
+.kb-view__loading-card {
+  width: min(340px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--line-1, var(--border-subtle));
+  border-radius: calc(12px * var(--radius-scale, 1));
+  background: color-mix(in oklab, var(--glass-3, var(--surface-1)) 88%, transparent);
+  box-shadow: var(--shadow-1, 0 10px 30px oklch(0 0 0 / 0.08));
+}
+
+.kb-view__spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid color-mix(in oklab, var(--accent) 18%, transparent);
+  border-top-color: var(--accent);
+  animation: kb-view-spin 850ms linear infinite;
+}
+
+.kb-view__loading-rail {
+  width: 100%;
+  display: grid;
+  gap: 7px;
+}
+
+.kb-view__loading-rail span {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--line-1, oklch(0.8 0 0 / 0.4)), color-mix(in oklab, var(--accent) 18%, transparent), var(--line-1, oklch(0.8 0 0 / 0.4)));
+  background-size: 220% 100%;
+  animation: kb-view-skeleton 1.2s ease-in-out infinite;
+}
+
+.kb-view__loading-rail span:nth-child(2) { width: 82%; }
+.kb-view__loading-rail span:nth-child(3) { width: 64%; }
+
+@keyframes kb-view-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes kb-view-skeleton {
+  0% { background-position: 120% 0; }
+  100% { background-position: -120% 0; }
+}
+
 .kb-view__error-banner {
   display: flex;
   align-items: center;
@@ -568,6 +627,22 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
   font-size: 12px;
   color: var(--text-2, var(--text-secondary));
   flex-shrink: 0;
+}
+
+.kb-view__error-close {
+  width: 28px;
+  height: 28px;
+  padding: 0 !important;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.kb-view__error-close:focus-visible,
+.kb-view__back:focus-visible,
+.kb-view__add-col:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-soft), 0 0 0 1px var(--accent);
 }
 
 /* Page header */
@@ -645,8 +720,8 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
   padding: 7px 14px;
   border-radius: 999px;
   background: var(--glass-3, var(--surface-1));
-  border: 1px solid var(--accent);
-  box-shadow: 0 8px 24px oklch(0 0 0 / 0.25), 0 0 12px var(--accent-glow, oklch(0.66 0.10 258 / 0.2));
+  border: 1px solid color-mix(in oklab, var(--accent) 68%, var(--line-strong));
+  box-shadow: var(--shadow-pop), 0 0 14px -8px var(--accent-glow);
   font-size: 12.5px;
   color: var(--text-2, var(--text-secondary));
   pointer-events: none;
@@ -658,7 +733,7 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-.kb-drop-tooltip__icon { font-size: 11px; }
+.kb-drop-tooltip__icon { color: var(--accent); flex: 0 0 auto; }
 
 /* Add column ghost */
 .kb-view__add-col {
@@ -670,7 +745,9 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
   padding: 9px 12px;
   border-radius: calc(8px * var(--radius-scale, 1));
   border: 1px dashed var(--line-strong, var(--border-muted));
+  background: transparent;
   color: var(--text-4, var(--text-muted));
+  font: inherit;
   font-size: 12px;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
@@ -678,6 +755,10 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
 }
 
 .kb-view__add-col:hover { border-color: var(--accent); color: var(--accent); }
+
+.kb-view__add-col:focus-visible {
+  border-color: var(--accent);
+}
 
 .kb-view__no-results {
   position: sticky;
@@ -707,7 +788,7 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
   width: 44px;
   height: 44px;
   border-radius: calc(11px * var(--radius-scale, 1));
-  background: var(--accent-soft, oklch(0.66 0.10 258 / 0.12));
+  background: var(--accent-soft, rgb(161 98 7 / 0.12));
   color: var(--accent);
   display: grid;
   place-items: center;

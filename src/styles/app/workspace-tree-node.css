@@ -12,6 +12,7 @@
   font-size: 13px;
   cursor: pointer;
   padding-right: 10px;
+  position: relative;
   transition: background 0.12s, color 0.12s;
 }
 
@@ -20,10 +21,16 @@
   color: var(--text-1);
 }
 
+.tree-row:focus-visible,
+.tree-folder-add:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-soft), 0 0 0 1px var(--accent);
+}
+
 .tree-row--active {
-  background: var(--accent-soft);
+  background: color-mix(in oklab, var(--glass-3) 86%, transparent);
   color: var(--text-1);
-  box-shadow: inset 0 0 0 1px oklch(0.66 0.10 258 / 0.2);
+  box-shadow: inset 2px 0 0 var(--accent), inset 0 0 0 1px color-mix(in oklab, var(--accent) 24%, transparent);
 }
 
 .tree-arrow {
@@ -69,6 +76,10 @@
   color: var(--text-1);
 }
 
+.tree-folder-add:focus-visible {
+  opacity: 1;
+}
+
 .tree-note-emoji {
   width: 18px;
   display: inline-flex;
@@ -82,4 +93,43 @@
   flex-direction: column;
   gap: 2px;
   margin-top: 2px;
+}
+
+/* --- Drag-and-drop feedback --- */
+
+.tree-row--dragging {
+  opacity: 0.4;
+}
+
+/* Индикаторные полосы позиции сброса (рендерятся как дочерние .tree-drop-line).
+   По умолчанию скрыты; проявляются при наведении через модификаторы строки. */
+.tree-drop-line {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  height: 0;
+  border-radius: calc(2px * var(--radius-scale, 1));
+  pointer-events: none;
+  transition: height 0.1s ease, opacity 0.1s ease, background 0.1s ease, box-shadow 0.1s ease;
+}
+.tree-drop-line--top {
+  top: -2px;
+}
+.tree-drop-line--bottom {
+  bottom: -2px;
+}
+
+/* Горизонтальная accent-полоса до/после строки (переупорядочивание). */
+.tree-row--drop-before .tree-drop-line--top,
+.tree-row--drop-after .tree-drop-line--bottom {
+  height: 3px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow, rgb(161 98 7 / 0.25));
+}
+
+/* Заполнение папки-приёмника при наведении «внутрь» (как drop-zone в Kanban). */
+.tree-row--drop-into {
+  background: color-mix(in oklab, var(--accent) 13%, transparent) !important;
+  box-shadow: inset 0 0 0 1px var(--accent);
+  color: var(--text-1);
 }

@@ -61,6 +61,24 @@ pub fn load_yjs_state(workspace_path: String, note_id: String) -> Result<Respons
     Ok(Response::new(bytes))
 }
 
+/// Removes persisted local editor CRDT state for a note. External content
+/// imports update the canonical `.nevo` JSON first; dropping this cache makes
+/// the next editor mount rebuild the Y.Doc from that JSON instead of replaying
+/// stale editor state over the imported content.
+#[tauri::command]
+pub fn delete_yjs_state(workspace_path: String, note_id: String) -> Result<bool, String> {
+    let workspace_path = normalize_workspace_path(&workspace_path)
+        .map_err(|e| e.to_string())?
+        .to_string_lossy()
+        .into_owned();
+    let path = yjs_state_path(&workspace_path, &note_id)?;
+    if !path.exists() {
+        return Ok(false);
+    }
+    std::fs::remove_file(&path).map_err(|e| e.to_string())?;
+    Ok(true)
+}
+
 /// Max size for a text file imported through `read_text_file` (25 MiB).
 const MAX_TEXT_IMPORT_BYTES: u64 = 25 * 1024 * 1024;
 
@@ -77,7 +95,12 @@ pub fn read_text_file(path: String) -> Result<String, String> {
         .extension()
         .and_then(|e| e.to_str())
         .map(|e| e.to_ascii_lowercase())
-        .map(|e| matches!(e.as_str(), "md" | "markdown" | "mdown" | "mkd" | "txt" | "text"))
+        .map(|e| {
+            matches!(
+                e.as_str(),
+                "md" | "markdown" | "mdown" | "mkd" | "txt" | "text"
+            )
+        })
         .unwrap_or(false);
     if !allowed_ext {
         return Err("Only text files (.md/.markdown/.txt) can be imported".to_string());

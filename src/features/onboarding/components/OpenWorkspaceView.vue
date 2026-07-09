@@ -9,6 +9,7 @@ import { useWorkspaceStore } from '../../../stores/workspace'
 import { useSharedStorageStore } from '../../../stores/sharedStorage'
 import { useAuthStore } from '../../../stores/auth'
 import { useDeviceLayout } from '../../../composables/useDeviceLayout'
+import { useConfirmDialog } from '../../../ui/composables/useConfirmDialog'
 import type { RecentWorkspace } from '../../../types/workspace'
 
 const emit = defineEmits<{
@@ -22,6 +23,7 @@ const workspaceStore = useWorkspaceStore()
 const shared = useSharedStorageStore()
 const auth = useAuthStore()
 const { isTouch, runtime } = useDeviceLayout()
+const { confirm } = useConfirmDialog()
 
 const filterQuery = ref('')
 const isDragOver = ref(false)
@@ -111,23 +113,9 @@ function deleteWorkspaceLabel(ws: RecentWorkspace): string {
     : t('onboarding.open.removeRecent')
 }
 
-function isTauriRuntime(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
-}
-
-async function confirmDialog(message: string): Promise<boolean> {
-  if (!isTauriRuntime()) return window.confirm(message)
-
-  try {
-    const { confirm } = await import('@tauri-apps/plugin-dialog')
-    return await confirm(message)
-  } catch {
-    return false
-  }
-}
-
 async function alertDialog(message: string): Promise<void> {
-  if (!isTauriRuntime()) {
+  const isTauriRuntime = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+  if (!isTauriRuntime) {
     window.alert(message)
     return
   }
@@ -147,7 +135,11 @@ async function deleteWorkspace(ws: RecentWorkspace) {
     ? 'onboarding.open.deleteStorageConfirm'
     : 'onboarding.open.removeRecentConfirm'
 
-  if (!await confirmDialog(t(confirmKey, { name: ws.name }))) return
+  if (!await confirm({
+    message: t(confirmKey, { name: ws.name }),
+    confirmLabel: deletesCloudStorage ? t('confirmDialog.delete') : deleteWorkspaceLabel(ws),
+    variant: deletesCloudStorage ? 'danger' : 'default',
+  })) return
 
   deletingWorkspaceKey.value = workspaceKey(ws)
   try {
@@ -301,6 +293,6 @@ async function onDrop(e: DragEvent) {
     </Transition>
 
     <PrivacyBadge />
-    <div class="version-badge">{{ t('version', { version: workspaceStore.appMetadata?.version ?? '0.1.8' }) }}</div>
+    <div class="version-badge">{{ t('version', { version: workspaceStore.appMetadata?.version ?? '0.1.9' }) }}</div>
   </div>
 </template>

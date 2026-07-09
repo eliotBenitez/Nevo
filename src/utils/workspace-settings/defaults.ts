@@ -85,6 +85,7 @@ export function createDefaultWorkspaceSettings(): WorkspaceSettings {
       recentItemsBehavior: 'remember',
       confirmBeforeDelete: true,
       lastContext: { kind: 'workspace', folderId: null, noteId: null },
+      startupNoteId: null,
     },
     appearance: {
       accentPreset: 'violet',
@@ -139,6 +140,7 @@ export function createDefaultWorkspaceSettings(): WorkspaceSettings {
       newNoteTemplate: 'blank',
       newWorkspaceHomeNote: true,
       autoCreateStarterStructure: 'light',
+      sidebarContentMode: 'tree',
       sidebarSortMode: 'manual',
       graphEntryMode: 'global',
       graphScopeDefault: 'workspace',
@@ -162,6 +164,7 @@ export function createDefaultWorkspaceSettings(): WorkspaceSettings {
       autoReloadOnLaunch: true,
       installSource: 'folder-only',
     },
+    pluginSettings: {},
     features: {
       kanban: true,
       templates: true,

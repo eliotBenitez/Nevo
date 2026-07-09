@@ -1,5 +1,5 @@
-import type { Node as PMNode } from 'prosemirror-model'
-import type { EditorState } from 'prosemirror-state'
+import type { Node as PMNode, NodeType, Slice } from 'prosemirror-model'
+import type { EditorState, Transaction } from 'prosemirror-state'
 import { Plugin, PluginKey } from 'prosemirror-state'
 import { Decoration, DecorationSet } from 'prosemirror-view'
 
@@ -54,13 +54,74 @@ function buildDecorations(state: EditorState): DecorationSet {
   return DecorationSet.create(state.doc, decorations)
 }
 
+/**
+ * Marker text depends on list structure (item order, ordered-list `order` attr, bullet
+ * nesting depth) but never on the text content inside a list item. Most keystrokes edit
+ * plain paragraph/heading text elsewhere in the document and can't possibly change any
+ * marker, so — mirroring `collectRemovedAssetSrcs` in `useEditorCore.ts` — we scan only
+ * the changed ranges for a list-related ancestor/insertion before paying for the full
+ * recursive `collect()` rebuild. This is intentionally conservative: an edit anywhere
+ * inside an existing list (even one that only changes text, not structure) still
+ * triggers a full rebuild, since correctly scoping the rebuild to "only the affected
+ * list" would require re-deriving bullet nesting depth from the document root anyway.
+ */
+function transactionTouchesLists(
+  prevDoc: PMNode,
+  tr: Transaction,
+  listItemType: NodeType | undefined,
+  bulletListType: NodeType | undefined,
+  orderedListType: NodeType | undefined,
+): boolean {
+  const isListNode = (node: PMNode) =>
+    node.type === listItemType || node.type === bulletListType || node.type === orderedListType
+  let doc = prevDoc
+  for (const step of tr.steps) {
+    const stepMap = step.getMap()
+    let touched = false
+    stepMap.forEach((oldStart, oldEnd) => {
+      if (touched || oldEnd <= oldStart) return
+      doc.nodesBetween(oldStart, oldEnd, (node) => {
+        if (touched) return false
+        if (isListNode(node)) { touched = true; return false }
+        return true
+      })
+    })
+    if (touched) return true
+    const slice = (step as unknown as { slice?: Slice }).slice
+    if (slice) {
+      let found = false
+      slice.content.descendants((node) => {
+        if (found) return false
+        if (isListNode(node)) { found = true; return false }
+        return true
+      })
+      if (found) return true
+    }
+    const result = step.apply(doc)
+    if (result.doc) doc = result.doc
+  }
+  return false
+}
+
 export function createListMarkerPlugin(): Plugin {
   return new Plugin<DecorationSet>({
     key,
     state: {
       // Markers depend only on document structure, never on selection.
       init: (_, state) => buildDecorations(state),
-      apply: (tr, old, _oldState, newState) => (tr.docChanged ? buildDecorations(newState) : old),
+      apply: (tr, old, oldState, newState) => {
+        if (!tr.docChanged) return old
+        const schema = newState.schema
+        const touched = transactionTouchesLists(
+          oldState.doc,
+          tr,
+          schema.nodes.list_item,
+          schema.nodes.bullet_list,
+          schema.nodes.ordered_list,
+        )
+        if (!touched) return old.map(tr.mapping, newState.doc)
+        return buildDecorations(newState)
+      },
     },
     props: {
       decorations(state) {

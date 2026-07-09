@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use super::path_utils::normalize_workspace_path;
+use super::path_utils::{normalize_workspace_path, write_atomic};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -66,7 +66,7 @@ fn save_index(workspace_path: &str, index: &GraphIndex) -> Result<(), String> {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     let json = serde_json::to_string_pretty(index).map_err(|e| e.to_string())?;
-    std::fs::write(&path, json).map_err(|e| e.to_string())
+    write_atomic(&path, json.as_bytes()).map_err(|e| e.to_string())
 }
 
 fn rebuild_backward(index: &mut GraphIndex) {

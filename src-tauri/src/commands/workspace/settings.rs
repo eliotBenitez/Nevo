@@ -1,10 +1,22 @@
 use serde_json::Value;
+use std::collections::HashMap;
 use std::path::Path;
+use std::sync::{OnceLock, RwLock};
 
 use super::paths::{settings_path, workspace_context, workspace_error_context};
 use super::types::{default_hotkey_bindings, HotkeyBinding, WorkspaceSettings};
-use crate::commands::path_utils::normalize_workspace_path;
+use crate::commands::path_utils::{normalize_workspace_path, write_atomic};
 use crate::logging::{LogContext, LogError};
+
+/// Caches `advanced.developer_logging` per workspace so hot-path commands (e.g.
+/// `save_note`) don't re-read and re-parse `settings.json` from disk on every
+/// call just to decide whether to log at debug/info level. Invalidated by
+/// `save_workspace_settings` whenever the setting changes.
+static DIAGNOSTICS_CACHE: OnceLock<RwLock<HashMap<String, bool>>> = OnceLock::new();
+
+fn diagnostics_cache() -> &'static RwLock<HashMap<String, bool>> {
+    DIAGNOSTICS_CACHE.get_or_init(|| RwLock::new(HashMap::new()))
+}
 
 fn normalize_view(value: Option<&str>) -> String {
     match value {
@@ -395,6 +407,12 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
         .filter(|value| matches!(*value, "off" | "light" | "structured"))
         .unwrap_or("light")
         .to_string();
+    settings.workspace.sidebar_content_mode = workspace
+        .get("sidebarContentMode")
+        .and_then(|value| value.as_str())
+        .filter(|value| matches!(*value, "tree" | "tag-preview"))
+        .unwrap_or("tree")
+        .to_string();
     settings.workspace.graph_entry_mode = workspace
         .get("graphEntryMode")
         .and_then(|value| value.as_str())
@@ -501,6 +519,13 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
         .unwrap_or(true);
     settings.plugins.install_source = "folder-only".to_string();
 
+    if let Some(plugin_settings) = object.get("pluginSettings").and_then(|v| v.as_object()) {
+        settings.plugin_settings = plugin_settings
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
+    }
+
     let features = object
         .get("features")
         .and_then(|value| value.as_object())
@@ -581,9 +606,24 @@ pub(crate) fn read_workspace_settings(path: &Path) -> Result<WorkspaceSettings, 
 }
 
 pub fn is_extended_diagnostics_enabled(workspace_path: &str) -> bool {
-    read_workspace_settings(&settings_path(workspace_path))
+    if let Some(cached) = diagnostics_cache()
+        .read()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .get(workspace_path)
+    {
+        return *cached;
+    }
+
+    let enabled = read_workspace_settings(&settings_path(workspace_path))
         .map(|settings| settings.advanced.developer_logging)
-        .unwrap_or(false)
+        .unwrap_or(false);
+
+    diagnostics_cache()
+        .write()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .insert(workspace_path.to_string(), enabled);
+
+    enabled
 }
 
 #[tauri::command]
@@ -663,7 +703,7 @@ pub fn save_workspace_settings(
         );
         message
     })?;
-    std::fs::write(settings_path(&workspace_path), content).map_err(|error| {
+    write_atomic(&settings_path(&workspace_path), content.as_bytes()).map_err(|error| {
         let message = error.to_string();
         let _ = logger.error(
             "tauri.workspace",
@@ -673,6 +713,13 @@ pub fn save_workspace_settings(
         );
         message
     })?;
+    diagnostics_cache()
+        .write()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .insert(
+            workspace_path.clone(),
+            normalized.advanced.developer_logging,
+        );
     let _ = logger.info(
         "tauri.workspace",
         "save_workspace_settings",
@@ -737,7 +784,7 @@ pub fn save_custom_css(workspace_path: String, css: String) -> Result<(), String
     })?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let css_path = super::paths::custom_css_path(&workspace_path);
-    
+
     if let Some(parent) = css_path.parent() {
         std::fs::create_dir_all(parent).map_err(|error| {
             let message = error.to_string();
@@ -767,7 +814,37 @@ pub fn save_custom_css(workspace_path: String, css: String) -> Result<(), String
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::commands::workspace::create_workspace;
     use serde_json::json;
+    use uuid::Uuid;
+
+    struct TestWorkspace {
+        path: std::path::PathBuf,
+    }
+
+    impl TestWorkspace {
+        fn new() -> Self {
+            let path = std::env::temp_dir().join(format!("nevo-settings-{}", Uuid::new_v4()));
+            create_workspace(
+                path.to_string_lossy().into_owned(),
+                "Settings".to_string(),
+                "N".to_string(),
+                "violet".to_string(),
+            )
+            .expect("create workspace");
+            Self { path }
+        }
+
+        fn path_string(&self) -> String {
+            self.path.to_string_lossy().into_owned()
+        }
+    }
+
+    impl Drop for TestWorkspace {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.path);
+        }
+    }
 
     #[test]
     fn migrates_legacy_flat_settings() {
@@ -813,6 +890,40 @@ mod tests {
 
         assert_eq!(settings.ai.api_kind, "ollama");
         assert_eq!(settings.ai.base_url, "http://localhost:11434");
+    }
+
+    #[test]
+    fn preserves_arbitrary_plugin_settings_passthrough() {
+        let settings = normalize_settings_value(json!({
+            "pluginSettings": {
+                "nevo.github-sync": {
+                    "repo": "owner/name",
+                    "branch": "main",
+                    "autoSync": true,
+                    "intervalMinutes": 15
+                }
+            }
+        }));
+
+        let github = settings
+            .plugin_settings
+            .get("nevo.github-sync")
+            .expect("github-sync plugin settings preserved");
+        assert_eq!(
+            github.get("repo").and_then(|v| v.as_str()),
+            Some("owner/name")
+        );
+        assert_eq!(github.get("autoSync").and_then(|v| v.as_bool()), Some(true));
+        assert_eq!(
+            github.get("intervalMinutes").and_then(|v| v.as_i64()),
+            Some(15)
+        );
+    }
+
+    #[test]
+    fn defaults_plugin_settings_to_empty_map_when_absent() {
+        let settings = normalize_settings_value(json!({}));
+        assert!(settings.plugin_settings.is_empty());
     }
 
     #[test]
@@ -865,5 +976,22 @@ mod tests {
             settings.hotkeys.bindings[0].custom_chord.as_deref(),
             Some("Ctrl+Shift+K")
         );
+    }
+
+    #[test]
+    fn is_extended_diagnostics_enabled_reflects_latest_saved_value() {
+        let workspace = TestWorkspace::new();
+        let workspace_path = workspace.path_string();
+
+        let mut settings = WorkspaceSettings::default();
+        settings.advanced.developer_logging = true;
+        save_workspace_settings(workspace_path.clone(), settings.clone())
+            .expect("save settings with logging enabled");
+        assert!(is_extended_diagnostics_enabled(&workspace_path));
+
+        settings.advanced.developer_logging = false;
+        save_workspace_settings(workspace_path.clone(), settings)
+            .expect("save settings with logging disabled");
+        assert!(!is_extended_diagnostics_enabled(&workspace_path));
     }
 }

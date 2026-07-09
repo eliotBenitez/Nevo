@@ -9,6 +9,12 @@ import { useImageUpload } from './useImageUpload'
 
 const IMPORTED_SRC = '.nevo/assets/pasted.png'
 
+const clipboardMock = vi.hoisted(() => ({
+  readImage: vi.fn(),
+  readText: vi.fn(),
+}))
+vi.mock('@tauri-apps/plugin-clipboard-manager', () => clipboardMock)
+
 vi.mock('../../../utils/logger', () => ({
   appLogger: {
     warn: vi.fn(() => Promise.resolve()),
@@ -19,7 +25,10 @@ vi.mock('../../../utils/logger', () => ({
 }))
 
 const mockBackend = {
+  handle: { kind: 'local', path: '/workspace' },
   importImageAsset: vi.fn(async () => ({ src: IMPORTED_SRC, hash: 'h', deduplicated: false, bytes: 3 })),
+  importAssetByPath: vi.fn(async () => ({ src: IMPORTED_SRC, hash: 'h', deduplicated: false, bytes: 3 })),
+  importImageFromUrl: vi.fn(async () => ({ src: IMPORTED_SRC, hash: 'h', deduplicated: false, bytes: 3 })),
 }
 
 vi.mock('../../../core/workspace-backend', async () => {
@@ -96,8 +105,49 @@ function buildPasteEvent(files: File[], plainText?: string): ClipboardEvent {
   return event
 }
 
+function buildTypedPasteEvent(dataByType: Record<string, string>, files: File[] = []): ClipboardEvent {
+  const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent
+  Object.defineProperty(event, 'clipboardData', {
+    configurable: true,
+    value: {
+      files: buildFileList(files),
+      types: Object.keys(dataByType),
+      getData: (type: string) => dataByType[type] ?? '',
+    },
+  })
+  return event
+}
+
+// Mirrors WebKitGTK: types advertises text/uri-list but the payload is withheld
+// from the webview (getData returns '') — the value is only reachable natively.
+function buildUriListPasteEvent(): ClipboardEvent {
+  const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent
+  Object.defineProperty(event, 'clipboardData', {
+    configurable: true,
+    value: {
+      files: buildFileList([]),
+      types: ['text/uri-list'],
+      getData: () => '',
+    },
+  })
+  return event
+}
+
+async function useLocalBackend() {
+  const { useWorkspaceStore } = await import('../../../stores/workspace')
+  useWorkspaceStore().activeHandle = { kind: 'local', path: '/workspace' } as never
+}
+
 beforeEach(() => {
   setActivePinia(createPinia())
+  mockBackend.importImageAsset.mockClear()
+  mockBackend.importAssetByPath.mockClear()
+  mockBackend.importImageFromUrl.mockClear()
+  clipboardMock.readImage.mockReset()
+  clipboardMock.readText.mockReset()
+  // Default: no bitmap on the clipboard.
+  clipboardMock.readImage.mockRejectedValue(new Error('no image'))
+  clipboardMock.readText.mockResolvedValue('')
 })
 
 afterEach(() => {
@@ -200,6 +250,102 @@ describe('useImageUpload — paste handling', () => {
 
     // The empty paragraph must have been replaced, not left in place.
     expect(nodeTypes).toEqual(['paragraph', 'image_block'])
+
+    core.editorView?.destroy()
+  })
+
+  it('imports a local image from the native clipboard (file:// path via readText)', async () => {
+    await useLocalBackend()
+    clipboardMock.readText.mockResolvedValue('file:///home/user/photo.png')
+    const core = createCoreWithView()
+    const upload = useImageUpload(core, () => '/workspace', () => {})
+
+    const event = buildUriListPasteEvent()
+    const handled = upload.onEditorPaste(event)
+
+    expect(handled).toBe(true)
+    expect(event.defaultPrevented).toBe(true)
+    await new Promise((r) => setTimeout(r, 0))
+    expect(mockBackend.importAssetByPath).toHaveBeenCalledWith('/home/user/photo.png', 'photo.png')
+
+    core.editorView?.destroy()
+  })
+
+  it('downloads a web image from the native clipboard (http URL via readText)', async () => {
+    await useLocalBackend()
+    const url = 'https://example.com/pic.png'
+    clipboardMock.readText.mockResolvedValue(url)
+    const core = createCoreWithView()
+    const upload = useImageUpload(core, () => '/workspace', () => {})
+
+    const event = buildUriListPasteEvent()
+    const handled = upload.onEditorPaste(event)
+
+    expect(handled).toBe(true)
+    expect(event.defaultPrevented).toBe(true)
+    await new Promise((r) => setTimeout(r, 0))
+    expect(mockBackend.importImageFromUrl).toHaveBeenCalledWith(url)
+
+    const { doc } = core.editorView!.state
+    let imageSrc: string | null = null
+    doc.descendants((node) => {
+      if (node.type.name === 'image_block') imageSrc = node.attrs.src as string
+    })
+    expect(imageSrc).toBe(IMPORTED_SRC)
+
+    core.editorView?.destroy()
+  })
+
+  it('downloads a web image pasted as image-only text/html', async () => {
+    await useLocalBackend()
+    const url = 'https://private-user-images.githubusercontent.com/1/abc.png?jwt=x'
+    const event = buildTypedPasteEvent({ 'text/html': `<meta charset="utf-8"><img src="${url}" alt="">` })
+    const core = createCoreWithView()
+    const upload = useImageUpload(core, () => '/workspace', () => {})
+
+    const handled = upload.onEditorPaste(event)
+
+    expect(handled).toBe(true)
+    expect(event.defaultPrevented).toBe(true)
+    await new Promise((r) => setTimeout(r, 0))
+    expect(mockBackend.importImageFromUrl).toHaveBeenCalledWith(url)
+
+    const { doc } = core.editorView!.state
+    let imageSrc: string | null = null
+    doc.descendants((node) => {
+      if (node.type.name === 'image_block') imageSrc = node.attrs.src as string
+    })
+    expect(imageSrc).toBe(IMPORTED_SRC)
+
+    core.editorView?.destroy()
+  })
+
+  it('does not hijack a rich-text/html paste that contains text alongside an image', async () => {
+    await useLocalBackend()
+    const event = buildTypedPasteEvent({
+      'text/html': '<p>hello <img src="https://example.com/x.png"> world</p>',
+      'text/plain': 'hello world',
+    })
+    const core = createCoreWithView()
+    const upload = useImageUpload(core, () => '/workspace', () => {})
+
+    const handled = upload.onEditorPaste(event)
+
+    expect(handled).toBe(false)
+    expect(mockBackend.importImageFromUrl).not.toHaveBeenCalled()
+
+    core.editorView?.destroy()
+  })
+
+  it('does not treat a plain-text paste (no uri-list) as an image', async () => {
+    const core = createCoreWithView()
+    const upload = useImageUpload(core, () => '/workspace', () => {})
+
+    const event = buildTypedPasteEvent({ 'text/plain': 'https://example.com/article' })
+    const handled = upload.onEditorPaste(event)
+
+    expect(handled).toBe(false)
+    expect(event.defaultPrevented).toBe(false)
 
     core.editorView?.destroy()
   })

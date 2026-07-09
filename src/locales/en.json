@@ -1,4 +1,9 @@
 {
+  "confirmDialog": {
+    "title": "Confirm action",
+    "delete": "Delete",
+    "discard": "Discard changes"
+  },
   "updater": {
     "availableTitle": "Version {version} available",
     "whatsNew": "What's new",
@@ -128,6 +133,8 @@
     "cloudWorkspace": "Cloud storage",
     "toggleSidebar": "Toggle sidebar",
     "toggleRightPanel": "Toggle right panel",
+    "openDrawer": "Open sidebar",
+    "closeDrawer": "Close sidebar",
     "createNote": "New note",
     "createFolder": "New folder",
     "importMd": "Import .md",
@@ -149,6 +156,33 @@
       "noHeadings": "No headings yet",
       "backlinks": "Backlinks",
       "noBacklinks": "No backlinks",
+      "properties": {
+        "title": "Properties",
+        "type": "Type",
+        "typeNone": "Not set",
+        "status": "Status",
+        "date": "Date",
+        "datePlaceholder": "No date",
+        "tags": "Tags",
+        "addTag": "Add tag",
+        "tagsPlaceholder": "Tags...",
+        "removeTag": "Remove tag {tag}",
+        "types": {
+          "note": "Note",
+          "task": "Task",
+          "idea": "Idea",
+          "meeting": "Meeting",
+          "project": "Project",
+          "research": "Research"
+        },
+        "statuses": {
+          "none": "No status",
+          "draft": "Draft",
+          "active": "Active",
+          "waiting": "Waiting",
+          "done": "Done"
+        }
+      },
       "metadata": "About",
       "words": "{n} words",
       "readTime": "{n} min read",
@@ -162,6 +196,43 @@
     "noPath": "Path is not set",
     "untitledNote": "Untitled",
     "newFolderPrompt": "Folder name",
+    "emptyTree": {
+      "title": "No pages yet",
+      "subtitle": "Create a note or folder to start this workspace."
+    },
+    "sidebarPreview": {
+      "tagsLabel": "Note tags",
+      "allNotesTitle": "All notes",
+      "selectedTitle": "Selected tags",
+      "clear": "Clear",
+      "emptyPreview": "No text preview",
+      "empty": {
+        "no-notes": {
+          "title": "No notes yet",
+          "subtitle": "Create a note and it will appear here."
+        },
+        "no-matches": {
+          "title": "No matches",
+          "subtitle": "Pick different tags or clear the filter."
+        }
+      }
+    },
+    "boards": {
+      "title": "Boards",
+      "new": "New board",
+      "emptyTitle": "No boards yet",
+      "emptySubtitle": "Create a Kanban board for tasks or projects."
+    },
+    "tabs": {
+      "label": "Open notes",
+      "close": "Close {title}"
+    },
+    "createFolderModal": {
+      "title": "Create folder",
+      "placeholder": "Folder name",
+      "submit": "Create",
+      "emptyName": "Enter a folder name."
+    },
     "emptyTitle": "Start with your first note",
     "emptySubtitle": "Create a note or choose one from the sidebar to start writing.",
     "emptyFolderTitle": "Folder: {folder}",
@@ -216,11 +287,17 @@
       "searchPrompt": "Search by title",
       "searchNoResults": "Nothing found",
       "renameModalTitle": "Rename",
+      "openNoteMenu": "Open note menu",
       "renameModalPlaceholder": "Enter a new name",
       "moveUp": "Move up",
       "moveDown": "Move down",
       "cancel": "Cancel",
       "confirm": "Confirm"
+    },
+    "drag": {
+      "moveToFolder": "Move to folder",
+      "reorderHint": "Drag to reorder",
+      "manualSortRequired": "Switch to manual sort to enable dragging"
     },
     "system": {
       "graph": "Graph",
@@ -231,11 +308,23 @@
     },
     "trash": {
       "title": "Trash",
+      "description": "Restore deleted items or remove them permanently.",
+      "countLabel": "Items in trash: {count}",
+      "searchLabel": "Search trash",
       "emptyAction": "Empty Trash",
-      "emptyState": "Trash is empty",
+      "emptyTitle": "Trash is empty",
+      "emptyState": "Deleted notes and folders will appear here.",
+      "noResultsTitle": "Nothing found",
+      "noResultsDescription": "Try another title or clear the search field.",
       "deletedAt": "Deleted at: {date}",
+      "folderType": "Folder",
+      "noteType": "Note",
+      "itemActions": "Actions for {title}",
       "restore": "Restore",
+      "restoreItem": "Restore {title}",
       "deletePermanently": "Delete Permanently",
+      "deleteItem": "Delete {title} permanently",
+      "actionHint": "Permanent deletion cannot be undone.",
       "deletePermanentlyConfirm": "Are you sure you want to permanently delete this note? This action cannot be undone.",
       "emptyConfirm": "Are you sure you want to empty the trash? All items will be permanently deleted."
     },
@@ -243,6 +332,8 @@
       "placeholder": "Search notes, blocks, settings...",
       "rootLabel": "Workspace root",
       "loading": "Searching note content across the workspace...",
+      "loadingShort": "Searching note content...",
+      "loadingTitle": "Searching...",
       "idleTitle": "Global workspace search",
       "idleDescription": "Search notes, folders, note blocks, and settings from one field.",
       "emptyTitle": "No matches found",
@@ -255,15 +346,25 @@
     },
     "history": {
       "title": "File history",
+      "description": "Review saved snapshots, compare changes, and restore a previous version.",
       "files": "Files",
+      "filesHint": "Notes with saved snapshots",
       "versions": "Versions",
+      "versionsHint": "Snapshots for the selected note",
       "previewCompare": "Preview / Compare",
+      "previewCompareHint": "Inspect the snapshot or compare it with the live note",
       "preview": "Preview",
       "compare": "Compare",
+      "searchLabel": "Search history notes",
       "searchPlaceholder": "Search notes...",
       "snapshotCount": "{count} snapshots",
+      "latestSnapshotAt": "Latest {value}",
+      "noteUpdatedAt": "Note updated {value}",
       "updatedAt": "Updated {value}",
+      "snapshotCreatedAt": "Snapshot from {value}",
+      "noSnapshotSelection": "No version selected",
       "restore": "Restore snapshot",
+      "restoreSelectionHint": "Restoring replaces the current note with the selected snapshot.",
       "restoreConfirm": "Restore this snapshot to the live note?",
       "restoring": "Restoring…",
       "coverValue": "Cover: {value}",
@@ -280,14 +381,23 @@
         "changed": "Changed"
       },
       "states": {
+        "loadingFilesTitle": "Loading history",
         "loadingFiles": "Loading note history…",
+        "noFilesTitle": "No history yet",
         "noFiles": "No live notes with history yet.",
+        "noSearchResultsTitle": "No matches",
         "noSearchResults": "No notes match that search.",
+        "noFileSelectedTitle": "Choose a note",
         "noFileSelected": "Select a note to browse its history.",
+        "noSnapshotsTitle": "No versions",
         "noSnapshots": "This note has no snapshots.",
+        "noSnapshotSelectedTitle": "Choose a version",
         "noSnapshotSelected": "Select a version to preview it.",
+        "loadingPreviewTitle": "Loading snapshot",
         "loadingPreview": "Loading snapshot…",
+        "emptySnapshotTitle": "Empty snapshot",
         "emptySnapshot": "This snapshot is empty.",
+        "noDiffTitle": "No differences",
         "noDiff": "No visible differences between the current note and this snapshot."
       },
       "errors": {
@@ -303,6 +413,13 @@
       "saving": "Saving…",
       "unsaved": "Unsaved changes",
       "error": "Save failed"
+    },
+    "relativeTime": {
+      "justNow": "just now",
+      "hourAgo": "1 hour ago",
+      "hoursAgo": "{count} hours ago",
+      "yesterday": "yesterday",
+      "daysAgo": "{count} days ago"
     },
     "blockMenu": {
       "turnInto": "Turn into",
@@ -394,10 +511,13 @@
       "advanced": "Advanced",
       "about": "About"
     },
+    "navigationLabel": "Settings sections",
     "search": {
+      "label": "Search settings",
       "placeholder": "Search settings...",
       "resultsTitle": "Results for \"{query}\"",
       "resultsCount": "{count} settings matched across the catalog.",
+      "openResult": "Open {title} in {section}",
       "emptyTitle": "No settings matched.",
       "emptyDescription": "Try searching for \"theme\", \"plugin\", \"block\", or \"workspace\"."
     },
@@ -449,6 +569,13 @@
       "language": {
         "ru": "Russian",
         "en": "English"
+      },
+      "startupView": {
+        "editor": "Editor (empty)",
+        "lastNote": "Last opened document",
+        "specificNote": "Specific document",
+        "graph": "Note Graph",
+        "kanban": "Kanban Board"
       },
       "focusMode": {
         "off": "Off",
@@ -519,6 +646,10 @@
         "floating": "Floating",
         "solid": "Solid",
         "minimal": "Minimal"
+      },
+      "sidebarContentMode": {
+        "tree": "Tree",
+        "tag-preview": "Tags & previews"
       },
       "workspaceType": {
         "general": "General",
@@ -591,7 +722,12 @@
       },
       "startupView": {
         "title": "Startup view",
-        "description": "The editor is live today. Table, kanban, and graph remain roadmap targets."
+        "description": "Select the default view when opening the workspace"
+      },
+      "startupNote": {
+        "title": "Startup document",
+        "description": "Select the document to open when launching the application",
+        "placeholder": "Choose a document..."
       },
       "restoreLastContext": {
         "title": "Restore last context",
@@ -772,6 +908,7 @@
       },
       "groups": {
         "identity": "Identity",
+        "sidebarMode": "Sidebar mode",
         "navigation": "Navigation",
         "structure": "Structure",
         "creationDefaults": "Creation defaults",
@@ -782,8 +919,15 @@
         "description": "Rename the workspace and update its glyph or gradient",
         "panelDescription": "Rename the workspace and update its glyph or gradient after creation",
         "namePlaceholder": "Workspace name",
+        "preview": "Current workspace identity preview",
         "glyphLabel": "Choose glyph",
         "save": "Save identity"
+      },
+      "sidebarContentMode": {
+        "title": "Sidebar content",
+        "description": "Choose the familiar tree or a tag-driven note preview feed.",
+        "treeDescription": "Folders and notes stay in the classic tree.",
+        "tagPreviewDescription": "Tags on the left, matching note previews on the right."
       },
       "workspaceType": {
         "title": "Workspace type",
@@ -955,8 +1099,27 @@
       "description": "Extend Nevo without leaving the editor. Plugins run inside the workspace sandbox.",
       "marketplace": "Marketplace",
       "rescan": "Rescan plugins",
+      "refreshCatalog": "Refresh catalog",
       "systemLabel": "System",
       "builtIn": "Built-in",
+      "install": "Install",
+      "update": "Update",
+      "remove": "Remove",
+      "openSource": "Open source",
+      "cacheNotice": "Cached data",
+      "catalogLoading": "Loading catalog…",
+      "catalogLoadingDescription": "Fetching marketplace metadata and comparing it with installed plugins.",
+      "catalogEmptyTitle": "Marketplace is empty.",
+      "catalogEmptyDescription": "The marketplace repository does not contain `plugins/<pluginId>` folders yet, or it is unreachable.",
+      "installedVersion": "installed v{version}",
+      "summary": {
+        "label": "Plugin summary",
+        "installed": "Installed",
+        "enabled": "Enabled",
+        "issues": "Issues",
+        "catalog": "Catalog",
+        "cache": "Cache"
+      },
       "kanban": {
         "title": "Kanban Boards",
         "description": "Enable Kanban board view. When disabled, boards are hidden but data is preserved."
@@ -973,28 +1136,91 @@
         "title": "Mind Maps",
         "description": "Render interactive mind maps from Markdown outlines directly in notes."
       },
+      "githubSync": {
+        "title": "GitHub Sync",
+        "description": "Back up the workspace to a GitHub repository.",
+        "fields": {
+          "repo": "Repository",
+          "branch": "Branch",
+          "token": "Access token",
+          "tokenHint": "Personal access token with repo scope",
+          "commitMessage": "Commit message",
+          "autoSync": "Automatic sync",
+          "intervalMinutes": "Interval (minutes)"
+        },
+        "actions": {
+          "test": "Test connection",
+          "syncNow": "Sync now"
+        },
+        "status": {
+          "testing": "Checking…",
+          "syncing": "Syncing…",
+          "connectionOk": "Connection successful",
+          "never": "Never synced",
+          "lastSynced": "Last synced: {time}",
+          "filesCount": "{count} files",
+          "failed": "Error: {message}"
+        },
+        "toast": {
+          "successTitle": "GitHub Sync",
+          "success": "Workspace synced to GitHub.",
+          "successDetail": "Workspace synced to GitHub · {count} files.",
+          "errorTitle": "GitHub Sync failed",
+          "error": "Could not sync the workspace to GitHub."
+        }
+      },
       "filters": {
         "all": "All · {count}",
         "enabled": "Enabled · {count}",
         "manifestIssues": "Manifest issues · {count}"
       },
+      "tabs": {
+        "label": "Plugin sections",
+        "installed": "Installed · {count}",
+        "catalog": "Marketplace · {count}"
+      },
+      "marketplaceStatus": {
+        "notInstalled": "Not installed",
+        "installed": "Installed",
+        "updateAvailable": "Update available",
+        "disabled": "Disabled",
+        "invalid": "Invalid",
+        "conflict": "Conflict"
+      },
       "noDescription": "No description in manifest.",
       "fallbackDescription": "Workspace plugin manifest",
       "permissions": "Permissions",
+      "noPermissions": "No capabilities",
       "source": "Source",
       "manifestIssue": "Manifest issue",
       "manifestValid": "Manifest valid",
       "emptyTitle": "No plugins found.",
-      "emptyDescription": "Drop plugin folders into `.nevo/plugins` and rescan this workspace."
+      "emptyDescription": "Drop plugin folders into `.nevo/plugins` and rescan this workspace.",
+      "settings": {
+        "configure": "Configure",
+        "hide": "Hide",
+        "secretSet": "Set",
+        "secretPlaceholder": "Enter value",
+        "saved": "Saved"
+      }
     },
     "hotkeys": {
       "description": "Editable keyboard commands in Nevo can be recorded here. Editor formatting shortcuts are fixed by the editor engine.",
       "resetAll": "Reset all",
+      "resetOne": "Reset {command}",
+      "editable": "Editable",
+      "conflictSummary": "Conflicts",
+      "searchLabel": "Search shortcuts",
       "searchPlaceholder": "Search shortcuts...",
       "matches": "{count} matches",
       "conflicts": "Conflicts with {count} binding(s)",
       "pressKeys": "Press keys…",
       "fixed": "Fixed",
+      "table": {
+        "command": "Command",
+        "state": "State",
+        "shortcut": "Shortcut"
+      },
       "scope": {
         "workspace": "workspace",
         "app": "app"

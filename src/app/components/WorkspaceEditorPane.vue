@@ -137,6 +137,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 const coverImageInputRef = ref<HTMLInputElement | null>(null)
 const overlayContainerRef = ref<OverlayContainerInstance | null>(null)
 const noteEmbedPickerRef = ref<HTMLDivElement | null>(null)
+const titleInputRef = ref<HTMLTextAreaElement | null>(null)
 
 const localGraphOpen = ref(false)
 const breadcrumbMenuOpen = ref(false)
@@ -799,6 +800,10 @@ function insertResolvedTemplate(payload: { template: TemplateDocument; fieldValu
   insertTemplatePickerOpen.value = false
 }
 
+function isInsideNvSelectMenu(target: Node): boolean {
+  return target instanceof Element && target.closest('.nv-select__menu') !== null
+}
+
 // Outside click handler
 function onDocumentMouseDown(event: MouseEvent) {
   const target = event.target as Node | null
@@ -836,7 +841,7 @@ function onDocumentMouseDown(event: MouseEvent) {
   }
   if (pluginNodePopover.open) {
     const insidePopover = c?.pluginNodePopoverEl?.contains(target) ?? false
-    if (!insidePopover) pluginNodeEditor.close()
+    if (!insidePopover && !isInsideNvSelectMenu(target)) pluginNodeEditor.close()
   }
   if (embedUrlPopover.open) {
     const insidePopover = c?.embedUrlPopoverEl?.contains(target) ?? false
@@ -980,8 +985,7 @@ const overlayHandlers: OverlayHandlers = {
   closeSlashEmojiPicker,
   selectCalloutIcon,
   closeCalloutIconPicker,
-  onBlockDragStart: blockHandleComposable.onDragStart,
-  onBlockDragEnd: blockHandleComposable.onDragEnd,
+  onBlockHandlePointerDown: blockHandleComposable.onHandlePointerDown,
   onTypeIconClick: () => blockHandleComposable.onTypeIconClick(),
   onHandleMouseEnter: blockHandleComposable.onHandleMouseEnter,
   onHandleMouseLeave: blockHandleComposable.onHandleMouseLeave,
@@ -1031,6 +1035,8 @@ watch(
         manifest.entryPoint,
         manifest.priority ?? 0,
         (manifest.editorCapabilities ?? []).join(','),
+        (manifest.uiCapabilities ?? []).join(','),
+        (manifest.workspaceCapabilities ?? []).join(','),
       ].join(':'))
       .join('|'),
     slashCommands: props.settings.editor.slashCommands,
@@ -1207,6 +1213,7 @@ watch(
 
 onMounted(() => {
   document.addEventListener('mousedown', onDocumentMouseDown)
+  nextTick(resizeTitle)
 })
 
 onBeforeUnmount(async () => {
@@ -1239,9 +1246,22 @@ const noteIconButtonLabel = computed(() => {
   const title = props.note?.title.trim() || t('workspace.titlePlaceholder')
   return `Change icon for ${title}`
 })
+
+function resizeTitle() {
+  const el = titleInputRef.value
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = `${el.scrollHeight}px`
+}
+
+function onTitleInput(event: Event) {
+  emit('update:title', (event.target as HTMLTextAreaElement).value)
+  resizeTitle()
+}
 const editorBodyClasses = computed(() => ({
   'doc-body--smooth': props.settings.editor.smoothScrolling,
   'doc-body--active-emphasis': props.settings.editor.activeBlockEmphasis,
+  'doc-body--scrollbar-dragging': scrollbarDragging.value,
 }))
 const editorContentStyle = computed(() => ({
   '--workspace-editor-font-family': resolveEditorFontFamilyCss(props.settings.appearance.editorFontFamily),
@@ -1294,6 +1314,16 @@ const scrollbarStyle = computed<CSSProperties>(() => ({
 const scrollbarInteractivityStyle = computed<CSSProperties>(() => ({
   pointerEvents: scrollbarVisible.value || scrollbarDragging.value ? 'auto' : 'none',
 }))
+
+watch(
+  () => props.note?.title,
+  () => { nextTick(resizeTitle) },
+)
+
+watch(
+  () => props.note?.id,
+  () => { nextTick(resizeTitle) },
+)
 
 // Pushes scrollbar below the cover image when it's visible in the viewport.
 // Cover occupies doc-body padding-top (20px) + cover height (200px) = 220px from scroll origin.
@@ -1452,11 +1482,13 @@ defineExpose({ editorRoot, flushPendingContent, updateDrawBlock })
                 >
                   <NvNoteIcon :value="noteIcon" :size="36" />
                 </button>
-                <input
+                <textarea
+                  ref="titleInputRef"
                   class="doc-title"
+                  rows="1"
                   :value="note.title"
                   :placeholder="t('workspace.titlePlaceholder')"
-                  @input="emit('update:title', ($event.target as HTMLInputElement).value)"
+                  @input="onTitleInput"
                 />
               </div>
               <div

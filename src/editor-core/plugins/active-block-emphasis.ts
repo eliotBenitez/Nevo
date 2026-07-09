@@ -2,8 +2,7 @@ import type { ResolvedPos } from 'prosemirror-model'
 import { Plugin } from 'prosemirror-state'
 import { Decoration, DecorationSet } from 'prosemirror-view'
 import { TextSelection } from 'prosemirror-state'
-
-const containerBlockNames = new Set(['blockquote', 'callout'])
+import { isContainerBlockType } from '../schema/container-blocks'
 
 function getActiveBlockDepth($cursor: ResolvedPos): number | null {
   let textblockDepth: number | null = null
@@ -11,7 +10,7 @@ function getActiveBlockDepth($cursor: ResolvedPos): number | null {
   for (let depth = $cursor.depth; depth >= 1; depth -= 1) {
     const node = $cursor.node(depth)
 
-    if (containerBlockNames.has(node.type.name)) {
+    if (isContainerBlockType(node.type)) {
       return depth
     }
 

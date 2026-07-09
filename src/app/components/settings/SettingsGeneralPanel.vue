@@ -5,12 +5,13 @@ import { storeToRefs } from 'pinia'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import NvToggle from '../../../ui/primitives/NvToggle.vue'
 import { useWorkspaceStore } from '../../../stores/workspace'
-import type { AppLocale } from '../../../types/workspace'
+import type { AppLocale, WorkspaceView } from '../../../types/workspace'
 
-type RowState = 'functional' | 'info' | 'coming'
+import { useTreeStore } from '../../../stores/tree'
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
+const treeStore = useTreeStore()
 const { settings, appConfig } = storeToRefs(workspaceStore)
 
 const languageOptions = computed<Array<{ value: AppLocale; label: string }>>(() => [
@@ -18,17 +19,24 @@ const languageOptions = computed<Array<{ value: AppLocale; label: string }>>(() 
   { value: 'en', label: t('settings.options.language.en') },
 ])
 
-function stateLabel(state: RowState): string {
-  if (state === 'functional') return t('settings.state.functional')
-  if (state === 'coming') return t('settings.state.coming')
-  return t('settings.state.info')
-}
+const startupViewOptions = computed<Array<{ value: WorkspaceView; label: string }>>(() => [
+  { value: 'editor', label: t('settings.options.startupView.editor') },
+  { value: 'last-note', label: t('settings.options.startupView.lastNote') },
+  { value: 'specific-note', label: t('settings.options.startupView.specificNote') },
+  { value: 'graph', label: t('settings.options.startupView.graph') },
+  { value: 'kanban', label: t('settings.options.startupView.kanban') },
+])
 
-function stateClass(state: RowState): string {
-  if (state === 'functional') return 'status-chip--functional'
-  if (state === 'coming') return 'status-chip--coming'
-  return 'status-chip--info'
-}
+const noteOptions = computed(() => {
+  const options: Array<{ value: string; label: string }> = []
+  for (const [id, meta] of treeStore.noteById.entries()) {
+    options.push({
+      value: id,
+      label: (meta.icon ? `${meta.icon} ` : '') + (meta.title || t('workspace.untitledNote')),
+    })
+  }
+  return options
+})
 </script>
 
 <template>
@@ -67,7 +75,26 @@ function stateClass(state: RowState): string {
               <div class="row-title">{{ t('settings.general.startupView.title') }}</div>
               <div class="row-sub">{{ t('settings.general.startupView.description') }}</div>
             </div>
-            <span class="status-chip" :class="stateClass('coming')">{{ stateLabel('coming') }}</span>
+            <NvSelect
+              :model-value="settings.general.defaultStartupView"
+              :options="startupViewOptions"
+              :min-width="140"
+              @update:model-value="v => workspaceStore.updateSettings(draft => { draft.general.defaultStartupView = v as WorkspaceView })"
+            />
+          </div>
+
+          <div v-if="settings.general.defaultStartupView === 'specific-note'" class="settings-row settings-row--border">
+            <div class="row-copy">
+              <div class="row-title">{{ t('settings.general.startupNote.title') }}</div>
+              <div class="row-sub">{{ t('settings.general.startupNote.description') }}</div>
+            </div>
+            <NvSelect
+              :model-value="settings.general.startupNoteId || ''"
+              :options="noteOptions"
+              :min-width="140"
+              :placeholder="t('settings.general.startupNote.placeholder')"
+              @update:model-value="v => workspaceStore.updateSettings(draft => { draft.general.startupNoteId = v as string || null })"
+            />
           </div>
 
           <div class="settings-row settings-row--border">

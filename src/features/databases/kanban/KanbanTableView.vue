@@ -481,8 +481,8 @@ function getCardTags(card: KanbanCard, colId: string): KanbanPropertyOption[] {
 }
 
 .kb-table__row--selected {
-  background: var(--accent-soft, oklch(0.66 0.10 258 / 0.10));
-  outline: 1px solid oklch(0.66 0.10 258 / 0.28);
+  background: var(--accent-soft, rgb(161 98 7 / 0.10));
+  outline: 1px solid color-mix(in oklab, var(--accent) 34%, transparent);
   outline-offset: -1px;
 }
 

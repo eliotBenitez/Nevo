@@ -10,6 +10,9 @@ import NvPopupMenu from '../../ui/primitives/NvPopupMenu.vue'
 import type { NvMenuItemDef } from '../../ui/primitives/menu-types'
 import type { SortMode } from '../composables/useSidebarTree'
 
+import { useWorkspaceStore } from '../../stores/workspace'
+import { resolveBindingChord } from '../../utils/workspace-settings'
+
 interface Props {
   kanbanEnabled?: boolean
   collapseState: 'collapsed' | 'expanded'
@@ -27,14 +30,26 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const workspaceStore = useWorkspaceStore()
+
+const newNoteShortcut = computed(() => {
+  const b = workspaceStore.settings.hotkeys.bindings.find((x) => x.commandId === 'workspace.new-note')
+  return b ? resolveBindingChord(b) : 'Ctrl+N'
+})
+
+const newFolderShortcut = computed(() => {
+  const b = workspaceStore.settings.hotkeys.bindings.find((x) => x.commandId === 'workspace.new-folder')
+  return b ? resolveBindingChord(b) : 'Ctrl+Shift+N'
+})
 
 const sortMenuOpen = ref(false)
 
 const newMenuItems = computed<NvMenuItemDef[]>(() => {
   const items: NvMenuItemDef[] = [
-    { label: t('workspace.actions.newNote'), icon: markRaw(FileText), action: () => emit('create-note') },
-    { label: t('workspace.actions.newFolder'), icon: markRaw(FolderPlus), action: () => emit('create-folder') },
+    { label: t('workspace.actions.newNote'), icon: markRaw(FileText), shortcut: newNoteShortcut.value, action: () => emit('create-note') },
+    { label: t('workspace.actions.newFolder'), icon: markRaw(FolderPlus), shortcut: newFolderShortcut.value, action: () => emit('create-folder') },
   ]
+
   if (props.kanbanEnabled !== false) {
     items.push({ label: t('workspace.actions.newBoard'), icon: markRaw(Kanban), action: () => emit('create-board') })
   }

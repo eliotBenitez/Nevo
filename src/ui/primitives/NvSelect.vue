@@ -270,6 +270,12 @@ watch(
   },
 )
 
+function focus() {
+  triggerRef.value?.focus()
+}
+
+defineExpose({ focus })
+
 onBeforeUnmount(() => {
   detachListeners()
   if (isOpen.value) {

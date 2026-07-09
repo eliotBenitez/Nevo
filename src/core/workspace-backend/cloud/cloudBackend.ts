@@ -7,13 +7,14 @@ import * as Y from 'yjs'
 import type { Awareness } from 'y-protocols/awareness'
 import { encryptBytes, decryptBytes } from '../../../editor-core/collaboration/encryption'
 import type {
-  WorkspaceManifest, WorkspaceSettings, WorkspaceDiagnostics, WorkspaceCleanupReport, PluginManifest,
+  WorkspaceManifest, WorkspaceSettings, WorkspaceDiagnostics, WorkspaceCleanupReport, PluginManifest, MarketplaceCatalog,
 } from '../../../types/workspace'
-import type { FolderMeta, NoteMeta, NoteDocument, NoteSnapshotMeta, BlockNode, ImportedImageAsset } from '../../../types/note'
+import type { FolderMeta, NoteMeta, NoteDocument, NoteSnapshotMeta, BlockNode, ImportedImageAsset, SidebarNotePreview } from '../../../types/note'
 import type { WorkspaceBlockSearchItem } from '../../../types/search'
 import type { BacklinkRef, GraphEdge, ExtractedEdge } from '../../../types/graph'
 import type { TemplateFieldValues } from '../../../types/template'
 import { createDefaultWorkspaceSettings } from '../../../utils/workspace-settings'
+import { buildSidebarPreviewText, normalizeSidebarTags } from '../../../utils/sidebar/sidebarNotePreviews'
 import type { WorkspaceBackend, WorkspaceHandle, KanbanBoardUpdate, KanbanCardUpdate } from '../types'
 import type { CloudDocument } from '../../../types/cloud'
 import type { KanbanBoard, KanbanCard, KanbanPropertyDef } from '../../../types/kanban'
@@ -24,6 +25,7 @@ import * as ops from './manifestOps'
 
 const EMPTY_CONTENT: BlockNode = { type: 'doc', content: [{ type: 'paragraph' }] }
 const SETTINGS_KEY = 'settings'
+const SIDEBAR_PREVIEWS_KEY = 'sidebar_note_previews'
 
 /** Asset src scheme for cloud storages (vs local `.nevo/assets/...`). */
 export const CLOUD_ASSET_SCHEME = 'cloud-asset:'
@@ -178,7 +180,7 @@ export class CloudBackend implements WorkspaceBackend {
     this.docRooms.set(doc.id, doc.roomCode)
     mutateManifest(this.manifestSession.ydoc, this.map, m => ops.addNote(m, doc.id, folderId, title, icon))
     const now = new Date().toISOString()
-    return { id: doc.id, title, icon, folderId, createdAt: now, updatedAt: now, content: structuredClone(EMPTY_CONTENT) }
+    return { id: doc.id, title, icon, folderId, createdAt: now, updatedAt: now, properties: { type: null, tags: [], date: null, status: null }, content: structuredClone(EMPTY_CONTENT) }
   }
   createNoteFromTemplate(_templateId: string, folderId: string | null, title: string, icon: string, _f: TemplateFieldValues): Promise<NoteDocument> {
     // Templates are a local feature; cloud falls back to a blank note for v1.
@@ -197,21 +199,74 @@ export class CloudBackend implements WorkspaceBackend {
       folderId: meta?.folderId ?? null,
       createdAt: meta?.updatedAt ?? now,
       updatedAt: meta?.updatedAt ?? now,
+      properties: { type: null, tags: [], date: null, status: null },
       content: structuredClone(EMPTY_CONTENT),
     })
   }
   saveNote(note: NoteDocument): Promise<void> {
     // Content auto-syncs through the live Yjs session; only meta lives in the manifest.
     mutateManifest(this.manifestSession.ydoc, this.map, m => ops.updateNoteMeta(m, note.id, { title: note.title, icon: note.icon }))
+    this.writeSidebarPreviewCache({
+      ...this.readSidebarPreviewCache(),
+      [note.id]: {
+        noteId: note.id,
+        title: note.title,
+        icon: note.icon,
+        folderPath: '',
+        updatedAt: note.updatedAt,
+        tags: normalizeSidebarTags(note.properties?.tags),
+        previewText: buildSidebarPreviewText(note.content),
+      },
+    })
     return Promise.resolve()
   }
   deleteNote(noteId: string): Promise<void> {
     mutateManifest(this.manifestSession.ydoc, this.map, m => ops.trashNote(m, noteId))
+    const cache = this.readSidebarPreviewCache()
+    delete cache[noteId]
+    this.writeSidebarPreviewCache(cache)
     return Promise.resolve()
   }
   moveNote(noteId: string, targetFolderId: string | null): Promise<void> {
     mutateManifest(this.manifestSession.ydoc, this.map, m => ops.moveNote(m, noteId, targetFolderId))
     return Promise.resolve()
+  }
+
+  listSidebarNotePreviews(): Promise<SidebarNotePreview[]> {
+    const snap = readManifest(this.map)
+    if (!snap) return Promise.resolve([])
+    const previews: SidebarNotePreview[] = []
+    const cache = this.readSidebarPreviewCache()
+    const add = (meta: NoteMeta, folderPath: string) => {
+      const cached = cache[meta.id]
+      previews.push({
+        noteId: meta.id,
+        title: cached?.title ?? meta.title,
+        icon: cached?.icon ?? meta.icon,
+        folderPath,
+        updatedAt: cached?.updatedAt ?? meta.updatedAt,
+        tags: normalizeSidebarTags(cached?.tags),
+        previewText: cached?.previewText ?? '',
+      })
+    }
+    snap.rootNotes.forEach(note => add(note, ''))
+    const walk = (folders: FolderMeta[], parents: string[]) => {
+      for (const folder of folders) {
+        const path = [...parents, folder.title]
+        folder.notes.forEach(note => add(note, path.join(' / ')))
+        walk(folder.children, path)
+      }
+    }
+    walk(snap.tree, [])
+    return Promise.resolve(previews)
+  }
+
+  private readSidebarPreviewCache(): Record<string, SidebarNotePreview> {
+    return plainClone(this.manifestSession?.ydoc.getMap<Record<string, SidebarNotePreview>>('meta').get(SIDEBAR_PREVIEWS_KEY) ?? {})
+  }
+
+  private writeSidebarPreviewCache(cache: Record<string, SidebarNotePreview>): void {
+    this.manifestSession.ydoc.getMap<Record<string, SidebarNotePreview>>('meta').set(SIDEBAR_PREVIEWS_KEY, plainClone(cache))
   }
 
   // --- note sessions (used by the editor for live, real-time content) ---
@@ -262,6 +317,16 @@ export class CloudBackend implements WorkspaceBackend {
   importAssetByPath(): Promise<ImportedImageAsset> {
     // Path-based import needs Tauri filesystem access; unsupported for cloud v1.
     return Promise.reject(new Error('Importing assets by path is not supported for cloud storages'))
+  }
+
+  async importImageFromUrl(url: string): Promise<ImportedImageAsset> {
+    // No Rust downloader for cloud; fetch in the webview (subject to CORS) and
+    // upload the encrypted bytes like any other pasted image.
+    const response = await fetch(url)
+    if (!response.ok) throw new Error(`Download failed: HTTP ${response.status}`)
+    const buffer = await response.arrayBuffer()
+    const fileName = (url.split(/[?#]/)[0] ?? url).split('/').pop() || 'image.png'
+    return this.importImageAsset(fileName, Array.from(new Uint8Array(buffer)))
   }
 
   /** Synchronous cache lookup for a resolved asset object URL (or null). */
@@ -450,6 +515,13 @@ export class CloudBackend implements WorkspaceBackend {
 
   listPlugins(): Promise<PluginManifest[]> { return Promise.resolve([]) }
   setPluginEnabled(): Promise<void> { return Promise.resolve() }
+  marketplaceListPlugins(): Promise<MarketplaceCatalog> {
+    return Promise.resolve({ repo: 'eliotBenitez/nevo-marketplace', branch: 'main', updatedAt: new Date(0).toISOString(), fromCache: false, error: 'Marketplace is not supported for cloud workspaces yet', plugins: [] })
+  }
+  marketplaceInstallPlugin(): Promise<PluginManifest> { return Promise.reject(new Error('Marketplace is not supported for cloud workspaces yet')) }
+  marketplaceUpdatePlugin(): Promise<PluginManifest> { return Promise.reject(new Error('Marketplace is not supported for cloud workspaces yet')) }
+  marketplaceRemovePlugin(): Promise<void> { return Promise.reject(new Error('Marketplace is not supported for cloud workspaces yet')) }
+  marketplaceRefreshCache(): Promise<MarketplaceCatalog> { return this.marketplaceListPlugins() }
   pruneSnapshots(): Promise<WorkspaceCleanupReport> { return Promise.resolve({ removedFiles: 0, bytesFreed: 0 }) }
   cleanupOrphanedAssets(): Promise<WorkspaceCleanupReport> { return Promise.resolve({ removedFiles: 0, bytesFreed: 0 }) }
   deleteUnreferencedAsset(): Promise<boolean> { return Promise.resolve(false) }

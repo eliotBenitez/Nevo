@@ -1,5 +1,6 @@
 use chrono::{NaiveDateTime, Utc};
-use std::path::Path;
+use serde::Serialize;
+use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 use super::{
@@ -10,15 +11,23 @@ use crate::commands::path_utils::normalize_workspace_path;
 use crate::commands::workspace;
 use crate::logging::{LogContext, LogError};
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NoteSnapshotsEntry {
+    pub note_id: String,
+    pub snapshots: Vec<NoteSnapshotMeta>,
+}
+
+fn snapshots_root_path(workspace_path: &str) -> PathBuf {
+    Path::new(workspace_path).join(".nevo").join("snapshots")
+}
+
 pub(crate) fn snapshot_dir_path(
     workspace_path: &str,
     note_id: &str,
 ) -> Result<std::path::PathBuf, String> {
     crate::commands::path_utils::validate_id(note_id)?;
-    Ok(Path::new(workspace_path)
-        .join(".nevo")
-        .join("snapshots")
-        .join(note_id))
+    Ok(snapshots_root_path(workspace_path).join(note_id))
 }
 
 fn snapshot_file_path(
@@ -38,24 +47,67 @@ fn create_snapshot_id() -> String {
     )
 }
 
+/// List `.json` snapshot files in `dir`, newest first. Used both for a single
+/// note's snapshot directory and (via `list_all_note_snapshots_impl`) for every
+/// note-id subdirectory under the workspace's snapshots root in one pass.
+fn list_json_files_in_dir(dir: &Path) -> Vec<PathBuf> {
+    if !dir.exists() {
+        return vec![];
+    }
+
+    let mut files = match std::fs::read_dir(dir) {
+        Ok(entries) => entries
+            .flatten()
+            .map(|entry| entry.path())
+            .filter(|path| path.extension().and_then(|x| x.to_str()) == Some("json"))
+            .collect::<Vec<_>>(),
+        Err(_) => return vec![],
+    };
+
+    files.sort_by(|a, b| b.cmp(a));
+    files
+}
+
 fn list_snapshot_files(
     workspace_path: &str,
     note_id: &str,
 ) -> Result<Vec<std::path::PathBuf>, String> {
     let dir = snapshot_dir_path(workspace_path, note_id)?;
-    if !dir.exists() {
-        return Ok(vec![]);
+    Ok(list_json_files_in_dir(&dir))
+}
+
+/// Build snapshot metadata for a set of snapshot files. The note id embedded in
+/// each `NoteSnapshotMeta` comes from the snapshot's own document content, not
+/// from the directory name, so this needs no `note_id` parameter and is shared
+/// by both the single-note and workspace-wide snapshot listing commands.
+fn build_snapshot_metas(files: Vec<PathBuf>) -> Vec<NoteSnapshotMeta> {
+    let mut snapshots = vec![];
+    for path in files {
+        let snapshot_id = match path.file_stem().and_then(|x| x.to_str()) {
+            Some(id) => id.to_string(),
+            None => continue,
+        };
+        let content = match std::fs::read_to_string(&path) {
+            Ok(content) => content,
+            Err(_) => continue,
+        };
+        let parsed = match serde_json::from_str::<NoteDocument>(&content) {
+            Ok(doc) => doc,
+            Err(_) => continue,
+        };
+        let created_at = std::fs::metadata(&path)
+            .ok()
+            .and_then(|metadata| metadata.modified().ok())
+            .map(|mtime| chrono::DateTime::<Utc>::from(mtime).to_rfc3339())
+            .unwrap_or_else(|| parsed.updated_at.clone());
+        snapshots.push(NoteSnapshotMeta {
+            id: snapshot_id,
+            note_id: parsed.id.clone(),
+            created_at,
+            updated_at: parsed.updated_at.clone(),
+        });
     }
-
-    let mut files = std::fs::read_dir(dir)
-        .map_err(|e| e.to_string())?
-        .flatten()
-        .map(|entry| entry.path())
-        .filter(|path| path.extension().and_then(|x| x.to_str()) == Some("json"))
-        .collect::<Vec<_>>();
-
-    files.sort_by(|a, b| b.cmp(a));
-    Ok(files)
+    snapshots
 }
 
 fn prune_note_snapshots_internal(
@@ -113,42 +165,67 @@ pub(crate) fn store_note_snapshot(workspace_path: &str, note: &NoteDocument) -> 
 }
 
 #[tauri::command]
-pub fn list_note_snapshots(
+pub async fn list_note_snapshots(
+    workspace_path: String,
+    note_id: String,
+) -> Result<Vec<NoteSnapshotMeta>, String> {
+    tauri::async_runtime::spawn_blocking(move || list_note_snapshots_impl(workspace_path, note_id))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+pub(crate) fn list_note_snapshots_impl(
     workspace_path: String,
     note_id: String,
 ) -> Result<Vec<NoteSnapshotMeta>, String> {
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
-    let mut snapshots = vec![];
     let files = list_snapshot_files(&workspace_path, &note_id)?;
+    Ok(build_snapshot_metas(files))
+}
 
-    for path in files {
-        let snapshot_id = match path.file_stem().and_then(|x| x.to_str()) {
+/// Collect snapshot metadata for every note in one filesystem pass, instead of
+/// the frontend issuing one `list_note_snapshots` invoke per note (N+1 IPC
+/// round trips when opening the history panel).
+#[tauri::command]
+pub async fn list_all_note_snapshots(
+    workspace_path: String,
+) -> Result<Vec<NoteSnapshotsEntry>, String> {
+    tauri::async_runtime::spawn_blocking(move || list_all_note_snapshots_impl(workspace_path))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+pub(crate) fn list_all_note_snapshots_impl(
+    workspace_path: String,
+) -> Result<Vec<NoteSnapshotsEntry>, String> {
+    let workspace_path = normalize_workspace_path(&workspace_path)?;
+    let workspace_path = workspace_path.to_string_lossy().into_owned();
+    let root = snapshots_root_path(&workspace_path);
+    if !root.exists() {
+        return Ok(vec![]);
+    }
+
+    let mut entries = vec![];
+    let dirs = std::fs::read_dir(&root).map_err(|e| e.to_string())?;
+    for dir_entry in dirs.flatten() {
+        let dir_path = dir_entry.path();
+        if !dir_path.is_dir() {
+            continue;
+        }
+        let note_id = match dir_entry.file_name().to_str() {
             Some(id) => id.to_string(),
             None => continue,
         };
-        let content = match std::fs::read_to_string(&path) {
-            Ok(content) => content,
-            Err(_) => continue,
-        };
-        let parsed = match serde_json::from_str::<NoteDocument>(&content) {
-            Ok(doc) => doc,
-            Err(_) => continue,
-        };
-        let created_at = std::fs::metadata(&path)
-            .ok()
-            .and_then(|metadata| metadata.modified().ok())
-            .map(|mtime| chrono::DateTime::<Utc>::from(mtime).to_rfc3339())
-            .unwrap_or_else(|| parsed.updated_at.clone());
-        snapshots.push(NoteSnapshotMeta {
-            id: snapshot_id,
-            note_id: parsed.id.clone(),
-            created_at,
-            updated_at: parsed.updated_at.clone(),
-        });
+        let files = list_json_files_in_dir(&dir_path);
+        let snapshots = build_snapshot_metas(files);
+        if snapshots.is_empty() {
+            continue;
+        }
+        entries.push(NoteSnapshotsEntry { note_id, snapshots });
     }
 
-    Ok(snapshots)
+    Ok(entries)
 }
 
 #[tauri::command]

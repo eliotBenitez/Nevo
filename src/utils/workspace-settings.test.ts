@@ -41,6 +41,32 @@ describe('normalizeWorkspaceSettings', () => {
     expect(settings.general.confirmBeforeDelete).toBe(defaults.general.confirmBeforeDelete)
   })
 
+  it('preserves arbitrary pluginSettings without dropping unknown keys', () => {
+    const settings = normalizeWorkspaceSettings({
+      pluginSettings: {
+        'nevo.github-sync': {
+          repo: 'owner/name',
+          branch: 'main',
+          autoSync: true,
+          intervalMinutes: 15,
+        },
+      },
+    })
+
+    expect(settings.pluginSettings['nevo.github-sync']).toEqual({
+      repo: 'owner/name',
+      branch: 'main',
+      autoSync: true,
+      intervalMinutes: 15,
+    })
+  })
+
+  it('defaults pluginSettings to an empty object when absent or invalid', () => {
+    expect(normalizeWorkspaceSettings({}).pluginSettings).toEqual({})
+    expect(normalizeWorkspaceSettings({ pluginSettings: [] }).pluginSettings).toEqual({})
+    expect(normalizeWorkspaceSettings({ pluginSettings: 'nope' }).pluginSettings).toEqual({})
+  })
+
   it('enables markdown shortcuts by default but preserves explicit opt-out', () => {
     expect(createDefaultWorkspaceSettings().editor.markdownShortcuts).toBe(true)
     expect(normalizeWorkspaceSettings({}).editor.markdownShortcuts).toBe(true)

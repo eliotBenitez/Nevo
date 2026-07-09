@@ -1,8 +1,16 @@
 import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { createI18n } from 'vue-i18n'
 import TitleBarTabs from './TitleBarTabs.vue'
 import NvNoteIcon from '../../ui/primitives/NvNoteIcon.vue'
+import en from '../../locales/en.json'
 import type { TabEntry } from '../../stores/tabs'
+
+const i18n = createI18n({
+  legacy: false,
+  locale: 'en',
+  messages: { en },
+})
 
 function createTab(id: string, title: string): TabEntry {
   return {
@@ -17,6 +25,9 @@ function createTab(id: string, title: string): TabEntry {
 
 function mountTabs(tabs: TabEntry[]) {
   return mount(TitleBarTabs, {
+    global: {
+      plugins: [i18n],
+    },
     props: {
       tabs,
       activeTabId: tabs[0]?.id ?? null,
@@ -88,6 +99,16 @@ describe('TitleBarTabs', () => {
     await wrapper.findAll('.title-tab')[1].trigger('click')
 
     expect(wrapper.emitted('select')).toEqual([['note-b']])
+  })
+
+  it('supports semantic tab buttons and localized close labels', () => {
+    const tabs = [createTab('a', 'Alpha')]
+    const wrapper = mountTabs(tabs)
+
+    expect(wrapper.get('[role="tablist"]').attributes('aria-label')).toBe('Open notes')
+    expect(wrapper.get('.title-tab').attributes('role')).toBe('tab')
+    expect(wrapper.get('.title-tab').attributes('aria-selected')).toBe('true')
+    expect(wrapper.get('.tab-close').attributes('aria-label')).toBe('Close Alpha')
   })
 
   it('emits only close when clicking a tab close control', async () => {

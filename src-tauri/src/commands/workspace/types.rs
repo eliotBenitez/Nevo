@@ -33,6 +33,8 @@ pub struct TrashedItem {
     pub deleted_at: String,
     #[serde(rename = "originalParentId")]
     pub original_parent_id: Option<String>,
+    #[serde(default)]
+    pub icon: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -52,6 +54,10 @@ pub struct WorkspaceManifest {
     pub root_notes: Vec<NoteMeta>,
     #[serde(default)]
     pub trash: Vec<TrashedItem>,
+    /// Persisted user ordering of note ids for the tag-preview sidebar mode.
+    /// Backward-compatible: absent on old manifests deserializes to an empty vec.
+    #[serde(default, rename = "sidebarNoteOrder")]
+    pub sidebar_note_order: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -230,6 +236,11 @@ pub struct WorkspaceBehaviorSettings {
         default = "default_starter_structure"
     )]
     pub auto_create_starter_structure: String,
+    #[serde(
+        rename = "sidebarContentMode",
+        default = "default_sidebar_content_mode"
+    )]
+    pub sidebar_content_mode: String,
     #[serde(rename = "graphEntryMode", default = "default_graph_entry_mode")]
     pub graph_entry_mode: String,
     #[serde(rename = "graphScopeDefault", default = "default_scope_workspace")]
@@ -275,6 +286,9 @@ fn default_note_template() -> String {
 fn default_starter_structure() -> String {
     "light".to_string()
 }
+fn default_sidebar_content_mode() -> String {
+    "tree".to_string()
+}
 fn default_graph_entry_mode() -> String {
     "global".to_string()
 }
@@ -314,6 +328,7 @@ impl Default for WorkspaceBehaviorSettings {
             new_note_template: default_note_template(),
             new_workspace_home_note: true,
             auto_create_starter_structure: default_starter_structure(),
+            sidebar_content_mode: default_sidebar_content_mode(),
             graph_entry_mode: default_graph_entry_mode(),
             graph_scope_default: default_scope_workspace(),
             search_start_scope: default_scope_workspace(),
@@ -486,6 +501,8 @@ pub struct WorkspaceSettings {
     pub workspace: WorkspaceBehaviorSettings,
     pub ai: AISettings,
     pub plugins: PluginsSettings,
+    #[serde(default, rename = "pluginSettings")]
+    pub plugin_settings: std::collections::HashMap<String, serde_json::Value>,
     #[serde(default)]
     pub features: FeaturesSettings,
     pub hotkeys: HotkeysSettings,
@@ -502,6 +519,7 @@ impl Default for WorkspaceSettings {
             workspace: WorkspaceBehaviorSettings::default(),
             ai: AISettings::default(),
             plugins: PluginsSettings::default(),
+            plugin_settings: std::collections::HashMap::new(),
             features: FeaturesSettings::default(),
             hotkeys: HotkeysSettings::default(),
             files: FilesSettings::default(),
@@ -518,16 +536,30 @@ pub struct PluginManifest {
     #[serde(default)]
     pub description: String,
     pub enabled: bool,
+    #[serde(default = "default_plugin_kind")]
+    pub kind: String,
+    #[serde(default = "default_plugin_source")]
+    pub source: String,
     #[serde(rename = "entryPoint")]
     pub entry_point: String,
     #[serde(rename = "apiVersion", default = "default_api_version")]
     pub api_version: String,
     #[serde(rename = "editorCapabilities", default = "default_editor_capabilities")]
     pub editor_capabilities: Vec<String>,
+    #[serde(rename = "uiCapabilities", default)]
+    pub ui_capabilities: Vec<String>,
+    #[serde(rename = "workspaceCapabilities", default)]
+    pub workspace_capabilities: Vec<String>,
     #[serde(rename = "nevoVersionRange")]
     pub nevo_version_range: Option<String>,
     #[serde(default)]
     pub priority: Option<i32>,
+    #[serde(
+        default,
+        rename = "settingsSchema",
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub settings_schema: Vec<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize)]
@@ -578,6 +610,14 @@ fn default_api_version() -> String {
 
 fn default_editor_capabilities() -> Vec<String> {
     vec!["editor.read".to_string(), "editor.write".to_string()]
+}
+
+fn default_plugin_kind() -> String {
+    "user".to_string()
+}
+
+fn default_plugin_source() -> String {
+    "folder".to_string()
 }
 
 pub(crate) fn default_hotkey_bindings() -> Vec<HotkeyBinding> {

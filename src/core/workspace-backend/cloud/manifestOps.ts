@@ -103,6 +103,7 @@ export function trashNote(m: WorkspaceManifest, noteId: string): void {
     m.trash.push({
       id: meta.id, type: 'note', title: meta.title,
       deletedAt: new Date().toISOString(), originalParentId: meta.folderId,
+      icon: meta.icon,
     } as TrashedItem)
   }
 }
@@ -112,5 +113,5 @@ export function restoreTrash(m: WorkspaceManifest, itemId: string): void {
   const idx = m.trash.findIndex(i => i.id === itemId)
   if (idx === -1) return
   const item = m.trash.splice(idx, 1)[0]
-  addNote(m, item.id, item.originalParentId ?? null, item.title, '📄')
+  addNote(m, item.id, item.originalParentId ?? null, item.title, item.icon ?? '📄')
 }

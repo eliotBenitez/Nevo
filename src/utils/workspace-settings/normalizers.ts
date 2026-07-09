@@ -49,7 +49,7 @@ function clampPositiveInt(value: unknown, fallback: number, min: number, max: nu
 }
 
 function normalizeView(value: unknown): WorkspaceView {
-  return value === 'table' || value === 'kanban' || value === 'graph' ? value : 'editor'
+  return value === 'table' || value === 'kanban' || value === 'graph' || value === 'last-note' || value === 'specific-note' ? value : 'editor'
 }
 
 function clampZoom(value: unknown): number {
@@ -91,6 +91,7 @@ export function normalizeWorkspaceSettings(input: unknown): WorkspaceSettings {
   normalized.general.restoreLastContext = typeof general.restoreLastContext === 'boolean' ? general.restoreLastContext : defaults.general.restoreLastContext
   normalized.general.recentItemsBehavior = general.recentItemsBehavior === 'manual' ? 'manual' : defaults.general.recentItemsBehavior
   normalized.general.confirmBeforeDelete = typeof general.confirmBeforeDelete === 'boolean' ? general.confirmBeforeDelete : defaults.general.confirmBeforeDelete
+  normalized.general.startupNoteId = typeof general.startupNoteId === 'string' ? general.startupNoteId : null
   if (general.lastContext && typeof general.lastContext === 'object') {
     const lastContext = general.lastContext as Record<string, unknown>
     normalized.general.lastContext = {
@@ -177,6 +178,9 @@ export function normalizeWorkspaceSettings(input: unknown): WorkspaceSettings {
   normalized.workspace.newWorkspaceHomeNote = typeof workspace.newWorkspaceHomeNote === 'boolean' ? workspace.newWorkspaceHomeNote : defaults.workspace.newWorkspaceHomeNote
   normalized.workspace.autoCreateStarterStructure = workspace.autoCreateStarterStructure === 'off' || workspace.autoCreateStarterStructure === 'structured'
     ? workspace.autoCreateStarterStructure : defaults.workspace.autoCreateStarterStructure
+  normalized.workspace.sidebarContentMode = workspace.sidebarContentMode === 'tag-preview'
+    ? 'tag-preview'
+    : defaults.workspace.sidebarContentMode
   normalized.workspace.sidebarSortMode = workspace.sidebarSortMode === 'name-asc' || workspace.sidebarSortMode === 'name-desc' || workspace.sidebarSortMode === 'updated'
     ? workspace.sidebarSortMode : defaults.workspace.sidebarSortMode
   normalized.workspace.graphEntryMode = workspace.graphEntryMode === 'from-current-note' ? 'from-current-note' : defaults.workspace.graphEntryMode
@@ -216,6 +220,10 @@ export function normalizeWorkspaceSettings(input: unknown): WorkspaceSettings {
   normalized.advanced.experimentalGraphTools = typeof advanced.experimentalGraphTools === 'boolean'
     ? advanced.experimentalGraphTools : defaults.advanced.experimentalGraphTools
   normalized.advanced.developerLogging = typeof advanced.developerLogging === 'boolean' ? advanced.developerLogging : defaults.advanced.developerLogging
+
+  normalized.pluginSettings = raw.pluginSettings && typeof raw.pluginSettings === 'object' && !Array.isArray(raw.pluginSettings)
+    ? JSON.parse(JSON.stringify(raw.pluginSettings)) as Record<string, Record<string, unknown>>
+    : {}
 
   return normalized
 }

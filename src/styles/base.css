@@ -17,7 +17,7 @@ body {
   font-family: var(--font-ui);
   font-feature-settings: 'cv11', 'ss01';
   -webkit-font-smoothing: antialiased;
-  letter-spacing: -0.005em;
+  letter-spacing: 0;
 }
 
 .nv-app {
@@ -208,7 +208,7 @@ body {
 [data-surface="tinted"] .nv-glass,
 [data-surface="tinted"] .nv-card {
   backdrop-filter: blur(20px) saturate(120%);
-  background: color-mix(in oklab, var(--glass-2), var(--wash-a) 12%);
+  background: color-mix(in oklab, var(--glass-2), var(--accent-soft) 10%);
 }
 
 /* ── Contrast modes ─────────────────────────────────── */

@@ -4,6 +4,7 @@
   --nv-active-block-indicator-offset: 18px;
   --nv-active-list-block-indicator-offset: 2.05em;
   --nv-active-toggle-block-indicator-offset: 40px;
+  --nv-active-heading-block-indicator-offset: 26px;
   --nv-active-block-indicator-width: 3px;
   --nv-active-block-indicator-radius: 999px;
   --nv-active-block-indicator-color: color-mix(in oklab, var(--accent) 78%, white 10%);
@@ -60,8 +61,13 @@
   left: calc(var(--nv-active-toggle-block-indicator-offset) * -1);
 }
 
+.doc-editor .nv-prosemirror .nv-heading.nv-active-block::before {
+  left: calc(var(--nv-active-heading-block-indicator-offset) * -1);
+}
+
 .doc-editor .nv-prosemirror blockquote.nv-active-block::before,
 .doc-editor .nv-prosemirror .nv-callout.nv-active-block::before,
+.doc-editor .nv-prosemirror .nv-plugin-block.nv-active-block::before,
 .doc-editor .nv-prosemirror .nv-checklist-item.nv-active-block::before {
   top: 4px;
   bottom: 4px;

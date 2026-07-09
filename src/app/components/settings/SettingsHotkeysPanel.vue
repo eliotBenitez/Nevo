@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Search } from 'lucide-vue-next'
+import { Keyboard, RotateCcw, Search } from 'lucide-vue-next'
 import { useSettingsHotkeys } from '../../composables/useSettingsHotkeys'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 
@@ -18,6 +19,10 @@ const {
   resetHotkey,
   resetAllHotkeys,
 } = useSettingsHotkeys()
+
+const editableHotkeyCount = computed(() => filteredHotkeys.value.filter(binding => isEditableHotkey(binding)).length)
+const fixedHotkeyCount = computed(() => filteredHotkeys.value.length - editableHotkeyCount.value)
+const conflictCount = computed(() => Object.keys(hotkeyConflicts.value).length)
 </script>
 
 <template>
@@ -27,19 +32,51 @@ const {
         <h2 class="panel-title">{{ t('settings.sections.hotkeys') }}</h2>
         <p class="panel-sub">{{ t('settings.hotkeys.description') }}</p>
       </div>
-      <NvButton variant="ghost" size="xs" @click="resetAllHotkeys">{{ t('settings.hotkeys.resetAll') }}</NvButton>
+      <div class="panel-summary">
+        <span class="panel-summary__item">
+          <Keyboard :size="13" aria-hidden="true" />
+          <strong>{{ editableHotkeyCount }}</strong>
+          {{ t('settings.hotkeys.editable') }}
+        </span>
+        <span class="panel-summary__item">
+          <strong>{{ fixedHotkeyCount }}</strong>
+          {{ t('settings.hotkeys.fixed') }}
+        </span>
+        <span class="panel-summary__item" :class="{ 'panel-summary__item--warning': conflictCount }">
+          <strong>{{ conflictCount }}</strong>
+          {{ t('settings.hotkeys.conflictSummary') }}
+        </span>
+        <NvButton variant="ghost" size="xs" @click="resetAllHotkeys">
+          <RotateCcw :size="13" />
+          {{ t('settings.hotkeys.resetAll') }}
+        </NvButton>
+      </div>
     </header>
 
     <div class="panel-body">
       <div class="search-row">
+        <label class="settings-sr-only" for="settings-hotkeys-search">{{ t('settings.hotkeys.searchLabel') }}</label>
         <div class="search-field" :class="{ 'search-field--active': hotkeyQuery }">
           <Search :size="12" class="search-icon--accent" />
-          <input v-model="hotkeyQuery" class="search-input" :placeholder="t('settings.hotkeys.searchPlaceholder')" />
+          <input
+            id="settings-hotkeys-search"
+            v-model="hotkeyQuery"
+            class="search-input"
+            type="search"
+            :aria-label="t('settings.hotkeys.searchLabel')"
+            :placeholder="t('settings.hotkeys.searchPlaceholder')"
+            autocomplete="off"
+          >
           <span class="nv-chip">{{ t('settings.hotkeys.matches', { count: filteredHotkeys.length }) }}</span>
         </div>
       </div>
 
       <div class="shortcuts-table">
+        <div class="shortcuts-table__head" aria-hidden="true">
+          <span>{{ t('settings.hotkeys.table.command') }}</span>
+          <span>{{ t('settings.hotkeys.table.state') }}</span>
+          <span>{{ t('settings.hotkeys.table.shortcut') }}</span>
+        </div>
         <article
           v-for="binding in filteredHotkeys"
           :key="binding.commandId"
@@ -76,7 +113,16 @@ const {
                 >{{ segment }}</kbd>
               </span>
             </button>
-            <NvButton variant="ghost" size="xs" icon :disabled="!isEditableHotkey(binding)" @click="resetHotkey(binding.commandId)">×</NvButton>
+            <NvButton
+              variant="ghost"
+              size="xs"
+              icon
+              :disabled="!isEditableHotkey(binding)"
+              :aria-label="t('settings.hotkeys.resetOne', { command: hotkeyLabel(binding) })"
+              @click="resetHotkey(binding.commandId)"
+            >
+              <RotateCcw :size="12" />
+            </NvButton>
           </div>
         </article>
       </div>

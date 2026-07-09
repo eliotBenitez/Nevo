@@ -206,9 +206,11 @@ pub async fn search_workspace_blocks(
     workspace_path: String,
     query: String,
 ) -> Result<Vec<WorkspaceBlockSearchResult>, String> {
-    tauri::async_runtime::spawn_blocking(move || search_workspace_blocks_sync(workspace_path, query))
-        .await
-        .map_err(|e| e.to_string())?
+    tauri::async_runtime::spawn_blocking(move || {
+        search_workspace_blocks_sync(workspace_path, query)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 pub(crate) fn search_workspace_blocks_sync(

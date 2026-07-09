@@ -3,24 +3,11 @@ import type { Ref } from 'vue'
 import type { FolderMeta, NoteDocument, NoteMeta } from '../../types/note'
 import type { WorkspaceManifest, WorkspaceSettings } from '../../types/workspace'
 import { noteCommands } from '../../tauri/commands'
+import { useConfirmDialog } from '../../ui/composables/useConfirmDialog'
 
 type TreeMenuAction = 'rename' | 'delete' | 'search' | 'history' | 'export'
 type ExportFormat = 'markdown' | 'html' | 'docx' | 'typst' | 'pdf'
 export type TreeMenuTarget = { kind: 'folder' | 'note'; id: string; title: string; folderId: string | null }
-
-function isTauriRuntime(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
-}
-
-async function dialogConfirm(message: string): Promise<boolean> {
-  if (!isTauriRuntime()) return window.confirm(message)
-  try {
-    const { confirm } = await import('@tauri-apps/plugin-dialog')
-    return await confirm(message)
-  } catch {
-    return window.confirm(message)
-  }
-}
 
 interface TreeOps {
   deleteNote: (id: string) => Promise<void>
@@ -58,6 +45,7 @@ interface ContextMenuHandlers {
 
 export function useTreeContextMenu(deps: ContextMenuDeps, handlers: ContextMenuHandlers) {
   const renameModal = reactive<{ open: boolean; target: TreeMenuTarget | null; title: string }>({ open: false, target: null, title: '' })
+  const { confirm } = useConfirmDialog()
 
   function closeRenameModal() {
     renameModal.open = false; renameModal.target = null; renameModal.title = ''
@@ -106,7 +94,11 @@ export function useTreeContextMenu(deps: ContextMenuDeps, handlers: ContextMenuH
       return
     }
     if (action === 'delete') {
-      if (deps.settings.value.general.confirmBeforeDelete && !await dialogConfirm(deps.t('workspace.context.deleteConfirm'))) return
+      if (deps.settings.value.general.confirmBeforeDelete && !await confirm({
+        message: deps.t('workspace.context.deleteConfirm'),
+        confirmLabel: deps.t('confirmDialog.delete'),
+        variant: 'danger',
+      })) return
       if (target.kind === 'note') {
         await deps.treeOps.deleteNote(target.id)
         if (deps.activeNoteId.value === target.id) { deps.clearNote(); await handlers.navigateToWorkspaceRoot() }

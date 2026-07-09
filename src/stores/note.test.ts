@@ -29,6 +29,7 @@ vi.mock('../tauri/commands', () => ({
     saveNote: vi.fn(),
     deleteNote: vi.fn(),
     moveNote: vi.fn(),
+    listSidebarNotePreviews: vi.fn(),
     listNoteSnapshots: vi.fn(),
     restoreNoteSnapshot: vi.fn(),
     pruneNoteSnapshots: vi.fn(),
@@ -85,6 +86,7 @@ describe('useNoteStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    vi.mocked(noteCommands.listSidebarNotePreviews).mockResolvedValue([])
     useWorkspaceStore().activeHandle = { kind: 'local', path: '/workspace' }
   })
 
@@ -143,6 +145,26 @@ describe('useNoteStore', () => {
     expect(noteStore.snapshots).toEqual([])
   })
 
+  it('can force reload a note instead of using the cached document', async () => {
+    const mockedNoteCommands = vi.mocked(noteCommands)
+    mockedNoteCommands.loadNote
+      .mockResolvedValueOnce(createNote('note-force', 'Cached text'))
+      .mockResolvedValueOnce(createNote('note-force', 'Imported text'))
+    mockedNoteCommands.listNoteSnapshots.mockResolvedValue([])
+
+    const noteStore = useNoteStore()
+    await noteStore.loadNote('note-force')
+    expect(noteStore.activeNote?.content.content?.[0]?.content?.[0]?.text).toBe('Cached text')
+
+    await noteStore.loadNote('note-force')
+    expect(mockedNoteCommands.loadNote).toHaveBeenCalledTimes(1)
+    expect(noteStore.activeNote?.content.content?.[0]?.content?.[0]?.text).toBe('Cached text')
+
+    await noteStore.loadNote('note-force', { force: true })
+    expect(mockedNoteCommands.loadNote).toHaveBeenCalledTimes(2)
+    expect(noteStore.activeNote?.content.content?.[0]?.content?.[0]?.text).toBe('Imported text')
+  })
+
   it('flushes pending editor content before saving', async () => {
     const mockedNoteCommands = vi.mocked(noteCommands)
     mockedNoteCommands.saveNote.mockResolvedValue(undefined)
@@ -183,5 +205,62 @@ describe('useNoteStore', () => {
     )
     expect(noteStore.isDirty).toBe(false)
     noteStore.setPendingContentFlush(null)
+  })
+
+  it('marks note dirty when properties are patched', () => {
+    const noteStore = useNoteStore()
+    noteStore.activeNote = createNote('note-1', 'Initial')
+
+    noteStore.setPropertiesPatch({ type: 'task', tags: [' work ', '', 'work'], date: '', status: 'active' })
+
+    expect(noteStore.activeNote?.properties).toEqual({
+      type: 'task',
+      tags: ['work'],
+      date: null,
+      status: 'active',
+    })
+    expect(noteStore.isDirty).toBe(true)
+    expect(noteStore.saveStatus).toBe('unsaved')
+  })
+
+  it('keeps existing properties when applying a partial patch', () => {
+    const noteStore = useNoteStore()
+    noteStore.activeNote = {
+      ...createNote('note-1', 'Initial'),
+      properties: {
+        type: 'meeting',
+        tags: ['team'],
+        date: '2026-07-04',
+        status: 'draft',
+      },
+    }
+
+    noteStore.setPropertiesPatch({ status: 'done' })
+
+    expect(noteStore.activeNote?.properties).toEqual({
+      type: 'meeting',
+      tags: ['team'],
+      date: '2026-07-04',
+      status: 'done',
+    })
+  })
+
+  it('keeps note unsaved if properties change while save is in flight', async () => {
+    const saveDone = deferred<void>()
+    const mockedNoteCommands = vi.mocked(noteCommands)
+    mockedNoteCommands.saveNote.mockImplementation(() => saveDone.promise)
+
+    const noteStore = useNoteStore()
+    noteStore.activeNote = createNote('note-1', 'Initial')
+    noteStore.setPropertiesPatch({ type: 'note' })
+
+    const saveRequest = noteStore.saveNote()
+    noteStore.setPropertiesPatch({ type: 'task' })
+    saveDone.resolve()
+    await saveRequest
+
+    expect(noteStore.activeNote?.properties?.type).toBe('task')
+    expect(noteStore.isDirty).toBe(true)
+    expect(noteStore.saveStatus).toBe('unsaved')
   })
 })

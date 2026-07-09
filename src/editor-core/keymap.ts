@@ -5,6 +5,7 @@ import { redo, undo } from 'prosemirror-history'
 import { liftListItem, splitListItem } from 'prosemirror-schema-list'
 import { CellSelection, findTable, goToNextCell, selectedRect } from 'prosemirror-tables'
 import { createExitToggleCommand, createExitToggleOnDoubleEnterCommand } from './node-views/toggle'
+import { getContainerBlockTypes } from './schema/container-blocks'
 
 const PARAGRAPH_AFTER_SELECTED_BLOCK_TYPES = new Set([
   'file_block',
@@ -58,19 +59,17 @@ function createInsertParagraphAfterSelectedBlockCommand(schema: Schema): Command
 }
 
 function createExitContainerOnDoubleEnterCommand(schema: Schema): Command {
-  const calloutType = schema.nodes.callout
-  const blockquoteType = schema.nodes.blockquote
+  const containerTypes = getContainerBlockTypes(schema)
   const paragraphType = schema.nodes.paragraph
 
   return (state, dispatch) => {
-    if ((!calloutType && !blockquoteType) || !paragraphType) return false
+    if (containerTypes.size === 0 || !paragraphType) return false
     if (!(state.selection instanceof TextSelection) || !state.selection.$cursor) return false
     const $cursor = state.selection.$cursor
 
     let containerDepth: number | null = null
     for (let d = $cursor.depth; d >= 1; d--) {
-      const nodeType = $cursor.node(d).type
-      if (nodeType === calloutType || nodeType === blockquoteType) {
+      if (containerTypes.has($cursor.node(d).type)) {
         containerDepth = d
         break
       }
@@ -117,30 +116,30 @@ function createExitContainerOnDoubleEnterCommand(schema: Schema): Command {
   }
 }
 
-function createExitBlockquoteCommand(schema: Schema): Command {
-  const blockquoteType = schema.nodes.blockquote
+function createExitContainerCommand(schema: Schema): Command {
+  const containerTypes = getContainerBlockTypes(schema)
   const paragraphType = schema.nodes.paragraph
 
   return (state, dispatch) => {
-    if (!blockquoteType || !paragraphType) return false
+    if (containerTypes.size === 0 || !paragraphType) return false
     if (!(state.selection instanceof TextSelection) || !state.selection.$cursor) return false
     const $cursor = state.selection.$cursor
 
-    let blockquoteDepth: number | null = null
+    let containerDepth: number | null = null
     for (let d = $cursor.depth; d >= 1; d--) {
-      if ($cursor.node(d).type === blockquoteType) {
-        blockquoteDepth = d
+      if (containerTypes.has($cursor.node(d).type)) {
+        containerDepth = d
         break
       }
     }
-    if (blockquoteDepth === null) return false
+    if (containerDepth === null) return false
 
     const paragraph = paragraphType.createAndFill()
     if (!paragraph) return false
     if (!dispatch) return true
 
-    const blockquoteNode = $cursor.node(blockquoteDepth)
-    const insertPos = $cursor.before(blockquoteDepth) + blockquoteNode.nodeSize
+    const containerNode = $cursor.node(containerDepth)
+    const insertPos = $cursor.before(containerDepth) + containerNode.nodeSize
     const tr = state.tr.insert(insertPos, paragraph)
     dispatch(tr.setSelection(TextSelection.create(tr.doc, insertPos + 1)).scrollIntoView())
     return true
@@ -219,7 +218,7 @@ export function createCoreKeymap(schema: Schema, commands: Map<string, Command>,
   const listItem = schema.nodes.list_item
   const insertParagraphAfterSelectedBlock = createInsertParagraphAfterSelectedBlockCommand(schema)
   const exitContainerOnDoubleEnter = createExitContainerOnDoubleEnterCommand(schema)
-  const exitBlockquote = createExitBlockquoteCommand(schema)
+  const exitContainer = createExitContainerCommand(schema)
   const exitToggle = createExitToggleCommand(schema)
   const exitToggleOnDoubleEnter = createExitToggleOnDoubleEnterCommand(schema)
   const exitEmptyListItem = createExitEmptyListItemCommand(schema)
@@ -248,8 +247,8 @@ export function createCoreKeymap(schema: Schema, commands: Map<string, Command>,
     'Mod-Shift-9': commands.get('core.blockquote') ?? (() => false),
     Enter: chainCommands(insertParagraphAfterSelectedBlock, newlineInCode, exitContainerOnDoubleEnter, exitToggleOnDoubleEnter, exitEmptyListItem, listItem ? splitListItem(listItem) : () => false, splitBlock),
     'Shift-Enter': insertBlockquoteHardBreak,
-    'Mod-Enter': chainCommands(insertParagraphAfterSelectedBlock, exitBlockquote, exitToggle, insertListItemHardBreak),
-    'Ctrl-Enter': chainCommands(insertParagraphAfterSelectedBlock, exitBlockquote, exitToggle, insertListItemHardBreak),
+    'Mod-Enter': chainCommands(insertParagraphAfterSelectedBlock, exitContainer, exitToggle, insertListItemHardBreak),
+    'Ctrl-Enter': chainCommands(insertParagraphAfterSelectedBlock, exitContainer, exitToggle, insertListItemHardBreak),
   }
 
   if (tabBehavior !== 'focus') {

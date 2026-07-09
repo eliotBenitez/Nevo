@@ -8,8 +8,9 @@ import type {
   WorkspaceDiagnostics,
   WorkspaceCleanupReport,
   PluginManifest,
+  MarketplaceCatalog,
 } from '../../types/workspace'
-import type { FolderMeta, NoteDocument, NoteSnapshotMeta, ImportedImageAsset } from '../../types/note'
+import type { FolderMeta, NoteDocument, NoteSnapshotMeta, ImportedImageAsset, SidebarNotePreview } from '../../types/note'
 import type { TemplateFieldValues } from '../../types/template'
 import type { KanbanBoard, KanbanCard, KanbanPropertyDef, KanbanCardField, KanbanLink } from '../../types/kanban'
 import type { WorkspaceBlockSearchItem } from '../../types/search'
@@ -54,6 +55,11 @@ export interface WorkspaceBackend {
   saveCustomCss(css: string): Promise<void>
   listPlugins(): Promise<PluginManifest[]>
   setPluginEnabled(pluginId: string, enabled: boolean): Promise<void>
+  marketplaceListPlugins(forceRefresh?: boolean): Promise<MarketplaceCatalog>
+  marketplaceInstallPlugin(pluginId: string, version?: string): Promise<PluginManifest>
+  marketplaceUpdatePlugin(pluginId: string): Promise<PluginManifest>
+  marketplaceRemovePlugin(pluginId: string): Promise<void>
+  marketplaceRefreshCache(): Promise<MarketplaceCatalog>
   getDiagnostics(): Promise<WorkspaceDiagnostics>
   pruneSnapshots(keepPerNote: number): Promise<WorkspaceCleanupReport>
   cleanupOrphanedAssets(): Promise<WorkspaceCleanupReport>
@@ -76,10 +82,13 @@ export interface WorkspaceBackend {
   saveNote(note: NoteDocument): Promise<void>
   deleteNote(noteId: string): Promise<void>
   moveNote(noteId: string, targetFolderId: string | null): Promise<void>
+  listSidebarNotePreviews(): Promise<SidebarNotePreview[]>
 
   // --- assets (images / files) ---
   importImageAsset(fileName: string, bytes: number[]): Promise<ImportedImageAsset>
   importAssetByPath(sourcePath: string, fileName: string): Promise<ImportedImageAsset>
+  /** Download a remote image URL and import it into the workspace assets. */
+  importImageFromUrl(url: string): Promise<ImportedImageAsset>
   deleteUnreferencedAsset(assetSrc: string): Promise<boolean>
   /** Persist a draw_block payload (JSON bytes) and return the relative `src`. */
   saveDrawAsset(drawId: string, bytes: number[]): Promise<string>

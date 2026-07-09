@@ -3,6 +3,7 @@ import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { openPath, openUrl, revealItemInDir } from '@tauri-apps/plugin-opener'
 import { computed } from 'vue'
+import { Cpu, ExternalLink, FolderOpen, HardDrive, Monitor, RefreshCw, Settings } from 'lucide-vue-next'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { useDeviceLayout } from '../../../composables/useDeviceLayout'
 import { useAppUpdater } from '../../../composables/useAppUpdater'
@@ -65,7 +66,7 @@ async function openExternalUrl(url: string) {
 
     <div class="panel-body">
       <div class="about-hero">
-        <div class="about-mark"><em><NvNoteIcon :value="manifest?.glyph || 'N'" :size="22" /></em></div>
+        <div class="about-mark"><em><NvNoteIcon :value="manifest?.glyph || 'N'" :size="48" /></em></div>
         <div class="about-copy">
           <div class="about-name"><em>Nevo</em></div>
           <p class="about-tagline">{{ t('settings.about.tagline') }}</p>
@@ -82,11 +83,41 @@ async function openExternalUrl(url: string) {
           </div>
 
           <div class="about-actions">
-            <NvButton variant="primary" :loading="isChecking" :disabled="isChecking" @click="onCheckUpdates">{{ isChecking ? t('updater.checking') : t('settings.about.actions.checkUpdates') }}</NvButton>
-            <NvButton @click="revealPath(appMetadata?.configPath)">{{ t('settings.about.actions.revealConfig') }}</NvButton>
-            <NvButton @click="openFolder(appMetadata?.appDataDir)">{{ t('settings.about.actions.openUserFolder') }}</NvButton>
-            <NvButton @click="openExternalUrl('https://tauri.app')">{{ t('settings.about.actions.acknowledgements') }}</NvButton>
+            <NvButton variant="primary" :loading="isChecking" :disabled="isChecking" @click="onCheckUpdates">
+              <RefreshCw :size="14" />
+              {{ isChecking ? t('updater.checking') : t('settings.about.actions.checkUpdates') }}
+            </NvButton>
+            <NvButton @click="revealPath(appMetadata?.configPath)">
+              <Settings :size="14" />
+              {{ t('settings.about.actions.revealConfig') }}
+            </NvButton>
+            <NvButton @click="openFolder(appMetadata?.appDataDir)">
+              <FolderOpen :size="14" />
+              {{ t('settings.about.actions.openUserFolder') }}
+            </NvButton>
+            <NvButton @click="openExternalUrl('https://tauri.app')">
+              <ExternalLink :size="14" />
+              {{ t('settings.about.actions.acknowledgements') }}
+            </NvButton>
           </div>
+        </div>
+      </div>
+
+      <div class="about-diagnostics">
+        <div class="about-diagnostic-card">
+          <Cpu :size="15" />
+          <span>{{ t('settings.about.meta.engine') }}</span>
+          <strong>{{ appMetadata?.engine ?? 'Tauri 2' }}</strong>
+        </div>
+        <div class="about-diagnostic-card">
+          <Monitor :size="15" />
+          <span>{{ t('settings.about.meta.platform') }}</span>
+          <strong>{{ appMetadata?.platform ?? t('settings.common.desktop') }}</strong>
+        </div>
+        <div class="about-diagnostic-card">
+          <HardDrive :size="15" />
+          <span>{{ t('settings.about.meta.workspace') }}</span>
+          <strong>{{ diagnostics?.workspacePath ?? t('settings.about.notAvailable') }}</strong>
         </div>
       </div>
 

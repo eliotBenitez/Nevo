@@ -1,7 +1,13 @@
 import type { Node as PMNode } from 'prosemirror-model'
-import { NodeSelection } from 'prosemirror-state'
 import type { EditorView, NodeView } from 'prosemirror-view'
-import { resolveNodePosition, getStringAttr, type CoreNodeViewOptions, type NodeViewPosition } from './utils'
+import {
+  resolveNodePosition,
+  getStringAttr,
+  createLazyRenderObserver,
+  selectNodeAt,
+  type CoreNodeViewOptions,
+  type NodeViewPosition,
+} from './utils'
 
 let vegaEmbedModule: typeof import('vega-embed')['default'] | null = null
 
@@ -64,10 +70,9 @@ export function createVegaNodeView(node: PMNode, view: EditorView, getPos: NodeV
   dom.append(buildHeader(), rendered)
 
   let currentNode = node
-  let isVisible = typeof IntersectionObserver === 'undefined'
+  let isVisible = false
   let pendingRender = false
   let lastRenderedSpec = ''
-  let observer: IntersectionObserver | null = null
   let currentView: { finalize: () => void } | null = null
 
   const sync = async () => {
@@ -134,19 +139,14 @@ export function createVegaNodeView(node: PMNode, view: EditorView, getPos: NodeV
     }
   }
 
-  if (typeof IntersectionObserver !== 'undefined') {
-    observer = new IntersectionObserver((entries) => {
-      if (!entries[0]?.isIntersecting) return
-      isVisible = true
-      observer?.disconnect()
-      observer = null
-      if (pendingRender) {
-        pendingRender = false
-        void sync()
-      }
-    }, { rootMargin: '200px' })
-    observer.observe(dom)
-  }
+  const lazyRender = createLazyRenderObserver(dom, () => {
+    isVisible = true
+    if (pendingRender) {
+      pendingRender = false
+      void sync()
+    }
+  })
+  isVisible = lazyRender.isInitiallyVisible
 
   const requestVegaEdit = (event?: MouseEvent) => {
     const position = resolveNodePosition(getPos)
@@ -162,7 +162,7 @@ export function createVegaNodeView(node: PMNode, view: EditorView, getPos: NodeV
     event.stopPropagation()
     const position = resolveNodePosition(getPos)
     if (typeof position === 'number') {
-      view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, position)))
+      selectNodeAt(view, position)
     }
     requestVegaEdit(event)
   }
@@ -181,7 +181,7 @@ export function createVegaNodeView(node: PMNode, view: EditorView, getPos: NodeV
       return true
     },
     destroy() {
-      observer?.disconnect()
+      lazyRender.disconnect()
       if (currentView) {
         currentView.finalize()
         currentView = null

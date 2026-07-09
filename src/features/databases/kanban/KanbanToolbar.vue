@@ -362,9 +362,9 @@ function setDensity(density: KanbanCardDensity) {
 }
 
 .kb-toolbar__btn--active {
-  background: var(--accent-soft, oklch(0.66 0.10 258 / 0.12));
+  background: var(--accent-soft, rgb(161 98 7 / 0.12));
   color: var(--accent);
-  border-color: oklch(0.66 0.10 258 / 0.20);
+  border-color: color-mix(in oklab, var(--accent) 28%, transparent);
 }
 
 .kb-toolbar__btn--primary {

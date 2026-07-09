@@ -84,5 +84,14 @@ export function useNotePersistence() {
     idleSavePending = false
   })
 
+  // `isDirty` only transitions false -> true once, so it won't fire again for
+  // edits made while a save is already in flight (isDirty stays true the whole
+  // time, including the drift check after the in-flight save completes).
+  // `dirtyRevision` bumps on every such edit, so watching it re-schedules the
+  // autosave instead of silently dropping it.
+  watch(() => noteStore.dirtyRevision, () => {
+    if (noteStore.isDirty) scheduleSave()
+  })
+
   return { flushSave }
 }

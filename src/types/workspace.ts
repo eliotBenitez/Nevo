@@ -1,9 +1,9 @@
 import type { FolderMeta, NoteMeta } from './note'
-import type { NevoEditorCapability } from './editor-plugin'
+import type { NevoEditorCapability, NevoWorkspaceCapability, NevoUiCapability } from './editor-plugin'
 
 export type ThemeMode = 'dark' | 'light' | 'system'
 export type AppLocale = 'ru' | 'en'
-export type WorkspaceView = 'editor' | 'table' | 'kanban' | 'graph'
+export type WorkspaceView = 'editor' | 'table' | 'kanban' | 'graph' | 'last-note' | 'specific-note'
 export type AccentPreset = 'violet' | 'ember' | 'sage' | 'ocean' | 'rose' | (string & {})
 export type InterfaceDensity = 'comfortable' | 'compact'
 export type ReducedMotionMode = 'system' | 'reduce' | 'full'
@@ -21,6 +21,7 @@ export type BackgroundScene = 'aurora' | 'paper' | 'studio' | 'plain'
 export type SurfaceStyle = 'glass' | 'solid' | 'tinted'
 export type ContrastMode = 'soft' | 'balanced' | 'high'
 export type SidebarStyle = 'floating' | 'solid' | 'minimal'
+export type SidebarContentMode = 'tree' | 'tag-preview'
 export type WorkspaceType = 'general' | 'research' | 'writing' | 'product' | 'knowledge-base'
 export type WorkspaceStatus = 'active' | 'archived' | 'draft'
 export type SidebarDefaultState = 'expanded' | 'collapsed'
@@ -45,7 +46,9 @@ export type EditorTypewriterPosition = 'upper' | 'center' | 'lower'
 export type RecentItemsBehavior = 'remember' | 'manual'
 export type AIProviderKind = 'local' | 'cloud'
 export type AIApiKind = 'ollama' | 'openai'
-export type PluginInstallSource = 'folder-only'
+export type PluginInstallSource = 'folder-only' | 'marketplace'
+export type PluginKind = 'system' | 'user' | 'marketplace'
+export type PluginSource = 'bundled' | 'folder' | 'marketplace'
 export type AttachmentImportBehavior = 'copy-into-workspace'
 export type HotkeyScope = 'workspace' | 'app'
 export type SettingsSectionId =
@@ -92,6 +95,7 @@ export interface TrashedItem {
   title: string
   deletedAt: string
   originalParentId: string | null
+  icon?: string
 }
 
 export interface WorkspaceManifest {
@@ -105,6 +109,9 @@ export interface WorkspaceManifest {
   tree: FolderMeta[]
   rootNotes: NoteMeta[]
   trash?: TrashedItem[]
+  /** Persisted user ordering of note ids for the tag-preview sidebar mode.
+   *  Backward-compatible: absent or stale arrays fall back to natural preview order. */
+  sidebarNoteOrder?: string[]
 }
 
 export interface WorkspaceLastContext {
@@ -119,6 +126,7 @@ export interface GeneralSettings {
   recentItemsBehavior: RecentItemsBehavior
   confirmBeforeDelete: boolean
   lastContext: WorkspaceLastContext
+  startupNoteId: string | null
 }
 
 export interface AppearanceSettings {
@@ -181,6 +189,7 @@ export interface WorkspaceBehaviorSettings {
   newWorkspaceHomeNote: boolean
   autoCreateStarterStructure: AutoCreateStarterStructure
   // Sidebar
+  sidebarContentMode: SidebarContentMode
   sidebarSortMode: 'manual' | 'name-asc' | 'name-desc' | 'updated'
   // System views
   graphEntryMode: GraphEntryMode
@@ -247,10 +256,26 @@ export interface WorkspaceSettings {
   workspace: WorkspaceBehaviorSettings
   ai: AISettings
   plugins: PluginsSettings
+  pluginSettings: Record<string, Record<string, unknown>>
   features: FeaturesSettings
   hotkeys: HotkeysSettings
   files: FilesSettings
   advanced: AdvancedSettings
+}
+
+export interface PluginSettingField {
+  key: string
+  type: 'text' | 'password' | 'textarea' | 'select' | 'number' | 'checkbox'
+  label?: string
+  description?: string
+  placeholder?: string
+  options?: { value: string; label: string }[]
+  default?: unknown
+  min?: number
+  max?: number
+  step?: number
+  /** Хранить значение в secure_store (secrets.json), а не в pluginSettings. */
+  secret?: boolean
 }
 
 export interface PluginManifest {
@@ -259,11 +284,45 @@ export interface PluginManifest {
   version: string
   description: string
   enabled: boolean
+  kind?: PluginKind
+  source?: PluginSource
   entryPoint: string
   apiVersion: string
   editorCapabilities: NevoEditorCapability[]
+  uiCapabilities?: NevoUiCapability[]
+  workspaceCapabilities?: NevoWorkspaceCapability[]
   nevoVersionRange?: string
   priority?: number
+  settingsSchema?: PluginSettingField[]
+}
+
+export type MarketplacePluginStatus =
+  | 'notInstalled'
+  | 'installed'
+  | 'updateAvailable'
+  | 'disabled'
+  | 'invalid'
+  | 'conflict'
+
+export interface MarketplaceCatalogItem {
+  pluginId: string
+  pluginPath: string
+  treeSha: string
+  status: MarketplacePluginStatus
+  manifest: PluginManifest | null
+  manifestError: string | null
+  installedVersion: string | null
+  sourceUrl: string
+  files: string[]
+}
+
+export interface MarketplaceCatalog {
+  repo: string
+  branch: string
+  updatedAt: string
+  fromCache: boolean
+  error: string | null
+  plugins: MarketplaceCatalogItem[]
 }
 
 export interface AppConfig {

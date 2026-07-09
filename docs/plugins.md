@@ -36,12 +36,20 @@
   "version": "1.0.0",
   "description": "Добавляет кастомные команды и элементы в слэш-меню",
   "enabled": true,
+  "kind": "user",
+  "source": "folder",
   "entryPoint": "index.js",
   "apiVersion": "1.0.0",
   "nevoVersionRange": "^1.0.0",
   "editorCapabilities": [
     "editor.read",
     "editor.write"
+  ],
+  "uiCapabilities": [
+    "workspace.view.register"
+  ],
+  "workspaceCapabilities": [
+    "workspace.read"
   ],
   "priority": 10
 }
@@ -56,10 +64,14 @@
 | `version` | `string` | Да | Семантическая версия плагина (например, `"1.0.0"`). |
 | `description` | `string` | Нет | Краткое описание плагина. |
 | `enabled` | `boolean` | Да | Состояние включения плагина по умолчанию. |
+| `kind` | `"system" \| "user" \| "marketplace"` | Нет | Тип плагина. Для старых манифестов по умолчанию используется `"user"`. |
+| `source` | `"bundled" \| "folder" \| "marketplace"` | Нет | Источник установки. Для старых манифестов по умолчанию используется `"folder"`. |
 | `entryPoint` | `string` | Да | Путь к основному JS-файлу плагина относительно папки плагина. |
 | `apiVersion` | `string` | Да | Версия Nevo SDK API, под которую написан плагин (по умолчанию `"1.0.0"`). Мажорная версия должна совпадать с текущей версией SDK приложения. |
 | `nevoVersionRange` | `string` | Нет | Совместимый диапазон версий Nevo (например, `^1.0.0`, `*` или `latest`). |
-| `editorCapabilities` | `string[]` | Да | Массив запрашиваемых разрешений для доступа к API. |
+| `editorCapabilities` | `string[]` | Да | Разрешения редактора: регистрация команд, нод, slash items, node views, сериализаторов. |
+| `uiCapabilities` | `string[]` | Нет | Разрешения UI рабочего пространства: view/sidebar/modal/navigation. |
+| `workspaceCapabilities` | `string[]` | Нет | Разрешения на чтение/запись доменных данных workspace, notes, templates и kanban. |
 | `priority` | `number` | Нет | Приоритет загрузки. Плагины с более высоким приоритетом инициализируются раньше, а их горячие клавиши перехватывают события первыми. |
 
 ---
@@ -69,9 +81,98 @@
 Система безопасности Nevo требует явного указания возможностей, которые использует плагин:
 
 *   **`editor.read`**: Разрешает чтение состояния редактора (например, подписку на транзакции).
-*   **`editor.write`**: Разрешает изменять состояние редактора (регистрировать команды, клавиши, узлы, отметки, элементы слэш-меню и т.д.).
-*   **`workspace.read`**: Доступ к чтению метаданных воркспейса (будет доступно в будущих версиях).
-*   **`workspace.command.invoke`**: Доступ к вызову некоторых команд бэкенда Tauri.
+*   **`editor.write`**: Разрешает изменять состояние редактора: регистрировать команды, клавиши, узлы, отметки, элементы slash-меню, node views и сериализацию.
+*   **`workspace.view.register`**: Разрешает регистрировать workspace views, элементы сайдбара и модальные окна.
+*   **`workspace.navigation`**: Разрешает переходы через `ctx.navigation.open(route)` и возврат к корню workspace.
+*   **`workspace.read` / `workspace.write`**: Доступ к чтению и записи данных рабочего пространства.
+*   **`note.read` / `note.write`**: Доступ к данным заметок.
+*   **`template.read` / `template.write`**: Доступ к командам шаблонов (`template_*`).
+*   **`kanban.read` / `kanban.write`**: Доступ к командам Kanban (`kanban_*`).
+
+`ctx.workspace.invoke(commandId, args)` принимает только команды из allow-list SDK. Например, `kanban_list_boards` требует `kanban.read`, а `kanban_create_board` требует `kanban.write`. Неизвестные команды не прокидываются в Tauri напрямую.
+
+---
+
+## 🧩 Системные bundled-плагины
+
+Системные возможности Nevo поставляются как обычные workspace-плагины с `kind: "system"` и `source: "bundled"`. При создании или открытии локального workspace приложение автоматически устанавливает или обновляет эти пакеты в `.nevo/plugins/<id>`:
+
+*   `nevo.kanban` — workspace view `/workspace/plugin/nevo.kanban/:boardId` и доступ к `kanban_*`.
+*   `nevo.templates` — modal/интеграция шаблонов и доступ к `template_*`.
+*   `nevo.vega` — slash item для блока Vega-Lite.
+*   `nevo.markmap` — slash item для блока Markmap.
+
+Состояние включения хранится только в `manifest.enabled`. Legacy-поле `settings.features.*` читается нормализатором старых настроек, но не является источником истины для UI и логики плагинов. При обновлении bundled-плагина сохраняется пользовательское значение `enabled`; пользовательские плагины с `kind: "user"` или `source: "folder"` не перезаписываются.
+
+---
+
+## 🛒 Marketplace-плагины
+
+Каталог плагинов Nevo читается из публичного GitHub-репозитория `eliotBenitez/nevo-marketplace`, ветка `main`. Приложение не использует ZIP-архивы, releases или `git clone`: оно читает GitHub tree API, скачивает файлы через raw URLs и устанавливает выбранный плагин в текущий workspace.
+
+Структура marketplace-репозитория:
+
+```text
+nevo-marketplace/
+├── marketplace.json
+└── plugins/
+    └── my-plugin/
+        ├── manifest.json
+        ├── index.js
+        ├── README.md
+        ├── icon.svg
+        └── screenshots/
+```
+
+`marketplace.json` в корне опционален. Он может содержать `schemaVersion`, `name`, `updatedAt`, `featured` и `categories`; если файла нет, Nevo строит каталог сканированием `plugins/*/manifest.json`.
+
+Marketplace-манифест использует тот же формат `PluginManifest`, но обязан указывать `kind: "marketplace"` и `source: "marketplace"`:
+
+```json
+{
+  "id": "my-plugin",
+  "name": "My Marketplace Plugin",
+  "version": "1.0.0",
+  "description": "Добавляет команду workspace",
+  "enabled": true,
+  "kind": "marketplace",
+  "source": "marketplace",
+  "entryPoint": "index.js",
+  "apiVersion": "1.0.0",
+  "editorCapabilities": ["editor.read"],
+  "uiCapabilities": ["workspace.view.register"],
+  "workspaceCapabilities": ["workspace.read"]
+}
+```
+
+Правила безопасности:
+
+*   `id` должен совпадать с именем папки `plugins/<pluginId>` и содержать только `[A-Za-z0-9._-]`.
+*   Все скачиваемые файлы должны находиться внутри `plugins/<pluginId>/`.
+*   Пути с `..`, абсолютные пути, обратные слеши и symlink-like entries из GitHub tree отклоняются.
+*   `entryPoint` должен существовать среди файлов плагина.
+*   Marketplace-плагин не устанавливается поверх `system` или `user` плагина с тем же `id`.
+
+При установке Nevo создаёт `.nevo/plugins/<pluginId>/.nevo-marketplace.json`:
+
+```json
+{
+  "repo": "eliotBenitez/nevo-marketplace",
+  "branch": "main",
+  "pluginPath": "plugins/my-plugin",
+  "treeSha": "sha-list",
+  "installedVersion": "1.0.0",
+  "installedAt": "2026-07-05T19:00:00Z",
+  "files": ["manifest.json", "index.js"]
+}
+```
+
+Жизненный цикл:
+
+*   **Install**: Nevo скачивает всю папку `plugins/<pluginId>`, проверяет манифест и заменяет целевую папку в `.nevo/plugins`.
+*   **Update**: плагин переустанавливается из активной ветки marketplace, но текущее значение `manifest.enabled` сохраняется.
+*   **Remove**: удаляются только плагины с `kind/source = marketplace` и metadata-файлом `.nevo-marketplace.json`; пользовательские и системные плагины защищены от удаления этой командой.
+*   **Offline/cache**: каталог кэшируется в `.nevo/marketplace/cache.json`. Если GitHub недоступен, UI может показать кэшированные данные с явной пометкой.
 
 ---
 
@@ -164,8 +265,23 @@
       run: (ctx: { view: EditorView; state: EditorState; dispatch: (tr: Transaction) => void }) => void
     }
     ```
-*   **`registerDecorationProvider(id: string, provider: (state: EditorState) => Decoration[] | DecorationSet): void`**  
-    Регистрирует провайдер динамических декораций (выделения цветом, добавления виджетов, классов) на основе текущего состояния редактора.
+*   **`registerDecorationProvider(id: string, provider: (state: EditorState) => Decoration[] | DecorationSet, options?: { dependsOnSelection?: boolean }): void`**  
+    Регистрирует провайдер динамических декораций (выделения цветом, добавления виджетов, классов) на основе текущего состояния редактора. По умолчанию провайдер перевызывается только при изменении документа; если результат провайдера зависит от текущего выделения (например, подсветка текущего блока), укажите `{ dependsOnSelection: true }`, чтобы он также перевызывался при простом перемещении курсора.
+
+### UI рабочего пространства
+
+*   **`registerWorkspaceView({ id, title, route, component, icon?, order? }): void`**  
+    Регистрирует view рабочего пространства. First-party bundled-плагины могут указывать Vue-компонент приложения, сторонние плагины должны предоставлять совместимый компонент через SDK.
+*   **`registerSidebarItem({ id, title, route, icon?, order? }): void`**  
+    Регистрирует элемент навигации в сайдбаре.
+*   **`registerModal({ id, component }): void`**  
+    Регистрирует модальное окно, которое может быть открыто host-логикой плагина.
+*   **`workspace.invoke(commandId, args?): Promise<T>`**  
+    Выполняет разрешённую workspace-команду по capability allow-list.
+*   **`navigation.open(route)` / `navigation.backToWorkspace()`**  
+    Навигация внутри workspace при наличии `workspace.navigation`.
+*   **`i18n.t(key, params?)`**  
+    Доступ к локализации приложения.
 
 ### Кастомные блоки, поповеры и сериализация
 

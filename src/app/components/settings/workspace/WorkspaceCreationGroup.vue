@@ -97,9 +97,9 @@ watch([activePath, locale], loadTemplateOptions)
         </div>
         <NvPopupMenu v-model:open="noteIconPickerOpen" placement="bottom-end">
           <template #trigger>
-            <button class="icon-trigger-btn">
+            <NvButton class="icon-trigger-btn">
               <NvNoteIcon :value="settings.workspace.defaultNoteIcon" :size="18" />
-            </button>
+            </NvButton>
           </template>
           <div class="settings-icon-picker-wrap">
             <NvIconPicker
@@ -118,9 +118,9 @@ watch([activePath, locale], loadTemplateOptions)
         </div>
         <NvPopupMenu v-model:open="folderIconPickerOpen" placement="bottom-end">
           <template #trigger>
-            <button class="icon-trigger-btn">
+            <NvButton class="icon-trigger-btn">
               <NvNoteIcon :value="settings.workspace.defaultFolderIcon" :size="18" />
-            </button>
+            </NvButton>
           </template>
           <div class="settings-icon-picker-wrap">
             <NvIconPicker

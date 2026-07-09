@@ -1,7 +1,13 @@
 import type { Node as PMNode } from 'prosemirror-model'
-import { NodeSelection } from 'prosemirror-state'
 import type { EditorView, NodeView } from 'prosemirror-view'
-import { resolveNodePosition, getStringAttr, type CoreNodeViewOptions, type NodeViewPosition } from './utils'
+import {
+  resolveNodePosition,
+  getStringAttr,
+  createLazyRenderObserver,
+  selectNodeAt,
+  type CoreNodeViewOptions,
+  type NodeViewPosition,
+} from './utils'
 
 let renderCounter = 0
 
@@ -83,10 +89,9 @@ export function createMermaidNodeView(node: PMNode, view: EditorView, getPos: No
   dom.append(buildHeader(), rendered)
 
   let currentNode = node
-  let isVisible = typeof IntersectionObserver === 'undefined'
+  let isVisible = false
   let pendingRender = false
   let lastRenderedCode = ''
-  let observer: IntersectionObserver | null = null
 
   const sync = async () => {
     if (!isVisible) {
@@ -121,19 +126,14 @@ export function createMermaidNodeView(node: PMNode, view: EditorView, getPos: No
     }
   }
 
-  if (typeof IntersectionObserver !== 'undefined') {
-    observer = new IntersectionObserver((entries) => {
-      if (!entries[0]?.isIntersecting) return
-      isVisible = true
-      observer?.disconnect()
-      observer = null
-      if (pendingRender) {
-        pendingRender = false
-        void sync()
-      }
-    }, { rootMargin: '200px' })
-    observer.observe(dom)
-  }
+  const lazyRender = createLazyRenderObserver(dom, () => {
+    isVisible = true
+    if (pendingRender) {
+      pendingRender = false
+      void sync()
+    }
+  })
+  isVisible = lazyRender.isInitiallyVisible
 
   const requestMermaidEdit = (event?: MouseEvent) => {
     const position = resolveNodePosition(getPos)
@@ -149,7 +149,7 @@ export function createMermaidNodeView(node: PMNode, view: EditorView, getPos: No
     event.stopPropagation()
     const position = resolveNodePosition(getPos)
     if (typeof position === 'number') {
-      view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, position)))
+      selectNodeAt(view, position)
     }
     requestMermaidEdit(event)
   }
@@ -168,7 +168,7 @@ export function createMermaidNodeView(node: PMNode, view: EditorView, getPos: No
       return true
     },
     destroy() {
-      observer?.disconnect()
+      lazyRender.disconnect()
       dom.removeEventListener('click', onClick)
     },
   }

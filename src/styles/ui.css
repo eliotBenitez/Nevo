@@ -22,25 +22,26 @@
 .blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(40px);
+  filter: blur(54px);
+  opacity: 0.58;
 }
 .blob-a {
   top: -15%; left: 12%;
   width: 460px; height: 460px;
-  background: radial-gradient(circle, oklch(0.66 0.10 258 / 0.45), transparent 60%);
+  background: radial-gradient(circle, color-mix(in oklab, var(--accent) 44%, transparent), transparent 62%);
   animation: blob-drift-a 18s ease-in-out infinite;
 }
 .blob-b {
   bottom: -20%; right: 8%;
   width: 540px; height: 540px;
-  background: radial-gradient(circle, oklch(0.72 0.08 30 / 0.35), transparent 60%);
-  filter: blur(50px);
+  background: radial-gradient(circle, rgb(255 255 255 / 0.06), transparent 64%);
+  filter: blur(62px);
   animation: blob-drift-b 22s ease-in-out infinite;
 }
 .blob-c {
   top: 40%; left: 55%;
   width: 320px; height: 320px;
-  background: radial-gradient(circle, oklch(0.7 0.08 155 / 0.20), transparent 60%);
+  background: radial-gradient(circle, rgb(120 113 108 / 0.10), transparent 62%);
   animation: blob-drift-c 16s ease-in-out infinite;
 }
 

@@ -6,10 +6,10 @@ import SettingsPluginsPanel from './SettingsPluginsPanel.vue'
 import en from '../../../locales/en.json'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import type { PluginManifest } from '../../../types/workspace'
-import { createDefaultWorkspaceSettings } from '../../../utils/workspace-settings'
 
 vi.mock('@tauri-apps/plugin-opener', () => ({
   openPath: vi.fn(),
+  openUrl: vi.fn(),
 }))
 
 vi.mock('../../../tauri/commands', () => ({
@@ -24,27 +24,32 @@ const i18n = createI18n({
   messages: { en },
 })
 
-function plugin(id: string, enabled: boolean): PluginManifest {
+function plugin(id: string, enabled: boolean, kind: PluginManifest['kind'] = 'user'): PluginManifest {
   return {
     id,
     name: id,
     version: '1.0.0',
     description: 'Plugin',
     enabled,
+    kind,
+    source: kind === 'system' ? 'bundled' : 'folder',
     entryPoint: 'index.js',
     apiVersion: '1.0.0',
     editorCapabilities: ['editor.read'],
+    uiCapabilities: [],
+    workspaceCapabilities: [],
   }
 }
 
 describe('SettingsPluginsPanel', () => {
-  it('includes system plugins in total and enabled filter counts', () => {
+  it('counts system and user plugins from the same manifest list', () => {
     setActivePinia(createPinia())
     const workspaceStore = useWorkspaceStore()
-    const settings = createDefaultWorkspaceSettings()
-    settings.features.vega = false
-    workspaceStore.settings = settings
     workspaceStore.plugins = [
+      plugin('nevo.kanban', true, 'system'),
+      plugin('nevo.templates', true, 'system'),
+      plugin('nevo.vega', false, 'system'),
+      plugin('nevo.markmap', true, 'system'),
       plugin('plugin.enabled', true),
       plugin('plugin.disabled', false),
     ]

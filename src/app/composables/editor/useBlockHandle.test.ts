@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { EditorState, NodeSelection, TextSelection } from 'prosemirror-state'
+import { EditorState, TextSelection } from 'prosemirror-state'
 import { EditorView } from 'prosemirror-view'
 import { mount as mountVue } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import { nevoBaseSchema } from '../../../editor-core/schema'
 import EditorBlockHandle from '../../components/editor/EditorBlockHandle.vue'
 import type { EditorCore } from './useEditorCore'
-import { createDeleteBlockTransaction, resolveBlockHandlePosition, resolveBlockTypeMenuPosition, resolveTurnIntoSelectionPos, useBlockHandle } from './useBlockHandle'
+import { createDeleteBlockTransaction, isPointInBlockHandleStickyArea, resolveBlockHandlePosition, resolveBlockTypeMenuPosition, resolveTurnIntoSelectionPos, useBlockHandle } from './useBlockHandle'
+import { buildDropTransaction } from '../../../editor-core/dnd/blockDnd'
 import en from '../../../locales/en.json'
 
 const i18n = createI18n({
@@ -14,23 +15,6 @@ const i18n = createI18n({
   locale: 'en',
   messages: { en },
 })
-
-function createDataTransfer(): DataTransfer {
-  const data = new Map<string, string>()
-  return {
-    clearData: () => data.clear(),
-    setData: (type: string, value: string) => { data.set(type, value) },
-    getData: (type: string) => data.get(type) ?? '',
-    setDragImage: () => {},
-    effectAllowed: 'uninitialized',
-  } as unknown as DataTransfer
-}
-
-function createDragStartEvent(dataTransfer: DataTransfer): DragEvent {
-  const event = new Event('dragstart') as DragEvent
-  Object.defineProperty(event, 'dataTransfer', { value: dataTransfer })
-  return event
-}
 
 describe('resolveBlockHandlePosition', () => {
   it('keeps the handle clear of the active block indicator', () => {
@@ -43,6 +27,24 @@ describe('resolveBlockHandlePosition', () => {
     const position = resolveBlockHandlePosition({ top: 120, left: 240 }, { left: 210 })
 
     expect(position).toEqual({ top: 123, left: 246 })
+  })
+})
+
+describe('isPointInBlockHandleStickyArea', () => {
+  it('keeps the handle sticky while the pointer crosses the gap to the block', () => {
+    expect(isPointInBlockHandleStickyArea(
+      { x: 224, y: 132 },
+      { top: 120, right: 420, bottom: 148, left: 240 },
+      { top: 123, left: 212 },
+    )).toBe(true)
+  })
+
+  it('does not keep the handle sticky for points outside the hovered block row', () => {
+    expect(isPointInBlockHandleStickyArea(
+      { x: 224, y: 170 },
+      { top: 120, right: 420, bottom: 148, left: 240 },
+      { top: 123, left: 212 },
+    )).toBe(false)
   })
 })
 
@@ -206,7 +208,7 @@ describe('createDeleteBlockTransaction', () => {
 })
 
 describe('useBlockHandle drag', () => {
-  it('keeps the dragged table node selection so drop moves the table even if selection changes inside it', () => {
+  it('moves the dragged node via an explicit transaction, independent of the live selection', () => {
     const schema = nevoBaseSchema
     const doc = schema.node('doc', null, [
       schema.node('paragraph', null, [schema.text('before')]),
@@ -219,62 +221,33 @@ describe('useBlockHandle drag', () => {
       ]),
       schema.node('paragraph', null, [schema.text('after')]),
     ])
-    const mount = document.createElement('div')
-    document.body.appendChild(mount)
 
-    let blockHandle: ReturnType<typeof useBlockHandle> | null = null
-    const view = new EditorView(mount, {
-      state: EditorState.create({ schema, doc }),
-      dispatchTransaction(transaction) {
-        view.updateState(view.state.apply(transaction))
-      },
+    let state = EditorState.create({ schema, doc })
+    const tableNode = doc.child(1)
+    const srcFrom = doc.child(0).nodeSize
+    const srcTo = srcFrom + tableNode.nodeSize
+
+    // Move the live selection into the table cell — the drop must not depend on it.
+    let cellTextPos: number | null = null
+    state.doc.descendants((node, pos) => {
+      if (cellTextPos !== null || !node.isTextblock || node.textContent !== 'cell') return true
+      cellTextPos = pos + 1
+      return false
     })
+    if (cellTextPos === null) throw new Error('Expected table cell text position')
+    state = state.apply(state.tr.setSelection(TextSelection.create(state.doc, cellTextPos)))
 
-    try {
-      const core = {
-        editorView: view,
-        commandRegistry: new Map(),
-        workspacePath: null,
-      } as unknown as EditorCore
-      blockHandle = useBlockHandle(core)
-      const tablePos = doc.child(0).nodeSize
-      blockHandle.blockHandle.hoveredBlockPos = tablePos
-      blockHandle.blockHandle.hoveredBlockTypeName = doc.child(1).type.name
-      blockHandle.blockHandle.hoveredBlockIconAttrs = null
+    // Drop the table at the very end of the document.
+    const tr = buildDropTransaction(state, tableNode, srcFrom, srcTo, { type: 'vertical', insertAt: state.doc.content.size })
+    expect(tr).not.toBeNull()
+    state = state.apply(tr!)
 
-      blockHandle.onDragStart(createDragStartEvent(createDataTransfer()))
-
-      const dragging = (view as unknown as { dragging: { move: boolean; node?: NodeSelection } | null }).dragging
-      expect(dragging?.move).toBe(true)
-      expect(dragging?.node).toBeInstanceOf(NodeSelection)
-      expect(dragging?.node?.from).toBe(tablePos)
-      expect(dragging?.node?.node.type.name).toBe('table')
-
-      let cellTextPos: number | null = null
-      view.state.doc.descendants((node, pos) => {
-        if (cellTextPos !== null || !node.isTextblock || node.textContent !== 'cell') return true
-        cellTextPos = pos + 1
-        return false
-      })
-      if (cellTextPos === null) throw new Error('Expected table cell text position')
-      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, cellTextPos)))
-
-      const tr = view.state.tr
-      dragging?.node?.replace(tr)
-      view.dispatch(tr)
-
-      expect(view.state.doc.toJSON()).toEqual({
-        type: 'doc',
-        content: [
-          { type: 'paragraph', content: [{ type: 'text', text: 'before' }] },
-          { type: 'paragraph', content: [{ type: 'text', text: 'after' }] },
-        ],
-      })
-    } finally {
-      blockHandle?.onDragEnd()
-      view.destroy()
-      mount.remove()
-    }
+    // Moved (not copied): table no longer in the middle, appears exactly once at the end.
+    expect(state.doc.childCount).toBe(3)
+    expect(state.doc.child(0).textContent).toBe('before')
+    expect(state.doc.child(1).textContent).toBe('after')
+    expect(state.doc.child(2).type.name).toBe('table')
+    expect(state.doc.child(2).textContent).toBe('cell')
   })
 })
 

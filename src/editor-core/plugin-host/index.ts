@@ -22,6 +22,7 @@ export class EditorPluginHost {
   private readonly workspacePath: string | null
   private readonly manifests: NevoEditorPluginManifest[]
   private readonly nevoVersion: string
+  private readonly runtime: EditorPluginHostOptions['runtime']
   private readonly listeners = new Map<keyof NevoEditorEventMap, Set<(payload: unknown) => void>>()
   private readonly storage = new Map<string, Map<string, unknown>>()
   private readonly runtimePlugins = new Map<string, NevoEditorRuntimePlugin>()
@@ -33,6 +34,9 @@ export class EditorPluginHost {
     commands: new Map<string, Command>(),
     keymaps: [],
     slashItems: new Map<string, NevoSlashItem>(),
+    workspaceViews: new Map(),
+    sidebarItems: new Map(),
+    modals: new Map(),
     toolbarActions: new Map<string, NevoToolbarAction>(),
     nodeViews: new Map(),
     decorationProviders: new Map(),
@@ -52,6 +56,7 @@ export class EditorPluginHost {
     this.workspacePath = options.workspacePath
     this.manifests = options.manifests
     this.nevoVersion = options.nevoVersion
+    this.runtime = options.runtime
   }
 
   async initialize(): Promise<void> {
@@ -130,6 +135,12 @@ export class EditorPluginHost {
         init: (_, state) => this._buildDecorations(state),
         apply: (tr, oldSet, _, newState) => {
           if (!tr.docChanged && !tr.selectionSet) return oldSet
+          if (tr.docChanged) return this._buildDecorations(newState)
+          // Selection moved but the document didn't change: positions are identical,
+          // so re-running every provider (and re-walking the whole document for each
+          // one) on plain cursor movement is wasted work — unless some provider
+          // explicitly declared that its output depends on the selection.
+          if (!this._hasSelectionDependentProviders()) return oldSet
           return this._buildDecorations(newState)
         },
       },
@@ -141,11 +152,18 @@ export class EditorPluginHost {
     })
   }
 
+  private _hasSelectionDependentProviders(): boolean {
+    for (const entry of this.registries.decorationProviders.values()) {
+      if (entry.dependsOnSelection) return true
+    }
+    return false
+  }
+
   private _buildDecorations(state: EditorState): DecorationSet | null {
     const collected: Decoration[] = []
-    for (const provider of this.registries.decorationProviders.values()) {
+    for (const entry of this.registries.decorationProviders.values()) {
       try {
-        const result = provider(state)
+        const result = entry.provider(state)
         if (result instanceof DecorationSet) {
           collected.push(...result.find())
         } else {
@@ -199,6 +217,7 @@ export class EditorPluginHost {
         this.emit.bind(this),
         this.on.bind(this),
         this.invokeNodeEditRequest.bind(this),
+        this.runtime,
       )
 
       await instance.onRegister?.(context)

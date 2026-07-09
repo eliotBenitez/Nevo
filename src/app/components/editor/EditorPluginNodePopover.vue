@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import type { NevoNodePopoverField } from '../../../types/editor-plugin'
 
 const props = defineProps<{
@@ -21,7 +22,11 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-const firstFieldRef = ref<HTMLElement | null>(null)
+const firstFieldRef = ref<{ focus: () => void } | null>(null)
+
+function setFirstFieldRef(el: unknown) {
+  firstFieldRef.value = (el as { focus: () => void } | null) ?? null
+}
 
 function focusInput() {
   firstFieldRef.value?.focus()
@@ -66,6 +71,7 @@ function onCheckbox(field: NevoNodePopoverField, event: Event) {
     class="editor-overlay editor-popup-panel plugin-node-popover"
     :style="popoverStyle"
     @submit.prevent="emit('apply')"
+    @keydown="emit('keydown', $event)"
   >
     <label class="editor-popup-panel__label">{{ title }}</label>
 
@@ -81,33 +87,28 @@ function onCheckbox(field: NevoNodePopoverField, event: Event) {
       <textarea
         v-if="(field.type ?? 'textarea') === 'textarea'"
         :id="`plugin-field-${field.key}`"
-        :ref="index === 0 ? (el) => { firstFieldRef = el as HTMLElement } : undefined"
+        :ref="index === 0 ? setFirstFieldRef : undefined"
         class="editor-popup-panel__input"
         :value="stringValue(field.key)"
         :rows="field.rows ?? 6"
         :placeholder="field.placeholder"
         @input="onText(field, $event)"
-        @keydown="emit('keydown', $event)"
       />
 
-      <select
+      <NvSelect
         v-else-if="field.type === 'select'"
-        :id="`plugin-field-${field.key}`"
-        :ref="index === 0 ? (el) => { firstFieldRef = el as HTMLElement } : undefined"
-        class="editor-popup-panel__input plugin-node-popover__select"
-        :value="stringValue(field.key)"
-        @change="onText(field, $event)"
-        @keydown="emit('keydown', $event)"
-      >
-        <option v-for="opt in field.options ?? []" :key="opt.value" :value="opt.value">
-          {{ opt.label }}
-        </option>
-      </select>
+        :ref="index === 0 ? setFirstFieldRef : undefined"
+        class="plugin-node-popover__select"
+        :model-value="stringValue(field.key)"
+        :options="field.options ?? []"
+        :min-width="'100%'"
+        @update:model-value="(value) => emit('update:value', { key: field.key, value })"
+      />
 
       <input
         v-else-if="field.type === 'number'"
         :id="`plugin-field-${field.key}`"
-        :ref="index === 0 ? (el) => { firstFieldRef = el as HTMLElement } : undefined"
+        :ref="index === 0 ? setFirstFieldRef : undefined"
         type="number"
         class="editor-popup-panel__input"
         :value="stringValue(field.key)"
@@ -116,17 +117,15 @@ function onCheckbox(field: NevoNodePopoverField, event: Event) {
         :step="field.step"
         :placeholder="field.placeholder"
         @input="onNumber(field, $event)"
-        @keydown="emit('keydown', $event)"
       >
 
       <label v-else-if="field.type === 'checkbox'" class="plugin-node-popover__checkbox">
         <input
           :id="`plugin-field-${field.key}`"
-          :ref="index === 0 ? (el) => { firstFieldRef = el as HTMLElement } : undefined"
+          :ref="index === 0 ? setFirstFieldRef : undefined"
           type="checkbox"
           :checked="booleanValue(field.key)"
           @change="onCheckbox(field, $event)"
-          @keydown="emit('keydown', $event)"
         >
         <span>{{ field.placeholder ?? field.label }}</span>
       </label>
@@ -134,24 +133,22 @@ function onCheckbox(field: NevoNodePopoverField, event: Event) {
       <input
         v-else-if="field.type === 'color'"
         :id="`plugin-field-${field.key}`"
-        :ref="index === 0 ? (el) => { firstFieldRef = el as HTMLElement } : undefined"
+        :ref="index === 0 ? setFirstFieldRef : undefined"
         type="color"
         class="plugin-node-popover__color"
         :value="stringValue(field.key) || '#000000'"
         @input="onText(field, $event)"
-        @keydown="emit('keydown', $event)"
       >
 
       <input
         v-else
         :id="`plugin-field-${field.key}`"
-        :ref="index === 0 ? (el) => { firstFieldRef = el as HTMLElement } : undefined"
+        :ref="index === 0 ? setFirstFieldRef : undefined"
         type="text"
         class="editor-popup-panel__input"
         :value="stringValue(field.key)"
         :placeholder="field.placeholder"
         @input="onText(field, $event)"
-        @keydown="emit('keydown', $event)"
       >
     </div>
 
@@ -180,6 +177,7 @@ function onCheckbox(field: NevoNodePopoverField, event: Event) {
 }
 
 .plugin-node-popover__field-label {
+  color: var(--text-2);
   font-size: 12px;
   opacity: 0.7;
 }

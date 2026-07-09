@@ -10,18 +10,34 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
-  padding: 22px 30px 16px;
+  padding: 20px 30px 16px;
   border-bottom: 1px solid var(--line-1);
+  position: relative;
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--glass-2) 72%, transparent), transparent),
+    color-mix(in oklab, var(--glass-1) 34%, transparent);
+}
+
+.panel-header::after {
+  content: '';
+  position: absolute;
+  left: 30px;
+  bottom: -1px;
+  width: 42px;
+  height: 1px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
 }
 
 .panel-title {
   margin: 0;
   color: var(--text-1);
   font-family: var(--font-serif);
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 400;
   line-height: 1.06;
-  letter-spacing: -0.015em;
+  letter-spacing: 0;
 }
 
 .panel-sub {
@@ -37,6 +53,13 @@
   color: var(--text-4);
   font: 500 12px var(--font-ui);
   cursor: pointer;
+  transition: color 120ms ease;
+}
+
+.panel-link:hover,
+.panel-link:focus-visible {
+  color: var(--accent);
+  outline: none;
 }
 
 .panel-body {
@@ -44,10 +67,10 @@
   min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
-  padding: 20px 30px 30px;
+  padding: 18px 30px 30px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
   contain: paint;
   /* The settings window has `border-radius` + `overflow: hidden`; a rounded-corner
      clipping ancestor disables WebKit's accelerated overflow scrolling, forcing slow
@@ -100,10 +123,51 @@
   letter-spacing: 0.08em;
 }
 
+.panel-summary {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.panel-summary__item {
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: calc(8px * var(--radius-scale, 1));
+  border: 1px solid var(--line-1);
+  background: color-mix(in oklab, var(--glass-2) 82%, transparent);
+  color: var(--text-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.panel-summary__item strong {
+  color: var(--text-1);
+  font-weight: 650;
+}
+
+.panel-summary__item--warning {
+  color: oklch(0.68 0.09 72);
+  border-color: oklch(0.74 0.08 72 / 0.34);
+  background: oklch(0.74 0.08 72 / 0.12);
+}
+
 .settings-card {
-  background: color-mix(in oklab, var(--glass-2) 92%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--glass-3) 92%, transparent), color-mix(in oklab, var(--glass-2) 86%, transparent));
   border: 1px solid var(--line-2);
   border-radius: calc(12px * var(--radius-scale, 1));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035);
+  transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+
+.settings-card:focus-within {
+  border-color: color-mix(in oklab, var(--accent) 34%, var(--line-2));
+  box-shadow: 0 0 0 1px var(--accent-soft);
 }
 
 .settings-row {
@@ -111,6 +175,7 @@
   align-items: center;
   gap: 16px;
   padding: 14px 16px;
+  min-width: 0;
 }
 
 .settings-row--border {
@@ -131,6 +196,7 @@
   color: var(--text-1);
   font-size: 13.5px;
   font-weight: 550;
+  overflow-wrap: anywhere;
 }
 
 .row-sub {
@@ -138,6 +204,7 @@
   color: var(--text-4);
   font-size: 12px;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .toggle {
@@ -232,9 +299,14 @@
 }
 
 .segmented__item.is-active {
-  background: var(--glass-3);
-  color: var(--text-1);
-  box-shadow: var(--shadow-1);
+  background: color-mix(in oklab, var(--glass-3) 72%, var(--accent-soft));
+  color: var(--accent);
+  box-shadow: var(--shadow-1), inset 0 -1px 0 var(--accent);
+}
+
+.segmented__item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-soft), 0 0 0 1px var(--accent);
 }
 
 .ui-input,
@@ -246,6 +318,14 @@
   background: var(--hover);
   color: var(--text-1);
   font: 500 12.5px var(--font-ui);
+  min-width: 0;
+}
+
+.ui-input:focus,
+.hotkey-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .ui-input--glyph,
@@ -301,8 +381,19 @@
 }
 
 .empty-state {
-  padding: 26px 18px;
+  padding: 28px 18px;
   color: var(--text-3);
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 6px;
+  border: 1px dashed var(--line-2);
+  border-radius: calc(12px * var(--radius-scale, 1));
+  background: color-mix(in oklab, var(--glass-1) 78%, transparent);
+}
+
+.empty-state__icon {
+  color: var(--text-4);
 }
 
 .empty-state__title {
@@ -409,5 +500,47 @@
   .settings-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .panel-summary,
+  .header-actions,
+  .card-actions,
+  .inline-actions,
+  .about-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 719px) {
+  .panel-header {
+    padding: 16px 16px 14px;
+  }
+
+  .panel-title {
+    font-size: 23px;
+  }
+
+  .panel-body {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .settings-row {
+    padding: 13px;
+  }
+
+  .inline-actions,
+  .header-actions,
+  .card-actions,
+  .about-actions {
+    width: 100%;
+  }
+
+  .inline-actions .nv-btn,
+  .header-actions .nv-btn,
+  .card-actions .nv-btn,
+  .about-actions .nv-btn {
+    flex: 1 1 auto;
+    justify-content: center;
   }
 }

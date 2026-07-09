@@ -25,12 +25,19 @@ vi.mock('../tauri/commands', () => ({
     listPlugins: vi.fn(),
     validatePluginManifest: vi.fn(),
     setPluginEnabled: vi.fn(),
+    marketplaceListPlugins: vi.fn(),
+    marketplaceInstallPlugin: vi.fn(),
+    marketplaceUpdatePlugin: vi.fn(),
+    marketplaceRemovePlugin: vi.fn(),
+    marketplaceRefreshCache: vi.fn(),
     getWorkspaceDiagnostics: vi.fn(),
     pruneWorkspaceSnapshots: vi.fn(),
     cleanupOrphanedAssets: vi.fn(),
   },
   folderCommands: {},
-  noteCommands: {},
+  noteCommands: {
+    listSidebarNotePreviews: vi.fn().mockResolvedValue([]),
+  },
 }))
 
 vi.mock('../utils/logger', () => ({
@@ -127,6 +134,7 @@ describe('useWorkspaceStore settings integration', () => {
 
     expect(store.settings.general.defaultStartupView).toBe('graph')
     expect(store.settings.workspace.defaultLandingView).toBe('graph')
+    expect(store.settings.workspace.sidebarContentMode).toBe('tree')
     expect(store.settings.appearance.editorFontSize).toBe(18)
     expect(store.settings.editor.spellCheck).toBe(true)
   })
@@ -171,6 +179,31 @@ describe('useWorkspaceStore settings integration', () => {
 
     expect(vi.mocked(workspaceCommands.setPluginEnabled)).toHaveBeenCalledWith('/tmp/workspace', 'plugin.alpha', false)
     expect(store.plugins[0]?.enabled).toBe(false)
+  })
+
+  it('reloads installed plugins after marketplace install', async () => {
+    vi.mocked(workspaceCommands.openWorkspace).mockResolvedValue(manifest())
+    vi.mocked(workspaceCommands.loadSettings).mockResolvedValue({} as never)
+    vi.mocked(workspaceCommands.listPlugins)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([plugin(true)])
+    vi.mocked(workspaceCommands.marketplaceInstallPlugin).mockResolvedValue(plugin(true))
+    vi.mocked(workspaceCommands.marketplaceListPlugins).mockResolvedValue({
+      repo: 'eliotBenitez/nevo-marketplace',
+      branch: 'main',
+      updatedAt: '2026-07-05T00:00:00.000Z',
+      fromCache: false,
+      error: null,
+      plugins: [],
+    })
+
+    const store = useWorkspaceStore()
+    await store.init()
+    await store.openWorkspace('/tmp/workspace')
+    await store.installMarketplacePlugin('plugin.alpha', '1.0.0')
+
+    expect(vi.mocked(workspaceCommands.marketplaceInstallPlugin)).toHaveBeenCalledWith('/tmp/workspace', 'plugin.alpha', '1.0.0')
+    expect(store.plugins[0]?.id).toBe('plugin.alpha')
   })
 
   it('persists locale changes through app config', async () => {

@@ -3,6 +3,7 @@ import { computed, defineAsyncComponent, markRaw, nextTick, onBeforeUnmount, ref
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import {
+  ArrowRight,
   Code,
   Database,
   Eye,
@@ -11,6 +12,7 @@ import {
   Layers,
   Plug,
   Search,
+  SearchX,
   Settings,
   Sparkles,
   SlidersHorizontal,
@@ -65,7 +67,7 @@ const dialogRef = ref<HTMLElement | null>(null)
 const { activate, deactivate } = useFocusTrap(dialogRef, computed(() => props.open))
 watch(() => props.open, (open) => { if (open) nextTick(activate); else deactivate() })
 
-const activeSection = ref<SettingsSectionId>('appearance')
+const activeSection = ref<SettingsSectionId>('general')
 const settingsSearch = ref('')
 const { capturingBindingId } = useSettingsHotkeys()
 const pluginSectionCount = computed(() => getTotalPluginCount(plugins.value))
@@ -105,7 +107,7 @@ watch(
     toggleEscapeListener(open)
     if (!open) return
     settingsSearch.value = ''
-    activeSection.value = props.initialSection ?? 'appearance'
+    activeSection.value = props.initialSection ?? 'general'
     await workspaceStore.loadDiagnostics()
     await workspaceStore.reloadPlugins()
   },
@@ -171,76 +173,94 @@ function toggleEscapeListener(enabled: boolean) {
         </div>
 
         <div class="settings-shell">
-          <aside class="settings-sidebar">
-            <div class="settings-sidebar__head">
-              <Settings :size="14" class="sidebar-icon--muted" />
-              <span class="settings-sidebar__title">{{ t('settings.title') }}</span>
-              <div class="spacer" />
-              <kbd class="nv-kbd">⌘,</kbd>
-            </div>
-
-            <div class="settings-sidebar__search">
-              <div class="search-field" :class="{ 'search-field--active': settingsSearch }">
-                <Search :size="12" class="sidebar-icon--muted" />
-                <input v-model="settingsSearch" class="search-input" :placeholder="t('settings.search.placeholder')" />
+          <div class="settings-content">
+            <aside class="settings-sidebar">
+              <div class="settings-sidebar__head">
+                <span class="settings-sidebar__mark">
+                  <Settings :size="14" />
+                </span>
+                <span class="settings-sidebar__title">{{ t('settings.title') }}</span>
+                <div class="spacer" />
+                <kbd class="nv-kbd">⌘,</kbd>
               </div>
-            </div>
 
-            <nav class="settings-nav">
-              <button
-                v-for="section in sections"
-                :key="section.id"
-                type="button"
-                class="settings-nav__item"
-                :class="{ 'is-active': !settingsSearch && activeSection === section.id }"
-                @click="activateSection(section.id)"
-              >
-                <component :is="section.icon" :size="13" class="settings-nav__icon" />
-                <span class="settings-nav__label">{{ section.label }}</span>
-                <span v-if="section.count" class="settings-nav__count">{{ section.count }}</span>
-              </button>
-            </nav>
+              <div class="settings-sidebar__search">
+                <label class="settings-sr-only" for="workspace-settings-search">{{ t('settings.search.label') }}</label>
+                <div class="search-field" :class="{ 'search-field--active': settingsSearch }">
+                  <Search :size="12" class="sidebar-icon--muted" />
+                  <input
+                    id="workspace-settings-search"
+                    v-model="settingsSearch"
+                    class="search-input"
+                    type="search"
+                    :placeholder="t('settings.search.placeholder')"
+                    :aria-label="t('settings.search.label')"
+                    autocomplete="off"
+                  >
+                </div>
+              </div>
 
-            <div class="settings-sidebar__foot">
-              Nevo · v{{ appMetadata?.version ?? '0.1.0' }} · {{ appMetadata?.platform ?? t('settings.common.desktop') }}
-            </div>
-          </aside>
+              <nav class="settings-nav" :aria-label="t('settings.navigationLabel')">
+                <button
+                  v-for="section in sections"
+                  :key="section.id"
+                  type="button"
+                  class="settings-nav__item"
+                  :class="{ 'is-active': !settingsSearch && activeSection === section.id }"
+                  :aria-current="!settingsSearch && activeSection === section.id ? 'page' : undefined"
+                  @click="activateSection(section.id)"
+                >
+                  <component :is="section.icon" :size="13" class="settings-nav__icon" />
+                  <span class="settings-nav__label">{{ section.label }}</span>
+                  <span v-if="section.count" class="settings-nav__count">{{ section.count }}</span>
+                </button>
+              </nav>
 
-          <main class="settings-main">
-            <template v-if="settingsSearch">
-              <section class="panel">
-                <header class="panel-header">
-                  <div>
-                    <h2 class="panel-title">{{ t('settings.search.resultsTitle', { query: settingsSearch }) }}</h2>
-                    <p class="panel-sub">{{ t('settings.search.resultsCount', { count: searchResults.length }) }}</p>
-                  </div>
-                </header>
-                <div class="panel-body">
-                  <div class="results-card">
-                    <button
-                      v-for="result in searchResults"
-                      :key="result.id"
-                      type="button"
-                      class="result-row"
-                      @click="activateSection(result.section)"
-                    >
-                      <div class="result-row__meta">
-                        <span class="result-pill">{{ result.sectionLabel }}</span>
-                        <div>
-                          <div class="result-row__title">{{ result.title }}</div>
-                          <div class="result-row__desc">{{ result.description }}</div>
+              <div class="settings-sidebar__foot">
+                Nevo · v{{ appMetadata?.version ?? '0.1.0' }} · {{ appMetadata?.platform ?? t('settings.common.desktop') }}
+              </div>
+            </aside>
+
+            <main class="settings-main">
+              <template v-if="settingsSearch">
+                <section class="panel">
+                  <header class="panel-header">
+                    <div>
+                      <h2 class="panel-title">{{ t('settings.search.resultsTitle', { query: settingsSearch }) }}</h2>
+                      <p class="panel-sub">{{ t('settings.search.resultsCount', { count: searchResults.length }) }}</p>
+                    </div>
+                  </header>
+                  <div class="panel-body">
+                    <div class="results-card">
+                      <button
+                        v-for="result in searchResults"
+                        :key="result.id"
+                        type="button"
+                        class="result-row"
+                        :aria-label="t('settings.search.openResult', { title: result.title, section: result.sectionLabel })"
+                        @click="activateSection(result.section)"
+                      >
+                        <div class="result-row__meta">
+                          <span class="result-pill">{{ result.sectionLabel }}</span>
+                          <div>
+                            <div class="result-row__title">{{ result.title }}</div>
+                            <div class="result-row__desc">{{ result.description }}</div>
+                          </div>
                         </div>
+                        <div class="result-row__side">
+                          <div class="result-row__value">{{ result.value }}</div>
+                          <ArrowRight :size="14" class="result-row__arrow" aria-hidden="true" />
+                        </div>
+                      </button>
+                      <div v-if="searchResults.length === 0" class="empty-state">
+                        <SearchX :size="24" class="empty-state__icon" aria-hidden="true" />
+                        <div class="empty-state__title">{{ t('settings.search.emptyTitle') }}</div>
+                        <div class="empty-state__sub">{{ t('settings.search.emptyDescription') }}</div>
                       </div>
-                      <div class="result-row__value">{{ result.value }}</div>
-                    </button>
-                    <div v-if="searchResults.length === 0" class="empty-state">
-                      <div class="empty-state__title">{{ t('settings.search.emptyTitle') }}</div>
-                      <div class="empty-state__sub">{{ t('settings.search.emptyDescription') }}</div>
                     </div>
                   </div>
-                </div>
-              </section>
-            </template>
+                </section>
+              </template>
 
             <SettingsAppearancePanel v-else-if="activeSection === 'appearance'" />
             <SettingsEditorPanel v-else-if="activeSection === 'editor'" />
@@ -252,7 +272,8 @@ function toggleEscapeListener(enabled: boolean) {
             <SettingsWorkspacePanel v-else-if="activeSection === 'workspace'" />
             <SettingsFilesPanel v-else-if="activeSection === 'files'" />
             <SettingsAdvancedPanel v-else-if="activeSection === 'advanced'" />
-          </main>
+            </main>
+          </div>
         </div>
       </section>
     </div>

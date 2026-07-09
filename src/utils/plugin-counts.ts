@@ -1,19 +1,9 @@
-import type { PluginManifest, WorkspaceSettings } from '../types/workspace'
-
-const SYSTEM_PLUGIN_FEATURE_KEYS = ['kanban', 'templates', 'vega', 'markmap'] as const
-
-export function getSystemPluginCount(): number {
-  return SYSTEM_PLUGIN_FEATURE_KEYS.length
-}
-
-export function getEnabledSystemPluginCount(settings: WorkspaceSettings): number {
-  return SYSTEM_PLUGIN_FEATURE_KEYS.filter(key => settings.features[key] !== false).length
-}
+import type { PluginManifest } from '../types/workspace'
 
 export function getTotalPluginCount(plugins: PluginManifest[]): number {
-  return getSystemPluginCount() + plugins.length
+  return plugins.length
 }
 
-export function getEnabledPluginCount(plugins: PluginManifest[], settings: WorkspaceSettings): number {
-  return getEnabledSystemPluginCount(settings) + plugins.filter(plugin => plugin.enabled).length
+export function getEnabledPluginCount(plugins: PluginManifest[]): number {
+  return plugins.filter(plugin => plugin.enabled).length
 }

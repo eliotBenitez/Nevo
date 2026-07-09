@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 use super::folder::{load_manifest, save_manifest};
-use super::note::NoteDocument;
+use super::note::{NoteDocument, NoteProperties};
 use super::path_utils::normalize_workspace_path;
 use super::workspace::{FolderMeta, NoteMeta};
 
@@ -689,6 +689,7 @@ pub fn template_create_note(
         folder_id: folder_id.clone(),
         created_at: now.clone(),
         updated_at: now.clone(),
+        properties: Some(NoteProperties::empty()),
         content: {
             let mut content = template.content.clone();
             let mut cursor = false;

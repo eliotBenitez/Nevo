@@ -71,6 +71,29 @@ describe('broken-link decoration plugin', () => {
     destroy()
   })
 
+  it('keeps a broken-link decoration correctly positioned after an unrelated edit elsewhere', () => {
+    const { view, destroy } = mountWith(
+      (id) => id === 'exists',
+      docWithLinks([{ noteId: 'missing', text: 'bad' }]),
+    )
+    try {
+      // Insert plain text before the broken-link run. This transaction never touches
+      // the internal_link mark, so the plugin should take the cheap map-only path
+      // instead of rebuilding — but the decoration must still shift with the insert.
+      view.dispatch(view.state.tr.insertText('hello ', 1))
+
+      const set = brokenLinkPluginKey.getState(view.state)!
+      const decos = set.find()
+      expect(decos).toHaveLength(1)
+      const paragraphStart = 1
+      const badTextPos = paragraphStart + 'hello '.length
+      expect(decos[0].from).toBe(badTextPos)
+      expect(decos[0].to).toBe(badTextPos + 'bad'.length)
+    } finally {
+      destroy()
+    }
+  })
+
   it('recomputes when a refresh meta transaction is dispatched', () => {
     let known = new Set(['a'])
     const { view, destroy } = mountWith(

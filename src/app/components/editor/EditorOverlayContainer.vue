@@ -92,8 +92,7 @@ export interface OverlayHandlers {
   closeSlashEmojiPicker: () => void
   selectCalloutIcon: (icon: string) => void
   closeCalloutIconPicker: () => void
-  onBlockDragStart: (event: DragEvent) => void
-  onBlockDragEnd: () => void
+  onBlockHandlePointerDown: (event: PointerEvent) => void
   onTypeIconClick: () => void
   onHandleMouseEnter: () => void
   onHandleMouseLeave: () => void
@@ -426,8 +425,7 @@ defineExpose({
         :position="blockHandle.position"
         :hovered-block-type-name="blockHandle.hoveredBlockTypeName"
         :hovered-block-icon-attrs="blockHandle.hoveredBlockIconAttrs"
-        @dragstart="handlers.onBlockDragStart"
-        @dragend="handlers.onBlockDragEnd"
+        @pointerdown="handlers.onBlockHandlePointerDown"
         @type-icon-click="handlers.onTypeIconClick"
         @mouseenter="handlers.onHandleMouseEnter"
         @mouseleave="handlers.onHandleMouseLeave"

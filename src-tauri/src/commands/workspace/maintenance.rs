@@ -420,7 +420,7 @@ pub fn cleanup_orphaned_assets(workspace_path: String) -> Result<WorkspaceCleanu
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::commands::note::{create_note, save_note};
+    use crate::commands::note::{create_note_impl, save_note_impl};
     use crate::commands::workspace::create_workspace;
     use chrono::Utc;
     use serde_json::json;
@@ -474,7 +474,7 @@ mod tests {
         .expect("write draw payload");
 
         // A note references the drawing payload so the `.draw.json` itself survives.
-        let mut note = create_note(
+        let mut note = create_note_impl(
             workspace_path.clone(),
             None,
             "Has drawing".to_string(),
@@ -489,11 +489,14 @@ mod tests {
             }]
         });
         note.updated_at = Utc::now().to_rfc3339();
-        save_note(workspace_path.clone(), note).expect("save note");
+        save_note_impl(workspace_path.clone(), note).expect("save note");
 
         cleanup_orphaned_assets(workspace_path).expect("cleanup");
 
         assert!(image_path.exists(), "drawing image must survive cleanup");
-        assert!(assets_dir.join(draw_name).exists(), "drawing payload must survive");
+        assert!(
+            assets_dir.join(draw_name).exists(),
+            "drawing payload must survive"
+        );
     }
 }

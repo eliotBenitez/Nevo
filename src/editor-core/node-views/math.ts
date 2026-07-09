@@ -1,8 +1,19 @@
 import type { Node as PMNode } from 'prosemirror-model'
-import { NodeSelection } from 'prosemirror-state'
 import type { EditorView, NodeView } from 'prosemirror-view'
 import { isKatexLoaded, loadKatex, renderKatexToString } from '../../utils/katex'
-import { resolveNodePosition, getStringAttr, type CoreNodeViewOptions, type NodeViewPosition } from './utils'
+import {
+  resolveNodePosition,
+  getStringAttr,
+  createLazyRenderObserver,
+  selectNodeAt,
+  type CoreNodeViewOptions,
+  type NodeViewPosition,
+} from './utils'
+
+function formatKatexError(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error)
+  return raw.replace(/^KaTeX parse error:\s*/, '').trim() || 'Invalid formula'
+}
 
 export function createMathNodeView(node: PMNode, view: EditorView, getPos: NodeViewPosition, options?: CoreNodeViewOptions): NodeView {
   const isInline = node.type.name === 'math_inline'
@@ -12,14 +23,17 @@ export function createMathNodeView(node: PMNode, view: EditorView, getPos: NodeV
   const rendered = document.createElement(isInline ? 'span' : 'div')
   rendered.className = 'nv-math-render'
 
-  dom.append(rendered)
+  const errorEl = document.createElement(isInline ? 'span' : 'div')
+  errorEl.className = 'nv-math-error'
+  errorEl.hidden = true
+
+  dom.append(rendered, errorEl)
 
   let currentNode = node
-  let isVisible = typeof IntersectionObserver === 'undefined'
+  let isVisible = false
   let pendingRender = false
   let lastRenderedLatex: string | null = null
   let lastRenderedDisplayMode: boolean | null = null
-  let observer: IntersectionObserver | null = null
 
   const sync = () => {
     if (!isVisible) {
@@ -52,27 +66,26 @@ export function createMathNodeView(node: PMNode, view: EditorView, getPos: NodeV
     try {
       rendered.innerHTML = renderKatexToString(latex || '\\;', { displayMode, throwOnError: true })
       dom.dataset.error = 'false'
-    } catch {
+      errorEl.hidden = true
+      errorEl.textContent = ''
+    } catch (error) {
       rendered.textContent = latex || '(empty formula)'
       dom.dataset.error = 'true'
+      errorEl.textContent = formatKatexError(error)
+      errorEl.hidden = false
     }
     lastRenderedLatex = latex
     lastRenderedDisplayMode = displayMode
   }
 
-  if (typeof IntersectionObserver !== 'undefined') {
-    observer = new IntersectionObserver((entries) => {
-      if (!entries[0]?.isIntersecting) return
-      isVisible = true
-      observer?.disconnect()
-      observer = null
-      if (pendingRender) {
-        pendingRender = false
-        sync()
-      }
-    }, { rootMargin: '200px' })
-    observer.observe(dom)
-  }
+  const lazyRender = createLazyRenderObserver(dom, () => {
+    isVisible = true
+    if (pendingRender) {
+      pendingRender = false
+      sync()
+    }
+  })
+  isVisible = lazyRender.isInitiallyVisible
 
   const requestMathEdit = (event?: MouseEvent) => {
     const position = resolveNodePosition(getPos)
@@ -89,7 +102,7 @@ export function createMathNodeView(node: PMNode, view: EditorView, getPos: NodeV
     const mouseEvent = event as MouseEvent
     const position = resolveNodePosition(getPos)
     if (typeof position === 'number') {
-      view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, position)))
+      selectNodeAt(view, position)
     }
     requestMathEdit(mouseEvent)
   }
@@ -109,7 +122,7 @@ export function createMathNodeView(node: PMNode, view: EditorView, getPos: NodeV
       return true
     },
     destroy() {
-      observer?.disconnect()
+      lazyRender.disconnect()
       dom.removeEventListener('click', onClick)
     },
   }

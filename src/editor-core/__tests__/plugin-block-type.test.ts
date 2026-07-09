@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { Schema } from 'prosemirror-model'
 import { buildPluginContext } from '../plugin-host/context'
 import { setActivePluginSerialization } from '../plugin-host/active-serialization'
 import { serializeNoteToMarkdown } from '../../utils/noteExport/markdownSerializer'
@@ -15,6 +16,9 @@ function makeRegistries(): NevoEditorRegistries {
     commands: new Map(),
     keymaps: [],
     slashItems: new Map(),
+    workspaceViews: new Map(),
+    sidebarItems: new Map(),
+    modals: new Map(),
     toolbarActions: new Map(),
     nodeViews: new Map(),
     decorationProviders: new Map(),
@@ -127,5 +131,72 @@ describe('plugin node serialization', () => {
     const block = parsed.content.content?.find((n) => n.type === 'card_block')
     expect(block).toBeTruthy()
     expect(block?.attrs?.text).toBe('hello')
+  })
+})
+
+const panelBlock: NevoBlockTypeConfig = {
+  name: 'panel_block',
+  schema: { group: 'block', content: 'block+', attrs: { variant: { default: 'info' } } },
+  render: () => {
+    const dom = document.createElement('div')
+    const contentDOM = document.createElement('div')
+    dom.append(contentDOM)
+    return { dom, contentDOM }
+  },
+  serialize: {
+    markdown: (_node, helpers) => `::panel\n${helpers.serializeChildren()}`,
+  },
+  slashItem: { id: 'panel.insert', title: 'Panel', defaultAttrs: { variant: 'info' } },
+}
+
+describe('container block type', () => {
+  it('builds a node view exposing contentDOM', () => {
+    const registries = makeRegistries()
+    makeContext(registries).registerBlockType(panelBlock)
+
+    const constructor = registries.nodeViews.get('panel_block')
+    expect(constructor).toBeTruthy()
+
+    const schema = new Schema({
+      nodes: {
+        doc: { content: 'block+' },
+        paragraph: { group: 'block', content: 'text*', toDOM: () => ['p', 0] },
+        text: {},
+        panel_block: registries.nodes.get('panel_block')!,
+      },
+    })
+    const node = schema.nodes.panel_block.createAndFill({ variant: 'info' })!
+
+    // view/getPos используются лениво (только в requestEdit), поэтому заглушки безопасны.
+    const nodeView = constructor!(node, {} as never, () => 0, [], null as never)
+    expect(nodeView.dom).toBeInstanceOf(HTMLElement)
+    expect(nodeView.contentDOM).toBeInstanceOf(HTMLElement)
+    // contentDOM должен быть внутри dom, иначе ProseMirror не отрисует детей.
+    expect((nodeView.dom as HTMLElement).contains(nodeView.contentDOM as Node)).toBe(true)
+  })
+
+  it('serializes container children through serializeChildren', () => {
+    const registries = makeRegistries()
+    makeContext(registries).registerBlockType(panelBlock)
+    setActivePluginSerialization(registries)
+
+    const note: NoteDocument = {
+      id: 'n2',
+      title: 'Doc',
+      content: {
+        type: 'doc',
+        content: [
+          {
+            type: 'panel_block',
+            attrs: { variant: 'info' },
+            content: [{ type: 'paragraph', content: [{ type: 'text', text: 'inside' }] }],
+          },
+        ],
+      },
+    } as unknown as NoteDocument
+
+    const { markdown } = serializeNoteToMarkdown(note, 'assets')
+    expect(markdown).toContain('::panel')
+    expect(markdown).toContain('inside')
   })
 })

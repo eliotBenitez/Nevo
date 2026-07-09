@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 interface Props {
   open: boolean
   title: string
   heading: string
+  placeholder?: string
+  submitLabel?: string
+  error?: string
+  submitDisabled?: boolean
 }
 
 const props = defineProps<Props>()
@@ -20,7 +24,7 @@ const inputRef = ref<HTMLInputElement | null>(null)
 
 watch(() => props.open, (open) => {
   if (open) {
-    import('vue').then(({ nextTick }) => nextTick(() => inputRef.value?.focus()))
+    void nextTick(() => inputRef.value?.focus())
   }
 })
 </script>
@@ -28,18 +32,21 @@ watch(() => props.open, (open) => {
 <template>
   <Teleport to="body">
     <div v-if="open" class="rename-backdrop" @click.self="emit('close')">
-      <form class="rename-modal" @submit.prevent="emit('submit')">
+      <form class="rename-modal" @submit.prevent="emit('submit')" @keydown.escape.prevent="emit('close')">
         <h3 class="rename-modal__title">{{ heading }}</h3>
         <input
           ref="inputRef"
           :value="title"
           class="rename-modal__input"
-          :placeholder="t('workspace.context.renameModalPlaceholder')"
+          :placeholder="placeholder ?? t('workspace.context.renameModalPlaceholder')"
+          :aria-invalid="!!error"
+          :aria-describedby="error ? 'rename-modal-error' : undefined"
           @input="emit('update:title', ($event.target as HTMLInputElement).value)"
         />
+        <p v-if="error" id="rename-modal-error" class="rename-modal__error">{{ error }}</p>
         <div class="rename-modal__actions">
           <button type="button" class="nv-btn" @click="emit('close')">{{ t('workspace.context.cancel') }}</button>
-          <button type="submit" class="nv-btn nv-btn--primary">{{ t('workspace.context.confirm') }}</button>
+          <button type="submit" class="nv-btn nv-btn--primary" :disabled="submitDisabled">{{ submitLabel ?? t('workspace.context.confirm') }}</button>
         </div>
       </form>
     </div>

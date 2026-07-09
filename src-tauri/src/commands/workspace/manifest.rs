@@ -5,9 +5,10 @@ use uuid::Uuid;
 use super::paths::{
     notes_dir_path, settings_path, snapshots_dir_path, workspace_context, workspace_error_context,
 };
+use super::plugins::ensure_bundled_system_plugins;
 use super::settings::{is_extended_diagnostics_enabled, read_workspace_settings};
 use super::types::{WorkspaceManifest, WorkspaceSettings};
-use crate::commands::path_utils::normalize_workspace_path;
+use crate::commands::path_utils::{normalize_workspace_path, write_atomic};
 use crate::logging::{LogContext, LogError};
 
 #[tauri::command]
@@ -45,6 +46,15 @@ pub fn create_workspace(
         );
         message
     })?;
+    ensure_bundled_system_plugins(&workspace_path).map_err(|message| {
+        let _ = logger.error(
+            "tauri.workspace",
+            "create_workspace",
+            "Failed to install bundled plugins",
+            workspace_error_context(&workspace_path, "io", message.clone()),
+        );
+        message
+    })?;
     std::fs::create_dir_all(base.join("notes")).map_err(|error| {
         let message = error.to_string();
         let _ = logger.error(
@@ -77,6 +87,7 @@ pub fn create_workspace(
         tree: vec![],
         root_notes: vec![],
         trash: vec![],
+        sidebar_note_order: vec![],
     };
 
     let manifest_json = serde_json::to_string_pretty(&manifest).map_err(|error| {
@@ -156,6 +167,15 @@ pub fn open_workspace(path: String) -> Result<WorkspaceManifest, String> {
         message
     })?;
     let workspace_path = path.to_string_lossy().into_owned();
+    ensure_bundled_system_plugins(&workspace_path).map_err(|message| {
+        let _ = logger.error(
+            "tauri.workspace",
+            "open_workspace",
+            "Failed to install bundled plugins",
+            workspace_error_context(&workspace_path, "io", message.clone()),
+        );
+        message
+    })?;
     let manifest_path = Path::new(&path).join(".nevo/workspace.json");
     let content = std::fs::read_to_string(&manifest_path).map_err(|error| {
         let message = error.to_string();
@@ -267,7 +287,7 @@ pub fn save_workspace_manifest(path: String, manifest: WorkspaceManifest) -> Res
         );
         message
     })?;
-    std::fs::write(manifest_path, content).map_err(|error| {
+    write_atomic(&manifest_path, content.as_bytes()).map_err(|error| {
         let message = error.to_string();
         let _ = logger.error(
             "tauri.workspace",

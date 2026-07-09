@@ -16,6 +16,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: color-mix(in oklab, var(--canvas-1) 92%, var(--glass-3));
 }
 
 .editor-doc-body {
@@ -185,6 +186,18 @@
 
 .doc-body--smooth {
   scroll-behavior: smooth;
+}
+
+/* While dragging the custom scrollbar thumb, scrollTop is set programmatically per
+   mousemove. On WebKitGTK a `contain: paint` layer doesn't repaint on a JS-driven
+   scroll until the pointer is released (content jumps into place only on mouse-up),
+   so drop containment for the duration of the drag. */
+.doc-body--scrollbar-dragging {
+  contain: none;
+  /* Override `scroll-behavior: smooth` while dragging: each mousemove sets scrollTop
+     directly, and smooth scrolling would animate every step so the content trails the
+     cursor. Defined after `.doc-body--smooth` so it wins at equal specificity. */
+  scroll-behavior: auto;
 }
 
 .editor-pane--focus-soft {
@@ -377,6 +390,8 @@
   line-height: 1.08;
   letter-spacing: -0.02em;
   padding: 4px 0;
+  resize: none;
+  overflow: hidden;
 }
 
 .doc-title::placeholder {
@@ -392,4 +407,3 @@
 .image-file-input {
   display: none;
 }
-

@@ -7,8 +7,9 @@ import type {
   WorkspaceManifest,
   WorkspaceSettings,
   PluginManifest,
+  MarketplaceCatalog,
 } from '../types/workspace'
-import type { FolderMeta, ImportedImageAsset, NoteDocument, NoteSnapshotMeta } from '../types/note'
+import type { FolderMeta, ImportedImageAsset, NoteDocument, NoteSnapshotMeta, NoteSnapshotsEntry, SidebarNotePreview } from '../types/note'
 import type { WorkspaceBlockSearchItem } from '../types/search'
 import type { BacklinkRef, GraphEdge, ExtractedEdge } from '../types/graph'
 import type { KanbanBoard, KanbanCard } from '../types/kanban'
@@ -98,6 +99,21 @@ export const workspaceCommands = {
   setPluginEnabled: (workspacePath: string, pluginId: string, enabled: boolean) =>
     invokeCommand<void>('set_plugin_enabled', { workspacePath, pluginId, enabled }),
 
+  marketplaceListPlugins: (workspacePath: string, forceRefresh = false) =>
+    invokeCommand<MarketplaceCatalog>('marketplace_list_plugins', { workspacePath, forceRefresh }),
+
+  marketplaceInstallPlugin: (workspacePath: string, pluginId: string, version?: string) =>
+    invokeCommand<PluginManifest>('marketplace_install_plugin', { workspacePath, pluginId, version }),
+
+  marketplaceUpdatePlugin: (workspacePath: string, pluginId: string) =>
+    invokeCommand<PluginManifest>('marketplace_update_plugin', { workspacePath, pluginId }),
+
+  marketplaceRemovePlugin: (workspacePath: string, pluginId: string) =>
+    invokeCommand<void>('marketplace_remove_plugin', { workspacePath, pluginId }),
+
+  marketplaceRefreshCache: (workspacePath: string) =>
+    invokeCommand<MarketplaceCatalog>('marketplace_refresh_cache', { workspacePath }),
+
   getWorkspaceDiagnostics: (workspacePath: string) =>
     invokeCommand<WorkspaceDiagnostics>('get_workspace_diagnostics', { workspacePath }),
 
@@ -135,8 +151,14 @@ export const noteCommands = {
   moveNote: (workspacePath: string, noteId: string, targetFolderId: string | null) =>
     invokeCommand<void>('move_note', { workspacePath, noteId, targetFolderId }),
 
+  listSidebarNotePreviews: (workspacePath: string) =>
+    invokeCommand<SidebarNotePreview[]>('list_sidebar_note_previews', { workspacePath }),
+
   listNoteSnapshots: (workspacePath: string, noteId: string) =>
     invokeCommand<NoteSnapshotMeta[]>('list_note_snapshots', { workspacePath, noteId }),
+
+  listAllNoteSnapshots: (workspacePath: string) =>
+    invokeCommand<NoteSnapshotsEntry[]>('list_all_note_snapshots', { workspacePath }),
 
   loadNoteSnapshot: (workspacePath: string, noteId: string, snapshotId: string) =>
     invokeCommand<NoteDocument>('load_note_snapshot', { workspacePath, noteId, snapshotId }),
@@ -161,6 +183,9 @@ export const noteCommands = {
 
   importAssetByPath: (workspacePath: string, sourcePath: string, fileName: string) =>
     invokeCommand<ImportedImageAsset>('import_asset_by_path', { workspacePath, sourcePath, fileName }),
+
+  importAssetFromUrl: (workspacePath: string, url: string) =>
+    invokeCommand<ImportedImageAsset>('import_asset_from_url', { workspacePath, url }),
 
   deleteUnreferencedAsset: (workspacePath: string, assetSrc: string) =>
     invokeCommand<boolean>('delete_unreferenced_asset', { workspacePath, assetSrc }),
@@ -252,6 +277,9 @@ export const collabCommands = {
       (buf) => new Uint8Array(buf),
     ),
 
+  deleteYjsState: (workspacePath: string, noteId: string) =>
+    invokeCommand<boolean>('delete_yjs_state', { workspacePath, noteId }),
+
   startServer: (port: number) =>
     invokeCommand<CollabServerInfo>('start_collab_server', { port }),
 
@@ -327,4 +355,27 @@ export const graphCommands = {
 
   getAllEdges: (workspacePath: string) =>
     invokeCommand<GraphEdge[]>('graph_get_all_edges', { workspacePath }),
+}
+
+export interface GithubSyncResult {
+  commitSha: string
+  filesCount: number
+  syncedAt: string
+}
+
+export const githubSyncCommands = {
+  testConnection: (repo: string) =>
+    invokeCommand<boolean>('github_sync_test_connection', { repo }),
+
+  syncNow: (workspacePath: string) =>
+    invokeCommand<GithubSyncResult>('github_sync_now', { workspacePath }),
+
+  getStatus: (workspacePath: string) =>
+    invokeCommand<Record<string, unknown>>('github_sync_get_status', { workspacePath }),
+
+  startAuto: (workspacePath: string, intervalMinutes: number) =>
+    invokeCommand<void>('github_sync_start_auto', { workspacePath, intervalMinutes }),
+
+  stopAuto: () =>
+    invokeCommand<void>('github_sync_stop_auto', {}),
 }

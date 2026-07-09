@@ -153,4 +153,11 @@ describe('active block emphasis', () => {
     expect(editorProseCss).toContain('--nv-active-list-block-indicator-offset')
     expect(editorProseCss).toMatch(/li > \.nv-active-block::before\s*{[^}]*var\(--nv-active-list-block-indicator-offset\)/s)
   })
+
+  it('keeps heading active-block indicator offset separate from the default block offset', () => {
+    const editorProseCss = readFileSync('src/styles/editor-prose/prose-text.css', 'utf8')
+
+    expect(editorProseCss).toContain('--nv-active-heading-block-indicator-offset')
+    expect(editorProseCss).toMatch(/\.nv-heading\.nv-active-block::before\s*{[^}]*var\(--nv-active-heading-block-indicator-offset\)/s)
+  })
 })

@@ -301,7 +301,7 @@ function getTagColorStyle(tag: KanbanPropertyOption) {
   flex-direction: row;
   align-items: stretch;
   border-radius: calc(8px * var(--radius-scale, 1));
-  background: color-mix(in oklab, var(--glass-3, var(--surface-1)) 92%, transparent);
+  background: color-mix(in oklab, var(--glass-3, var(--surface-1)) 96%, var(--canvas-0, transparent));
   border: 1px solid var(--line-2, var(--border-subtle));
   cursor: pointer;
   user-select: none;
@@ -326,8 +326,8 @@ function getTagColorStyle(tag: KanbanPropertyOption) {
 }
 
 .kb-card--highlight {
-  background: oklch(0.66 0.10 258 / 0.08);
-  border-color: oklch(0.66 0.10 258 / 0.30);
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+  border-color: color-mix(in oklab, var(--accent) 34%, var(--line-2));
 }
 
 .kb-card--dragging {
@@ -338,7 +338,7 @@ function getTagColorStyle(tag: KanbanPropertyOption) {
   transform: rotate(-1.2deg) translateY(-3px) scale(1.012);
   box-shadow:
     0 22px 48px -8px oklch(0 0 0 / 0.45),
-    0 0 0 1.5px oklch(0.66 0.10 258 / 0.55);
+    0 0 0 1.5px color-mix(in oklab, var(--accent) 62%, transparent);
   z-index: 10;
   pointer-events: none;
 }
@@ -358,8 +358,8 @@ function getTagColorStyle(tag: KanbanPropertyOption) {
     background 0.12s ease;
   box-shadow:
     0 28px 70px -18px oklch(0 0 0 / 0.52),
-    0 0 0 1.5px oklch(0.66 0.10 258 / 0.45);
-  background: color-mix(in oklab, var(--glass-3, var(--surface-1)) 92%, white 8%);
+    0 0 0 1.5px color-mix(in oklab, var(--accent) 52%, transparent);
+  background: color-mix(in oklab, var(--glass-3, var(--surface-1)) 96%, white 4%);
 }
 
 .kb-card__handle {

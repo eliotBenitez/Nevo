@@ -173,4 +173,37 @@ describe('TitleBarSearch', () => {
 
     wrapper.unmount()
   })
+
+  it('exposes combobox and listbox semantics for keyboard navigation', async () => {
+    const wrapper = mount(TitleBarSearch, {
+      attachTo: document.body,
+      global: {
+        plugins: [i18n],
+      },
+      props: {
+        manifest,
+        workspacePath: '/workspace',
+        settingsItems,
+        searchShortcut: 'Ctrl+P',
+      },
+    })
+
+    const input = wrapper.get('input')
+    await input.setValue('alpha')
+    await flushSearch()
+    await input.trigger('keydown', { key: 'ArrowDown' })
+
+    expect(input.attributes('role')).toBe('combobox')
+    expect(input.attributes('aria-expanded')).toBe('true')
+    expect(input.attributes('aria-controls')).toBeTruthy()
+    expect(input.attributes('aria-activedescendant')).toBeTruthy()
+
+    const listbox = document.body.querySelector('[role="listbox"]')
+    const activeOption = document.getElementById(input.attributes('aria-activedescendant')!)
+    expect(listbox).toBeTruthy()
+    expect(activeOption?.getAttribute('role')).toBe('option')
+    expect(activeOption?.getAttribute('aria-selected')).toBe('true')
+
+    wrapper.unmount()
+  })
 })

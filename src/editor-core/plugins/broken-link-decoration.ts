@@ -1,5 +1,7 @@
 import { Plugin, PluginKey } from 'prosemirror-state'
+import type { Transaction } from 'prosemirror-state'
 import { Decoration, DecorationSet } from 'prosemirror-view'
+import type { MarkType, Node as PMNode, Slice } from 'prosemirror-model'
 
 /** A plugin that marks `internal_link` marks pointing at non-existent notes
  *  with a CSS class (`.is-broken`) so they can be visually distinguished,
@@ -16,6 +18,51 @@ export interface BrokenLinkPluginOptions {
   /** Returns true when the given noteId still exists in the workspace.
    *  Always returning true disables the decoration entirely. */
   exists: (noteId: string) => boolean
+}
+
+/**
+ * Cheap pre-check: could this transaction possibly have added, removed, or
+ * repositioned an `internal_link`-marked text run? Mirrors the
+ * `collectRemovedAssetSrcs` pattern in `useEditorCore.ts`: only scan the changed
+ * ranges (old-doc side for removed/resolved marks, inserted slice / mark steps for
+ * new ones) instead of walking the entire document on every keystroke. Plain text
+ * edits anywhere outside an internal_link run — the overwhelming majority of
+ * keystrokes — never touch these ranges, so the full `buildDecorations` scan is
+ * skipped for them.
+ */
+function transactionTouchesInternalLink(prevDoc: PMNode, tr: Transaction, internalLinkType: MarkType): boolean {
+  const hasMark = (node: PMNode) => node.isText && internalLinkType.isInSet(node.marks)
+  let doc = prevDoc
+  for (const step of tr.steps) {
+    const anyStep = step as unknown as { slice?: Slice; mark?: { type: MarkType } }
+    if (anyStep.mark && anyStep.mark.type === internalLinkType) return true
+
+    const stepMap = step.getMap()
+    let touched = false
+    stepMap.forEach((oldStart, oldEnd) => {
+      if (touched || oldEnd <= oldStart) return
+      doc.nodesBetween(oldStart, oldEnd, (node) => {
+        if (touched) return false
+        if (hasMark(node)) { touched = true; return false }
+        return true
+      })
+    })
+    if (touched) return true
+
+    if (anyStep.slice) {
+      let found = false
+      anyStep.slice.content.descendants((node) => {
+        if (found) return false
+        if (hasMark(node)) { found = true; return false }
+        return true
+      })
+      if (found) return true
+    }
+
+    const result = step.apply(doc)
+    if (result.doc) doc = result.doc
+  }
+  return false
 }
 
 export function createBrokenLinkDecorationPlugin(options: BrokenLinkPluginOptions): Plugin {
@@ -45,13 +92,19 @@ export function createBrokenLinkDecorationPlugin(options: BrokenLinkPluginOption
       init(_, instance) {
         return buildDecorations(instance.doc)
       },
-      apply(tr, prev, _oldState, newState) {
-        // Recompute when the doc changed OR an explicit refresh meta was sent
-        // (the existence check depends on external state, not the doc).
-        if (tr.docChanged || tr.getMeta(brokenLinkPluginKey)) {
+      apply(tr, prev, oldState, newState) {
+        // Explicit refresh meta: the existence check depends on external state, not
+        // the doc, so always recompute fully.
+        if (tr.getMeta(brokenLinkPluginKey)) {
           return buildDecorations(newState.doc)
         }
-        return prev
+        if (!tr.docChanged) return prev
+        const internalLinkType = newState.schema.marks.internal_link
+        if (!internalLinkType) return DecorationSet.empty
+        if (!transactionTouchesInternalLink(oldState.doc, tr, internalLinkType)) {
+          return prev.map(tr.mapping, newState.doc)
+        }
+        return buildDecorations(newState.doc)
       },
     },
     props: {

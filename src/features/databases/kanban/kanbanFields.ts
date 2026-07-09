@@ -43,7 +43,14 @@ export function getCardStatusValue(
   card: Pick<KanbanCard, 'properties'>,
   board: Pick<KanbanBoard, 'statusPropertyId'>,
 ): string {
-  const value = cloneStatusProperties(card)[board.statusPropertyId]
+  // Read the single status key directly instead of spreading the whole
+  // properties object: this function is called columns×cards times when
+  // grouping board views, and the clone allocated an object per call for a
+  // one-key lookup.
+  const properties = isRecordObject(card.properties)
+    ? card.properties as Record<string, KanbanCardPropValue>
+    : null
+  const value = properties?.[board.statusPropertyId]
   return typeof value === 'string' ? value : ''
 }
 

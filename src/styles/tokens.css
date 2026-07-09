@@ -9,9 +9,18 @@
   --font-serif: 'Instrument Serif', 'Cambria', Georgia, serif;
   --font-mono: 'Geist Mono', 'JetBrains Mono', ui-monospace, monospace;
 
-  --accent: oklch(0.66 0.10 258);
-  --accent-soft: oklch(0.66 0.10 258 / 0.14);
-  --accent-glow: oklch(0.66 0.10 258 / 0.32);
+  --accent: #A16207;
+  --accent-hover: #B45309;
+  --accent-soft: rgb(161 98 7 / 0.16);
+  --accent-glow: rgb(161 98 7 / 0.34);
+
+  --danger: oklch(0.56 0.19 25);
+  --danger-hover: oklch(0.50 0.20 25);
+  --danger-soft: color-mix(in oklab, var(--danger) 14%, transparent);
+  --danger-line: color-mix(in oklab, var(--danger) 34%, transparent);
+  --danger-glow: color-mix(in oklab, var(--danger) 28%, transparent);
+  --status-danger: var(--danger);
+  --status-danger-soft: var(--danger-soft);
 
   --hue-rose:  oklch(0.72 0.06 18);
   --hue-amber: oklch(0.78 0.07 78);
@@ -35,34 +44,41 @@
 }
 
 .theme-dark {
-  --canvas-0: oklch(0.16 0.012 270);
-  --canvas-1: oklch(0.185 0.012 270);
-  --wash-a: oklch(0.28 0.04 258);
-  --wash-b: oklch(0.22 0.03 30);
+  --canvas-0: #0a0a0c;
+  --canvas-1: #101013;
+  --wash-a: rgb(161 98 7 / 0.085);
+  --wash-b: rgb(255 255 255 / 0.055);
 
-  --glass-1: oklch(0.24 0.012 268 / 0.55);
-  --glass-2: oklch(0.27 0.012 268 / 0.72);
-  --glass-3: oklch(0.32 0.013 268 / 0.82);
-  --glass-titlebar: oklch(0.20 0.012 268 / 0.70);
+  --glass-1: rgb(17 17 19 / 0.80);
+  --glass-2: rgb(22 22 25 / 0.88);
+  --glass-3: rgb(29 29 31 / 0.94);
+  --glass-titlebar: rgb(13 13 16 / 0.90);
 
-  --line-1: oklch(1 0 0 / 0.06);
-  --line-2: oklch(1 0 0 / 0.10);
-  --line-strong: oklch(1 0 0 / 0.16);
+  --line-1: rgb(255 255 255 / 0.065);
+  --line-2: rgb(255 255 255 / 0.105);
+  --line-strong: rgb(255 255 255 / 0.17);
   --shadow: oklch(0 0 0);
-  --shadow-1: 0 1px 0 0 oklch(1 0 0 / 0.04) inset, 0 1px 2px oklch(0 0 0 / 0.3);
-  --shadow-2: 0 12px 40px -8px oklch(0 0 0 / 0.45), 0 2px 6px oklch(0 0 0 / 0.3);
-  --shadow-pop: 0 24px 60px -12px oklch(0 0 0 / 0.6), 0 2px 8px oklch(0 0 0 / 0.4), inset 0 1px 0 oklch(1 0 0 / 0.06);
+  --shadow-1: 0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 1px 2px rgb(0 0 0 / 0.34);
+  --shadow-2: 0 16px 42px -14px rgb(0 0 0 / 0.58), 0 2px 8px rgb(0 0 0 / 0.32);
+  --shadow-pop: 0 26px 64px -18px rgb(0 0 0 / 0.70), 0 4px 16px rgb(0 0 0 / 0.40), inset 0 1px 0 rgb(255 255 255 / 0.06);
 
-  --text-1: oklch(0.96 0.005 268);
-  --text-2: oklch(0.82 0.008 268);
-  --text-3: oklch(0.66 0.010 268);
-  --text-4: oklch(0.52 0.012 268);
-  --text-inv: oklch(0.18 0 0);
+  --text-1: #f0efed;
+  --text-2: #d0ccc7;
+  --text-3: #aaa39c;
+  --text-4: #817a72;
+  --text-inv: #0c0a09;
 
-  --hover: oklch(1 0 0 / 0.04);
-  --hover-strong: oklch(1 0 0 / 0.07);
-  --press: oklch(1 0 0 / 0.10);
+  --hover: rgb(255 255 255 / 0.05);
+  --hover-strong: rgb(255 255 255 / 0.085);
+  --press: rgb(255 255 255 / 0.12);
   --selection: color-mix(in oklab, var(--accent) 32%, transparent);
+  --danger: oklch(0.67 0.18 25);
+  --danger-hover: oklch(0.62 0.19 25);
+  --danger-soft: color-mix(in oklab, var(--danger) 16%, transparent);
+  --danger-line: color-mix(in oklab, var(--danger) 38%, transparent);
+  --danger-glow: color-mix(in oklab, var(--danger) 24%, transparent);
+  --status-danger: var(--danger);
+  --status-danger-soft: var(--danger-soft);
 
   /* Compatibility aliases for older bg/border variables */
   --bg-1: var(--canvas-0);
@@ -100,6 +116,13 @@
   --hover-strong: oklch(0 0 0 / 0.05);
   --press: oklch(0 0 0 / 0.07);
   --selection: color-mix(in oklab, var(--accent) 20%, transparent);
+  --danger: oklch(0.54 0.19 25);
+  --danger-hover: oklch(0.48 0.20 25);
+  --danger-soft: color-mix(in oklab, var(--danger) 12%, transparent);
+  --danger-line: color-mix(in oklab, var(--danger) 30%, transparent);
+  --danger-glow: color-mix(in oklab, var(--danger) 22%, transparent);
+  --status-danger: var(--danger);
+  --status-danger-soft: var(--danger-soft);
 
   /* Compatibility aliases for older bg/border variables */
   --bg-1: var(--canvas-0);

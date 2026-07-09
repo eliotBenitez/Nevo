@@ -26,6 +26,7 @@ export function emptyManifest(storageId: string, name: string, glyph: string, gr
     tree: [],
     rootNotes: [],
     trash: [],
+    sidebarNoteOrder: [],
   }
 }
 

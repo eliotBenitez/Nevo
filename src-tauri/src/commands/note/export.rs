@@ -121,10 +121,7 @@ fn export_note_with_assets(
 }
 
 #[tauri::command]
-pub fn export_draw_file(
-    export_path: String,
-    bytes: Vec<u8>,
-) -> Result<(), String> {
+pub fn export_draw_file(export_path: String, bytes: Vec<u8>) -> Result<(), String> {
     std::fs::write(&export_path, bytes).map_err(|error| error.to_string())
 }
 
@@ -132,10 +129,7 @@ pub fn export_draw_file(
 /// to disk. The document already embeds its images, so no asset copying is
 /// needed here.
 #[tauri::command]
-pub fn export_note_docx(
-    export_path: String,
-    bytes: Vec<u8>,
-) -> Result<(), String> {
+pub fn export_note_docx(export_path: String, bytes: Vec<u8>) -> Result<(), String> {
     let logger = crate::logging::logger();
     std::fs::write(&export_path, bytes).map_err(|error| {
         let message = error.to_string();
@@ -152,4 +146,3 @@ pub fn export_note_docx(
         message
     })
 }
-

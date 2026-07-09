@@ -39,8 +39,7 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  dragstart: [event: DragEvent]
-  dragend: []
+  pointerdown: [event: PointerEvent]
   typeIconClick: []
   mouseenter: []
   mouseleave: []
@@ -97,11 +96,9 @@ const { t } = useI18n()
   >
     <button
       class="block-handle__btn block-handle__drag"
-      draggable="true"
       :aria-label="t('editor.blockHandle.drag')"
       :title="t('editor.blockHandle.drag')"
-      @dragstart="emit('dragstart', $event)"
-      @dragend="emit('dragend')"
+      @pointerdown="emit('pointerdown', $event)"
     >
       <GripVertical :size="14" />
     </button>

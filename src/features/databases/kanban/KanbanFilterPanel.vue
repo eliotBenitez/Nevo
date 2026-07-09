@@ -373,7 +373,7 @@ function valueString(rule: KanbanFilterRule): string {
 }
 
 .kb-filter__add:not(:disabled):hover {
-  background: var(--accent-soft, oklch(0.66 0.10 258 / 0.12));
+  background: var(--accent-soft, rgb(161 98 7 / 0.12));
 }
 
 .kb-filter__clear {

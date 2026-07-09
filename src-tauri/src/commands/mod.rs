@@ -3,6 +3,7 @@ pub mod auth;
 pub mod config;
 pub mod folder;
 pub mod fonts;
+pub mod github_sync;
 pub mod graph;
 pub mod kanban;
 pub mod kanban_ops;

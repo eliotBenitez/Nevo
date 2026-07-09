@@ -27,8 +27,6 @@ latest.json
 *.sw?
 
 # AI agent instructions
-AGENTS.md
-CLAUDE.md
 GEMINI.md
 
 # Personal / non-essential docs
@@ -44,4 +42,13 @@ Nevo.html
 # Stray screenshots / images at root
 /src-tauri/Screen*.png
 /src-tauri/*.png.bak
+/src-tauri/icon-source
+
 changes.md
+scripts
+
+.claude
+.agents
+.codex
+
+graphify-out

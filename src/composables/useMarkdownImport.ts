@@ -2,15 +2,26 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTreeStore } from '../stores/tree'
 import { useWorkspaceStore } from '../stores/workspace'
-import { noteCommands } from '../tauri/commands'
+import { useNoteStore } from '../stores/note'
+import { collabCommands, noteCommands } from '../tauri/commands'
 import { parseMarkdownToBlockNode, type ParsedMarkdown } from '../utils/noteImport/markdownParser'
 import type { BlockNode } from '../types/note'
+
+interface ImportMarkdownIntoNoteOptions {
+  beforePersist?: () => void | Promise<void>
+}
 
 export function useMarkdownImport() {
   const { t } = useI18n()
   const treeStore = useTreeStore()
   const workspaceStore = useWorkspaceStore()
+  const noteStore = useNoteStore()
   const importing = ref(false)
+
+  async function resetLocalEditorState(workspacePath: string, noteId: string) {
+    if (workspaceStore.backendKind !== 'local') return
+    await collabCommands.deleteYjsState(workspacePath, noteId)
+  }
 
   async function pickAndParseMarkdown(): Promise<{ basename: string; parsed: ParsedMarkdown } | null> {
     let open: (options: { title: string; filters: { name: string; extensions: string[] }[]; multiple: boolean }) => Promise<unknown>
@@ -53,13 +64,17 @@ export function useMarkdownImport() {
 
       const updatedAt = new Date().toISOString()
       await noteCommands.saveNote(workspacePath, { ...note, title: title || basename, content, updatedAt })
+      await resetLocalEditorState(workspacePath, note.id)
+      noteStore.invalidateNoteCache(note.id)
+      treeStore.syncNoteMeta(note.id, { title: title || basename, icon: note.icon }, updatedAt)
+      void workspaceStore.refreshSidebarNotePreviews()
       return note.id
     } finally {
       importing.value = false
     }
   }
 
-  async function importMarkdownIntoNote(noteId: string): Promise<boolean> {
+  async function importMarkdownIntoNote(noteId: string, options: ImportMarkdownIntoNoteOptions = {}): Promise<boolean> {
     importing.value = true
     try {
       const workspacePath = workspaceStore.activePath
@@ -75,7 +90,12 @@ export function useMarkdownImport() {
         content: [...(note.content.content ?? []), ...(parsed.content.content ?? [])],
       }
       const updatedAt = new Date().toISOString()
+      await options.beforePersist?.()
       await noteCommands.saveNote(workspacePath, { ...note, content: merged, updatedAt })
+      await resetLocalEditorState(workspacePath, note.id)
+      noteStore.invalidateNoteCache(note.id)
+      treeStore.syncNoteMeta(note.id, { title: note.title, icon: note.icon }, updatedAt)
+      void workspaceStore.refreshSidebarNotePreviews()
       return true
     } finally {
       importing.value = false

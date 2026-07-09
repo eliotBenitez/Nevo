@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from 'vue'
 import { X } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import NvNoteIcon from '../../ui/primitives/NvNoteIcon.vue'
 import type { TabEntry } from '../../stores/tabs'
 
@@ -20,6 +21,7 @@ const draggedTabId = ref<string | null>(null)
 const dragOverTabId = ref<string | null>(null)
 const lastReorderTargetId = ref<string | null>(null)
 const suppressNextClick = ref(false)
+const { t } = useI18n()
 let clickSuppressTimer: ReturnType<typeof setTimeout> | null = null
 
 function onTabClick(tab: TabEntry) {
@@ -105,12 +107,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="tabs-strip" @dragover.prevent>
+  <div class="tabs-strip" role="tablist" :aria-label="t('workspace.tabs.label')" @dragover.prevent>
     <div
       v-for="tab in tabs"
       :key="tab.id"
-      role="button"
-      class="title-tab"
+      class="title-tab-wrap"
       :class="{
         'title-tab--active': tab.id === activeTabId,
         'title-tab--hovered': tab.id !== activeTabId && tab.id === hoveredTabId,
@@ -119,34 +120,39 @@ onBeforeUnmount(() => {
         'title-tab--dragging': tab.id === draggedTabId,
         'title-tab--drag-over': tab.id === dragOverTabId && tab.id !== draggedTabId,
       }"
-      :title="tab.title"
-      draggable="true"
-      @click="onTabClick(tab)"
       @mouseenter="hoveredTabId = tab.id"
       @mouseleave="hoveredTabId = null"
-      @dragstart="onDragStart($event, tab)"
-      @dragenter="onDragEnter(tab)"
-      @dragleave="onDragLeave(tab)"
-      @dragover.prevent
-      @dragend="onDragEnd"
-      @drop.prevent="onDrop(tab)"
     >
-      <span
-        class="tab-icon"
+      <button
+        type="button"
+        role="tab"
+        class="title-tab"
+        :title="tab.title"
+        :aria-selected="tab.id === activeTabId"
+        draggable="true"
+        @click="onTabClick(tab)"
+        @dragstart="onDragStart($event, tab)"
+        @dragenter="onDragEnter(tab)"
+        @dragleave="onDragLeave(tab)"
+        @dragover.prevent
+        @dragend="onDragEnd"
+        @drop.prevent="onDrop(tab)"
       >
-        <NvNoteIcon :value="tab.icon" :size="14" />
-      </span>
-      <span v-if="!tab.isPinned" class="tab-title">{{ tab.title }}</span>
-      <span
+        <span class="tab-icon">
+          <NvNoteIcon :value="tab.icon" :size="14" />
+        </span>
+        <span v-if="!tab.isPinned" class="tab-title">{{ tab.title }}</span>
+      </button>
+      <button
         v-if="!tab.isPinned"
+        type="button"
         class="tab-close"
-        role="button"
         draggable="false"
-        :aria-label="`Close ${tab.title}`"
+        :aria-label="t('workspace.tabs.close', { title: tab.title })"
         @click="onClose($event, tab)"
       >
         <X :size="10" />
-      </span>
+      </button>
     </div>
   </div>
 </template>

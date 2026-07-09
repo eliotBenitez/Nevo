@@ -1,5 +1,6 @@
 mod maintenance;
 mod manifest;
+mod marketplace;
 mod paths;
 mod plugins;
 mod settings;
@@ -11,6 +12,7 @@ mod types;
 // settings/manifest types referenced across the crate.
 pub use maintenance::*;
 pub use manifest::*;
+pub use marketplace::*;
 pub use plugins::*;
 pub use settings::*;
 pub use types::*;

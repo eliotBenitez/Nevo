@@ -30,6 +30,13 @@ fn resolve_assets(
     workspace: &Path,
     assets: &[TypstAsset],
 ) -> Result<Vec<(String, Vec<u8>)>, String> {
+    // Asset `rel_path` values come from the note/frontend and must stay inside
+    // the workspace. Without this check a crafted note could read arbitrary
+    // files on disk (e.g. "../../../../etc/passwd") into the compiled document.
+    let canonical_ws = workspace
+        .canonicalize()
+        .unwrap_or_else(|_| workspace.to_path_buf());
+
     let mut resolved = Vec::with_capacity(assets.len());
     for asset in assets {
         let bytes = if let Some(b64) = &asset.bytes_base64 {
@@ -37,7 +44,14 @@ fn resolve_assets(
                 .decode(b64)
                 .map_err(|err| format!("asset {}: {}", asset.name, err))?
         } else if let Some(rel) = &asset.rel_path {
-            std::fs::read(workspace.join(rel)).map_err(|err| format!("asset {}: {}", rel, err))?
+            let abs = workspace.join(rel);
+            let canonical = abs
+                .canonicalize()
+                .map_err(|err| format!("asset {}: {}", rel, err))?;
+            if !canonical.starts_with(&canonical_ws) {
+                return Err(format!("asset {}: path escapes workspace", rel));
+            }
+            std::fs::read(&canonical).map_err(|err| format!("asset {}: {}", rel, err))?
         } else {
             continue;
         };
@@ -240,6 +254,52 @@ a #link("nevo://note/abc-123")[note reference] here
 
         assert_eq!(render_dark(foreign), 0, "usvg should ignore foreignObject");
         assert!(render_dark(native) > 200, "usvg should render SVG <text>");
+    }
+
+    #[test]
+    fn resolve_assets_rejects_path_traversal_outside_workspace() {
+        let base =
+            std::env::temp_dir().join(format!("nevo-typst-traversal-{}", uuid::Uuid::new_v4()));
+        let workspace = base.join("workspace");
+        std::fs::create_dir_all(&workspace).expect("create workspace");
+
+        // A secret file that lives outside the workspace root.
+        std::fs::write(base.join("secret.txt"), b"top secret").expect("write secret");
+
+        let assets = vec![TypstAsset {
+            name: "leak.txt".to_string(),
+            bytes_base64: None,
+            rel_path: Some("../secret.txt".to_string()),
+        }];
+
+        let result = resolve_assets(&workspace, &assets);
+        assert!(
+            result.is_err(),
+            "asset path escaping the workspace must be rejected"
+        );
+
+        let _ = std::fs::remove_dir_all(base);
+    }
+
+    #[test]
+    fn resolve_assets_reads_valid_relative_asset() {
+        let base =
+            std::env::temp_dir().join(format!("nevo-typst-valid-asset-{}", uuid::Uuid::new_v4()));
+        let workspace = base.join("workspace");
+        let assets_dir = workspace.join("assets");
+        std::fs::create_dir_all(&assets_dir).expect("create asset dir");
+        std::fs::write(assets_dir.join("pic.png"), b"png-bytes").expect("write asset");
+
+        let assets = vec![TypstAsset {
+            name: "pic.png".to_string(),
+            bytes_base64: None,
+            rel_path: Some("assets/pic.png".to_string()),
+        }];
+
+        let result = resolve_assets(&workspace, &assets).expect("valid asset should resolve");
+        assert_eq!(result, vec![("pic.png".to_string(), b"png-bytes".to_vec())]);
+
+        let _ = std::fs::remove_dir_all(base);
     }
 
     #[test]

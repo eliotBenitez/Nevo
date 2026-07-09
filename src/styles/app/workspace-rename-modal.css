@@ -46,9 +46,19 @@
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
+.rename-modal__input[aria-invalid='true'] {
+  border-color: oklch(0.6 0.18 25);
+}
+
+.rename-modal__error {
+  margin: -2px 0 0;
+  color: oklch(0.62 0.18 25);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .rename-modal__actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
 }
-

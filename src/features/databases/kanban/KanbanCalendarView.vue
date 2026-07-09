@@ -507,7 +507,7 @@ const dowLabels = computed(() =>
 }
 
 .kb-cal__day--drop {
-  background: oklch(0.66 0.10 258 / 0.08);
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
   outline: 1.5px dashed var(--accent);
   outline-offset: -2px;
 }
@@ -569,7 +569,7 @@ const dowLabels = computed(() =>
 
 .kb-cal__week-view__col-head--today,
 .kb-cal__week-view__col--today {
-  background: var(--accent-soft, oklch(0.66 0.10 258 / 0.08));
+  background: var(--accent-soft, rgb(161 98 7 / 0.08));
 }
 
 .kb-cal__week-view__body {

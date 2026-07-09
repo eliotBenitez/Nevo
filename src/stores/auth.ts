@@ -7,6 +7,9 @@ import type { CloudUser, AuthTokens } from '../types/cloud'
 import { useServerConfigStore } from './serverConfig'
 import { secureStore, SECRET_PRIVATE_KEY, SECRET_REFRESH_TOKEN } from '../tauri/secureStore'
 import { generateKeypair } from '../core/crypto/keypair'
+import { appLogger } from '../utils/logger'
+
+const OAUTH_TIMEOUT_MS = 5 * 60_000
 
 export type AuthStatus = 'anonymous' | 'authenticating' | 'authenticated'
 export type OAuthProvider = 'google' | 'github'
@@ -49,28 +52,53 @@ export const useAuthStore = defineStore('auth', () => {
   /** Begin an OAuth login: open the system browser and await the loopback. */
   async function login(provider: OAuthProvider): Promise<void> {
     status.value = 'authenticating'
-    const port = await invoke<number>('start_oauth_loopback')
+    try {
+      const port = await invoke<number>('start_oauth_loopback')
 
-    const done = new Promise<AuthTokens>((resolve) => {
-      const unlistenPromise = listen<AuthTokens>('oauth-callback', (event) => {
-        void unlistenPromise.then((un) => un())
-        resolve(event.payload)
+      let settled = false
+      let resolveDone: (tokens: AuthTokens) => void = () => {}
+      let rejectDone: (error: unknown) => void = () => {}
+      const done = new Promise<AuthTokens>((resolve, reject) => {
+        resolveDone = resolve
+        rejectDone = reject
       })
-    })
 
-    await openUrl(`${serverCfg.serverUrl}/api/v1/auth/${provider}/start?port=${port}`)
+      const unlistenPromise = listen<AuthTokens>('oauth-callback', (event) => {
+        if (settled) return
+        settled = true
+        resolveDone(event.payload)
+      })
 
-    const tokens = await done
-    await applyTokens(tokens)
-    await loadMe()
-    await ensureKeypair()
-    sessionServerUrl.value = serverCfg.serverUrl
-    status.value = 'authenticated'
+      const timeoutId = setTimeout(() => {
+        if (settled) return
+        settled = true
+        rejectDone(new Error('OAuth login timed out'))
+      }, OAUTH_TIMEOUT_MS)
+
+      // The listener and timeout are cleaned up in `finally` for every exit path
+      // (success, timeout, token-exchange error, or `openUrl` failure), so a
+      // failed browser launch can't leak them or leave `done` to reject unheard.
+      try {
+        await openUrl(`${serverCfg.serverUrl}/api/v1/auth/${provider}/start?port=${port}`)
+
+        const tokens = await done
+        await applyTokens(tokens)
+        await loadMe()
+        await ensureKeypair()
+        sessionServerUrl.value = serverCfg.serverUrl
+        status.value = 'authenticated'
+      } finally {
+        clearTimeout(timeoutId)
+        void unlistenPromise.then((un) => un())
+      }
+    } catch (error) {
+      status.value = 'anonymous'
+      throw error
+    }
   }
 
   /** Exchange the refresh token for a new access+refresh pair. */
-  async function refresh(): Promise<boolean> {
-    if (!refreshToken.value) return false
+  async function _doRefresh(): Promise<boolean> {
     try {
       const res = await fetch(`${serverCfg.serverUrl}/api/v1/auth/refresh`, {
         method: 'POST',
@@ -83,9 +111,25 @@ export const useAuthStore = defineStore('auth', () => {
       }
       await applyTokens(await res.json() as AuthTokens)
       return true
-    } catch {
+    } catch (error) {
+      await appLogger.warn({
+        source: 'frontend.auth',
+        event: 'refresh',
+        message: 'Token refresh failed',
+        error,
+      })
       return false
     }
+  }
+
+  let refreshInFlight: Promise<boolean> | null = null
+
+  /** Exchange the refresh token for a new access+refresh pair (single-flight). */
+  async function refresh(): Promise<boolean> {
+    if (!refreshToken.value) return false
+    if (refreshInFlight) return refreshInFlight
+    refreshInFlight = _doRefresh().finally(() => { refreshInFlight = null })
+    return refreshInFlight
   }
 
   async function logout(): Promise<void> {
@@ -96,7 +140,15 @@ export const useAuthStore = defineStore('auth', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refresh: refreshToken.value }),
         })
-      } catch { /* best effort */ }
+      } catch (error) {
+        await appLogger.warn({
+          source: 'frontend.auth',
+          event: 'logout',
+          message: 'Logout request failed',
+          error,
+        })
+        /* best effort */
+      }
     }
     await clearSession()
   }
@@ -117,10 +169,27 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function loadMe(): Promise<void> {
-    const res = await fetch(`${serverCfg.serverUrl}/api/v1/me`, {
-      headers: { Authorization: `Bearer ${accessToken.value}` },
-    })
-    if (res.ok) user.value = await res.json() as CloudUser
+    try {
+      const res = await fetch(`${serverCfg.serverUrl}/api/v1/me`, {
+        headers: { Authorization: `Bearer ${accessToken.value}` },
+      })
+      if (res.ok) {
+        user.value = await res.json() as CloudUser
+      } else {
+        await appLogger.warn({
+          source: 'frontend.auth',
+          event: 'load_me',
+          message: `Failed to load user profile: ${res.status}`,
+        })
+      }
+    } catch (error) {
+      await appLogger.warn({
+        source: 'frontend.auth',
+        event: 'load_me',
+        message: 'Failed to load user profile',
+        error,
+      })
+    }
   }
 
   /**

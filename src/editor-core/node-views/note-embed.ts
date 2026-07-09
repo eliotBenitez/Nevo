@@ -1,9 +1,8 @@
-import { h, markRaw, render } from 'vue'
+import { markRaw, render } from 'vue'
 import type { Node as PMNode } from 'prosemirror-model'
 import type { EditorView, NodeView } from 'prosemirror-view'
 import { ExternalLink, Link, Trash2 } from 'lucide-vue-next'
-import NvPopupMenu from '../../ui/primitives/NvPopupMenu.vue'
-import { resolveNodePosition, getStringAttr, type CoreNodeViewOptions, type NodeViewPosition } from './utils'
+import { resolveNodePosition, getStringAttr, renderNodeOverflowMenu, type CoreNodeViewOptions, type NodeViewPosition } from './utils'
 
 const SAFE_URL_RE = /^(https?:|mailto:|tel:|asset:|blob:|data:image\/|#|\/|\.\/|\.\.\/|[^:]*$)/i
 
@@ -164,53 +163,28 @@ export function createNoteEmbedNodeView(
     const noteId = getStringAttr(currentNode, 'noteId')
 
     // Render Popup Menu
-    const menuVNode = h(NvPopupMenu, {
-      items: [
-        {
-          label: noteId ? t('noteEmbed.change') : t('noteEmbed.pickNote'),
-          icon: markRaw(Link),
-          action: onPick,
-        },
-        {
-          label: t('noteEmbed.open'),
-          icon: markRaw(ExternalLink),
-          action: onOpen,
-          disabled: !noteId,
-        },
-        {
-          type: 'separator',
-        },
-        {
-          label: t('noteEmbed.remove'),
-          icon: markRaw(Trash2),
-          danger: true,
-          action: onRemove,
-        },
-      ],
-      placement: 'bottom-end',
-    }, {
-      trigger: () => h('button', {
-        type: 'button',
-        className: 'nv-note-embed-more-btn',
-      }, [
-        h('svg', {
-          xmlns: 'http://www.w3.org/2000/svg',
-          width: '16',
-          height: '16',
-          viewBox: '0 0 24 24',
-          fill: 'none',
-          stroke: 'currentColor',
-          'stroke-width': '2',
-          'stroke-linecap': 'round',
-          'stroke-linejoin': 'round',
-        }, [
-          h('circle', { cx: '12', cy: '12', r: '1' }),
-          h('circle', { cx: '12', cy: '5', r: '1' }),
-          h('circle', { cx: '12', cy: '19', r: '1' }),
-        ]),
-      ]),
-    })
-    render(menuVNode, moreBtnContainer)
+    renderNodeOverflowMenu(moreBtnContainer, [
+      {
+        label: noteId ? t('noteEmbed.change') : t('noteEmbed.pickNote'),
+        icon: markRaw(Link),
+        action: onPick,
+      },
+      {
+        label: t('noteEmbed.open'),
+        icon: markRaw(ExternalLink),
+        action: onOpen,
+        disabled: !noteId,
+      },
+      {
+        type: 'separator',
+      },
+      {
+        label: t('noteEmbed.remove'),
+        icon: markRaw(Trash2),
+        danger: true,
+        action: onRemove,
+      },
+    ], 'nv-note-embed-more-btn')
   }
 
   const onPick = () => {

@@ -301,6 +301,7 @@ const defaultSettings: WorkspaceSettings = {
     recentItemsBehavior: 'remember',
     confirmBeforeDelete: true,
     lastContext: { kind: 'workspace', folderId: null, noteId: null },
+    startupNoteId: null,
   },
   appearance: {
     accentPreset: 'violet',
@@ -354,6 +355,7 @@ const defaultSettings: WorkspaceSettings = {
     newNoteTemplate: 'blank',
     newWorkspaceHomeNote: true,
     autoCreateStarterStructure: 'light',
+    sidebarContentMode: 'tree',
     sidebarSortMode: 'manual',
     graphEntryMode: 'global',
     graphScopeDefault: 'workspace',
@@ -378,6 +380,7 @@ const defaultSettings: WorkspaceSettings = {
     autoReloadOnLaunch: false,
     installSource: 'folder-only',
   },
+  pluginSettings: {},
   features: {
     kanban: true,
   },

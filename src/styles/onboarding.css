@@ -256,7 +256,7 @@
 }
 .template-card--selected {
   background: var(--accent-soft);
-  border-color: oklch(0.66 0.10 258 / 0.4);
+  border-color: color-mix(in oklab, var(--accent) 48%, transparent);
 }
 .template-card:hover:not(.template-card--selected) { background: var(--hover-strong); }
 
@@ -452,7 +452,7 @@
 }
 .ws-row:hover { background: var(--hover); }
 .ws-row--first { background: var(--accent-soft); }
-.ws-row--first:hover { background: oklch(0.66 0.10 258 / 0.18); }
+.ws-row--first:hover { background: color-mix(in oklab, var(--accent) 18%, transparent); }
 
 .ws-icon {
   width: 36px;
@@ -494,8 +494,8 @@
   inset: 20px;
   border-radius: calc(18px * var(--radius-scale, 1));
   border: 2px dashed var(--accent);
-  background: oklch(0.66 0.10 258 / 0.06);
-  box-shadow: inset 0 0 40px oklch(0.66 0.10 258 / 0.15);
+  background: color-mix(in oklab, var(--accent) 7%, transparent);
+  box-shadow: inset 0 0 40px color-mix(in oklab, var(--accent) 16%, transparent);
   pointer-events: none;
 }
 .drop-card {
@@ -508,15 +508,15 @@
   padding: 22px 28px;
   background: var(--glass-3);
   backdrop-filter: blur(32px) saturate(160%);
-  border: 1px solid oklch(0.66 0.10 258 / 0.4);
+  border: 1px solid color-mix(in oklab, var(--accent) 48%, transparent);
   border-radius: calc(14px * var(--radius-scale, 1));
-  box-shadow: var(--shadow-pop), 0 0 0 4px oklch(0.66 0.10 258 / 0.15);
+  box-shadow: var(--shadow-pop), 0 0 0 4px color-mix(in oklab, var(--accent) 18%, transparent);
 }
 .drop-icon {
   width: 56px;
   height: 56px;
   border-radius: calc(14px * var(--radius-scale, 1));
-  background: oklch(0.66 0.10 258 / 0.14);
+  background: var(--accent-soft);
   color: var(--accent);
   display: grid;
   place-items: center;
@@ -721,11 +721,11 @@
 .action-card:hover { background: var(--hover-strong); transform: translateY(-1px); }
 
 .action-card--accent {
-  background: oklch(0.66 0.10 258 / 0.12);
-  border-color: oklch(0.66 0.10 258 / 0.35);
+  background: color-mix(in oklab, var(--accent) 13%, transparent);
+  border-color: color-mix(in oklab, var(--accent) 42%, transparent);
   box-shadow: 0 12px 30px -10px var(--accent-glow), inset 0 1px 0 oklch(1 0 0 / 0.08);
 }
-.action-card--accent:hover { background: oklch(0.66 0.10 258 / 0.18); }
+.action-card--accent:hover { background: color-mix(in oklab, var(--accent) 19%, transparent); }
 
 .action-card-header {
   display: flex;

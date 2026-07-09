@@ -1,6 +1,10 @@
+import { h, render } from 'vue'
 import hljs from 'highlight.js/lib/common'
 import type { Node as PMNode } from 'prosemirror-model'
+import { NodeSelection } from 'prosemirror-state'
 import type { EditorView } from 'prosemirror-view'
+import NvPopupMenu from '../../ui/primitives/NvPopupMenu.vue'
+import type { NvMenuItemDef } from '../../ui/primitives/menu-types'
 
 export type NodeViewPosition = (() => number | undefined) | boolean
 
@@ -136,6 +140,72 @@ export function createUpdateAttrs(
     if (typeof position !== 'number') return
     view.dispatch(view.state.tr.setNodeMarkup(position, undefined, nextAttrs))
   }
+}
+
+export function createLazyRenderObserver(
+  dom: HTMLElement,
+  onVisible: () => void,
+): { isInitiallyVisible: boolean; disconnect: () => void } {
+  if (typeof IntersectionObserver === 'undefined') {
+    return { isInitiallyVisible: true, disconnect: () => {} }
+  }
+  let observer: IntersectionObserver | null = new IntersectionObserver((entries) => {
+    if (!entries[0]?.isIntersecting) return
+    observer?.disconnect()
+    observer = null
+    onVisible()
+  }, { rootMargin: '200px' })
+  observer.observe(dom)
+  return {
+    isInitiallyVisible: false,
+    disconnect: () => {
+      observer?.disconnect()
+      observer = null
+    },
+  }
+}
+
+export function selectNodeAt(view: EditorView, position: number): void {
+  view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, position)))
+}
+
+/**
+ * Renders (or re-renders) a "three dots" overflow menu button into `container`,
+ * mounting an `NvPopupMenu` with the given items. Used by node views that expose
+ * a per-block overflow menu (media, note embed) so the trigger button/icon markup
+ * and popup wiring aren't duplicated per node view.
+ */
+export function renderNodeOverflowMenu(
+  container: HTMLElement,
+  items: NvMenuItemDef[],
+  triggerClassName: string,
+): void {
+  const menuVNode = h(NvPopupMenu, {
+    items,
+    placement: 'bottom-end',
+  }, {
+    trigger: () => h('button', {
+      type: 'button',
+      className: triggerClassName,
+    }, [
+      h('svg', {
+        xmlns: 'http://www.w3.org/2000/svg',
+        width: '16',
+        height: '16',
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke: 'currentColor',
+        'stroke-width': '2',
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round',
+      }, [
+        h('circle', { cx: '12', cy: '12', r: '1' }),
+        h('circle', { cx: '12', cy: '5', r: '1' }),
+        h('circle', { cx: '12', cy: '19', r: '1' }),
+      ]),
+    ]),
+  })
+  render(menuVNode, container)
 }
 
 export function addClickHandler(

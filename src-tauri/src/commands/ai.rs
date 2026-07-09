@@ -126,10 +126,19 @@ pub fn is_loopback_host(base_url: &str) -> bool {
         None => after_scheme,
     };
 
-    // Strip port
-    let host = match authority.rfind(':') {
-        Some(pos) => &authority[..pos],
-        None => authority,
+    // Bracketed IPv6 form, e.g. "[::1]:11434" or "[::1]" — the port (if any)
+    // follows the closing bracket, and the host itself may contain ':'.
+    let host = if let Some(rest) = authority.strip_prefix('[') {
+        match rest.find(']') {
+            Some(end) => &rest[..end],
+            None => rest,
+        }
+    } else {
+        // Strip port
+        match authority.rfind(':') {
+            Some(pos) => &authority[..pos],
+            None => authority,
+        }
     };
 
     matches!(host, "localhost" | "127.0.0.1" | "::1")
@@ -338,7 +347,9 @@ pub async fn ai_complete_stream(
             Ok(r) => r,
             Err(e) => {
                 let msg = e.to_string();
-                let _ = on_event.send(AiStreamEvent::Error { message: msg.clone() });
+                let _ = on_event.send(AiStreamEvent::Error {
+                    message: msg.clone(),
+                });
                 return Err(msg);
             }
         };
@@ -351,7 +362,9 @@ pub async fn ai_complete_stream(
                 Ok(c) => c,
                 Err(e) => {
                     let msg = e.to_string();
-                    let _ = on_event.send(AiStreamEvent::Error { message: msg.clone() });
+                    let _ = on_event.send(AiStreamEvent::Error {
+                        message: msg.clone(),
+                    });
                     return Err(msg);
                 }
             };
@@ -411,7 +424,9 @@ pub async fn ai_complete_stream(
             Ok(r) => r,
             Err(e) => {
                 let msg = e.to_string();
-                let _ = on_event.send(AiStreamEvent::Error { message: msg.clone() });
+                let _ = on_event.send(AiStreamEvent::Error {
+                    message: msg.clone(),
+                });
                 return Err(msg);
             }
         };
@@ -424,7 +439,9 @@ pub async fn ai_complete_stream(
                 Ok(c) => c,
                 Err(e) => {
                     let msg = e.to_string();
-                    let _ = on_event.send(AiStreamEvent::Error { message: msg.clone() });
+                    let _ = on_event.send(AiStreamEvent::Error {
+                        message: msg.clone(),
+                    });
                     return Err(msg);
                 }
             };
@@ -505,8 +522,7 @@ mod tests {
 
     #[test]
     fn sse_token_line() {
-        let result =
-            parse_sse_line(r#"data: {"choices":[{"delta":{"content":"Hi"}}]}"#);
+        let result = parse_sse_line(r#"data: {"choices":[{"delta":{"content":"Hi"}}]}"#);
         assert_eq!(result, SseParsed::Token("Hi".to_string()));
     }
 
@@ -548,6 +564,13 @@ mod tests {
     #[test]
     fn loopback_ipv6() {
         assert!(is_loopback_host("http://::1:11434"));
+    }
+
+    #[test]
+    fn loopback_ipv6_bracketed() {
+        assert!(is_loopback_host("http://[::1]:11434"));
+        assert!(is_loopback_host("http://[::1]"));
+        assert!(is_loopback_host("http://[::1]/api"));
     }
 
     #[test]

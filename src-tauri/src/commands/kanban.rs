@@ -4,7 +4,7 @@ use serde_json::Value;
 use std::path::Path;
 use uuid::Uuid;
 
-use super::path_utils::normalize_workspace_path;
+use super::path_utils::{normalize_workspace_path, validate_id, write_atomic};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -157,7 +157,8 @@ pub fn kanban_create_board(
     };
 
     let content = serde_json::to_string_pretty(&board).map_err(|e| e.to_string())?;
-    std::fs::write(board_path(&workspace_path, &board_id), content).map_err(|e| e.to_string())?;
+    write_atomic(&board_path(&workspace_path, &board_id), content.as_bytes())
+        .map_err(|e| e.to_string())?;
     Ok(board)
 }
 
@@ -171,6 +172,7 @@ pub fn kanban_update_board(
     property_definitions: Option<Value>,
     view_settings: Option<Value>,
 ) -> Result<KanbanBoard, String> {
+    validate_id(&board_id)?;
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let path = board_path(&workspace_path, &board_id);
@@ -195,12 +197,13 @@ pub fn kanban_update_board(
     board.updated_at = Utc::now().to_rfc3339();
 
     let new_content = serde_json::to_string_pretty(&board).map_err(|e| e.to_string())?;
-    std::fs::write(&path, new_content).map_err(|e| e.to_string())?;
+    write_atomic(&path, new_content.as_bytes()).map_err(|e| e.to_string())?;
     Ok(board)
 }
 
 #[tauri::command]
 pub fn kanban_delete_board(workspace_path: String, board_id: String) -> Result<(), String> {
+    validate_id(&board_id)?;
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let path = board_path(&workspace_path, &board_id);
@@ -219,6 +222,7 @@ pub fn kanban_list_cards(
     workspace_path: String,
     board_id: String,
 ) -> Result<Vec<KanbanCard>, String> {
+    validate_id(&board_id)?;
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let dir = cards_dir(&workspace_path, &board_id);
@@ -254,6 +258,7 @@ pub fn kanban_create_card(
     status_property_id: String,
     column_order: i64,
 ) -> Result<KanbanCard, String> {
+    validate_id(&board_id)?;
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let dir = cards_dir(&workspace_path, &board_id);
@@ -302,6 +307,8 @@ pub fn kanban_update_card(
     priority: Option<String>,
     links: Option<Value>,
 ) -> Result<KanbanCard, String> {
+    validate_id(&board_id)?;
+    validate_id(&card_id)?;
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let path = card_path(&workspace_path, &board_id, &card_id);
@@ -348,6 +355,8 @@ pub fn kanban_delete_card(
     board_id: String,
     card_id: String,
 ) -> Result<(), String> {
+    validate_id(&board_id)?;
+    validate_id(&card_id)?;
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let path = card_path(&workspace_path, &board_id, &card_id);
@@ -355,4 +364,70 @@ pub fn kanban_delete_card(
         std::fs::remove_file(&path).map_err(|e| e.to_string())?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A crafted `board_id`/`card_id` containing `..` must be rejected before
+    /// any filesystem access, so it can never escape `.nevo/boards` and reach
+    /// files outside the workspace (e.g. `kanban_delete_board` calling
+    /// `remove_dir_all` on an attacker-chosen directory).
+    #[test]
+    fn kanban_commands_reject_path_traversal_ids() {
+        let base = std::env::temp_dir().join(format!("nevo-kanban-traversal-{}", Uuid::new_v4()));
+        let workspace = base.join("workspace");
+        std::fs::create_dir_all(&workspace).unwrap();
+
+        // A "victim" directory outside the workspace that a traversal id could
+        // otherwise reach via `.nevo/boards/../../victim`.
+        let victim = base.join("victim");
+        std::fs::create_dir_all(&victim).unwrap();
+        std::fs::write(victim.join("secret.txt"), b"do not touch").unwrap();
+
+        let ws = workspace.to_string_lossy().into_owned();
+        let evil = "../../victim".to_string();
+
+        assert!(kanban_delete_board(ws.clone(), evil.clone()).is_err());
+        assert!(kanban_list_cards(ws.clone(), evil.clone()).is_err());
+        assert!(
+            kanban_update_board(ws.clone(), evil.clone(), None, None, None, None, None).is_err()
+        );
+        assert!(kanban_create_card(
+            ws.clone(),
+            evil.clone(),
+            "t".into(),
+            "v".into(),
+            "s".into(),
+            0
+        )
+        .is_err());
+        assert!(kanban_update_card(
+            ws.clone(),
+            evil.clone(),
+            "c".into(),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None
+        )
+        .is_err());
+        assert!(kanban_delete_card(ws.clone(), evil.clone(), "c".into()).is_err());
+
+        // A valid board id combined with a traversal card id must also fail.
+        assert!(kanban_delete_card(ws.clone(), "valid-board".into(), evil.clone()).is_err());
+
+        assert!(
+            victim.join("secret.txt").exists(),
+            "victim file must remain untouched by rejected calls"
+        );
+
+        std::fs::remove_dir_all(&base).ok();
+    }
 }

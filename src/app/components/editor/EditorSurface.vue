@@ -587,8 +587,7 @@ const overlayHandlers: OverlayHandlers = {
   closeSlashEmojiPicker,
   selectCalloutIcon,
   closeCalloutIconPicker,
-  onBlockDragStart: blockHandleComposable.onDragStart,
-  onBlockDragEnd: blockHandleComposable.onDragEnd,
+  onBlockHandlePointerDown: blockHandleComposable.onHandlePointerDown,
   onTypeIconClick: () => blockHandleComposable.onTypeIconClick(),
   onHandleMouseEnter: blockHandleComposable.onHandleMouseEnter,
   onHandleMouseLeave: blockHandleComposable.onHandleMouseLeave,
@@ -602,6 +601,10 @@ const overlayHandlers: OverlayHandlers = {
   onMenuMouseEnter: blockHandleComposable.onMenuMouseEnter,
   onMenuMouseLeave: blockHandleComposable.onMenuMouseLeave,
   hideToolbarManually: overlays.hideToolbarManually,
+}
+
+function isInsideNvSelectMenu(target: Node): boolean {
+  return target instanceof Element && target.closest('.nv-select__menu') !== null
 }
 
 function closeFloatingUiFromDocument(target: Node) {
@@ -621,7 +624,7 @@ function closeFloatingUiFromDocument(target: Node) {
   if (mermaidPopover.open && !(c?.mermaidPopoverEl?.contains(target) ?? false)) mermaidEditor.closeMermaidPopover()
   if (markmapPopover.open && !(c?.markmapPopoverEl?.contains(target) ?? false)) markmapEditor.closeMarkmapPopover()
   if (vegaPopover.open && !(c?.vegaPopoverEl?.contains(target) ?? false)) vegaEditor.closeVegaPopover()
-  if (pluginNodePopover.open && !(c?.pluginNodePopoverEl?.contains(target) ?? false)) pluginNodeEditor.close()
+  if (pluginNodePopover.open && !(c?.pluginNodePopoverEl?.contains(target) ?? false) && !isInsideNvSelectMenu(target)) pluginNodeEditor.close()
   if (embedUrlPopover.open) {
     const insidePopover = c?.embedUrlPopoverEl?.contains(target) ?? false
     const insideSlashMenu = c?.slashMenuEl?.contains(target) ?? false
@@ -684,7 +687,6 @@ watch(
       // O(document) JSON.stringify on every debounced flush for large notes.
       const rawContent = toRaw(content)
       if (rawContent === core.lastSerializedContentRef) {
-        core.lastSerializedContentRef = rawContent
         refreshIsEmpty()
         return
       }
@@ -752,15 +754,13 @@ onMounted(() => {
   document.addEventListener('mousedown', onDocumentMouseDown)
 })
 
-onBeforeUnmount(async () => {
+onBeforeUnmount(() => {
   document.removeEventListener('mousedown', onDocumentMouseDown)
   editorSetup.flushPendingContentUpdate()
   blockHandleComposable.unmount()
   editorSetup.destroyEditorView()
-  if (core.pluginHost) {
-    await core.pluginHost.deactivateAll()
-    await core.pluginHost.dispose()
-  }
+  const host = core.pluginHost
+  if (host) void host.deactivateAll().then(() => host.dispose()).catch(() => {})
 })
 
 const surfaceClasses = computed(() => ({

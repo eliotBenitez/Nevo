@@ -7,6 +7,7 @@ import { templateCommands } from '../../../tauri/commands'
 import { buildTemplateFieldDefaults, createEmptyTemplateContent, validateTemplateFieldValues } from '../../../utils/templates'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvCheckbox from '../../../ui/primitives/NvCheckbox.vue'
+import { useConfirmDialog } from '../../../ui/composables/useConfirmDialog'
 import TemplateEditor from './TemplateEditor.vue'
 
 type Mode = 'create-note' | 'insert'
@@ -26,6 +27,7 @@ const emit = defineEmits<{
 }>()
 
 const { t, locale } = useI18n()
+const { confirm } = useConfirmDialog()
 
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -168,7 +170,11 @@ async function onTemplateSaved(saved: TemplateDocument) {
 
 async function deleteTemplate(template: TemplateDocument) {
   if (!props.workspacePath || template.builtIn) return
-  if (!window.confirm(t('templates.deleteConfirm', { name: template.name }))) return
+  if (!await confirm({
+    message: t('templates.deleteConfirm', { name: template.name }),
+    confirmLabel: t('confirmDialog.delete'),
+    variant: 'danger',
+  })) return
   try {
     await templateCommands.deleteTemplate(props.workspacePath, template.id)
     await loadTemplates()

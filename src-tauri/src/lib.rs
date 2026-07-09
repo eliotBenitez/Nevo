@@ -4,8 +4,8 @@ mod logging;
 mod media_server;
 
 use commands::{
-    ai, auth, config, folder, fonts, graph, kanban, kanban_ops, note, templates, typst_export,
-    workspace,
+    ai, auth, config, folder, fonts, github_sync, graph, kanban, kanban_ops, note, templates,
+    typst_export, workspace,
 };
 #[cfg(target_os = "linux")]
 use tauri::Manager;
@@ -130,6 +130,7 @@ pub fn run() {
 
     let app = tauri::Builder::default()
         .manage(collab::server::CollabAppState::new())
+        .manage(github_sync::GithubSyncState::default())
         .setup(|app| {
             let logger = logging::AppLogger::new(logging::resolve_logs_dir(&app.handle())?)?;
             logging::install_global_logger(logger)?;
@@ -195,6 +196,11 @@ pub fn run() {
             workspace::list_plugins,
             workspace::validate_plugin_manifest,
             workspace::set_plugin_enabled,
+            workspace::marketplace_list_plugins,
+            workspace::marketplace_install_plugin,
+            workspace::marketplace_update_plugin,
+            workspace::marketplace_remove_plugin,
+            workspace::marketplace_refresh_cache,
             workspace::get_workspace_diagnostics,
             workspace::prune_workspace_snapshots,
             workspace::cleanup_orphaned_assets,
@@ -212,7 +218,9 @@ pub fn run() {
             note::save_note,
             note::delete_note,
             note::move_note,
+            note::list_sidebar_note_previews,
             note::list_note_snapshots,
+            note::list_all_note_snapshots,
             note::load_note_snapshot,
             note::restore_note_snapshot,
             note::prune_note_snapshots,
@@ -221,6 +229,7 @@ pub fn run() {
             note::empty_trash,
             note::import_image_asset,
             note::import_asset_by_path,
+            note::import_asset_from_url,
             note::delete_unreferenced_asset,
             note::save_draw_asset,
             note::read_draw_asset,
@@ -238,6 +247,7 @@ pub fn run() {
             note::export_draw_file,
             note::save_yjs_state,
             note::load_yjs_state,
+            note::delete_yjs_state,
             collab::server::start_collab_server,
             collab::server::stop_collab_server,
             collab::server::get_collab_server_info,
@@ -257,6 +267,11 @@ pub fn run() {
             kanban::kanban_delete_card,
             kanban_ops::kanban_move_card,
             kanban_ops::kanban_save_board_schema,
+            github_sync::github_sync_test_connection,
+            github_sync::github_sync_now,
+            github_sync::github_sync_get_status,
+            github_sync::github_sync_start_auto,
+            github_sync::github_sync_stop_auto,
         ]);
     app.run(tauri::generate_context!())
         .expect("error while running tauri application");

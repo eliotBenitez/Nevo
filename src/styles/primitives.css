@@ -1,13 +1,13 @@
 .nv-glass {
   background: var(--glass-2);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(112%);
+  -webkit-backdrop-filter: blur(18px) saturate(112%);
   border: 1px solid var(--line-2);
 }
 
 .nv-card {
   background: var(--glass-3);
-  backdrop-filter: blur(28px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(115%);
   border: 1px solid var(--line-2);
   border-radius: calc(14px * var(--radius-scale, 1));
   box-shadow: var(--shadow-1);
@@ -24,7 +24,7 @@
   background: transparent;
   color: var(--text-2);
   font: 500 12.5px var(--font-ui);
-  letter-spacing: -0.005em;
+  letter-spacing: 0;
   cursor: pointer;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
   white-space: nowrap;
@@ -36,11 +36,11 @@
 .nv-btn--ghost { border-color: var(--line-2); }
 .nv-btn--primary {
   background: var(--accent);
-  color: white;
+  color: #fff;
   border-color: var(--accent);
-  box-shadow: 0 1px 0 oklch(1 0 0 / 0.2) inset, 0 4px 12px var(--accent-glow);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.16) inset, 0 8px 22px -12px var(--accent-glow);
 }
-.nv-btn--primary:hover:not(:disabled) { background: oklch(0.70 0.10 258); color: white; }
+.nv-btn--primary:hover:not(:disabled) { background: var(--accent-hover); color: #fff; }
 .nv-btn--danger {
   background: oklch(0.55 0.18 25);
   color: white;
@@ -123,13 +123,9 @@
   padding: 5px;
   border-radius: calc(10px * var(--radius-scale, 1));
   border: 1px solid var(--line-strong);
-  background: linear-gradient(
-    180deg,
-    color-mix(in oklab, var(--glass-2) 94%, transparent),
-    color-mix(in oklab, var(--glass-1) 96%, transparent)
-  );
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  background: var(--glass-3);
+  backdrop-filter: blur(18px) saturate(115%);
+  -webkit-backdrop-filter: blur(18px) saturate(115%);
   box-shadow: var(--shadow-pop);
   min-width: 160px;
   max-height: min(420px, calc(100vh - 24px));
@@ -149,7 +145,7 @@
   background: transparent;
   color: var(--text-2);
   font: 500 12.5px var(--font-ui);
-  letter-spacing: -0.005em;
+  letter-spacing: 0;
   text-align: left;
   cursor: pointer;
   transition: background 80ms ease, color 80ms ease;

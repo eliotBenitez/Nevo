@@ -2,6 +2,7 @@ import { EditorView } from 'prosemirror-view'
 import { AllSelection, NodeSelection, TextSelection, type Command, type EditorState, type Transaction } from 'prosemirror-state'
 import { Slice, type Node } from 'prosemirror-model'
 import { cellAround, CellSelection } from 'prosemirror-tables'
+import { invoke } from '@tauri-apps/api/core'
 import * as Y from 'yjs'
 import { Awareness } from 'y-protocols/awareness'
 import type { NevoCoreCommands } from '../../../editor-core/commands'
@@ -39,7 +40,7 @@ import { useAuthStore } from '../../../stores/auth'
 import type { CloudBackend } from '../../../core/workspace-backend'
 import { looksLikeMarkdown, parseMarkdownToSlice } from './markdownPaste'
 import { appLogger } from '../../../utils/logger'
-import { isProseMirrorTransformError } from './prosemirrorErrors'
+import { runGuardedCommand } from './prosemirrorErrors'
 import { i18n } from '../../../i18n'
 import { useAiCompletion } from '../../../composables/useAiCompletion'
 import { buildAiSlashItems } from './aiSlashItems'
@@ -74,6 +75,11 @@ export interface EditorCore {
    *  must not be destroyed by the editor on teardown. */
   ownsYdoc: boolean
   workspacePath: string | null
+  systemPlugins: {
+    templates: boolean
+    vega: boolean
+    markmap: boolean
+  }
   /** Force broken-link decorations to be recomputed against the latest note
    *  existence state. No-op when the editor view is not ready. */
   refreshBrokenLinks: () => void
@@ -220,6 +226,11 @@ export function createEditorCore(): EditorCore {
     awareness: null,
     ownsYdoc: false,
     workspacePath: null,
+    systemPlugins: {
+      templates: false,
+      vega: false,
+      markmap: false,
+    },
     refreshBrokenLinks() {
       const view = core.editorView
       if (!view) return
@@ -239,6 +250,8 @@ function toEditorPluginManifest(manifest: PluginManifest): NevoEditorPluginManif
     entryPoint: manifest.entryPoint,
     apiVersion: manifest.apiVersion,
     editorCapabilities: manifest.editorCapabilities,
+    uiCapabilities: manifest.uiCapabilities ?? [],
+    workspaceCapabilities: manifest.workspaceCapabilities ?? [],
     nevoVersionRange: manifest.nevoVersionRange,
     priority: manifest.priority,
   }
@@ -302,6 +315,8 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
   // within the debounce window is never written.
   let yjsSaveTimer: ReturnType<typeof setTimeout> | null = null
   let flushYjsPersistence: (() => void) | null = null
+  let yjsUpdateTarget: Y.Doc | null = null
+  let yjsUpdateHandler: (() => void) | null = null
 
   function teardownYjsPersistence() {
     const hadPendingSave = yjsSaveTimer !== null
@@ -313,6 +328,11 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     // switch with no unsaved Yjs changes doesn't trigger a redundant write.
     if (hadPendingSave) flushYjsPersistence?.()
     flushYjsPersistence = null
+    if (yjsUpdateTarget && yjsUpdateHandler) {
+      yjsUpdateTarget.off('update', yjsUpdateHandler)
+    }
+    yjsUpdateTarget = null
+    yjsUpdateHandler = null
   }
 
   function clearContentSerializeTimer() {
@@ -370,23 +390,18 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
   }
 
   function executeStateCommand(command: Command): boolean {
-    if (!core.editorView) return false
-    let applied: boolean
-    try {
-      applied = command(core.editorView.state, core.editorView.dispatch.bind(core.editorView))
-    } catch (error) {
-      if (!isProseMirrorTransformError(error)) throw error
-      void appLogger.warn({
-        source: 'frontend.editor',
-        event: 'command_transform_error',
-        message: 'Editor command failed during document transform',
-        workspacePath: core.workspacePath,
-        error,
-      })
-      return false
-    }
+    const view = core.editorView
+    if (!view) return false
+    let applied = false
+    runGuardedCommand(() => {
+      applied = command(view.state, view.dispatch.bind(view))
+    }, {
+      event: 'command_transform_error',
+      message: 'Editor command failed during document transform',
+      workspacePath: core.workspacePath,
+    })
     if (applied) {
-      core.editorView.focus()
+      view.focus()
       callbacks.onOverlaysUpdate()
     }
     return applied
@@ -429,32 +444,29 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
   }
 
   function runPluginToolbarAction(action: NevoToolbarAction) {
-    if (!core.editorView) return
-    try {
+    const view = core.editorView
+    if (!view) return
+    const ok = runGuardedCommand(() => {
       action.run({
-        view: core.editorView,
-        state: core.editorView.state,
-        dispatch: core.editorView.dispatch.bind(core.editorView),
+        view,
+        state: view.state,
+        dispatch: view.dispatch.bind(view),
       })
-    } catch (error) {
-      if (!isProseMirrorTransformError(error)) throw error
-      void appLogger.warn({
-        source: 'frontend.editor',
-        event: 'plugin_toolbar_transform_error',
-        message: 'Plugin toolbar action failed during document transform',
-        workspacePath: core.workspacePath,
-        error,
-        payload: { actionId: action.id },
-      })
-      return
-    }
-    core.editorView.focus()
+    }, {
+      event: 'plugin_toolbar_transform_error',
+      message: 'Plugin toolbar action failed during document transform',
+      workspacePath: core.workspacePath,
+      payload: { actionId: action.id },
+    })
+    if (!ok) return
+    view.focus()
     callbacks.onOverlaysUpdate()
   }
 
   function runSlashItemFromOverlay(item: NevoSlashItem, _slashState: NevoSlashMenuState = core.lastSlashPluginState): boolean {
-    if (!core.editorView) return false
-    const currentSlashState = getSlashMenuState(core.editorView.state)
+    const view = core.editorView
+    if (!view) return false
+    const currentSlashState = getSlashMenuState(view.state)
     if (!currentSlashState.open || !currentSlashState.range) return false
     if (!currentSlashState.itemIds.includes(item.id)) return false
 
@@ -463,21 +475,15 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
       return true
     }
 
-    let applied: boolean
-    try {
-      applied = executeSlashItem(core.editorView, item, currentSlashState)
-    } catch (error) {
-      if (!isProseMirrorTransformError(error)) throw error
-      void appLogger.warn({
-        source: 'frontend.editor',
-        event: 'slash_transform_error',
-        message: 'Slash command failed during document transform',
-        workspacePath: core.workspacePath,
-        error,
-        payload: { itemId: item.id },
-      })
-      return false
-    }
+    let applied = false
+    runGuardedCommand(() => {
+      applied = executeSlashItem(view, item, currentSlashState)
+    }, {
+      event: 'slash_transform_error',
+      message: 'Slash command failed during document transform',
+      workspacePath: core.workspacePath,
+      payload: { itemId: item.id },
+    })
     if (!applied) return false
     if (item.id === 'math-inline' || item.id === 'math') {
       callbacks.onSlashMathItemRan()
@@ -485,7 +491,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     if (item.id === 'embed') {
       requestEmbedUrlForSelectedBlock()
     }
-    core.editorView.focus()
+    view.focus()
     callbacks.onOverlaysUpdate()
     return true
   }
@@ -510,6 +516,11 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
 
   async function initPluginHost(workspacePath: string | null, pluginManifests: PluginManifest[]) {
     core.workspacePath = workspacePath
+    core.systemPlugins = {
+      templates: pluginManifests.find(plugin => plugin.id === 'nevo.templates')?.enabled === true,
+      vega: pluginManifests.find(plugin => plugin.id === 'nevo.vega')?.enabled === true,
+      markmap: pluginManifests.find(plugin => plugin.id === 'nevo.markmap')?.enabled === true,
+    }
     if (core.pluginHost) {
       await core.pluginHost.deactivateAll()
       await core.pluginHost.dispose()
@@ -524,7 +535,17 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     }
 
     const manifests = pluginManifests.map(toEditorPluginManifest)
-    const host = new EditorPluginHost({ workspacePath, manifests, nevoVersion: '1.0.0' })
+    const host = new EditorPluginHost({
+      workspacePath,
+      manifests,
+      nevoVersion: '1.0.0',
+      runtime: {
+        invoke: (commandId, args = {}) => invoke(commandId, { workspacePath, ...args }),
+        t: (key, params) => String(i18n.global.t(key, params ?? {})),
+        getPluginSetting: (pluginId, key) => workspaceStore.getPluginSetting(pluginId, key),
+        setPluginSetting: (pluginId, key, value) => { void workspaceStore.setPluginSetting(pluginId, key, value) },
+      },
+    })
     host.setNodeEditRequestHandler((_view, position, nodeName, anchorRect) =>
       callbacks.onPluginNodeEditRequest(position, nodeName, anchorRect),
     )
@@ -669,11 +690,11 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
       enableSlashCommands: settings.editor.slashCommands,
       enableMarkdownShortcuts: settings.editor.markdownShortcuts,
       tabBehavior: settings.editor.tabKeyBehavior,
-      onTemplateInsertRequest: options.enableTemplates !== false && settings.features?.templates !== false
+      onTemplateInsertRequest: options.enableTemplates !== false && core.systemPlugins.templates
         ? callbacks.onTemplateInsertRequest
         : undefined,
-      enableVega: settings.features?.vega !== false,
-      enableMarkmap: settings.features?.markmap !== false,
+      enableVega: core.systemPlugins.vega,
+      enableMarkmap: core.systemPlugins.markmap,
       enableDraw: settings.features?.draw !== false,
       pluginHost: core.pluginHost ?? undefined,
       yFragment: options.yFragment,
@@ -939,13 +960,16 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
           })
         }
         flushYjsPersistence = persistYjsState
-        ydoc.on('update', () => {
+        const handleUpdate = () => {
           if (yjsSaveTimer) clearTimeout(yjsSaveTimer)
           yjsSaveTimer = setTimeout(() => {
             yjsSaveTimer = null
             persistYjsState()
           }, 2000)
-        })
+        }
+        yjsUpdateTarget = ydoc
+        yjsUpdateHandler = handleUpdate
+        ydoc.on('update', handleUpdate)
       }
     }
 
