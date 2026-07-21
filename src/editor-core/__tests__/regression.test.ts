@@ -5,7 +5,7 @@ import { NodeSelection, TextSelection } from 'prosemirror-state'
 import type { Node as PMNode } from 'prosemirror-model'
 import { createNevoEditorState } from '../state'
 import { nevoBaseSchema } from '../schema'
-import { serializeDocToNoteContent } from '../serialization'
+import { parseNoteContentToDoc, serializeDocToNoteContent } from '../serialization'
 import { createYDocFromContent, Y_FRAGMENT_NAME } from '../collaboration'
 import { createCoreKeymap } from '../keymap'
 import type { BlockNode } from '../../types/note'
@@ -113,6 +113,55 @@ const paragraphAfterSelectedBlockCases: Array<[string, BlockNode]> = [
       ],
     },
   ],
+]
+
+const shiftEnterTextBlockCases: Array<[string, BlockNode, string]> = [
+  ['paragraph', { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'paragraph' }] }] }, 'paragraph'],
+  ['heading', { type: 'doc', content: [{ type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'heading' }] }] }, 'heading'],
+  ['checklist item', { type: 'doc', content: [{ type: 'checklist_item', attrs: { checked: false }, content: [{ type: 'text', text: 'checklist' }] }] }, 'checklist'],
+  ['bullet list item', {
+    type: 'doc',
+    content: [{
+      type: 'bullet_list',
+      content: [{ type: 'list_item', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'list' }] }] }],
+    }],
+  }, 'list'],
+  ['blockquote', {
+    type: 'doc',
+    content: [{
+      type: 'blockquote',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'quote' }] }],
+    }],
+  }, 'quote'],
+  ['callout', {
+    type: 'doc',
+    content: [{
+      type: 'callout',
+      attrs: { variant: 'info', icon: '💡' },
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'callout' }] }],
+    }],
+  }, 'callout'],
+  ['toggle title', {
+    type: 'doc',
+    content: [{
+      type: 'toggle',
+      attrs: { collapsed: false },
+      content: [
+        { type: 'toggle_title', content: [{ type: 'text', text: 'toggle' }] },
+        { type: 'paragraph' },
+      ],
+    }],
+  }, 'toggle'],
+  ['table cell', {
+    type: 'doc',
+    content: [{
+      type: 'table',
+      content: [{
+        type: 'table_row',
+        content: [{ type: 'table_cell', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'cell' }] }] }],
+      }],
+    }],
+  }, 'cell'],
 ]
 
 describe('editor regression', () => {
@@ -747,6 +796,52 @@ describe('editor regression', () => {
     } finally {
       view.destroy()
       mount.remove()
+    }
+  })
+
+  it.each(shiftEnterTextBlockCases)('inserts a hard break on Shift+Enter inside a %s', (_name, content, text) => {
+    const { view, destroy } = createRegressionEditorView(content)
+
+    try {
+      const textBlockStart = findTextBlockContentPos(view.state.doc, text)
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, textBlockStart + text.length)))
+
+      expect(dispatchEditorKey(view, new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }))).toBe(true)
+      if (_name === 'paragraph') expect(view.state.doc.childCount).toBe(1)
+      expect(view.state.selection.$from.parent.textContent).toBe(text)
+      expect(view.state.selection.$from.parent.content.lastChild?.type.name).toBe('hard_break')
+
+      view.dispatch(view.state.tr.insertText('continued'))
+      expect(view.state.selection.$from.parent.textContent).toBe(`${text}continued`)
+      expect(view.state.selection.$from.parent.childCount).toBe(3)
+
+      const serialized = serializeDocToNoteContent(view.state.doc)
+      expect(parseNoteContentToDoc(nevoBaseSchema, serialized).toJSON()).toEqual(serialized)
+    } finally {
+      destroy()
+    }
+  })
+
+  it('keeps Shift+Enter inside a code block as a plain text newline', () => {
+    const { view, destroy } = createRegressionEditorView({
+      type: 'doc',
+      content: [{ type: 'code_block', attrs: { language: 'typescript' }, content: [{ type: 'text', text: 'const value' }] }],
+    })
+
+    try {
+      const codeStart = findTextBlockContentPos(view.state.doc, 'const value')
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, codeStart + 'const value'.length)))
+
+      expect(dispatchEditorKey(view, new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }))).toBe(true)
+      view.dispatch(view.state.tr.insertText('next'))
+
+      expect(view.state.doc.firstChild?.toJSON()).toEqual({
+        type: 'code_block',
+        attrs: { language: 'typescript' },
+        content: [{ type: 'text', text: 'const value\nnext' }],
+      })
+    } finally {
+      destroy()
     }
   })
 

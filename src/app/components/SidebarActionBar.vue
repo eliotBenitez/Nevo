@@ -3,7 +3,7 @@ import { computed, markRaw, ref } from 'vue'
 import type { Component } from 'vue'
 import {
   ArrowDownAZ, ArrowDownUp, ArrowDownZA, ChevronDown, ChevronsDownUp, ChevronsUpDown,
-  Clock, FileText, FolderPlus, Kanban, List, Plus, Upload,
+  Clock, FileText, FileUp, FolderInput, FolderPlus, Kanban, List, Plus, Upload,
 } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import NvPopupMenu from '../../ui/primitives/NvPopupMenu.vue'
@@ -25,6 +25,7 @@ const emit = defineEmits<{
   'create-folder': []
   'create-board': []
   'import-md': []
+  'import-obsidian': []
   'toggle-collapse-all': []
   'update:sortMode': [mode: SortMode]
 }>()
@@ -54,7 +55,14 @@ const newMenuItems = computed<NvMenuItemDef[]>(() => {
     items.push({ label: t('workspace.actions.newBoard'), icon: markRaw(Kanban), action: () => emit('create-board') })
   }
   items.push({ type: 'separator' })
-  items.push({ label: t('workspace.importMd'), icon: markRaw(Upload), action: () => emit('import-md') })
+  items.push({
+    label: t('workspace.importMenu'),
+    icon: markRaw(Upload),
+    items: [
+      { label: t('workspace.importMd'), icon: markRaw(FileUp), action: () => emit('import-md') },
+      { label: t('workspace.importObsidian'), icon: markRaw(FolderInput), action: () => emit('import-obsidian') },
+    ],
+  })
   return items
 })
 

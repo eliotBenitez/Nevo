@@ -66,6 +66,35 @@ export interface ImportedImageAsset {
   bytes: number
 }
 
+export interface PickedImportedAsset extends ImportedImageAsset {
+  fileName: string
+}
+
+/** A markdown note discovered while walking an Obsidian vault (Phase 1 import). */
+export interface VaultNote {
+  relativePath: string
+  content: string
+}
+
+/** An attachment discovered in the vault. Bytes are fetched lazily via `importVaultAsset`. */
+export interface VaultAsset {
+  relativePath: string
+  size: number
+}
+
+/** A vault file that could not be read into the manifest (oversized note, read error, etc). */
+export interface VaultSkipped {
+  relativePath: string
+  reason: string
+}
+
+export interface VaultManifest {
+  rootName: string
+  notes: VaultNote[]
+  assets: VaultAsset[]
+  skipped: VaultSkipped[]
+}
+
 export interface FolderMeta {
   id: string
   title: string

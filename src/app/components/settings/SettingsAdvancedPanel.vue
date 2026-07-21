@@ -1,25 +1,30 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
-import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener'
 import { useWorkspaceStore } from '../../../stores/workspace'
-import { useDeviceLayout } from '../../../composables/useDeviceLayout'
 import { appLogger } from '../../../utils/logger'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvToggle from '../../../ui/primitives/NvToggle.vue'
+import { systemCommands } from '../../../tauri/commands'
 
 const { t } = useI18n()
-const { runtime } = useDeviceLayout()
 const workspaceStore = useWorkspaceStore()
-const { settings, diagnostics, appMetadata, activePath } = storeToRefs(workspaceStore)
+const { settings, activePath } = storeToRefs(workspaceStore)
 
-async function revealPath(path: string | undefined) {
-  if (!path) return
+async function revealLogs() {
   try {
-    if (!runtime.value.supportsRevealInFileManager) { await openPath(path); return }
-    await revealItemInDir(path)
+    await systemCommands.openAppLocation('logs', true)
   } catch (error) {
-    await appLogger.warn({ source: 'frontend.settings', event: 'reveal_path', message: 'Failed to reveal path', workspacePath: activePath.value, error, payload: { path } })
+    await appLogger.warn({ source: 'frontend.settings', event: 'reveal_logs', message: 'Failed to reveal logs', workspacePath: activePath.value, error })
+  }
+}
+
+async function revealSettings() {
+  if (!activePath.value) return
+  try {
+    await systemCommands.openWorkspaceLocation(activePath.value, 'settings', { reveal: true })
+  } catch (error) {
+    await appLogger.warn({ source: 'frontend.settings', event: 'reveal_settings', message: 'Failed to reveal workspace settings', workspacePath: activePath.value, error })
   }
 }
 </script>
@@ -72,7 +77,7 @@ async function revealPath(path: string | undefined) {
               <div class="row-title">{{ t('settings.advanced.revealLogs.title') }}</div>
               <div class="row-sub">{{ t('settings.advanced.revealLogs.description') }}</div>
             </div>
-            <NvButton @click="revealPath(diagnostics?.logsPath ?? appMetadata?.logsPath)">{{ t('settings.advanced.revealLogs.action') }}</NvButton>
+            <NvButton @click="revealLogs">{{ t('settings.advanced.revealLogs.action') }}</NvButton>
           </div>
 
           <div class="settings-row settings-row--border">
@@ -80,7 +85,7 @@ async function revealPath(path: string | undefined) {
               <div class="row-title">{{ t('settings.advanced.rawSettings.title') }}</div>
               <div class="row-sub">{{ t('settings.advanced.rawSettings.description') }}</div>
             </div>
-            <NvButton @click="revealPath(diagnostics?.settingsPath)">{{ t('settings.advanced.rawSettings.reveal') }}</NvButton>
+            <NvButton @click="revealSettings">{{ t('settings.advanced.rawSettings.reveal') }}</NvButton>
           </div>
 
           <div class="settings-row settings-row--border">

@@ -50,11 +50,11 @@ export class LocalBackend implements WorkspaceBackend {
   marketplaceListPlugins(forceRefresh?: boolean): Promise<MarketplaceCatalog> {
     return workspaceCommands.marketplaceListPlugins(this.path, forceRefresh)
   }
-  marketplaceInstallPlugin(pluginId: string, version?: string): Promise<PluginManifest> {
-    return workspaceCommands.marketplaceInstallPlugin(this.path, pluginId, version)
+  marketplaceInstallPlugin(pluginId: string, permissionFingerprint: string, version?: string): Promise<PluginManifest> {
+    return workspaceCommands.marketplaceInstallPlugin(this.path, pluginId, permissionFingerprint, version)
   }
-  marketplaceUpdatePlugin(pluginId: string): Promise<PluginManifest> {
-    return workspaceCommands.marketplaceUpdatePlugin(this.path, pluginId)
+  marketplaceUpdatePlugin(pluginId: string, permissionFingerprint: string): Promise<PluginManifest> {
+    return workspaceCommands.marketplaceUpdatePlugin(this.path, pluginId, permissionFingerprint)
   }
   marketplaceRemovePlugin(pluginId: string): Promise<void> {
     return workspaceCommands.marketplaceRemovePlugin(this.path, pluginId)
@@ -108,9 +108,6 @@ export class LocalBackend implements WorkspaceBackend {
 
   importImageAsset(fileName: string, bytes: number[]): Promise<ImportedImageAsset> {
     return noteCommands.importImageAsset(this.path, fileName, bytes)
-  }
-  importAssetByPath(sourcePath: string, fileName: string): Promise<ImportedImageAsset> {
-    return noteCommands.importAssetByPath(this.path, sourcePath, fileName)
   }
   importImageFromUrl(url: string): Promise<ImportedImageAsset> {
     return noteCommands.importAssetFromUrl(this.path, url)

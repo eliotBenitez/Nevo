@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { NoteDocument, NoteProperties, NoteSnapshotMeta } from '../types/note'
 import { appLogger } from '../utils/logger'
+import { useTreeStore } from './tree'
 import { useWorkspaceStore } from './workspace'
 
 export type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
@@ -202,6 +203,7 @@ export const useNoteStore = defineStore('note', () => {
       isDirty.value = false
       saveStatus.value = 'saved'
       pushToCache(note)
+      useTreeStore().syncNoteMeta(note.id, { title: note.title, icon: note.icon }, note.updatedAt)
       void workspaceStore.refreshSidebarNotePreviews()
     } catch (error) {
       await appLogger.error({

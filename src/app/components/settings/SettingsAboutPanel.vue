@@ -1,18 +1,16 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
-import { openPath, openUrl, revealItemInDir } from '@tauri-apps/plugin-opener'
 import { computed } from 'vue'
 import { Cpu, ExternalLink, FolderOpen, HardDrive, Monitor, RefreshCw, Settings } from 'lucide-vue-next'
 import { useWorkspaceStore } from '../../../stores/workspace'
-import { useDeviceLayout } from '../../../composables/useDeviceLayout'
 import { useAppUpdater } from '../../../composables/useAppUpdater'
 import { appLogger } from '../../../utils/logger'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
+import { systemCommands, type AppLocation } from '../../../tauri/commands'
 
 const { t } = useI18n()
-const { runtime } = useDeviceLayout()
 const workspaceStore = useWorkspaceStore()
 const { manifest, appMetadata, diagnostics, activePath } = storeToRefs(workspaceStore)
 
@@ -23,32 +21,17 @@ async function onCheckUpdates() {
   await checkForUpdates({ silent: false })
 }
 
-async function revealPath(path: string | undefined) {
-  if (!path) return
+async function openAppLocation(location: AppLocation, reveal = false) {
   try {
-    if (!runtime.value.supportsRevealInFileManager) {
-      await openPath(path)
-      return
-    }
-    await revealItemInDir(path)
+    await systemCommands.openAppLocation(location, reveal)
   } catch (error) {
-    await appLogger.warn({ source: 'frontend.settings', event: 'reveal_path', message: 'Failed to reveal path', workspacePath: activePath.value, error, payload: { path } })
-  }
-}
-
-async function openFolder(path: string | undefined) {
-  if (!path) return
-  try {
-    await openPath(path)
-  } catch (error) {
-    try { await revealItemInDir(path); return } catch { /* fall through to logging */ }
-    await appLogger.warn({ source: 'frontend.settings', event: 'open_folder', message: 'Failed to open folder', workspacePath: activePath.value, error, payload: { path } })
+    await appLogger.warn({ source: 'frontend.settings', event: 'open_app_location', message: 'Failed to open application location', workspacePath: activePath.value, error, payload: { location, reveal } })
   }
 }
 
 async function openExternalUrl(url: string) {
   try {
-    await openUrl(url)
+    await systemCommands.openExternalUrl(url)
   } catch (error) {
     await appLogger.warn({ source: 'frontend.settings', event: 'open_external_url', message: 'Failed to open URL', workspacePath: activePath.value, error, payload: { url } })
   }
@@ -87,11 +70,11 @@ async function openExternalUrl(url: string) {
               <RefreshCw :size="14" />
               {{ isChecking ? t('updater.checking') : t('settings.about.actions.checkUpdates') }}
             </NvButton>
-            <NvButton @click="revealPath(appMetadata?.configPath)">
+            <NvButton @click="openAppLocation('config', true)">
               <Settings :size="14" />
               {{ t('settings.about.actions.revealConfig') }}
             </NvButton>
-            <NvButton @click="openFolder(appMetadata?.appDataDir)">
+            <NvButton @click="openAppLocation('appData')">
               <FolderOpen :size="14" />
               {{ t('settings.about.actions.openUserFolder') }}
             </NvButton>

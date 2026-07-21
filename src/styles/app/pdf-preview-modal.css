@@ -313,12 +313,29 @@
   padding: 20px;
 }
 
-.pdf-preview__page {
-  max-width: 100%;
-  height: auto;
+.pdf-preview__page-slot {
+  position: relative;
+  flex: 0 0 auto;
   background: #fff;
   border-radius: calc(2px * var(--radius-scale, 1));
   box-shadow: 0 8px 24px oklch(0 0 0 / 0.35);
+  overflow: hidden;
+}
+
+.pdf-preview__page {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.pdf-preview__page-placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--text-4);
+  font-size: 12px;
 }
 
 .pdf-state {

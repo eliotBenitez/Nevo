@@ -1,124 +1,143 @@
 # Repository Guidelines
-Answers must be written in Russian
 
-## Ui Design File
-- `Nevo.html`
+Answers to the user must be written in Russian. Code, identifiers, commit subjects, and `changes.md` entries remain in English.
 
-## Change Log Maintenance (changes.md)
+## Instruction Scope and Working Agreement
 
-After successfully completing any task, applying fixes, or implementing new features, you must document your actions in the `changes.md` file located at the root of the project.
+- Follow the nearest `AGENTS.md` for the files being changed. A nested file extends or overrides this root file for its subtree.
+- Inspect the current implementation, tests, and `git diff` before editing. Treat existing dirty-worktree changes as user-owned and do not rewrite or remove them.
+- Keep changes inside the requested scope. Report unrelated defects separately instead of fixing them opportunistically.
+- Prefer the smallest coherent change. Preserve public APIs, stored workspace data, serialized note content, and platform behavior unless the task explicitly requires a breaking change.
+- For codebase questions, use the existing graphify knowledge graph first, then verify conclusions against the current source when necessary.
 
-### Rules for updating changes.md:
-1. **Language Requirement:** All entries in `changes.md` must be written in **English** (на английском языке).
-2. **Preserve History:** **DO NOT** overwrite, clear, or replace the existing history. All previous entries must remain untouched.
-3. **Structure & Sections:** The file must be structured into three main sections separated by `---` dividers:
-   - `## 🆕 Added` (for new features, grouped under `### Feature Name` headers if there are multiple items, using `* **Detail**: Description` format)
-   - `## 🛠️ Fixed` (for bug fixes, using `* **Component/Detail**: Description` format)
-   - `## 🔄 Updated / Improved` (for refactoring and improvements, using `* **Component/Detail**: Description` format, nesting is allowed)
-4. **Insertion Rule:** New entries must be added at the top of their respective section (or subsection under `## 🆕 Added`), keeping the rest of the file intact.
-5. **Grammar & Tone:** Keep the descriptions concise, brief, and in the past tense (e.g., "Added...", "Fixed...", "Improved...", "Implemented...").
+## Design Before Implementation
 
-### Format Template:
-## 🆕 Added
+Decide the shape of the code before writing it. Decomposition and layering are design decisions, not post-hoc cleanup, and they are expected as part of the plan for any non-trivial task.
 
-### [Feature Name]
-* **[Detail]**: [Description of the implemented feature]
+- **Decompose during planning, not cleanup.** Before writing code, decide the file/module/component breakdown and name each unit and its single responsibility. A monolithic first draft "to split later" is not acceptable; the split is part of the plan and part of the initial implementation.
+- **One concern per file.** When a task spans multiple concerns — rendering, stateful logic, IO/serialization, framework-agnostic algorithms — separate them from the first commit along the existing boundaries: presentational component (`src/app`, `src/ui`) → composable (`src/composables`, `src/app/composables`) → framework-agnostic service/helper (`src/core`, `src/utils`) → shared state (`src/stores`). In Rust, split command handlers by domain under `src-tauri/src/commands/<domain>`.
+- **Size is a design signal.** Treat roughly **500 lines** — for Vue/TS files and Rust modules alike — as a trigger to stop and extract, not a target to fill. This applies while authoring, not only in review. A new file already approaching 500 lines at creation time means the boundaries were drawn wrong; redesign them. The number is a prompt to reconsider boundaries, not a mechanical cap — one concern per file is the actual rule.
+- **State ownership and data flow up front.** Before coding, state where each piece of state lives, who mutates it, and where side effects happen. Respect layering: components render, composables hold stateful UI logic, `src/core` and `src/utils` stay framework-agnostic, and `src/stores` holds shared state — never ProseMirror editor state (see `src/editor-core/AGENTS.md`). Cross boundaries only through typed props, callbacks, commands, and serialization edges.
+- **Reuse before adding.** Search existing primitives, composables, and utils for a fit before introducing new units.
 
----
+## Definition of Done
 
-## 🛠️ Fixed
+For implementation tasks:
 
-* **[Component/Area]**: [Description of the fixed bug]
+1. Identify the affected architectural boundaries and existing tests, and name the concrete files, components, and composables the change will create or split, with the single responsibility of each (see "Design Before Implementation").
+2. Implement the change without modifying unrelated user work.
+3. Add or update regression coverage when behavior changes.
+4. Run the checks required by the verification matrix below.
+5. Review `git diff --check` and the final scoped diff.
+6. Update `changes.md` only after the implementation is successfully verified.
+7. Run `graphify update .` after source or project documentation changes.
+8. In the final response, list completed work, checks actually run, and any known failures or skipped checks.
 
----
+If the repository already has unrelated lint or test failures, do not expand the task to fix them. Run focused checks for changed files, state the baseline failure clearly, and ensure the change introduces no additional failure.
 
-## 🔄 Updated / Improved
+## Change Log Maintenance (`changes.md`)
 
-* **[Component/Area]**: [Description of the improvement or refactoring]
+Update `changes.md` for implemented product changes, bug fixes, refactors, user-facing documentation, or agent-workflow changes. Do not update it for read-only analysis, explanations, diagnostics, or abandoned work.
 
-## Project Structure & Module Organization
-The active application lives in `src/`. Entry points are `src/main.ts`, `src/App.vue`, and `src/router/index.ts`. The workspace shell and most product UI are in `src/app`; route-level onboarding, graph, shared-storage, and kanban/database features are active modules under `src/features`. Shared Pinia state lives in `src/stores`, reusable composables in `src/composables` and `src/app/composables`, app search helpers in `src/app/search`, and typed domain models in `src/types`.
+- Write entries in English, concisely, and in the past tense.
+- Preserve existing history and keep exactly one top-level section of each kind: `## 🆕 Added`, `## 🛠️ Fixed`, and `## 🔄 Updated / Improved`.
+- Insert new entries at the top of the matching section. Use `### Feature Name` under `Added` when grouping several related items.
+- Use `* **Detail**: Description` for entries.
 
-Keep ProseMirror implementation details isolated in `src/editor-core`: schema, commands, plugins, node views, serialization, collaboration adapters, and editor tests belong there rather than in Vue or Pinia. Tauri-facing TypeScript wrappers live in `src/tauri`. Localized strings are in `src/locales`, design tokens and global styles are in `src/styles`, UI primitives are in `src/ui/primitives`, and glass/backdrop components are in `src/ui/glass`.
+## Architecture and Module Boundaries
 
-The desktop backend is a Tauri v2 app in `src-tauri/`. Rust commands are grouped under `src-tauri/src/commands`, with larger domains split into `commands/note` and `commands/workspace`. Collaboration server code is in `src-tauri/src/collab`, the local media server is in `src-tauri/src/media_server`, and frontend-accessible command registration is wired from `src-tauri/src/lib.rs`.
+The active Vue/TypeScript application lives in `src/`. Entry points are `src/main.ts`, `src/App.vue`, and `src/router/index.ts`.
 
-## Directory Map
-- `src/`: active Vue/TypeScript frontend.
-- `src/app/`: workspace shell, core app components, settings UI, editor UI wrappers, and app-level composables.
-- `src/app/components/editor/`: Vue components around editor controls, popovers, overlays, block handles, math, Mermaid, Vega, and link UI.
-- `src/app/components/settings/`: settings modal panels and workspace settings groups.
-- `src/app/search/`: app search settings, fuzzy search helpers, and searchable workspace items.
-- `src/core/`: framework-agnostic core services, including workspace backend adapters and crypto helpers.
-- `src/composables/`: shared Vue composables used outside a single app feature.
-- `src/editor-core/`: ProseMirror schema, commands, plugins, node views, serialization, collaboration, slash menu, and editor tests.
-- `src/features/`: active feature modules such as onboarding, graph, shared storage, and kanban/databases.
-- `src/locales/`: `vue-i18n` locale JSON files and locale consistency tests.
-- `src/router/`: Vue Router route definitions.
-- `src/stores/`: Pinia stores for workspace, notes, tabs, theme, graph, kanban, auth, collab, and UI state.
-- `src/styles/`: global CSS, design tokens, editor prose, primitives, settings, onboarding, graph, and app styles.
-- `src/tauri/`: frontend TypeScript wrappers for Tauri commands, secure store, and media server helpers.
-- `src/types/`: shared TypeScript domain types.
-- `src/ui/`: reusable UI primitives, glass components, animations, and UI-specific composables.
-- `src/utils/`: shared utilities for runtime, hotkeys, logging, templates, KaTeX, oEmbed, note history, import/export, and workspace settings.
-- `src-tauri/`: Tauri v2 Rust backend, capabilities, icons, config, and generated schemas.
-- `src-tauri/src/commands/`: Rust command modules exposed through Tauri invoke handlers.
-- `src-tauri/src/commands/note/`: note CRUD, search, assets, trash, snapshots, export, and collaboration persistence commands.
-- `src-tauri/src/commands/workspace/`: workspace manifests, settings, paths, plugins, and maintenance commands.
-- `src-tauri/src/collab/`: local collaboration server implementation.
-- `src-tauri/src/media_server/`: localhost media streaming server for local media playback.
-- `public/`: static frontend assets copied by Vite.
-- `docs/`: project documentation.
-- `settings/`: checked-in reference screenshots/settings assets used by the project.
-- `node_modules/`, `src-tauri/target/`, and other build/cache outputs: generated local artifacts; do not edit or commit.
+- `src/app/`: workspace shell, core product components, settings, editor wrappers, and app-level composables.
+- `src/editor-core/`: framework-isolated ProseMirror schema, commands, plugins, node views, serialization, and collaboration. Follow `src/editor-core/AGENTS.md`.
+- `src/features/`: route and product features, including onboarding, graph, drawing, shared storage, kanban, and databases.
+- `src/stores/`: shared Pinia state. Do not place ProseMirror editor state here.
+- On local workspaces, editor content lives in the disk-backed Y.Doc (`.nevo/collab/<noteId>.yjs`), not `note.content` — `note.content` only seeds a brand-new Y.Doc. To change a node's attributes from outside the editor, dispatch a ProseMirror transaction on the live `EditorView` (or patch the persisted Y.Doc directly); mutating `noteStore.setContent` is ignored by the editor and clobbered on re-serialization.
+- `src/core/`: framework-agnostic services and workspace backend adapters.
+- `src/composables/` and `src/app/composables/`: shared and app-scoped Vue composables.
+- `src/tauri/`: typed frontend wrappers around Tauri commands.
+- `src/locales/`: vue-i18n catalogs and locale consistency tests. Follow `src/locales/AGENTS.md`.
+- `src/styles/`: design tokens and global/feature CSS.
+- `src/ui/`: reusable primitives, glass components, animations, and UI composables. Follow `src/ui/AGENTS.md`.
+- `src/utils/`: reusable runtime, export/import, editor-adjacent, and workspace utilities.
+- `src-tauri/`: Tauri v2 Rust backend. Follow `src-tauri/AGENTS.md`.
 
-## Build, Test, and Development Commands
-Use `pnpm` because the repo includes `pnpm-lock.yaml`.
+Keep components and modules focused as a boundary decision made up front, not a later refactor (see "Design Before Implementation"). Extract substantial UI regions into their own components, move complex stateful logic into composables or framework-agnostic helpers, and keep Rust command modules split by domain. Do not grow an existing file past its concern; add a new unit instead.
 
-- `pnpm dev`: start the Vite frontend on port `1420` with a strict port.
-- `pnpm tauri dev`: run the desktop app with the Tauri shell.
-- `pnpm build`: run `vue-tsc --noEmit` and produce a production frontend bundle.
-- `pnpm test`: start Vitest in watch mode.
-- `pnpm test:run`: run the full frontend test suite once.
-- `pnpm preview`: preview the production frontend bundle.
-- `cargo test --manifest-path src-tauri/Cargo.toml`: run Rust unit tests when touching backend commands, logging, export, assets, or workspace settings.
+## Design Source
 
-## Coding Style & Naming Conventions
-Follow the existing TypeScript and Vue style: 2-space indentation, single quotes, and semicolon-free statements. Prefer Vue Composition API with `<script setup lang="ts">`. Vue components use PascalCase file names such as `WorkspaceShell.vue`, `KanbanView.vue`, and `NvButton.vue`. Stores and composables use descriptive camelCase names such as `theme.ts`, `useNotePersistence.ts`, and `useEditorCore.ts`. Use comments in the code only when absolutely necessary, such as when dealing with highly complex implementation details.
+`Nevo.html` is the checked-in visual reference. Use it together with `src/styles/tokens.css` and existing UI primitives; current application behavior and accessibility take precedence when the reference is stale.
 
-Avoid concentrating all logic and markup in a single large file. Logically split the code into multiple components and files: extract large blocks of UI markup into subcomponents, and move complex business logic, computations, or state machines into helper composables (for Vue) or specialized modules/helpers (for TypeScript and Rust). This will prevent files from bloating in the future and make them easier to maintain and test.
+## Build and Development Commands
 
-Keep TypeScript strictness intact; `tsconfig.json` enables `strict`, `noUnusedLocals`, and `noUnusedParameters`. Avoid putting ProseMirror state into Pinia or Vue reactivity; keep editor state transitions inside `src/editor-core` and bridge them through focused composables/components. Rust code in `src-tauri` should follow standard `rustfmt` defaults and keep command modules focused by domain.
+Use `pnpm` because the repository includes `pnpm-lock.yaml`. CI uses Node 22 and pnpm 11.
 
-## UI, Styling, and Localization
-Use the existing design-token system in `src/styles/tokens.css` and the global CSS files in `src/styles` before introducing new styling patterns. Prefer reusable primitives from `src/ui/primitives` for buttons, menus, toggles, inputs, popups, mini editors, and window controls. Keep feature-specific styling aligned with the existing app, editor, settings, onboarding, graph, and primitive style files.
+- `pnpm dev`: start Vite on strict port `1420`.
+- `pnpm tauri dev`: run the desktop application.
+- `pnpm build`: run `vue-tsc --noEmit` and build the frontend.
+- `pnpm lint`: lint the frontend tree.
+- `pnpm test`: run Vitest in watch mode.
+- `pnpm test:run`: run the frontend suite once.
+- `pnpm exec vitest run <path>`: run focused frontend tests.
+- `cargo fmt --manifest-path src-tauri/Cargo.toml --check`: check Rust formatting.
+- `cargo test --manifest-path src-tauri/Cargo.toml`: run Rust tests.
 
-All user-facing strings that participate in localization should go through `vue-i18n` and the JSON files in `src/locales`. When adding or changing localized UI, update both `en.json` and `ru.json` and keep `src/locales/locales.test.ts` passing.
+## Verification Matrix
 
-## Testing Guidelines
-Vitest runs in a `jsdom` environment with globals enabled from `vite.config.ts`. Tests are distributed across the codebase; keep new tests close to the code they cover using `*.test.ts`, or use `src/editor-core/__tests__` for editor-core behavior. Existing coverage includes editor serialization and commands, workspace shell/components, editor composables, search, stores, UI primitives, utils, kanban, graph focus behavior, localization, and Tauri TypeScript wrappers.
+| Changed area | Required checks |
+| --- | --- |
+| Documentation or agent instructions only | `git diff --check` and direct content review |
+| `src/**/*.ts`, `src/**/*.vue`, frontend config | Focused Vitest tests, ESLint on changed TS/Vue files, and `pnpm build` when types or public component contracts changed |
+| `src/editor-core/**` | Relevant editor test plus `src/editor-core/__tests__/serialization.test.ts` and `regression.test.ts` when schema/serialization behavior is affected |
+| `src/locales/**`, `src/i18n.ts`, locale types | `pnpm exec vitest run src/locales/locales.test.ts src/i18n.test.ts` |
+| `src/styles/**`, `src/ui/**`, visual Vue changes | Focused tests and manual/automated visual review for light/dark, relevant responsive sizes, and keyboard focus |
+| `src/tauri/**` | Relevant frontend wrapper tests; verify command names and payload casing against Rust |
+| `src-tauri/**` | `cargo fmt --check` and targeted or full `cargo test` |
+| Workspace manifests, SQLite, migrations, import/export | Round-trip, legacy-data, failure-path, and no-data-loss regression coverage |
+| Cross-cutting or release-sensitive changes | `pnpm lint`, `pnpm test:run`, `pnpm build`, and Rust checks when applicable |
 
-Add regression coverage for editor behavior, serialization, workspace persistence, export/import, kanban and graph data flows, localization shape, and Tauri-facing integration points when changing those areas. Run `pnpm test:run` before opening a PR; also run targeted `cargo test --manifest-path src-tauri/Cargo.toml` when Rust code changes.
+Use `.codex/skills/nevo-verify-change` when available to derive the check list from the current diff.
 
-## Commit & Pull Request Guidelines
-Git history is not available in this checkout, so use short imperative commit subjects such as `Add note snapshot restore test`. Keep commits focused on one concern. PRs should include a clear summary, testing notes, linked issues, and screenshots or short recordings for UI changes. Call out any Tauri, filesystem, workspace data, export/import, collaboration, or migration-related risk explicitly.
+## Coding Style
 
-## Security & Configuration Tips
-Do not commit workspace data, generated artifacts, build outputs, logs, or secrets. Treat `src-tauri/target/` as generated output. Review changes touching `src-tauri/src/commands`, `src-tauri/src/collab`, `src-tauri/src/media_server`, and `src/tauri` carefully because they affect filesystem access, networking, local media serving, secure storage, and desktop capabilities.
+Follow existing TypeScript and Vue style: 2-space indentation, single quotes, no semicolons, strict TypeScript, and `<script setup lang="ts">`. Use PascalCase for Vue components and descriptive camelCase for stores, composables, and helpers. Add comments only when they explain non-obvious constraints or failure modes.
+
+Rust follows `rustfmt`. Avoid blocking async runtimes, unchecked path construction, panics in command handlers, and silent data-loss fallbacks.
+
+## UI, Accessibility, and Localization
+
+- Reuse `src/styles/tokens.css` and primitives from `src/ui/primitives` before adding new visual patterns.
+- Preserve keyboard operation, visible focus, semantic labels, reduced-motion behavior, and usable touch targets.
+- Route user-facing strings through vue-i18n.
+- Treat `src/i18n.ts` as the source of truth for registered locales. Update every registered locale, preserve interpolation placeholders, and keep locale consistency tests passing.
+- Check WebKitGTK behavior for rendering techniques not universally supported by embedded webviews.
+
+## Security, Data, and Generated Files
+
+- Never commit secrets, workspace data, logs, caches, build output, or `src-tauri/target/`.
+- Treat filesystem paths, imported content, rendered HTML/SVG, URLs, and Tauri IPC payloads as untrusted input.
+- Changes to `src-tauri/src/commands`, `src-tauri/src/collab`, `src-tauri/src/media_server`, capabilities, or `src/tauri` require explicit review of filesystem, network, and permission impact.
+- Do not hand-edit generated capability schemas under `src-tauri/gen/schemas`.
+- Treat mobile scaffolds under `src-tauri/gen/android` and `src-tauri/gen/apple` as platform projects: edit them only for an explicit mobile task and avoid generated build/cache subdirectories.
+- Preserve backward compatibility for workspace manifests, persisted settings, note JSON, assets, and SQLite data. Add migrations instead of silently replacing incompatible data.
 
 ## Platform Gotchas
-- **Tauri v2 sync commands run on the webview main thread.** A synchronous `#[command] fn` that does heavy work (e.g. PDF/Typst compilation) blocks the UI. Make such commands `async` and offload the heavy part to `tauri::async_runtime::spawn_blocking`.
-- **WebKitGTK (the Linux webview) renders `<foreignObject>`-in-image as blank** (canvas tainting), so rasterizing SVG that embeds HTML/foreignObject into PNG produces empty output on this platform. Convert such content to a native SVG path (e.g. `<text>`/`<path>` glyphs) instead of relying on canvas rasterization.
+
+- Tauri v2 synchronous commands run on the webview main thread. Make heavy commands `async` and offload blocking work with `tauri::async_runtime::spawn_blocking`.
+- WebKitGTK (the Linux webview) renders `<foreignObject>` embedded in images as blank in relevant export paths. Prefer native SVG text/path content over canvas rasterization of HTML-in-SVG.
+- WebKitGTK withholds clipboard `text/uri-list` payloads from JavaScript (`DataTransfer.getData` and `DataTransferItem.getAsString` return empty), and `navigator.clipboard.read()` rejects with `NotAllowedError`. For image/file paste, read the OS clipboard natively via `tauri-plugin-clipboard-manager` (`readImage`/`readText`) rather than the webview `DataTransfer`.
+- Native HTML5 drag-and-drop is unreliable on WebKitGTK (lag, freeze, copy-instead-of-move). Implement in-app dragging with pointer events (`pointerdown`/`pointermove`/`pointerup`) instead of the HTML5 drag API.
+- Gate desktop-only plugins and services with appropriate Tauri capabilities and Rust `cfg` attributes so Android/iOS builds do not reference unavailable desktop functionality.
+
+## Git and Pull Requests
+
+Use recent history when it clarifies conventions, but verify behavior against the current tree. Use short imperative commit subjects. Keep commits focused. PRs should include a summary, testing notes, linked issues when applicable, screenshots or recordings for UI changes, and explicit risk notes for filesystem, workspace data, export/import, collaboration, networking, permissions, or migrations.
 
 ## graphify
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+This project has a knowledge graph under `graphify-out/`.
 
-When the user types `/graphify`, use the installed graphify skill or instructions before doing anything else.
-
-Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- For codebase questions, first run `graphify query "<question>"` when `graphify-out/graph.json` exists. Use `graphify path` for relationships and `graphify explain` for focused concepts.
+- Dirty graphify output is expected and is not a reason to skip it. Skip only when investigating stale/incorrect graph output or when the user explicitly opts out.
+- Prefer `graphify-out/wiki/index.md` for broad navigation when it exists. Read `GRAPH_REPORT.md` only for broad architecture review or when scoped queries are insufficient.
+- After modifying source or project documentation, run `graphify update .`.

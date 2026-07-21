@@ -10,6 +10,8 @@ import {
   type PdfExportOptions,
 } from './pdfOptions'
 import { latexToTypstMath } from './latexToTypstMath'
+import { normalizeDatabaseData, type DatabaseBlockData, type DbCellValue, type DbField } from '../../types/database-block'
+import { visibleRecords } from '../../editor-core/databaseFilterSort'
 
 export interface TypstImageAsset {
   /** Filename referenced inside the Typst source via `image("name")`. */
@@ -157,6 +159,44 @@ function tableToTypst(node: BlockNode, ctx: SerializeCtx): string {
   return `#align(center)[#table(\n  columns: ${colCount},\n  ${cells.join(', ')}\n)]`
 }
 
+function formatDbCellValue(value: DbCellValue, field: DbField): string {
+  if (value === null || value === undefined) return ''
+  if (field.type === 'select') {
+    const id = typeof value === 'string' ? value : ''
+    if (!id) return ''
+    return field.options?.find(o => o.id === id)?.name ?? id
+  }
+  if (field.type === 'multi_select') {
+    const ids = Array.isArray(value) ? value : []
+    return ids.map(id => field.options?.find(o => o.id === id)?.name ?? id).join(', ')
+  }
+  if (Array.isArray(value)) return value.join(', ')
+  if (typeof value === 'number') return String(value)
+  if (typeof value === 'boolean') return value ? '✓' : ''
+  return String(value)
+}
+
+function databaseBlockRecords(data: DatabaseBlockData) {
+  if (data.version !== 1) return []
+  const view = data.views.find(v => v.id === data.activeView) ?? data.views[0]
+  return view ? visibleRecords(data.records, view.filters, view.sorts, data.fields) : data.records
+}
+
+function databaseBlockToTypst(node: BlockNode): string {
+  const data = normalizeDatabaseData(node.attrs?.data)
+  const title = data.title.trim()
+  const heading = title ? `#strong[${escapeText(title)}]\n\n` : ''
+  if (!data.fields.length) return heading.trim()
+  const records = databaseBlockRecords(data)
+  const headerCells = data.fields.map(f => `[#strong[${escapeText(f.name)}]]`)
+  const dataCells = records.flatMap(record =>
+    data.fields.map(f => `[${escapeText(formatDbCellValue(record.cells[f.id] ?? null, f))}]`),
+  )
+  const cells = [...headerCells, ...dataCells].join(', ')
+  const table = `#align(center)[#table(\n  columns: ${data.fields.length},\n  ${cells}\n)]`
+  return `${heading}${table}`
+}
+
 function nodeToTypst(node: BlockNode, ctx: SerializeCtx): string {
   switch (node.type) {
     case 'doc':
@@ -273,16 +313,26 @@ function nodeToTypst(node: BlockNode, ctx: SerializeCtx): string {
       return blockChildren(node, ctx)
     case 'hard_break':
       return '#linebreak()'
+    case 'database_block':
+      return databaseBlockToTypst(node)
     default: {
       const pluginSerializer = getPluginNodeSerializer(node.type)?.typst
       if (pluginSerializer) {
-        return pluginSerializer(node as NevoSerializableNode, {
-          serializeChildren: () => blockChildren(node, ctx),
+        const children = blockChildren(node, ctx)
+        const result = pluginSerializer(node as NevoSerializableNode, {
+          serializeChildren: () => children,
         })
+        if (typeof result === 'string') return result
+        void result.catch(() => {})
+        const marker = JSON.stringify({ type: node.type, attrs: node.attrs ?? {} })
+          .replace(/\n/g, ' ')
+        return [`// nevo-plugin-node: ${marker}`, children].filter(Boolean).join('\n')
       }
+      const children = blockChildren(node, ctx)
       const text = inlineContent(node, ctx)
-      if (text) return text
-      return blockChildren(node, ctx)
+      const marker = JSON.stringify({ type: node.type, attrs: node.attrs ?? {} })
+        .replace(/\n/g, ' ')
+      return [`// nevo-plugin-node: ${marker}`, children || text].filter(Boolean).join('\n')
     }
   }
 }
@@ -387,4 +437,67 @@ export function serializeNoteToTypst(
   const body = nodeToTypst(note.content, ctx)
   const source = `${buildPreamble(note.title, options)}\n\n${body}\n`
   return { source, images: ctx.images, mermaid: ctx.mermaid, markmap: ctx.markmap, vega: ctx.vega, draw: ctx.draw }
+}
+
+async function resolveAsyncTypstPlugins(
+  node: BlockNode,
+  ctx: SerializeCtx,
+  replacements: Map<string, string>,
+  sequence: { value: number },
+): Promise<BlockNode> {
+  const pluginSerializer = getPluginNodeSerializer(node.type)?.typst
+  if (pluginSerializer) {
+    const resolvedChildren = await Promise.all((node.content ?? []).map(child =>
+      resolveAsyncTypstPlugins(child, ctx, replacements, sequence)))
+    const children = nodeToTypst({ type: 'doc', content: resolvedChildren }, ctx)
+    const marker = `NEVOPLUGINTYPST${++sequence.value}END`
+    try {
+      replacements.set(marker, await pluginSerializer(node as NevoSerializableNode, {
+        serializeChildren: () => children,
+      }))
+    } catch {
+      const json = JSON.stringify({ type: node.type, attrs: node.attrs ?? {} }).replace(/\n/g, ' ')
+      replacements.set(marker, [`// nevo-plugin-node: ${json}`, children].filter(Boolean).join('\n'))
+    }
+    return { type: 'paragraph', content: [{ type: 'text', text: marker }] }
+  }
+  if (!node.content?.length) return node
+  return {
+    ...node,
+    content: await Promise.all(node.content.map(child =>
+      resolveAsyncTypstPlugins(child, ctx, replacements, sequence))),
+  }
+}
+
+export async function serializeNoteToTypstAsync(
+  note: NoteDocument,
+  options: PdfExportOptions = DEFAULT_PDF_OPTIONS,
+  serializeOptions: TypstSerializeOptions = {},
+): Promise<TypstSerializeResult> {
+  const ctx: SerializeCtx = {
+    images: [],
+    mermaid: [],
+    markmap: [],
+    vega: [],
+    draw: [],
+    imageSeq: 0,
+    mermaidSeq: 0,
+    markmapSeq: 0,
+    vegaSeq: 0,
+    drawSeq: 0,
+    assetPathPrefix: serializeOptions.assetPathPrefix ?? '',
+  }
+  const replacements = new Map<string, string>()
+  const resolved = await resolveAsyncTypstPlugins(note.content, ctx, replacements, { value: 0 })
+  let body = nodeToTypst(resolved, ctx)
+  for (const [marker, value] of replacements) body = body.split(marker).join(value)
+  const source = `${buildPreamble(note.title, options)}\n\n${body}\n`
+  return {
+    source,
+    images: ctx.images,
+    mermaid: ctx.mermaid,
+    markmap: ctx.markmap,
+    vega: ctx.vega,
+    draw: ctx.draw,
+  }
 }

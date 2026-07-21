@@ -203,6 +203,7 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
   let hideTimer: ReturnType<typeof setTimeout> | null = null
   let mouseMoveFrame: number | null = null
   let pendingMousePoint: { x: number; y: number } | null = null
+  let touchStart: { x: number; y: number; time: number } | null = null
 
   function updateTypeMenuPosition() {
     const typeMenuEl = getMeasuredMenuEl(options.getTypeMenuEl?.() ?? null)
@@ -381,6 +382,27 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     }, 120)
   }
 
+  // Touch has no hover, so a quick tap reveals the handle for the tapped block
+  // (reusing the pointer geometry). Scrolls and long-press (native text
+  // selection) are excluded by the movement/duration thresholds.
+  function onTouchStart(event: TouchEvent) {
+    if (event.touches.length !== 1) { touchStart = null; return }
+    const touch = event.touches[0]
+    touchStart = { x: touch.clientX, y: touch.clientY, time: Date.now() }
+  }
+
+  function onTouchEnd(event: TouchEvent) {
+    const start = touchStart
+    touchStart = null
+    if (!start || blockHandle.isDragging) return
+    const touch = event.changedTouches[0]
+    if (!touch) return
+    const moved = Math.hypot(touch.clientX - start.x, touch.clientY - start.y)
+    if (moved > 10 || Date.now() - start.time > 400) return
+    // Defer so ProseMirror finishes placing the caret and layout settles.
+    window.setTimeout(() => handleMousePoint(touch.clientX, touch.clientY), 0)
+  }
+
   function onHandleMouseEnter() {
     isOverHandle = true
     clearHideTimer()
@@ -404,6 +426,8 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     currentDom = view.dom
     view.dom.addEventListener('mousemove', onMouseMove as EventListener)
     view.dom.addEventListener('mouseleave', onMouseLeave)
+    view.dom.addEventListener('touchstart', onTouchStart as EventListener, { passive: true })
+    view.dom.addEventListener('touchend', onTouchEnd as EventListener, { passive: true })
     window.addEventListener('mousemove', onWindowMouseMove)
   }
 
@@ -418,9 +442,12 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     if (currentDom) {
       currentDom.removeEventListener('mousemove', onMouseMove as EventListener)
       currentDom.removeEventListener('mouseleave', onMouseLeave)
+      currentDom.removeEventListener('touchstart', onTouchStart as EventListener)
+      currentDom.removeEventListener('touchend', onTouchEnd as EventListener)
       currentDom = null
     }
     window.removeEventListener('mousemove', onWindowMouseMove)
+    touchStart = null
     isOverHandle = false
     blockHandle.visible = false
     blockHandle.typeMenuOpen = false

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import { Plus, Folder } from 'lucide-vue-next'
@@ -6,6 +7,8 @@ import AmbientBackdrop from '../../../ui/glass/AmbientBackdrop.vue'
 import NevoMark from './NevoMark.vue'
 import PrivacyBadge from './PrivacyBadge.vue'
 import { useWorkspaceStore } from '../../../stores/workspace'
+import { useDeviceLayout } from '../../../composables/useDeviceLayout'
+import type { AppLocale } from '../../../types/workspace'
 
 const emit = defineEmits<{
   create: []
@@ -13,11 +16,18 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const { isTouch } = useDeviceLayout()
 const workspaceStore = useWorkspaceStore()
 const { appConfig, appMetadata } = storeToRefs(workspaceStore)
 
+const localeCycle: AppLocale[] = ['ru', 'en', 'fr', 'es', 'de']
+const nextLocale = computed<AppLocale>(() => {
+  const idx = localeCycle.indexOf(appConfig.value.locale)
+  return localeCycle[(idx + 1) % localeCycle.length]
+})
+
 function toggleLocale() {
-  void workspaceStore.setAppLocale(appConfig.value.locale === 'en' ? 'ru' : 'en')
+  void workspaceStore.setAppLocale(nextLocale.value)
 }
 </script>
 
@@ -43,7 +53,7 @@ function toggleLocale() {
               <Plus :size="18" />
             </div>
             <div class="spacer" />
-            <span class="nv-kbd">⏎</span>
+            <span v-if="!isTouch" class="nv-kbd">⏎</span>
           </div>
           <div>
             <div class="action-title">{{ t('onboarding.welcome.createWorkspace') }}</div>
@@ -57,7 +67,7 @@ function toggleLocale() {
               <Folder :size="18" />
             </div>
             <div class="spacer" />
-            <span class="nv-kbd">⌘O</span>
+            <span v-if="!isTouch" class="nv-kbd">⌘O</span>
           </div>
           <div>
             <div class="action-title">{{ t('onboarding.welcome.openExisting') }}</div>
@@ -71,7 +81,7 @@ function toggleLocale() {
     <PrivacyBadge />
     <div class="version-badge">{{ t('version', { version: appMetadata?.version ?? '0.1.9' }) }}</div>
     <button class="lang-toggle" @click="toggleLocale">
-      {{ appConfig.locale === 'en' ? 'RU' : 'EN' }}
+      {{ nextLocale.toUpperCase() }}
     </button>
   </div>
 </template>

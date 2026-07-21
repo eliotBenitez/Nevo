@@ -35,6 +35,10 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../app/WorkspaceShell.vue'),
   },
   {
+    path: '/workspace/plugin/:pluginId/:viewId?',
+    component: () => import('../app/WorkspaceShell.vue'),
+  },
+  {
     path: '/workspace/draw/:noteId/:drawId',
     component: () => import('../app/WorkspaceShell.vue'),
   },

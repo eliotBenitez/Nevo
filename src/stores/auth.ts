@@ -2,12 +2,12 @@ import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { openUrl } from '@tauri-apps/plugin-opener'
 import type { CloudUser, AuthTokens } from '../types/cloud'
 import { useServerConfigStore } from './serverConfig'
 import { secureStore, SECRET_PRIVATE_KEY, SECRET_REFRESH_TOKEN } from '../tauri/secureStore'
 import { generateKeypair } from '../core/crypto/keypair'
 import { appLogger } from '../utils/logger'
+import { systemCommands } from '../tauri/commands'
 
 const OAUTH_TIMEOUT_MS = 5 * 60_000
 
@@ -79,7 +79,7 @@ export const useAuthStore = defineStore('auth', () => {
       // (success, timeout, token-exchange error, or `openUrl` failure), so a
       // failed browser launch can't leak them or leave `done` to reject unheard.
       try {
-        await openUrl(`${serverCfg.serverUrl}/api/v1/auth/${provider}/start?port=${port}`)
+        await systemCommands.openExternalUrl(`${serverCfg.serverUrl}/api/v1/auth/${provider}/start?port=${port}`)
 
         const tokens = await done
         await applyTokens(tokens)

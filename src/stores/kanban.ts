@@ -36,6 +36,16 @@ export const useKanbanStore = defineStore('kanban', () => {
     return getBoardColumns(board)
   }
 
+  // Stamps the frontend's own clock on the board so the workspace home
+  // "recently modified" list reflects card activity, not just direct board
+  // edits. This mirrors the backend's server-side timestamp bump but uses
+  // the local clock (ms-level skew, day-granularity display is acceptable)
+  // to avoid changing command signatures.
+  function touchBoardUpdatedAt(boardId: string) {
+    const board = boards.value.get(boardId)
+    if (board) boards.value.set(boardId, { ...board, updatedAt: new Date().toISOString() })
+  }
+
   function cardsForColumn(boardId: string, columnOptionId: string, statusPropertyId: string) {
     if (!statusPropertyId) return []
     const boardCards = cards.value.get(boardId) ?? []
@@ -175,6 +185,7 @@ export const useKanbanStore = defineStore('kanban', () => {
     const card = await backend.kanbanCreateCard(boardId, title, columnOptionId, board.statusPropertyId, order)
     const current = cards.value.get(boardId) ?? []
     cards.value.set(boardId, [...current, normalizeCard(board, card)])
+    touchBoardUpdatedAt(boardId)
     return card
   }
 
@@ -197,6 +208,7 @@ export const useKanbanStore = defineStore('kanban', () => {
       const current = cards.value.get(boardId) ?? []
       const nextCard = board ? normalizeCard(board, card) : card
       cards.value.set(boardId, current.map(c => c.id === cardId ? nextCard : c))
+      touchBoardUpdatedAt(boardId)
     } finally {
       cardsSaving.value = false
     }
@@ -223,6 +235,7 @@ export const useKanbanStore = defineStore('kanban', () => {
     try {
       const result = await backend.kanbanMoveCard(boardId, cardId, newColumnOptionId, targetIndex)
       cards.value.set(boardId, result)
+      touchBoardUpdatedAt(boardId)
     } catch (err) {
       // Rollback on failure
       cards.value.set(boardId, prevCards)
@@ -236,6 +249,7 @@ export const useKanbanStore = defineStore('kanban', () => {
     await backend.kanbanDeleteCard(boardId, cardId)
     const current = cards.value.get(boardId) ?? []
     cards.value.set(boardId, current.filter(c => c.id !== cardId))
+    touchBoardUpdatedAt(boardId)
     if (activeCardId.value === cardId) activeCardId.value = null
   }
 

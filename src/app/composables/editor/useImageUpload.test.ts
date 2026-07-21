@@ -15,6 +15,12 @@ const clipboardMock = vi.hoisted(() => ({
 }))
 vi.mock('@tauri-apps/plugin-clipboard-manager', () => clipboardMock)
 
+const noteCommandMocks = vi.hoisted(() => ({
+  pickAndImportAsset: vi.fn(),
+  importClipboardImagePath: vi.fn(),
+}))
+vi.mock('../../../tauri/commands', () => ({ noteCommands: noteCommandMocks }))
+
 vi.mock('../../../utils/logger', () => ({
   appLogger: {
     warn: vi.fn(() => Promise.resolve()),
@@ -27,7 +33,6 @@ vi.mock('../../../utils/logger', () => ({
 const mockBackend = {
   handle: { kind: 'local', path: '/workspace' },
   importImageAsset: vi.fn(async () => ({ src: IMPORTED_SRC, hash: 'h', deduplicated: false, bytes: 3 })),
-  importAssetByPath: vi.fn(async () => ({ src: IMPORTED_SRC, hash: 'h', deduplicated: false, bytes: 3 })),
   importImageFromUrl: vi.fn(async () => ({ src: IMPORTED_SRC, hash: 'h', deduplicated: false, bytes: 3 })),
 }
 
@@ -141,8 +146,10 @@ async function useLocalBackend() {
 beforeEach(() => {
   setActivePinia(createPinia())
   mockBackend.importImageAsset.mockClear()
-  mockBackend.importAssetByPath.mockClear()
   mockBackend.importImageFromUrl.mockClear()
+  noteCommandMocks.pickAndImportAsset.mockReset()
+  noteCommandMocks.importClipboardImagePath.mockReset()
+  noteCommandMocks.importClipboardImagePath.mockResolvedValue(null)
   clipboardMock.readImage.mockReset()
   clipboardMock.readText.mockReset()
   // Default: no bitmap on the clipboard.
@@ -257,6 +264,13 @@ describe('useImageUpload — paste handling', () => {
   it('imports a local image from the native clipboard (file:// path via readText)', async () => {
     await useLocalBackend()
     clipboardMock.readText.mockResolvedValue('file:///home/user/photo.png')
+    noteCommandMocks.importClipboardImagePath.mockResolvedValue({
+      src: IMPORTED_SRC,
+      hash: 'h',
+      deduplicated: false,
+      bytes: 3,
+      fileName: 'photo.png',
+    })
     const core = createCoreWithView()
     const upload = useImageUpload(core, () => '/workspace', () => {})
 
@@ -266,7 +280,7 @@ describe('useImageUpload — paste handling', () => {
     expect(handled).toBe(true)
     expect(event.defaultPrevented).toBe(true)
     await new Promise((r) => setTimeout(r, 0))
-    expect(mockBackend.importAssetByPath).toHaveBeenCalledWith('/home/user/photo.png', 'photo.png')
+    expect(noteCommandMocks.importClipboardImagePath).toHaveBeenCalledWith('/workspace')
 
     core.editorView?.destroy()
   })

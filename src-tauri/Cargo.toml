@@ -1,6 +1,6 @@
 [package]
 name = "nevo"
-version = "0.1.9"
+version = "0.2.0"
 description = "Nevo editor"
 authors = ["eliotBenitez"]
 edition = "2021"
@@ -19,7 +19,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["protocol-asset"] }
+tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-clipboard-manager = "2"
@@ -29,10 +29,12 @@ serde_json = "1"
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 sha2 = "0.10"
+sha1 = "0.10"
 tokio = { version = "1", features = ["net", "sync", "rt-multi-thread", "macros", "io-util"] }
 tokio-tungstenite = "0.21"
 futures-util = "0.3"
 dashmap = "5"
+fontdb = "0.23"
 base64 = "0.22"
 typst = "0.14"
 typst-pdf = "0.14"
@@ -40,6 +42,8 @@ typst-render = "0.14"
 typst-as-lib = { version = "0.15", features = ["typst-kit-fonts", "typst-kit-embed-fonts"] }
 zip = { version = "0.6", default-features = false, features = ["deflate"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+percent-encoding = "2"
 
 [target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
 tauri-plugin-global-shortcut = "2"
@@ -47,3 +51,6 @@ tauri-plugin-updater = "2"
 
 [target."cfg(target_os = \"linux\")".dependencies]
 webkit2gtk = "2.0.2"
+
+[target."cfg(windows)".dependencies]
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Storage_FileSystem"] }

@@ -1,10 +1,9 @@
 import { ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useTreeStore } from '../stores/tree'
 import { useWorkspaceStore } from '../stores/workspace'
 import { useNoteStore } from '../stores/note'
 import { collabCommands, noteCommands } from '../tauri/commands'
-import { parseMarkdownToBlockNode, type ParsedMarkdown } from '../utils/noteImport/markdownParser'
+import { parseMarkdownToBlockNodeAsync, type ParsedMarkdown } from '../utils/noteImport/markdownParser'
 import type { BlockNode } from '../types/note'
 
 interface ImportMarkdownIntoNoteOptions {
@@ -12,7 +11,6 @@ interface ImportMarkdownIntoNoteOptions {
 }
 
 export function useMarkdownImport() {
-  const { t } = useI18n()
   const treeStore = useTreeStore()
   const workspaceStore = useWorkspaceStore()
   const noteStore = useNoteStore()
@@ -24,28 +22,17 @@ export function useMarkdownImport() {
   }
 
   async function pickAndParseMarkdown(): Promise<{ basename: string; parsed: ParsedMarkdown } | null> {
-    let open: (options: { title: string; filters: { name: string; extensions: string[] }[]; multiple: boolean }) => Promise<unknown>
-    try {
-      const mod = await import('@tauri-apps/plugin-dialog')
-      open = mod.open
-    } catch {
-      return null
+    const selected = await noteCommands.pickAndReadTextFile()
+    if (!selected) return null
+    const basename = selected.fileName.replace(/\.(?:md|markdown|mdown|mkd|txt|text)$/i, '') || 'Untitled'
+    return {
+      basename,
+      parsed: await parseMarkdownToBlockNodeAsync(
+        selected.content,
+        basename,
+        title => treeStore.resolveNoteIdByTitle(title),
+      ),
     }
-    let selected: unknown
-    try {
-      selected = await open({
-        title: t('import.openDialogTitle'),
-        filters: [{ name: 'Markdown', extensions: ['md'] }],
-        multiple: false,
-      })
-    } catch {
-      return null
-    }
-    if (!selected || typeof selected !== 'string') return null
-
-    const text = await noteCommands.readTextFile(selected)
-    const basename = selected.split(/[/\\]/).pop()?.replace(/\.md$/i, '') ?? 'Untitled'
-    return { basename, parsed: parseMarkdownToBlockNode(text, basename, (title) => treeStore.resolveNoteIdByTitle(title)) }
   }
 
   async function importMarkdownFile(folderId: string | null = null): Promise<string | null> {

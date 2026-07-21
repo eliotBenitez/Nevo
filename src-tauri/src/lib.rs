@@ -4,8 +4,8 @@ mod logging;
 mod media_server;
 
 use commands::{
-    ai, auth, config, folder, fonts, github_sync, graph, kanban, kanban_ops, note, templates,
-    typst_export, workspace,
+    ai, auth, config, database, folder, fonts, github_sync, graph, kanban, kanban_ops, note,
+    system, templates, typst_export, workspace,
 };
 #[cfg(target_os = "linux")]
 use tauri::Manager;
@@ -129,10 +129,20 @@ pub fn run() {
     }
 
     let app = tauri::Builder::default()
+        .register_uri_scheme_protocol("nevoasset", |_context, request| {
+            commands::path_utils::workspace_asset_response(request.uri().path())
+        })
+        .register_uri_scheme_protocol("nevoplugin", |_context, request| {
+            workspace::plugin_code_response(&request.uri().to_string())
+        })
+        .register_uri_scheme_protocol("nevoplugin-asset", |_context, request| {
+            workspace::plugin_asset_response(&request.uri().to_string())
+        })
         .manage(collab::server::CollabAppState::new())
         .manage(github_sync::GithubSyncState::default())
+        .manage(typst_export::PdfPreviewCache::default())
         .setup(|app| {
-            let logger = logging::AppLogger::new(logging::resolve_logs_dir(&app.handle())?)?;
+            let logger = logging::AppLogger::new(logging::resolve_logs_dir(app.handle())?)?;
             logging::install_global_logger(logger)?;
             let logger = logging::logger();
             let _ = logger.info(
@@ -155,22 +165,31 @@ pub fn run() {
                 .plugin(tauri_plugin_updater::Builder::new().build())?;
 
             // Start the localhost media streaming server (for <video> playback).
-            if let Err(error) = media_server::ensure_started() {
-                let _ = logger.error(
-                    "tauri.app",
-                    "media_server",
-                    "Failed to start media server",
-                    logging::LogContext::default().with_error(logging::LogError {
-                        kind: Some("io".to_string()),
-                        message: error,
-                        details: None,
-                    }),
-                );
+            // Desktop-only: the loopback server does not fit the mobile sandbox,
+            // where assets are served through Tauri's asset protocol instead.
+            #[cfg(desktop)]
+            {
+                if let Err(error) = media_server::ensure_started() {
+                    let _ = logger.error(
+                        "tauri.app",
+                        "media_server",
+                        "Failed to start media server",
+                        logging::LogContext::default().with_error(logging::LogError {
+                            kind: Some("io".to_string()),
+                            message: error,
+                            details: None,
+                        }),
+                    );
+                }
             }
 
             Ok(())
         })
-        .plugin(tauri_plugin_opener::init())
+        .plugin(
+            tauri_plugin_opener::Builder::new()
+                .open_js_links_on_click(false)
+                .build(),
+        )
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_process::init())
@@ -186,6 +205,13 @@ pub fn run() {
             config::load_app_config,
             config::save_app_config,
             config::get_app_metadata,
+            database::database_query_records,
+            database::database_apply_operations,
+            database::database_import_records,
+            database::database_read_all_records,
+            database::database_create_snapshot,
+            database::database_restore_snapshot,
+            database::database_delete,
             workspace::create_workspace,
             workspace::open_workspace,
             workspace::save_workspace_manifest,
@@ -196,9 +222,30 @@ pub fn run() {
             workspace::list_plugins,
             workspace::validate_plugin_manifest,
             workspace::set_plugin_enabled,
+            workspace::plugin_create_code_session,
+            workspace::plugin_create_staged_code_session,
+            workspace::plugin_revoke_code_session,
+            workspace::plugin_storage_get,
+            workspace::plugin_storage_set,
+            workspace::plugin_storage_delete,
+            workspace::plugin_storage_snapshot,
+            workspace::plugin_asset_write,
+            workspace::plugin_asset_read,
+            workspace::plugin_asset_delete,
+            workspace::plugin_asset_begin_upload,
+            workspace::plugin_asset_append_chunk,
+            workspace::plugin_asset_finish_upload,
+            workspace::plugin_asset_abort_upload,
+            workspace::plugin_asset_url,
+            workspace::plugin_registry_load,
+            workspace::plugin_registry_save,
+            workspace::plugin_network_fetch,
             workspace::marketplace_list_plugins,
             workspace::marketplace_install_plugin,
             workspace::marketplace_update_plugin,
+            workspace::marketplace_prepare_plugin,
+            workspace::marketplace_commit_plugin,
+            workspace::marketplace_abort_plugin,
             workspace::marketplace_remove_plugin,
             workspace::marketplace_refresh_cache,
             workspace::get_workspace_diagnostics,
@@ -228,13 +275,20 @@ pub fn run() {
             note::permanently_delete_from_trash,
             note::empty_trash,
             note::import_image_asset,
-            note::import_asset_by_path,
+            note::pick_and_import_asset,
+            note::import_clipboard_image_path,
             note::import_asset_from_url,
+            note::read_obsidian_vault,
+            note::import_vault_asset,
             note::delete_unreferenced_asset,
             note::save_draw_asset,
             note::read_draw_asset,
             note::read_latest_draw_asset,
-            note::open_file_path,
+            note::open_workspace_asset,
+            system::open_workspace_location,
+            system::open_app_location,
+            system::open_external_url,
+            system::pick_workspace_directory,
             media_server::get_media_server_info,
             note::search_workspace_blocks,
             note::export_note_markdown,
@@ -242,12 +296,14 @@ pub fn run() {
             note::export_note_docx,
             typst_export::export_note_pdf,
             typst_export::export_note_typst_archive,
-            typst_export::render_note_pdf_preview,
-            note::read_text_file,
+            typst_export::prepare_note_pdf_preview,
+            typst_export::render_note_pdf_preview_pages,
+            note::pick_and_read_text_file,
             note::export_draw_file,
             note::save_yjs_state,
             note::load_yjs_state,
             note::delete_yjs_state,
+            note::touch_note_updated_at,
             collab::server::start_collab_server,
             collab::server::stop_collab_server,
             collab::server::get_collab_server_info,

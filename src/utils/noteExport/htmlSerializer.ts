@@ -6,6 +6,8 @@ import { loadKatex, renderKatexToString } from '../katex'
 import { renderMermaidToSvg } from './mermaidToSvg'
 import { renderMarkmapToSvg } from './markmapToSvg'
 import { renderVegaToSvg } from './vegaToSvg'
+import { normalizeDatabaseData, type DatabaseBlockData, type DbCellValue, type DbField } from '../../types/database-block'
+import { visibleRecords } from '../../editor-core/databaseFilterSort'
 
 export interface HtmlSerializeResult {
   html: string
@@ -233,6 +235,43 @@ function codeText(node: BlockNode): string {
   return (node.content ?? []).map(c => c.text ?? '').join('')
 }
 
+function formatDbCellValue(value: DbCellValue, field: DbField): string {
+  if (value === null || value === undefined) return ''
+  if (field.type === 'select') {
+    const id = typeof value === 'string' ? value : ''
+    if (!id) return ''
+    return field.options?.find(o => o.id === id)?.name ?? id
+  }
+  if (field.type === 'multi_select') {
+    const ids = Array.isArray(value) ? value : []
+    return ids.map(id => field.options?.find(o => o.id === id)?.name ?? id).join(', ')
+  }
+  if (Array.isArray(value)) return value.join(', ')
+  if (typeof value === 'number') return String(value)
+  if (typeof value === 'boolean') return value ? '✓' : ''
+  return String(value)
+}
+
+function databaseBlockRecords(data: DatabaseBlockData) {
+  if (data.version !== 1) return []
+  const view = data.views.find(v => v.id === data.activeView) ?? data.views[0]
+  return view ? visibleRecords(data.records, view.filters, view.sorts, data.fields) : data.records
+}
+
+function databaseBlockToHtml(node: BlockNode): string {
+  const data = normalizeDatabaseData(node.attrs?.data)
+  const title = data.title.trim()
+  const caption = title ? `<caption>${escapeHtml(title)}</caption>` : ''
+  if (!data.fields.length) return caption ? `<figure class="database-block">${caption}</figure>` : ''
+  const records = databaseBlockRecords(data)
+  const head = `<tr>${data.fields.map(f => `<th>${escapeHtml(f.name)}</th>`).join('')}</tr>`
+  const body = records.map(record => {
+    const cells = data.fields.map(f => `<td>${escapeHtml(formatDbCellValue(record.cells[f.id] ?? null, f))}</td>`).join('')
+    return `<tr>${cells}</tr>`
+  }).join('\n')
+  return `<figure class="database-block"><table>${caption}<thead>${head}</thead><tbody>\n${body}\n</tbody></table></figure>`
+}
+
 async function blockChildren(node: BlockNode, ctx: SerializeCtx): Promise<string> {
   const children = await Promise.all((node.content ?? []).map(child => blockNode(child, ctx)))
   return children.filter(Boolean).join('\n')
@@ -430,15 +469,25 @@ export async function blockNode(node: BlockNode, ctx: SerializeCtx): Promise<str
     }
     case 'hard_break':
       return '<br>'
+    case 'database_block':
+      return databaseBlockToHtml(node)
     default: {
       const pluginSerializer = getPluginNodeSerializer(node.type)?.html
+      const childrenHtml = await blockChildren(node, ctx)
       if (pluginSerializer) {
-        const childrenHtml = await blockChildren(node, ctx)
-        return pluginSerializer(node as NevoSerializableNode, { serializeChildren: () => childrenHtml, escapeHtml })
+        try {
+          return await pluginSerializer(node as NevoSerializableNode, {
+            serializeChildren: () => childrenHtml,
+            escapeHtml,
+          })
+        } catch {
+          // Fall through to the lossless marker when the Worker is unavailable,
+          // times out, or returns output rejected by the host sanitizer.
+        }
       }
       const inline = inlineContent(node, ctx)
-      if (inline) return inline
-      return blockChildren(node, ctx)
+      const marker = escapeAttr(JSON.stringify({ type: node.type, attrs: node.attrs ?? {} }))
+      return `<div data-nevo-plugin-fallback="${marker}">${childrenHtml || inline}</div>`
     }
   }
 }

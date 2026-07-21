@@ -51,13 +51,20 @@ export const useCollabStore = defineStore('collab', () => {
     const info = await collabCommands.startServer(port)
     serverInfo.value = info
     mode.value = 'local'
-    await _connectLocalProvider(noteId, ydoc, awareness, info.url)
+    await _connectLocalProvider(noteId, ydoc, awareness, info.url, info.sessionToken)
     return info
   }
 
   async function joinSession(noteId: string, ydoc: Y.Doc, awareness: Awareness, wsUrl: string): Promise<void> {
+    const parsed = new URL(wsUrl)
+    if (!['ws:', 'wss:'].includes(parsed.protocol)) throw new Error('Local collaboration URL must use ws:// or wss://')
+    const sessionToken = parsed.searchParams.get('token') ?? ''
+    if (!sessionToken) throw new Error('Local collaboration URL is missing its session token')
+    parsed.search = ''
+    parsed.hash = ''
+    const serverUrl = parsed.toString().replace(/\/$/, '')
     mode.value = 'local'
-    await _connectLocalProvider(noteId, ydoc, awareness, wsUrl)
+    await _connectLocalProvider(noteId, ydoc, awareness, serverUrl, sessionToken)
   }
 
   // --- Shared-storage session (authenticated, server-persisted, E2E) ---
@@ -165,7 +172,7 @@ export const useCollabStore = defineStore('collab', () => {
   }
 
   async function _connectLocalProvider(
-    noteId: string, ydoc: Y.Doc, awareness: Awareness, wsUrl: string,
+    noteId: string, ydoc: Y.Doc, awareness: Awareness, wsUrl: string, sessionToken: string,
   ): Promise<void> {
     _destroyLocalProvider()
     _destroyCloudProvider()
@@ -175,7 +182,7 @@ export const useCollabStore = defineStore('collab', () => {
     initAwarenessUser(awareness, 'User')
 
     _localProvider = createWebSocketProvider({
-      ydoc, noteId, wsUrl, awareness,
+      ydoc, noteId, wsUrl, sessionToken, awareness,
       onStatusChange: (s) => { connectionStatus.value = s },
     })
     const handler = () => {

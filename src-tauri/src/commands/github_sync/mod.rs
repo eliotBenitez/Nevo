@@ -11,7 +11,11 @@ use base64::engine::general_purpose::STANDARD;
 use base64::Engine as _;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use sha1::{Digest, Sha1};
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
+use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 
 use crate::commands::auth::secure_store_get;
@@ -21,6 +25,21 @@ const PLUGIN_ID: &str = "nevo.github-sync";
 const TOKEN_SECRET_KEY: &str = "nevo.github-sync.token";
 const GITHUB_API: &str = "https://api.github.com";
 const USER_AGENT: &str = "Nevo";
+
+/// Files larger than this are skipped instead of uploaded. The GitHub Git Data
+/// blob API (`POST /git/blobs`) returns a `504 Gateway Timeout` well before its
+/// hard 40 MiB limit, and base64 encoding inflates the payload by ~33%, so a
+/// single oversized asset would otherwise abort the whole sync.
+const MAX_BLOB_BYTES: u64 = 25 * 1024 * 1024;
+const MAX_SYNC_BYTES: u64 = 512 * 1024 * 1024;
+
+/// Per-request timeout for GitHub API calls, so a stalled connection fails fast
+/// (and is then retried) instead of hanging the sync indefinitely.
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
+
+/// How many times a transient GitHub failure (network error or 429/5xx) is
+/// retried before giving up.
+const MAX_REQUEST_ATTEMPTS: u32 = 4;
 
 /// Managed state holding the background auto-sync task, if one is running.
 ///
@@ -43,7 +62,49 @@ struct GithubSyncConfig {
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct RepoFile {
     path: String,
-    bytes: Vec<u8>,
+    source_path: PathBuf,
+    size: u64,
+}
+
+/// Outcome of walking the workspace: the files to upload plus the relative
+/// paths of any files skipped because they exceed `MAX_BLOB_BYTES`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct CollectedFiles {
+    files: Vec<RepoFile>,
+    skipped: Vec<String>,
+    total_bytes: u64,
+}
+
+static ACTIVE_SYNCS: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+
+struct SyncRunGuard {
+    workspace_path: String,
+}
+
+impl SyncRunGuard {
+    fn acquire(workspace_path: &str) -> Result<Self, String> {
+        let mut active = ACTIVE_SYNCS
+            .get_or_init(|| Mutex::new(HashSet::new()))
+            .lock()
+            .map_err(|_| "GitHub Sync lock poisoned".to_string())?;
+        if !active.insert(workspace_path.to_string()) {
+            return Err("A GitHub Sync is already running for this workspace".to_string());
+        }
+        Ok(Self {
+            workspace_path: workspace_path.to_string(),
+        })
+    }
+}
+
+impl Drop for SyncRunGuard {
+    fn drop(&mut self) {
+        if let Ok(mut active) = ACTIVE_SYNCS
+            .get_or_init(|| Mutex::new(HashSet::new()))
+            .lock()
+        {
+            active.remove(&self.workspace_path);
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -52,6 +113,8 @@ pub struct SyncResult {
     pub commit_sha: String,
     pub files_count: usize,
     pub synced_at: String,
+    #[serde(default)]
+    pub skipped_files: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -142,7 +205,7 @@ fn load_config(workspace_path: &str) -> Result<GithubSyncConfig, String> {
 fn collect_dir_recursive(
     workspace_root: &Path,
     dir: &Path,
-    files: &mut Vec<RepoFile>,
+    collected: &mut CollectedFiles,
 ) -> Result<(), String> {
     if !dir.exists() {
         return Ok(());
@@ -152,34 +215,53 @@ fn collect_dir_recursive(
         let entry = entry.map_err(|error| error.to_string())?;
         let path = entry.path();
         if path.is_dir() {
-            collect_dir_recursive(workspace_root, &path, files)?;
+            collect_dir_recursive(workspace_root, &path, collected)?;
         } else if path.is_file() {
-            push_file(workspace_root, &path, files)?;
+            push_file(workspace_root, &path, collected)?;
         }
     }
     Ok(())
 }
 
-fn push_file(workspace_root: &Path, path: &Path, files: &mut Vec<RepoFile>) -> Result<(), String> {
+fn relative_path(workspace_root: &Path, path: &Path) -> Result<String, String> {
     let relative = path
         .strip_prefix(workspace_root)
         .map_err(|error| error.to_string())?;
-    let relative_str = relative
+    Ok(relative
         .components()
         .map(|component| component.as_os_str().to_string_lossy().into_owned())
         .collect::<Vec<_>>()
-        .join("/");
-    let bytes = std::fs::read(path).map_err(|error| error.to_string())?;
-    files.push(RepoFile {
+        .join("/"))
+}
+
+fn push_file(
+    workspace_root: &Path,
+    path: &Path,
+    collected: &mut CollectedFiles,
+) -> Result<(), String> {
+    let relative_str = relative_path(workspace_root, path)?;
+    let size = std::fs::metadata(path)
+        .map_err(|error| error.to_string())?
+        .len();
+    if size > MAX_BLOB_BYTES {
+        collected.skipped.push(relative_str);
+        return Ok(());
+    }
+    collected.total_bytes = collected.total_bytes.saturating_add(size);
+    if collected.total_bytes > MAX_SYNC_BYTES {
+        return Err("Workspace files exceed the 512 MiB GitHub Sync limit".to_string());
+    }
+    collected.files.push(RepoFile {
         path: relative_str,
-        bytes,
+        source_path: path.to_path_buf(),
+        size,
     });
     Ok(())
 }
 
-fn collect_workspace_files(workspace_path: &str) -> Result<Vec<RepoFile>, String> {
+fn collect_workspace_files(workspace_path: &str) -> Result<CollectedFiles, String> {
     let root = Path::new(workspace_path);
-    let mut files = Vec::new();
+    let mut collected = CollectedFiles::default();
 
     let notes_dir = root.join("notes");
     if notes_dir.exists() {
@@ -187,23 +269,32 @@ fn collect_workspace_files(workspace_path: &str) -> Result<Vec<RepoFile>, String
             let entry = entry.map_err(|error| error.to_string())?;
             let path = entry.path();
             if path.is_file() && path.extension().and_then(|ext| ext.to_str()) == Some("nevo") {
-                push_file(root, &path, &mut files)?;
+                push_file(root, &path, &mut collected)?;
             }
         }
     }
 
-    for relative in [".nevo/workspace.json", ".nevo/settings.json"] {
+    // Fold the database WAL into the main file so its committed rows are
+    // captured by the file-level upload below. Best-effort: a checkpoint
+    // failure must not abort the sync of everything else.
+    let _ = crate::commands::database::checkpoint_database(root);
+
+    for relative in [
+        ".nevo/workspace.json",
+        ".nevo/settings.json",
+        ".nevo/databases.sqlite",
+    ] {
         let path = root.join(relative);
         if path.is_file() {
-            push_file(root, &path, &mut files)?;
+            push_file(root, &path, &mut collected)?;
         }
     }
 
     for relative in [".nevo/assets", ".nevo/boards", ".nevo/snapshots"] {
-        collect_dir_recursive(root, &root.join(relative), &mut files)?;
+        collect_dir_recursive(root, &root.join(relative), &mut collected)?;
     }
 
-    Ok(files)
+    Ok(collected)
 }
 
 fn github_client(token: &str) -> Result<reqwest::Client, String> {
@@ -228,8 +319,24 @@ fn github_client(token: &str) -> Result<reqwest::Client, String> {
 
     reqwest::Client::builder()
         .default_headers(headers)
+        .timeout(REQUEST_TIMEOUT)
         .build()
         .map_err(|error| error.to_string())
+}
+
+/// Compute the git blob object id for `bytes`: SHA-1 over the git blob header
+/// (`blob <len>\0`) followed by the raw content. This equals the `sha` GitHub
+/// reports for a blob in a tree, so a matching id means the file is already
+/// stored in the repo and does not need re-uploading.
+fn git_blob_sha(bytes: &[u8]) -> String {
+    let mut hasher = Sha1::new();
+    hasher.update(format!("blob {}\0", bytes.len()).as_bytes());
+    hasher.update(bytes);
+    hasher
+        .finalize()
+        .iter()
+        .map(|byte| format!("{:02x}", byte))
+        .collect()
 }
 
 async fn github_error(response: reqwest::Response, url: &str) -> String {
@@ -238,17 +345,95 @@ async fn github_error(response: reqwest::Response, url: &str) -> String {
     format!("GitHub API {} at {}: {}", status, url, body)
 }
 
+/// Transient GitHub responses worth retrying: rate limiting and gateway/backend
+/// errors (a large-blob `POST /git/blobs` typically surfaces as `504`).
+fn is_retryable_status(status: reqwest::StatusCode) -> bool {
+    matches!(status.as_u16(), 429 | 500 | 502 | 503 | 504)
+}
+
+/// Exponential backoff (500ms, 1s, 2s, …) capped at 4s.
+fn backoff_delay(attempt: u32) -> Duration {
+    let millis = 500u64.saturating_mul(1u64 << (attempt - 1).min(3));
+    Duration::from_millis(millis.min(4000))
+}
+
+/// Longest we'll wait out a GitHub rate limit before giving up and surfacing
+/// the error. Secondary limits use short `Retry-After` windows we can honor;
+/// a primary limit whose reset is further away fails fast with a clear message.
+const RATE_LIMIT_MAX_WAIT: Duration = Duration::from_secs(60);
+
+fn header_u64(headers: &reqwest::header::HeaderMap, name: &str) -> Option<u64> {
+    headers.get(name)?.to_str().ok()?.trim().parse::<u64>().ok()
+}
+
+/// If `status`/`headers` indicate a GitHub rate limit we can wait out, return
+/// the delay to sleep before retrying (capped at `RATE_LIMIT_MAX_WAIT`).
+/// Honors `Retry-After` (secondary limit) first, then `X-RateLimit-Remaining:
+/// 0` + `X-RateLimit-Reset` (primary limit). Returns `None` when it isn't a
+/// waitable rate limit (e.g. a permission 403, or a reset too far away).
+fn rate_limit_delay(
+    status: reqwest::StatusCode,
+    headers: &reqwest::header::HeaderMap,
+) -> Option<Duration> {
+    if !matches!(status.as_u16(), 403 | 429) {
+        return None;
+    }
+    if let Some(seconds) = header_u64(headers, "retry-after") {
+        return Some(Duration::from_secs(seconds).min(RATE_LIMIT_MAX_WAIT));
+    }
+    if header_u64(headers, "x-ratelimit-remaining") == Some(0) {
+        let reset = header_u64(headers, "x-ratelimit-reset")?;
+        let now = Utc::now().timestamp().max(0) as u64;
+        let wait = reset.saturating_sub(now);
+        if wait <= RATE_LIMIT_MAX_WAIT.as_secs() {
+            return Some(Duration::from_secs(wait));
+        }
+    }
+    None
+}
+
+/// Send a request, retrying transient network errors (timeout/connect) and
+/// retryable status codes with exponential backoff. The builder must be
+/// cloneable, which every GitHub Git Data call here (JSON or bodyless) is.
+async fn send_with_retry(builder: reqwest::RequestBuilder) -> Result<reqwest::Response, String> {
+    let mut attempt = 0;
+    loop {
+        attempt += 1;
+        let request = builder
+            .try_clone()
+            .ok_or_else(|| "GitHub request is not retryable".to_string())?;
+        match request.send().await {
+            Ok(response) => {
+                if attempt < MAX_REQUEST_ATTEMPTS {
+                    if let Some(delay) = rate_limit_delay(response.status(), response.headers()) {
+                        tokio::time::sleep(delay).await;
+                        continue;
+                    }
+                    if is_retryable_status(response.status()) {
+                        tokio::time::sleep(backoff_delay(attempt)).await;
+                        continue;
+                    }
+                }
+                return Ok(response);
+            }
+            Err(error) => {
+                if attempt < MAX_REQUEST_ATTEMPTS && (error.is_timeout() || error.is_connect()) {
+                    tokio::time::sleep(backoff_delay(attempt)).await;
+                    continue;
+                }
+                return Err(error.to_string());
+            }
+        }
+    }
+}
+
 async fn get_base_commit_sha(
     client: &reqwest::Client,
     repo: &str,
     branch: &str,
 ) -> Result<Option<String>, String> {
     let url = format!("{}/repos/{}/git/ref/heads/{}", GITHUB_API, repo, branch);
-    let response = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(|error| error.to_string())?;
+    let response = send_with_retry(client.get(&url)).await?;
 
     if response.status().is_success() {
         let payload = response
@@ -263,18 +448,83 @@ async fn get_base_commit_sha(
     }
 }
 
+#[derive(Debug, Deserialize)]
+struct GitCommitDetail {
+    tree: GitTreeRef,
+}
+
+#[derive(Debug, Deserialize)]
+struct GitTreeRef {
+    sha: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct GitTreeListResponse {
+    tree: Vec<GitTreeListEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GitTreeListEntry {
+    path: String,
+    #[serde(rename = "type")]
+    entry_type: String,
+    sha: String,
+}
+
+/// Fetch the recursive `path -> blob sha` map for `commit_sha`'s tree, so an
+/// unchanged file can reuse its existing blob instead of re-uploading it.
+/// Returns an empty map if the commit/tree is missing (404/409): a missing
+/// path simply falls back to a normal upload, which is always correct. A
+/// truncated tree is likewise harmless — paths not in the map are re-uploaded.
+async fn get_base_tree_map(
+    client: &reqwest::Client,
+    repo: &str,
+    commit_sha: &str,
+) -> Result<HashMap<String, String>, String> {
+    let commit_url = format!("{}/repos/{}/git/commits/{}", GITHUB_API, repo, commit_sha);
+    let response = send_with_retry(client.get(&commit_url)).await?;
+    if !response.status().is_success() {
+        if matches!(response.status().as_u16(), 404 | 409) {
+            return Ok(HashMap::new());
+        }
+        return Err(github_error(response, &commit_url).await);
+    }
+    let commit = response
+        .json::<GitCommitDetail>()
+        .await
+        .map_err(|error| error.to_string())?;
+
+    let tree_url = format!(
+        "{}/repos/{}/git/trees/{}?recursive=1",
+        GITHUB_API, repo, commit.tree.sha
+    );
+    let response = send_with_retry(client.get(&tree_url)).await?;
+    if !response.status().is_success() {
+        if matches!(response.status().as_u16(), 404 | 409) {
+            return Ok(HashMap::new());
+        }
+        return Err(github_error(response, &tree_url).await);
+    }
+    let tree = response
+        .json::<GitTreeListResponse>()
+        .await
+        .map_err(|error| error.to_string())?;
+
+    Ok(tree
+        .tree
+        .into_iter()
+        .filter(|entry| entry.entry_type == "blob")
+        .map(|entry| (entry.path, entry.sha))
+        .collect())
+}
+
 async fn create_blob(client: &reqwest::Client, repo: &str, bytes: &[u8]) -> Result<String, String> {
     let url = format!("{}/repos/{}/git/blobs", GITHUB_API, repo);
     let body = serde_json::json!({
         "content": STANDARD.encode(bytes),
         "encoding": "base64",
     });
-    let response = client
-        .post(&url)
-        .json(&body)
-        .send()
-        .await
-        .map_err(|error| error.to_string())?;
+    let response = send_with_retry(client.post(&url).json(&body)).await?;
     if !response.status().is_success() {
         return Err(github_error(response, &url).await);
     }
@@ -303,12 +553,7 @@ async fn create_tree(
         })
         .collect::<Vec<_>>();
     let body = serde_json::json!({ "tree": tree });
-    let response = client
-        .post(&url)
-        .json(&body)
-        .send()
-        .await
-        .map_err(|error| error.to_string())?;
+    let response = send_with_retry(client.post(&url).json(&body)).await?;
     if !response.status().is_success() {
         return Err(github_error(response, &url).await);
     }
@@ -333,12 +578,7 @@ async fn create_commit(
         "tree": tree_sha,
         "parents": parents,
     });
-    let response = client
-        .post(&url)
-        .json(&body)
-        .send()
-        .await
-        .map_err(|error| error.to_string())?;
+    let response = send_with_retry(client.post(&url).json(&body)).await?;
     if !response.status().is_success() {
         return Err(github_error(response, &url).await);
     }
@@ -359,12 +599,7 @@ async fn update_ref(
     if had_base {
         let url = format!("{}/repos/{}/git/refs/heads/{}", GITHUB_API, repo, branch);
         let body = serde_json::json!({ "sha": commit_sha, "force": true });
-        let response = client
-            .patch(&url)
-            .json(&body)
-            .send()
-            .await
-            .map_err(|error| error.to_string())?;
+        let response = send_with_retry(client.patch(&url).json(&body)).await?;
         if !response.status().is_success() {
             return Err(github_error(response, &url).await);
         }
@@ -396,6 +631,7 @@ struct SyncResultEvent {
     auto: bool,
     commit_sha: Option<String>,
     files_count: Option<usize>,
+    skipped_files: Vec<String>,
     error: Option<String>,
 }
 
@@ -433,25 +669,48 @@ async fn perform_sync(
     workspace_path: String,
     auto: bool,
 ) -> Result<SyncResult, String> {
+    let _sync_guard = SyncRunGuard::acquire(&workspace_path)?;
     let config = load_config(&workspace_path)?;
     let token = secure_store_get(app.clone(), TOKEN_SECRET_KEY.to_string())?
         .ok_or_else(|| "GitHub token is not set".to_string())?;
 
     let workspace_for_collect = workspace_path.clone();
-    let files = tauri::async_runtime::spawn_blocking(move || {
+    let collected = tauri::async_runtime::spawn_blocking(move || {
         collect_workspace_files(&workspace_for_collect)
     })
     .await
     .map_err(|error| error.to_string())??;
+    let CollectedFiles {
+        files,
+        skipped,
+        total_bytes: _,
+    } = collected;
 
     let client = github_client(&token)?;
 
     let sync_outcome = async {
         let base_commit = get_base_commit_sha(&client, &config.repo, &config.branch).await?;
+        let base_tree = match base_commit.as_deref() {
+            Some(sha) => get_base_tree_map(&client, &config.repo, sha).await?,
+            None => HashMap::new(),
+        };
 
         let mut tree_entries = Vec::with_capacity(files.len());
         for file in &files {
-            let blob_sha = create_blob(&client, &config.repo, &file.bytes).await?;
+            let source_path = file.source_path.clone();
+            let expected_size = file.size;
+            let bytes = tauri::async_runtime::spawn_blocking(move || std::fs::read(source_path))
+                .await
+                .map_err(|error| error.to_string())?
+                .map_err(|error| error.to_string())?;
+            if bytes.len() as u64 != expected_size || bytes.len() as u64 > MAX_BLOB_BYTES {
+                return Err(format!("Workspace file changed during sync: {}", file.path));
+            }
+            let local_sha = git_blob_sha(&bytes);
+            let blob_sha = match base_tree.get(&file.path) {
+                Some(existing) if existing == &local_sha => local_sha,
+                _ => create_blob(&client, &config.repo, &bytes).await?,
+            };
             tree_entries.push((file.path.clone(), blob_sha));
         }
 
@@ -477,6 +736,7 @@ async fn perform_sync(
             commit_sha,
             files_count: files.len(),
             synced_at: Utc::now().to_rfc3339(),
+            skipped_files: skipped.clone(),
         })
     }
     .await;
@@ -489,6 +749,7 @@ async fn perform_sync(
                 auto,
                 commit_sha: Some(result.commit_sha.clone()),
                 files_count: Some(result.files_count),
+                skipped_files: result.skipped_files.clone(),
                 error: None,
             }
         }
@@ -499,6 +760,7 @@ async fn perform_sync(
                 auto,
                 commit_sha: None,
                 files_count: None,
+                skipped_files: skipped.clone(),
                 error: Some(error.clone()),
             }
         }
@@ -514,11 +776,7 @@ pub async fn github_sync_test_connection(app: AppHandle, repo: String) -> Result
         .ok_or_else(|| "GitHub token is not set".to_string())?;
     let client = github_client(&token)?;
     let url = format!("{}/repos/{}", GITHUB_API, repo);
-    let response = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(|error| error.to_string())?;
+    let response = send_with_retry(client.get(&url)).await?;
     if response.status().is_success() {
         Ok(true)
     } else {
@@ -625,6 +883,7 @@ mod tests {
 
         std::fs::write(root.join(".nevo/workspace.json"), b"{}").expect("workspace.json");
         std::fs::write(root.join(".nevo/settings.json"), b"{}").expect("settings.json");
+        std::fs::write(root.join(".nevo/databases.sqlite"), b"sqlite").expect("databases.sqlite");
 
         std::fs::create_dir_all(root.join(".nevo/assets")).expect("assets dir");
         std::fs::write(root.join(".nevo/assets/pic.png"), b"png-bytes").expect("asset");
@@ -642,8 +901,10 @@ mod tests {
         std::fs::write(root.join(".nevo/collab/state.bin"), b"bin").expect("collab state");
         std::fs::write(root.join(".nevo/secrets.json"), b"{}").expect("secrets");
 
-        let files = collect_workspace_files(&root.to_string_lossy()).expect("collect files");
-        let mut paths = files
+        let collected = collect_workspace_files(&root.to_string_lossy()).expect("collect files");
+        assert!(collected.skipped.is_empty());
+        let mut paths = collected
+            .files
             .iter()
             .map(|file| file.path.clone())
             .collect::<Vec<_>>();
@@ -654,6 +915,7 @@ mod tests {
             vec![
                 ".nevo/assets/pic.png".to_string(),
                 ".nevo/boards/board-1.json".to_string(),
+                ".nevo/databases.sqlite".to_string(),
                 ".nevo/settings.json".to_string(),
                 ".nevo/snapshots/note-a/2024.json".to_string(),
                 ".nevo/workspace.json".to_string(),
@@ -666,6 +928,50 @@ mod tests {
         assert!(!paths.iter().any(|path| path.contains("ignored.txt")));
 
         std::fs::remove_dir_all(workspace).expect("cleanup");
+    }
+
+    #[test]
+    fn collect_workspace_files_skips_files_over_the_blob_limit() {
+        let workspace = workspace("size-guard");
+        let root = &workspace;
+
+        std::fs::create_dir_all(root.join(".nevo/assets")).expect("assets dir");
+        std::fs::write(root.join(".nevo/assets/small.png"), b"tiny").expect("small asset");
+        let oversized = vec![0u8; (MAX_BLOB_BYTES + 1) as usize];
+        std::fs::write(root.join(".nevo/assets/huge.bin"), &oversized).expect("huge asset");
+
+        let collected = collect_workspace_files(&root.to_string_lossy()).expect("collect files");
+        let kept = collected
+            .files
+            .iter()
+            .map(|file| file.path.clone())
+            .collect::<Vec<_>>();
+
+        assert!(kept.contains(&".nevo/assets/small.png".to_string()));
+        assert!(!kept.iter().any(|path| path.contains("huge.bin")));
+        assert_eq!(collected.skipped, vec![".nevo/assets/huge.bin".to_string()]);
+
+        std::fs::remove_dir_all(workspace).expect("cleanup");
+    }
+
+    #[test]
+    fn backoff_delay_grows_and_caps() {
+        assert_eq!(backoff_delay(1), Duration::from_millis(500));
+        assert_eq!(backoff_delay(2), Duration::from_millis(1000));
+        assert_eq!(backoff_delay(3), Duration::from_millis(2000));
+        assert_eq!(backoff_delay(4), Duration::from_millis(4000));
+        assert_eq!(backoff_delay(10), Duration::from_millis(4000));
+    }
+
+    #[test]
+    fn retryable_status_covers_gateway_and_rate_limit() {
+        use reqwest::StatusCode;
+        assert!(is_retryable_status(StatusCode::TOO_MANY_REQUESTS));
+        assert!(is_retryable_status(StatusCode::BAD_GATEWAY));
+        assert!(is_retryable_status(StatusCode::SERVICE_UNAVAILABLE));
+        assert!(is_retryable_status(StatusCode::GATEWAY_TIMEOUT));
+        assert!(!is_retryable_status(StatusCode::NOT_FOUND));
+        assert!(!is_retryable_status(StatusCode::UNPROCESSABLE_ENTITY));
     }
 
     #[test]
@@ -732,5 +1038,54 @@ mod tests {
         std::fs::remove_dir_all(&defaults_workspace).expect("cleanup");
         std::fs::remove_dir_all(&no_repo_workspace).expect("cleanup");
         std::fs::remove_dir_all(&unconfigured_workspace).expect("cleanup");
+    }
+
+    #[test]
+    fn git_blob_sha_matches_git() {
+        assert_eq!(
+            git_blob_sha(b""),
+            "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        );
+        assert_eq!(
+            git_blob_sha(b"hello\n"),
+            "ce013625030ba8dba906f756967f9e9ca394464a"
+        );
+    }
+
+    #[test]
+    fn rate_limit_delay_honors_retry_after() {
+        use reqwest::header::{HeaderMap, HeaderValue};
+        use reqwest::StatusCode;
+
+        let mut headers = HeaderMap::new();
+        headers.insert("retry-after", HeaderValue::from_static("30"));
+        assert_eq!(
+            rate_limit_delay(StatusCode::FORBIDDEN, &headers),
+            Some(Duration::from_secs(30))
+        );
+
+        let mut headers = HeaderMap::new();
+        headers.insert("retry-after", HeaderValue::from_static("600"));
+        assert_eq!(
+            rate_limit_delay(StatusCode::FORBIDDEN, &headers),
+            Some(Duration::from_secs(60))
+        );
+    }
+
+    #[test]
+    fn rate_limit_delay_ignores_non_rate_limit() {
+        use reqwest::header::{HeaderMap, HeaderValue};
+        use reqwest::StatusCode;
+
+        let mut headers = HeaderMap::new();
+        headers.insert("retry-after", HeaderValue::from_static("30"));
+        assert_eq!(rate_limit_delay(StatusCode::NOT_FOUND, &headers), None);
+
+        let headers = HeaderMap::new();
+        assert_eq!(rate_limit_delay(StatusCode::FORBIDDEN, &headers), None);
+
+        let mut headers = HeaderMap::new();
+        headers.insert("x-ratelimit-remaining", HeaderValue::from_static("5"));
+        assert_eq!(rate_limit_delay(StatusCode::FORBIDDEN, &headers), None);
     }
 }

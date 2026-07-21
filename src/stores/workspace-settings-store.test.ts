@@ -8,7 +8,17 @@ import type {
 } from '../types/workspace'
 import { configCommands, workspaceCommands } from '../tauri/commands'
 import { appLogger } from '../utils/logger'
+import { runMarketplacePluginTransaction } from '../core/plugins/marketplaceMigration'
+import { pauseMarketplaceRuntime } from '../core/plugins/marketplaceRuntime'
 import { useWorkspaceStore } from './workspace'
+
+vi.mock('../core/plugins/marketplaceMigration', () => ({
+  runMarketplacePluginTransaction: vi.fn(),
+}))
+
+vi.mock('../core/plugins/marketplaceRuntime', () => ({
+  pauseMarketplaceRuntime: vi.fn(),
+}))
 
 vi.mock('../tauri/commands', () => ({
   configCommands: {
@@ -182,12 +192,14 @@ describe('useWorkspaceStore settings integration', () => {
   })
 
   it('reloads installed plugins after marketplace install', async () => {
+    const resumeRuntime = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(pauseMarketplaceRuntime).mockResolvedValue(resumeRuntime)
     vi.mocked(workspaceCommands.openWorkspace).mockResolvedValue(manifest())
     vi.mocked(workspaceCommands.loadSettings).mockResolvedValue({} as never)
     vi.mocked(workspaceCommands.listPlugins)
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([plugin(true)])
-    vi.mocked(workspaceCommands.marketplaceInstallPlugin).mockResolvedValue(plugin(true))
+    vi.mocked(runMarketplacePluginTransaction).mockResolvedValue(plugin(true))
     vi.mocked(workspaceCommands.marketplaceListPlugins).mockResolvedValue({
       repo: 'eliotBenitez/nevo-marketplace',
       branch: 'main',
@@ -200,9 +212,17 @@ describe('useWorkspaceStore settings integration', () => {
     const store = useWorkspaceStore()
     await store.init()
     await store.openWorkspace('/tmp/workspace')
-    await store.installMarketplacePlugin('plugin.alpha', '1.0.0')
+    await store.installMarketplacePlugin('plugin.alpha', 'permissions-sha', '1.0.0')
 
-    expect(vi.mocked(workspaceCommands.marketplaceInstallPlugin)).toHaveBeenCalledWith('/tmp/workspace', 'plugin.alpha', '1.0.0')
+    expect(vi.mocked(runMarketplacePluginTransaction)).toHaveBeenCalledWith({
+      workspacePath: '/tmp/workspace',
+      pluginId: 'plugin.alpha',
+      permissionFingerprint: 'permissions-sha',
+      version: '1.0.0',
+      update: false,
+      workspace: manifest(),
+    })
+    expect(resumeRuntime).toHaveBeenCalledOnce()
     expect(store.plugins[0]?.id).toBe('plugin.alpha')
   })
 

@@ -1,3 +1,11 @@
+packages:
+  - packages/*
+
 allowBuilds:
   core-js: true
   esbuild: false
+  sharp: false
+  vue-demi: true
+overrides:
+  dompurify: ^3.4.11
+  'undici@>=6.0.0 <7.0.0': ^6.27.0

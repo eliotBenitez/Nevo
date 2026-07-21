@@ -138,6 +138,90 @@
     "createNote": "New note",
     "createFolder": "New folder",
     "importMd": "Import .md",
+    "importObsidian": "Import Obsidian vault",
+    "importMenu": "Import",
+    "obsidianImport": {
+      "title": "Import Obsidian vault",
+      "description": "Choose an Obsidian vault folder. Its folders, notes, [[links]], attachments, tags and callouts are imported into the current workspace.",
+      "selectFolder": "Select vault folder…",
+      "cancel": "Cancel",
+      "close": "Close",
+      "phase": {
+        "reading": "Reading vault…",
+        "folders": "Creating folders…",
+        "creating": "Creating notes…",
+        "writing": "Importing content…"
+      },
+      "progressCount": "{processed} of {total} notes",
+      "doneTitle": "Import finished",
+      "vaultName": "Vault",
+      "notesCreated": "Notes imported",
+      "foldersCreated": "Folders created",
+      "attachmentsImported": "Attachments imported",
+      "tagsCollected": "Tags collected",
+      "notesWithFrontmatter": "Notes with frontmatter",
+      "unresolvedLinks": "Unresolved links",
+      "unresolvedEmbeds": "Unresolved embeds",
+      "skippedFiles": "Skipped files",
+      "errorTitle": "Import failed"
+    },
+    "home": {
+      "eyebrow": "Workspace home",
+      "subtitle": "A quiet place to pick up your work.",
+      "search": "Search notes, folders and settings",
+      "searchShortcut": "Ctrl P",
+      "quickActions": "Quick actions",
+      "addToHome": "Add to Home",
+      "removeFromHome": "Remove from Home",
+      "types": { "note": "Note", "folder": "Folder", "board": "Board", "graph": "Graph", "pluginView": "Plugin view" },
+      "empty": {
+        "title": "Your workspace is ready",
+        "subtitle": "Create the first note, then shape this Home around the work that matters.",
+        "action": "Create first note"
+      },
+      "favorites": {
+        "kicker": "Pinned for focus",
+        "title": "Favorites",
+        "manage": "Manage",
+        "emptyTitle": "Make Home yours",
+        "emptySubtitle": "Pin the notes, folders and views you return to most.",
+        "choose": "Choose favorites",
+        "loadingPlugin": "Loading plugin view…"
+      },
+      "recent": { "kicker": "Across your workspace", "title": "Recently updated" },
+      "manager": {
+        "title": "Manage Home favorites",
+        "subtitle": "Choose up to eight destinations and arrange them in your preferred order.",
+        "current": "On Home",
+        "library": "Available items",
+        "search": "Search items…",
+        "filters": "Filter item types",
+        "filter": { "all": "All", "note": "Notes", "folder": "Folders", "board": "Boards", "graph": "Graph", "pluginView": "Plugins" },
+        "unavailable": "Unavailable — remove manually",
+        "noFavorites": "No favorites yet.",
+        "noResults": "No matching items.",
+        "keyboardHint": "Use Alt + ↑ or Alt + ↓ on a row to reorder.",
+        "reorder": "Reorder {title}",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "remove": "Remove {title} from Home",
+        "add": "Add {title} to Home",
+        "addShort": "Add",
+        "onHome": "On Home",
+        "limit": "Home is full. Remove an item before adding another.",
+        "added": "{title} was added to Home.",
+        "removed": "{title} was removed from Home.",
+        "moved": "{title} moved to position {position}.",
+        "footer": "Favorites are saved with this workspace.",
+        "done": "Done"
+      }
+    },
+    "pluginUi": {
+      "loading": "Loading plugin view…",
+      "unavailable": "This plugin view is unavailable.",
+      "unsupportedMobile": "Plugin iframe views are not supported on mobile yet.",
+      "closeModal": "Close plugin dialog"
+    },
     "actions": {
       "new": "New",
       "newNote": "New note",
@@ -229,6 +313,7 @@
     },
     "createFolderModal": {
       "title": "Create folder",
+      "description": "Keep related notes and files together in one place.",
       "placeholder": "Folder name",
       "submit": "Create",
       "emptyName": "Enter a folder name."
@@ -300,6 +385,7 @@
       "manualSortRequired": "Switch to manual sort to enable dragging"
     },
     "system": {
+      "home": "Home",
       "graph": "Graph",
       "history": "History",
       "trash": "Trash",
@@ -343,6 +429,10 @@
         "blocks": "Blocks",
         "settings": "Settings"
       }
+    },
+    "searchOverlay": {
+      "ariaLabel": "Search workspace",
+      "close": "Close search"
     },
     "history": {
       "title": "File history",
@@ -568,7 +658,10 @@
       },
       "language": {
         "ru": "Russian",
-        "en": "English"
+        "en": "English",
+        "fr": "French",
+        "es": "Spanish",
+        "de": "German"
       },
       "startupView": {
         "editor": "Editor (empty)",
@@ -650,6 +743,10 @@
       "sidebarContentMode": {
         "tree": "Tree",
         "tag-preview": "Tags & previews"
+      },
+      "sidebarLayout": {
+        "docked": "Docked",
+        "floating": "Floating"
       },
       "workspaceType": {
         "general": "General",
@@ -909,6 +1006,7 @@
       "groups": {
         "identity": "Identity",
         "sidebarMode": "Sidebar mode",
+        "sidebarLayout": "Sidebar placement",
         "navigation": "Navigation",
         "structure": "Structure",
         "creationDefaults": "Creation defaults",
@@ -921,6 +1019,7 @@
         "namePlaceholder": "Workspace name",
         "preview": "Current workspace identity preview",
         "glyphLabel": "Choose glyph",
+        "glyphPickerTitle": "Workspace glyph",
         "save": "Save identity"
       },
       "sidebarContentMode": {
@@ -928,6 +1027,12 @@
         "description": "Choose the familiar tree or a tag-driven note preview feed.",
         "treeDescription": "Folders and notes stay in the classic tree.",
         "tagPreviewDescription": "Tags on the left, matching note previews on the right."
+      },
+      "sidebarLayout": {
+        "title": "Sidebar placement",
+        "description": "Dock the sidebar beside content, or let it float and auto-hide.",
+        "dockedDescription": "Sidebar is pinned beside the content.",
+        "floatingDescription": "Sidebar hides and slides in when you hover the left edge."
       },
       "workspaceType": {
         "title": "Workspace type",
@@ -1096,7 +1201,12 @@
       }
     },
     "plugins": {
-      "description": "Extend Nevo without leaving the editor. Plugins run inside the workspace sandbox.",
+      "description": "Extend Nevo without leaving the editor. Third-party plugins run as trusted code with access to the app.",
+      "trustWarningTitle": "Trust this plugin?",
+      "trustWarning": "{plugin} is third-party code and is not sandboxed. It can access the Nevo window and data available to the app. Install only if you trust its source.",
+      "permissionReviewTitle": "Allow plugin permissions?",
+      "permissionReview": "{plugin} requests these capabilities: {capabilities}. Network domains: {domains}.",
+      "noDomains": "No network access",
       "marketplace": "Marketplace",
       "rescan": "Rescan plugins",
       "refreshCatalog": "Refresh catalog",
@@ -1192,6 +1302,10 @@
       "permissions": "Permissions",
       "noPermissions": "No capabilities",
       "source": "Source",
+      "execution": {
+        "sandboxed": "Sandbox worker",
+        "trusted": "Trusted WebView"
+      },
       "manifestIssue": "Manifest issue",
       "manifestValid": "Manifest valid",
       "emptyTitle": "No plugins found.",
@@ -1674,6 +1788,7 @@
     "pdfGenerateError": "Failed to generate PDF preview.",
     "pdfSaveError": "Failed to save PDF.",
     "pdfPreviewTitle": "PDF preview",
+    "previewLoadingPage": "Loading page…",
     "saveDocx": "Save DOCX",
     "docxPreviewTitle": "Word preview",
     "docxGenerating": "Preparing Word document…",
@@ -1726,6 +1841,7 @@
       "draw": "Drawing",
       "markmap": "Mind Map",
       "chart": "Chart",
+      "database": "Database",
       "note_embed": "Note Embed",
       "embed": "Embed",
       "insert_template": "Insert Template",
@@ -1775,6 +1891,168 @@
       "full": "Full width"
     }
   },
+  "database": {
+    "titlePlaceholder": "Untitled database",
+    "view": {
+      "table": "Table",
+      "list": "List",
+      "chart": "Chart",
+      "cards": "Cards",
+      "renamePlaceholder": "View name"
+    },
+    "toolbar": {
+      "addView": "Add view",
+      "importCsv": "Import CSV",
+      "deleteView": "Delete view",
+      "filter": "Filter",
+      "sort": "Sort",
+      "settings": "Settings"
+    },
+    "table": {
+      "rowNumber": "#",
+      "addField": "Add field",
+      "sum": "Sum",
+      "addRow": "New row",
+      "empty": "No records yet"
+    },
+    "cell": {
+      "urlPlaceholder": "https://…",
+      "numberPlaceholder": "0",
+      "edit": "Edit",
+      "selectPlaceholder": "Select…",
+      "noOptions": "No options",
+      "checked": "Checked",
+      "unchecked": "Unchecked"
+    },
+    "field": {
+      "defaultName": "Field",
+      "namePlaceholder": "Field name",
+      "type": "Field type",
+      "options": "Options",
+      "optionNamePlaceholder": "Option name",
+      "addOption": "Add option",
+      "delete": "Delete field"
+    },
+    "fieldTypes": {
+      "text": "Text",
+      "number": "Number",
+      "date": "Date",
+      "select": "Select",
+      "multi_select": "Multi-select",
+      "checkbox": "Checkbox",
+      "url": "URL"
+    },
+    "list": {
+      "untitled": "Untitled"
+    },
+    "filter": {
+      "where": "Where",
+      "and": "and",
+      "empty": "No filters",
+      "checked": "Checked",
+      "unchecked": "Unchecked",
+      "selectValue": "Select value",
+      "noOptions": "No options",
+      "valuePlaceholder": "Value",
+      "removeRule": "Remove filter",
+      "addRule": "Add filter",
+      "clearAll": "Clear all",
+      "op": {
+        "contains": "contains",
+        "not_contains": "does not contain",
+        "is": "is",
+        "is_not": "is not",
+        "is_empty": "is empty",
+        "is_not_empty": "is not empty",
+        "eq": "=",
+        "neq": "≠",
+        "gt": ">",
+        "lt": "<",
+        "gte": "≥",
+        "lte": "≤",
+        "before": "before",
+        "after": "after",
+        "has_any": "has any of",
+        "has_all": "has all of",
+        "has_none": "has none of"
+      }
+    },
+    "sort": {
+      "empty": "No sorting",
+      "sortBy": "Sort by",
+      "then": "then by",
+      "asc": "Ascending",
+      "desc": "Descending",
+      "removeRule": "Remove sort",
+      "addRule": "Add sort",
+      "clearAll": "Clear all"
+    },
+    "settings": {
+      "renameView": "View name",
+      "gridLines": "Grid lines",
+      "stripedRows": "Striped rows",
+      "compact": "Compact rows",
+      "showRowNumbers": "Show row numbers",
+      "rowColorScheme": "Row color",
+      "rowColorSchemes": {
+        "neutral": "Neutral",
+        "blue": "Soft blue",
+        "green": "Soft green",
+        "amber": "Warm amber",
+        "lavender": "Lavender"
+      },
+      "deleteDatabase": "Delete database"
+    },
+    "chart": {
+      "kinds": {
+        "bar": "Bar",
+        "line": "Line",
+        "area": "Area",
+        "pie": "Pie"
+      },
+      "xField": "X axis",
+      "yFields": "Values",
+      "selected": "selected",
+      "addSeries": "Add value",
+      "removeSeries": "Remove value",
+      "countHint": "No values selected — the chart shows record count.",
+      "yFieldCount": "Count",
+      "aggregates": {
+        "sum": "Sum",
+        "count": "Count",
+        "avg": "Average",
+        "min": "Min",
+        "max": "Max"
+      },
+      "emptyGroup": "(empty)",
+      "noFields": "Add a field to build a chart",
+      "empty": "No data to display",
+      "importPrompt": "Import CSV"
+    },
+    "csv": {
+      "title": "Import CSV",
+      "chooseFile": "Choose file…",
+      "dropHint": "Select a .csv file to import",
+      "parseError": "Could not parse this file",
+      "delimiter": "Column delimiter",
+      "delimiters": {
+        "comma": "Comma ( , )",
+        "semicolon": "Semicolon ( ; )",
+        "tab": "Tab",
+        "pipe": "Pipe ( | )"
+      },
+      "firstRowHeader": "First row is header",
+      "columnMapping": "Column mapping",
+      "columnName": "Column",
+      "preview": "Preview",
+      "rowsCount": "rows",
+      "mode": "Import mode",
+      "modeReplace": "Replace existing data",
+      "modeAppend": "Append to existing data",
+      "cancel": "Cancel",
+      "import": "Import"
+    }
+  },
   "kanban": {
     "common": {
       "back": "Back",
@@ -1785,6 +2063,11 @@
       "saving": "Saving…",
       "retry": "Try again",
       "delete": "Delete"
+    },
+    "defaultTags": {
+      "fieldName": "Tags",
+      "urgent": "Urgent",
+      "feature": "Feature"
     },
     "view": {
       "loading": "Loading…",
@@ -2055,6 +2338,7 @@
     },
     "boardModal": {
       "createTitle": "New board",
+      "createDescription": "Set a name and icon to get your workflow started.",
       "renameTitle": "Rename board",
       "deleteTitle": "Delete board",
       "boardName": "Board name",

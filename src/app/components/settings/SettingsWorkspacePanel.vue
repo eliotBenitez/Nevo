@@ -5,7 +5,7 @@ import { storeToRefs } from 'pinia'
 import { Save } from 'lucide-vue-next'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { COVER_GRADIENTS } from '../../../utils/workspaceGradients'
-import type { SidebarContentMode, WorkspaceManifest } from '../../../types/workspace'
+import type { SidebarContentMode, SidebarLayout, WorkspaceManifest } from '../../../types/workspace'
 import { ACCENT_PRESETS, createDefaultWorkspaceSettings } from '../../../utils/workspace-settings'
 import WorkspaceNavigationGroup from './workspace/WorkspaceNavigationGroup.vue'
 import WorkspaceStructureGroup from './workspace/WorkspaceStructureGroup.vue'
@@ -16,7 +16,7 @@ import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import NvToggle from '../../../ui/primitives/NvToggle.vue'
 import NvColorPicker from '../../../ui/primitives/NvColorPicker.vue'
-import NvIconPicker from '../../../ui/primitives/NvIconPicker.vue'
+import NvGlyphPicker from '../../../ui/primitives/NvGlyphPicker.vue'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 
 const { t } = useI18n()
@@ -106,6 +106,18 @@ const sidebarContentModeOptions: Array<{ value: SidebarContentMode; label: strin
     description: t('settings.workspace.sidebarContentMode.tagPreviewDescription'),
   },
 ]
+const sidebarLayoutOptions: Array<{ value: SidebarLayout; label: string; description: string }> = [
+  {
+    value: 'docked',
+    label: opt('sidebarLayout', 'docked'),
+    description: t('settings.workspace.sidebarLayout.dockedDescription'),
+  },
+  {
+    value: 'floating',
+    label: opt('sidebarLayout', 'floating'),
+    description: t('settings.workspace.sidebarLayout.floatingDescription'),
+  },
+]
 
 const accentColors = Object.entries(ACCENT_PRESETS).map(([id, tokens]) => ({
   color: tokens.accent,
@@ -143,6 +155,12 @@ function setSidebarContentMode(mode: SidebarContentMode) {
   })
 }
 
+function setSidebarLayout(mode: SidebarLayout) {
+  workspaceStore.updateSettings(draft => {
+    draft.workspace.sidebarLayout = mode
+  })
+}
+
 
 </script>
 
@@ -156,6 +174,54 @@ function setSidebarContentMode(mode: SidebarContentMode) {
     </header>
 
     <div class="panel-body">
+      <!-- ── Workspace identity ─────────────────────── -->
+      <div class="group">
+        <div class="group-label">{{ t('settings.workspace.groups.identity') }}</div>
+        <div class="settings-card">
+          <div class="settings-row settings-row--stack">
+            <div class="row-copy">
+              <div class="row-title">{{ t('settings.workspace.identity.title') }}</div>
+              <div class="row-sub">{{ t('settings.workspace.identity.panelDescription') }}</div>
+            </div>
+            <div class="workspace-inputs">
+              <input v-model="workspaceDraft.name" class="ui-input" :placeholder="t('settings.workspace.identity.namePlaceholder')">
+              <div ref="glyphPickerRef" class="glyph-field">
+                <NvButton
+                  class="glyph-trigger"
+                  :class="{ 'is-active': glyphPickerOpen }"
+                  :title="t('settings.workspace.identity.glyphLabel')"
+                  @click="toggleGlyphPicker"
+                >
+                  <NvNoteIcon :value="workspaceDraft.glyph" :size="20" />
+                </NvButton>
+                <NvGlyphPicker
+                  v-if="glyphPickerOpen"
+                  class="glyph-picker-popover"
+                  :value="workspaceDraft.glyph"
+                  @select="selectGlyph"
+                  @close="glyphPickerOpen = false"
+                />
+              </div>
+            </div>
+            <div class="workspace-identity-strip">
+              <span class="workspace-identity-strip__mark">
+                <NvNoteIcon :value="workspaceDraft.glyph" :size="20" />
+              </span>
+              <span class="workspace-identity-strip__copy">
+                <strong>{{ workspaceDraft.name || manifest?.name || t('settings.workspace.identity.namePlaceholder') }}</strong>
+                <span>{{ t('settings.workspace.identity.preview') }}</span>
+              </span>
+            </div>
+            <div class="card-actions">
+              <NvButton variant="primary" @click="saveWorkspaceIdentity">
+                <Save :size="14" />
+                {{ t('settings.workspace.identity.save') }}
+              </NvButton>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ── Sidebar content ─────────────────────────── -->
       <div class="group">
         <div class="group-label">{{ t('settings.workspace.groups.sidebarMode') }}</div>
@@ -194,49 +260,47 @@ function setSidebarContentMode(mode: SidebarContentMode) {
               </button>
             </div>
           </div>
+        </div>
+      </div>
 
-          <div class="settings-row settings-row--stack settings-row--border">
+      <!-- ── Sidebar layout ───────────────────────────── -->
+      <div class="group">
+        <div class="group-label">{{ t('settings.workspace.groups.sidebarLayout') }}</div>
+        <div class="settings-card">
+          <div class="settings-row settings-row--stack">
             <div class="row-copy">
-              <div class="row-title">{{ t('settings.workspace.identity.title') }}</div>
-              <div class="row-sub">{{ t('settings.workspace.identity.panelDescription') }}</div>
+              <div class="row-title">{{ t('settings.workspace.sidebarLayout.title') }}</div>
+              <div class="row-sub">{{ t('settings.workspace.sidebarLayout.description') }}</div>
             </div>
-            <div class="workspace-inputs">
-              <input v-model="workspaceDraft.name" class="ui-input" :placeholder="t('settings.workspace.identity.namePlaceholder')">
-              <div ref="glyphPickerRef" class="glyph-field">
-                <NvButton
-                  class="glyph-trigger"
-                  :class="{ 'is-active': glyphPickerOpen }"
-                  :title="t('settings.workspace.identity.glyphLabel')"
-                  @click="toggleGlyphPicker"
-                >
-                  <NvNoteIcon :value="workspaceDraft.glyph" :size="20" />
-                </NvButton>
-                <NvIconPicker
-                  v-if="glyphPickerOpen"
-                  class="glyph-picker-popover"
-                  :value="workspaceDraft.glyph"
-                  @select="selectGlyph"
-                  @close="glyphPickerOpen = false"
-                />
-              </div>
-            </div>
-            <div class="workspace-identity-strip">
-              <span class="workspace-identity-strip__mark">
-                <NvNoteIcon :value="workspaceDraft.glyph" :size="20" />
-              </span>
-              <span class="workspace-identity-strip__copy">
-                <strong>{{ workspaceDraft.name || manifest?.name || t('settings.workspace.identity.namePlaceholder') }}</strong>
-                <span>{{ t('settings.workspace.identity.preview') }}</span>
-              </span>
-            </div>
-            <div class="card-actions">
-              <NvButton variant="primary" @click="saveWorkspaceIdentity">
-                <Save :size="14" />
-                {{ t('settings.workspace.identity.save') }}
-              </NvButton>
+            <div class="sidebar-mode-grid">
+              <button
+                v-for="mode in sidebarLayoutOptions"
+                :key="mode.value"
+                type="button"
+                class="sidebar-mode-card"
+                :class="{ 'sidebar-mode-card--active': settings.workspace.sidebarLayout === mode.value }"
+                :aria-pressed="settings.workspace.sidebarLayout === mode.value"
+                @click="setSidebarLayout(mode.value)"
+              >
+                <span class="sidebar-mode-card__preview" :class="`sidebar-mode-card__preview--${mode.value}`">
+                  <span class="sidebar-mode-card__rail">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                  <span class="sidebar-mode-card__body">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                </span>
+                <span class="sidebar-mode-card__copy">
+                  <span class="sidebar-mode-card__title">{{ mode.label }}</span>
+                  <span class="sidebar-mode-card__description">{{ mode.description }}</span>
+                </span>
+              </button>
             </div>
           </div>
-
         </div>
       </div>
 

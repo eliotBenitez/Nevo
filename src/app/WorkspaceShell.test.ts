@@ -10,6 +10,7 @@ import { useWorkspaceStore } from '../stores/workspace'
 import { useTreeStore } from '../stores/tree'
 import { useNoteStore } from '../stores/note'
 import { useKanbanStore } from '../stores/kanban'
+import { useTabsStore } from '../stores/tabs'
 import { dispatchHotkeyCommand } from '../utils/hotkeys'
 import { kanbanCommands, noteCommands } from '../tauri/commands'
 import { createDefaultWorkspaceSettings } from '../utils/workspace-settings'
@@ -79,7 +80,25 @@ const EditorPaneStub = defineComponent({
       default: null,
     },
   },
-  emits: ['consumed-pending-target'],
+  emits: ['consumed-pending-target', 'plugin-contributions'],
+  mounted() {
+    this.$emit('plugin-contributions', {
+      workspaceViews: [{
+        id: 'plugin.frame.dashboard',
+        pluginId: 'plugin.frame',
+        title: 'Plugin dashboard',
+        route: '/workspace/plugin/plugin.frame/dashboard',
+        frame: {
+          type: 'sandboxed-plugin-iframe',
+          pluginId: 'plugin.frame',
+          source: 'nevoplugin://0123456789abcdef0123456789abcdef/dashboard.html',
+          sandbox: 'allow-scripts',
+        },
+      }],
+      sidebarItems: [],
+      modals: [],
+    })
+  },
   template: `
     <div
       class="editor-pane-stub"
@@ -90,6 +109,7 @@ const EditorPaneStub = defineComponent({
     >
       {{ pendingBlockTarget ? pendingBlockTarget.noteId : "none" }}
     </div>
+    <section class="legacy-empty-state-stub">Legacy empty state</section>
   `,
 })
 
@@ -254,6 +274,7 @@ async function mountShell(options?: {
       { path: '/workspace/graph', component: { template: '<div />' } },
       { path: '/workspace/board/:boardId', component: { template: '<div />' } },
       { path: '/workspace/plugin/nevo.kanban/:boardId', component: { template: '<div />' } },
+      { path: '/workspace/plugin/:pluginId/:viewId?', component: { template: '<div />' } },
       { path: '/onboarding', component: { template: '<div />' } },
     ],
   })
@@ -290,16 +311,45 @@ describe('WorkspaceShell', () => {
     document.body.innerHTML = ''
   })
 
-  it('focuses the titlebar search for the workspace search hotkey', async () => {
+  it('opens the search overlay for the workspace search hotkey', async () => {
     const promptSpy = vi.spyOn(window, 'prompt')
     const { wrapper } = await mountShell()
 
     dispatchHotkeyCommand('workspace.search')
     await flushUi()
 
-    const input = wrapper.get('input')
-    expect(document.activeElement).toBe(input.element)
+    const input = document.body.querySelector<HTMLInputElement>('.search-overlay__input')
+    expect(input).toBeTruthy()
+    expect(document.activeElement).toBe(input)
     expect(promptSpy).not.toHaveBeenCalled()
+
+    wrapper.unmount()
+  })
+
+  it('delegates Home search to the centered search overlay', async () => {
+    const { wrapper } = await mountShell()
+
+    await wrapper.get('.workspace-home__search').trigger('click')
+    await flushUi()
+
+    const input = document.body.querySelector<HTMLInputElement>('.search-overlay__input')
+    expect(input).toBeTruthy()
+    expect(document.activeElement).toBe(input)
+    wrapper.unmount()
+  })
+
+  it('mounts sandboxed plugin workspace views while keeping the plugin host alive', async () => {
+    const { wrapper } = await mountShell({
+      initialRoute: '/workspace/plugin/plugin.frame/dashboard',
+    })
+    await flushUi()
+
+    const frame = wrapper.get('.sandbox-plugin-view iframe')
+    expect(frame.attributes('src')).toBe(
+      'nevoplugin://0123456789abcdef0123456789abcdef/dashboard.html',
+    )
+    expect(frame.attributes('sandbox')).toBe('allow-scripts')
+    expect(wrapper.get('.editor-pane-stub').isVisible()).toBe(false)
 
     wrapper.unmount()
   })
@@ -328,18 +378,38 @@ describe('WorkspaceShell', () => {
     const promptSpy = vi.spyOn(window, 'prompt')
     const { wrapper, treeStore } = await mountShell()
 
-    await wrapper.get('.emit-create-folder').trigger('click')
+    const createFolderTrigger = wrapper.get('.emit-create-folder')
+    const createFolderTriggerElement = createFolderTrigger.element as HTMLButtonElement
+    createFolderTriggerElement.focus()
+    await createFolderTrigger.trigger('click')
     await flushUi()
 
     expect(promptSpy).not.toHaveBeenCalled()
     expect(document.body.textContent ?? '').toContain('Create folder')
 
+    const dialog = document.body.querySelector<HTMLFormElement>('.rename-modal')
+    expect(dialog?.getAttribute('role')).toBe('dialog')
+    expect(dialog?.getAttribute('aria-modal')).toBe('true')
+    expect(dialog?.querySelector('label')?.textContent).toBe('Folder name')
+
     const input = document.body.querySelector<HTMLInputElement>('.rename-modal__input')
     expect(input).toBeTruthy()
     expect(document.activeElement).toBe(input)
 
-    input!.value = 'Project docs'
-    input!.dispatchEvent(new Event('input', { bubbles: true }))
+    input!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    await flushUi()
+
+    expect(document.body.querySelector('.rename-modal')).toBeNull()
+    expect(document.activeElement).toBe(createFolderTriggerElement)
+
+    await createFolderTrigger.trigger('click')
+    await flushUi()
+
+    const reopenedInput = document.body.querySelector<HTMLInputElement>('.rename-modal__input')
+    expect(reopenedInput).toBeTruthy()
+
+    reopenedInput!.value = 'Project docs'
+    reopenedInput!.dispatchEvent(new Event('input', { bubbles: true }))
     await flushUi()
 
     document.body.querySelector<HTMLFormElement>('.rename-modal')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
@@ -351,28 +421,34 @@ describe('WorkspaceShell', () => {
     wrapper.unmount()
   })
 
-  it('seeds the shared titlebar search from the tree search action', async () => {
+  it('seeds the shared search overlay from the tree search action', async () => {
     const { wrapper } = await mountShell()
 
     await wrapper.get('.emit-search').trigger('click')
     await flushUi()
 
-    expect((wrapper.get('input').element as HTMLInputElement).value).toBe('Seeded title')
+    const input = document.body.querySelector<HTMLInputElement>('.search-overlay__input')
+    expect(input?.value).toBe('Seeded title')
 
     wrapper.unmount()
   })
 
-  it('opens settings to the matched section from titlebar search results', async () => {
+  it('opens settings to the matched section from search overlay results', async () => {
     const { wrapper } = await mountShell()
 
-    await wrapper.get('input').setValue('mode')
+    dispatchHotkeyCommand('workspace.search')
+    await flushUi()
+
+    const input = document.body.querySelector<HTMLInputElement>('.search-overlay__input')
+    input!.value = 'mode'
+    input!.dispatchEvent(new Event('input', { bubbles: true }))
     await flushUi()
 
     await vi.waitFor(() => {
       expect(document.body.textContent ?? '').toContain('Mode')
     })
 
-    const resultButton = document.body.querySelector<HTMLButtonElement>('.titlebar-search__result')
+    const resultButton = document.body.querySelector<HTMLButtonElement>('.search-overlay__result')
     expect(resultButton).toBeTruthy()
 
     resultButton!.click()
@@ -388,7 +464,12 @@ describe('WorkspaceShell', () => {
   it('opens the parent note and passes a pending block target for block results', async () => {
     const { wrapper, router } = await mountShell()
 
-    await wrapper.get('input').setValue('alpha')
+    dispatchHotkeyCommand('workspace.search')
+    await flushUi()
+
+    const input = document.body.querySelector<HTMLInputElement>('.search-overlay__input')
+    input!.value = 'alpha'
+    input!.dispatchEvent(new Event('input', { bubbles: true }))
     await flushUi()
 
     const resultButton = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button'))
@@ -435,7 +516,7 @@ describe('WorkspaceShell', () => {
     wrapper.unmount()
   })
 
-  it('passes root overview data into the editor pane on the workspace route', async () => {
+  it('renders Home on the workspace route while keeping the editor plugin runtime mounted', async () => {
     const { wrapper } = await mountShell({
       manifestOverride: {
         rootOrder: ['folder-1', 'note-1'],
@@ -454,9 +535,9 @@ describe('WorkspaceShell', () => {
     })
 
     const editor = wrapper.get('.editor-pane-stub')
-    expect(editor.attributes('data-container-kind')).toBe('root')
-    expect(editor.attributes('data-container-title')).toBe('Workspace')
-    expect(editor.attributes('data-container-items')).toBe('folder:folder-1,note:note-1')
+    expect(wrapper.find('.workspace-home').exists()).toBe(true)
+    expect(editor.isVisible()).toBe(false)
+    expect(wrapper.get('.legacy-empty-state-stub').isVisible()).toBe(false)
 
     wrapper.unmount()
   })
@@ -537,28 +618,29 @@ describe('WorkspaceShell', () => {
     wrapper.unmount()
   })
 
-  it('keeps root overview instead of falling back to the generic empty state when root has content', async () => {
-    const { wrapper } = await mountShell({
-      manifestOverride: {
-        rootOrder: ['folder-1'],
-        rootNotes: [],
-        tree: [
-          {
-            id: 'folder-1',
-            title: 'Docs',
-            icon: '📁',
-            parentId: null,
-            order: 0,
-            children: [],
-            notes: [],
-          },
-        ],
-      },
+  it('preserves open tabs when navigating Home and returns Home after closing the last tab', async () => {
+    const { wrapper, router } = await mountShell({
+      initialRoute: '/workspace/note/note-1',
     })
+    const tabsStore = useTabsStore()
+    tabsStore.openTab('note-1', 'Alpha note', '📄')
+    tabsStore.openTab('note-2', 'Beta note', '📝')
+    await flushUi()
 
-    const editor = wrapper.get('.editor-pane-stub')
-    expect(editor.attributes('data-container-kind')).toBe('root')
-    expect(editor.attributes('data-container-items')).toBe('folder:folder-1')
+    await router.push('/workspace')
+    await flushUi()
+
+    expect(tabsStore.tabs.map(tab => tab.noteId)).toEqual(['note-1', 'note-2'])
+    expect(wrapper.get('.editor-pane-stub').isVisible()).toBe(false)
+
+    const closeButtons = wrapper.findAll('.tab-close')
+    await closeButtons[1].trigger('click')
+    await flushUi()
+    await wrapper.get('.tab-close').trigger('click')
+    await flushUi()
+
+    expect(tabsStore.tabs).toEqual([])
+    expect(router.currentRoute.value.fullPath).toBe('/workspace')
 
     wrapper.unmount()
   })

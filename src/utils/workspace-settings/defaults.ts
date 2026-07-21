@@ -86,6 +86,7 @@ export function createDefaultWorkspaceSettings(): WorkspaceSettings {
       confirmBeforeDelete: true,
       lastContext: { kind: 'workspace', folderId: null, noteId: null },
       startupNoteId: null,
+      homeFavorites: [],
     },
     appearance: {
       accentPreset: 'violet',
@@ -141,6 +142,7 @@ export function createDefaultWorkspaceSettings(): WorkspaceSettings {
       newWorkspaceHomeNote: true,
       autoCreateStarterStructure: 'light',
       sidebarContentMode: 'tree',
+      sidebarLayout: 'docked',
       sidebarSortMode: 'manual',
       graphEntryMode: 'global',
       graphScopeDefault: 'workspace',

@@ -1,6 +1,5 @@
 import { noteCommands } from '../../../tauri/commands'
 import { ensureMediaServer, mediaHttpUrl } from '../../../tauri/mediaServer'
-import { appLogger } from '../../../utils/logger'
 import type { EditorCore } from './useEditorCore'
 
 function getMediaDurationFromUrl(url: string, isVideo: boolean): Promise<number | null> {
@@ -40,21 +39,9 @@ export function useMediaUpload(
     const workspacePath = getWorkspacePath()
     if (!workspacePath) return
 
-    const filters = kind === 'video'
-      ? [{ name: 'Video', extensions: ['mp4', 'webm', 'ogv', 'mov', 'mkv', 'avi'] }]
-      : [{ name: 'Audio', extensions: ['mp3', 'm4a', 'wav', 'ogg', 'flac', 'aac'] }]
-
-    let selectedPath: string
-    try {
-      const { open: openDialog } = await import('@tauri-apps/plugin-dialog')
-      const result = await openDialog({ multiple: false, filters })
-      if (!result || typeof result !== 'string') return
-      selectedPath = result
-    } catch {
-      return
-    }
-
-    const fileName = selectedPath.split(/[\\/]/).pop() ?? 'media'
+    const imported = await noteCommands.pickAndImportAsset(workspacePath, kind)
+    if (!imported) return
+    const fileName = imported.fileName
     const extension = fileName.split('.').pop()?.toLowerCase() ?? ''
 
     const mimeMap: Record<string, string> = {
@@ -65,27 +52,12 @@ export function useMediaUpload(
     }
     const mime = mimeMap[extension] ?? (kind === 'video' ? 'video/mp4' : 'audio/mpeg')
 
-    let imported: { src: string }
-    try {
-      imported = await noteCommands.importAssetByPath(workspacePath, selectedPath, fileName)
-    } catch (error) {
-      await appLogger.error({
-        source: 'frontend.editor',
-        event: 'import_media',
-        message: 'Failed to import media into note',
-        workspacePath,
-        error,
-        payload: { fileName },
-      })
-      return
-    }
-
     // Probe duration via the HTTP media server for both audio and video.
     // asset:// cannot feed WebKitGTK's GStreamer backend for either media type.
     let duration: number | null = null
     try {
       await ensureMediaServer()
-      const url = mediaHttpUrl(`${workspacePath}/${imported.src}`)
+      const url = mediaHttpUrl(`${workspacePath}/${imported.src}`, imported.src)
       if (url) duration = await getMediaDurationFromUrl(url, kind === 'video')
     } catch { duration = null }
 

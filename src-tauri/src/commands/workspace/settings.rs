@@ -1,8 +1,11 @@
+mod home_favorites;
+
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{OnceLock, RwLock};
 
+use self::home_favorites::normalize_home_favorites;
 use super::paths::{settings_path, workspace_context, workspace_error_context};
 use super::types::{default_hotkey_bindings, HotkeyBinding, WorkspaceSettings};
 use crate::commands::path_utils::{normalize_workspace_path, write_atomic};
@@ -145,6 +148,7 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
         .get("confirmBeforeDelete")
         .and_then(|value| value.as_bool())
         .unwrap_or(true);
+    settings.general.home_favorites = normalize_home_favorites(general.get("homeFavorites"));
     if let Some(last_context) = general
         .get("lastContext")
         .and_then(|value| value.as_object())
@@ -290,7 +294,7 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
         workspace
             .get("defaultLandingView")
             .and_then(|value| value.as_str())
-            .or_else(|| Some(settings.general.default_startup_view.as_str())),
+            .or(Some(settings.general.default_startup_view.as_str())),
     );
     settings.workspace.show_backlinks_by_default = workspace
         .get("showBacklinksByDefault")
@@ -627,9 +631,15 @@ pub fn is_extended_diagnostics_enabled(workspace_path: &str) -> bool {
 }
 
 #[tauri::command]
-pub fn load_workspace_settings(workspace_path: String) -> Result<WorkspaceSettings, String> {
+pub async fn load_workspace_settings(workspace_path: String) -> Result<WorkspaceSettings, String> {
+    tauri::async_runtime::spawn_blocking(move || load_workspace_settings_sync(workspace_path))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+fn load_workspace_settings_sync(workspace_path: String) -> Result<WorkspaceSettings, String> {
     let logger = crate::logging::logger();
-    let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
+    let workspace_path = normalize_workspace_path(&workspace_path).inspect_err(|message| {
         let _ = logger.error(
             "tauri.workspace",
             "load_workspace_settings",
@@ -640,18 +650,17 @@ pub fn load_workspace_settings(workspace_path: String) -> Result<WorkspaceSettin
                 details: None,
             }),
         );
-        message
     })?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
-    let settings = read_workspace_settings(&settings_path(&workspace_path)).map_err(|message| {
-        let _ = logger.error(
-            "tauri.workspace",
-            "load_workspace_settings",
-            "Failed to load workspace settings",
-            workspace_error_context(&workspace_path, "io", message.clone()),
-        );
-        message
-    })?;
+    let settings =
+        read_workspace_settings(&settings_path(&workspace_path)).inspect_err(|message| {
+            let _ = logger.error(
+                "tauri.workspace",
+                "load_workspace_settings",
+                "Failed to load workspace settings",
+                workspace_error_context(&workspace_path, "io", message.clone()),
+            );
+        })?;
     let _ = logger.debug(
         "tauri.workspace",
         "load_workspace_settings",
@@ -663,12 +672,23 @@ pub fn load_workspace_settings(workspace_path: String) -> Result<WorkspaceSettin
 }
 
 #[tauri::command]
-pub fn save_workspace_settings(
+pub async fn save_workspace_settings(
+    workspace_path: String,
+    settings: WorkspaceSettings,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        save_workspace_settings_sync(workspace_path, settings)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+fn save_workspace_settings_sync(
     workspace_path: String,
     settings: WorkspaceSettings,
 ) -> Result<(), String> {
     let logger = crate::logging::logger();
-    let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
+    let workspace_path = normalize_workspace_path(&workspace_path).inspect_err(|message| {
         let _ = logger.error(
             "tauri.workspace",
             "save_workspace_settings",
@@ -679,7 +699,6 @@ pub fn save_workspace_settings(
                 details: None,
             }),
         );
-        message
     })?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let normalized = normalize_settings_value(serde_json::to_value(settings).map_err(|error| {
@@ -734,9 +753,15 @@ pub fn save_workspace_settings(
 }
 
 #[tauri::command]
-pub fn load_custom_css(workspace_path: String) -> Result<String, String> {
+pub async fn load_custom_css(workspace_path: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || load_custom_css_sync(workspace_path))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+fn load_custom_css_sync(workspace_path: String) -> Result<String, String> {
     let logger = crate::logging::logger();
-    let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
+    let workspace_path = normalize_workspace_path(&workspace_path).inspect_err(|message| {
         let _ = logger.error(
             "tauri.workspace",
             "load_custom_css",
@@ -747,7 +772,6 @@ pub fn load_custom_css(workspace_path: String) -> Result<String, String> {
                 details: None,
             }),
         );
-        message
     })?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let css_path = super::paths::custom_css_path(&workspace_path);
@@ -767,9 +791,15 @@ pub fn load_custom_css(workspace_path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn save_custom_css(workspace_path: String, css: String) -> Result<(), String> {
+pub async fn save_custom_css(workspace_path: String, css: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || save_custom_css_sync(workspace_path, css))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+fn save_custom_css_sync(workspace_path: String, css: String) -> Result<(), String> {
     let logger = crate::logging::logger();
-    let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
+    let workspace_path = normalize_workspace_path(&workspace_path).inspect_err(|message| {
         let _ = logger.error(
             "tauri.workspace",
             "save_custom_css",
@@ -780,7 +810,6 @@ pub fn save_custom_css(workspace_path: String, css: String) -> Result<(), String
                 details: None,
             }),
         );
-        message
     })?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let css_path = super::paths::custom_css_path(&workspace_path);
@@ -815,6 +844,7 @@ pub fn save_custom_css(workspace_path: String, css: String) -> Result<(), String
 mod tests {
     use super::*;
     use crate::commands::workspace::create_workspace;
+    use crate::commands::workspace::types::WorkspaceHomeFavorite;
     use serde_json::json;
     use uuid::Uuid;
 
@@ -979,18 +1009,43 @@ mod tests {
     }
 
     #[test]
+    fn home_favorites_survive_settings_save_and_reload() {
+        let workspace = TestWorkspace::new();
+        let workspace_path = workspace.path_string();
+        let favorites = vec![
+            WorkspaceHomeFavorite::Note {
+                id: "note-1".to_string(),
+            },
+            WorkspaceHomeFavorite::Graph,
+            WorkspaceHomeFavorite::PluginView {
+                plugin_id: "plugin.alpha".to_string(),
+                contribution_id: "dashboard".to_string(),
+            },
+        ];
+        let mut settings = WorkspaceSettings::default();
+        settings.general.home_favorites = favorites.clone();
+
+        save_workspace_settings_sync(workspace_path.clone(), settings)
+            .expect("save settings with home favorites");
+        let reloaded = load_workspace_settings_sync(workspace_path)
+            .expect("reload settings with home favorites");
+
+        assert_eq!(reloaded.general.home_favorites, favorites);
+    }
+
+    #[test]
     fn is_extended_diagnostics_enabled_reflects_latest_saved_value() {
         let workspace = TestWorkspace::new();
         let workspace_path = workspace.path_string();
 
         let mut settings = WorkspaceSettings::default();
         settings.advanced.developer_logging = true;
-        save_workspace_settings(workspace_path.clone(), settings.clone())
+        save_workspace_settings_sync(workspace_path.clone(), settings.clone())
             .expect("save settings with logging enabled");
         assert!(is_extended_diagnostics_enabled(&workspace_path));
 
         settings.advanced.developer_logging = false;
-        save_workspace_settings(workspace_path.clone(), settings)
+        save_workspace_settings_sync(workspace_path.clone(), settings)
             .expect("save settings with logging disabled");
         assert!(!is_extended_diagnostics_enabled(&workspace_path));
     }

@@ -8,6 +8,7 @@ import {
 } from '../../../utils/draw/drawEngine'
 import type { Ref } from 'vue'
 import type { UseDrawEditorOptions } from '../useDrawEditor'
+import { sanitizeSvg } from '../../../utils/sanitizeSvg'
 
 export interface DrawPersistence {
   save(): Promise<void>
@@ -46,7 +47,7 @@ export function createDrawPersistence(opts: {
     const bytes = Array.from(new TextEncoder().encode(json))
     try {
       const src = await options.onSave(bytes)
-      const svgPreview = await renderDrawToSvgString(data, 24, { resolveImageHref: options.resolveImageHref })
+      const svgPreview = sanitizeSvg(await renderDrawToSvgString(data, 24, { resolveImageHref: options.resolveImageHref }))
       options.onPersisted({ drawId: options.drawId, svgPreview, src })
     } catch (error) {
       dirtySinceSave = true

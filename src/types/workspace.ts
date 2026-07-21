@@ -1,8 +1,14 @@
 import type { FolderMeta, NoteMeta } from './note'
-import type { NevoEditorCapability, NevoWorkspaceCapability, NevoUiCapability } from './editor-plugin'
+import type {
+  NevoEditorCapability,
+  NevoPluginCapability,
+  NevoPluginExecutionMode,
+  NevoWorkspaceCapability,
+  NevoUiCapability,
+} from './editor-plugin'
 
 export type ThemeMode = 'dark' | 'light' | 'system'
-export type AppLocale = 'ru' | 'en'
+export type AppLocale = 'ru' | 'en' | 'fr' | 'es' | 'de'
 export type WorkspaceView = 'editor' | 'table' | 'kanban' | 'graph' | 'last-note' | 'specific-note'
 export type AccentPreset = 'violet' | 'ember' | 'sage' | 'ocean' | 'rose' | (string & {})
 export type InterfaceDensity = 'comfortable' | 'compact'
@@ -22,6 +28,7 @@ export type SurfaceStyle = 'glass' | 'solid' | 'tinted'
 export type ContrastMode = 'soft' | 'balanced' | 'high'
 export type SidebarStyle = 'floating' | 'solid' | 'minimal'
 export type SidebarContentMode = 'tree' | 'tag-preview'
+export type SidebarLayout = 'docked' | 'floating'
 export type WorkspaceType = 'general' | 'research' | 'writing' | 'product' | 'knowledge-base'
 export type WorkspaceStatus = 'active' | 'archived' | 'draft'
 export type SidebarDefaultState = 'expanded' | 'collapsed'
@@ -120,6 +127,11 @@ export interface WorkspaceLastContext {
   noteId: string | null
 }
 
+export type WorkspaceHomeFavorite =
+  | { kind: 'note' | 'folder' | 'board'; id: string }
+  | { kind: 'graph' }
+  | { kind: 'pluginView'; pluginId: string; contributionId: string }
+
 export interface GeneralSettings {
   defaultStartupView: WorkspaceView
   restoreLastContext: boolean
@@ -127,6 +139,7 @@ export interface GeneralSettings {
   confirmBeforeDelete: boolean
   lastContext: WorkspaceLastContext
   startupNoteId: string | null
+  homeFavorites: WorkspaceHomeFavorite[]
 }
 
 export interface AppearanceSettings {
@@ -190,6 +203,7 @@ export interface WorkspaceBehaviorSettings {
   autoCreateStarterStructure: AutoCreateStarterStructure
   // Sidebar
   sidebarContentMode: SidebarContentMode
+  sidebarLayout: SidebarLayout
   sidebarSortMode: 'manual' | 'name-asc' | 'name-desc' | 'updated'
   // System views
   graphEntryMode: GraphEntryMode
@@ -288,9 +302,16 @@ export interface PluginManifest {
   source?: PluginSource
   entryPoint: string
   apiVersion: string
+  executionMode?: NevoPluginExecutionMode
+  dataVersion?: number
+  capabilities?: NevoPluginCapability[]
   editorCapabilities: NevoEditorCapability[]
   uiCapabilities?: NevoUiCapability[]
   workspaceCapabilities?: NevoWorkspaceCapability[]
+  network?: {
+    hosts: string[]
+    methods: Array<'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'>
+  }
   nevoVersionRange?: string
   priority?: number
   settingsSchema?: PluginSettingField[]
@@ -314,6 +335,7 @@ export interface MarketplaceCatalogItem {
   installedVersion: string | null
   sourceUrl: string
   files: string[]
+  permissionFingerprint: string | null
 }
 
 export interface MarketplaceCatalog {
@@ -323,6 +345,19 @@ export interface MarketplaceCatalog {
   fromCache: boolean
   error: string | null
   plugins: MarketplaceCatalogItem[]
+}
+
+export interface MarketplacePreparedPlugin {
+  transactionId: string
+  manifest: PluginManifest
+  previousDataVersion: number | null
+  permissionFingerprint: string
+}
+
+export interface MarketplaceMigrationBundle {
+  workspaceStorage?: Record<string, unknown>
+  pluginRegistry?: Record<string, unknown>
+  collabStatesBase64?: Record<string, string>
 }
 
 export interface AppConfig {

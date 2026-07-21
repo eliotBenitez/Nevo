@@ -79,6 +79,26 @@ impl Default for WorkspaceLastContext {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[serde(tag = "kind")]
+pub enum WorkspaceHomeFavorite {
+    #[serde(rename = "note")]
+    Note { id: String },
+    #[serde(rename = "folder")]
+    Folder { id: String },
+    #[serde(rename = "board")]
+    Board { id: String },
+    #[serde(rename = "graph")]
+    Graph,
+    #[serde(rename = "pluginView")]
+    PluginView {
+        #[serde(rename = "pluginId")]
+        plugin_id: String,
+        #[serde(rename = "contributionId")]
+        contribution_id: String,
+    },
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GeneralSettings {
     #[serde(rename = "defaultStartupView")]
@@ -91,6 +111,8 @@ pub struct GeneralSettings {
     pub confirm_before_delete: bool,
     #[serde(rename = "lastContext")]
     pub last_context: WorkspaceLastContext,
+    #[serde(rename = "homeFavorites", default)]
+    pub home_favorites: Vec<WorkspaceHomeFavorite>,
 }
 
 impl Default for GeneralSettings {
@@ -101,6 +123,7 @@ impl Default for GeneralSettings {
             recent_items_behavior: "remember".to_string(),
             confirm_before_delete: true,
             last_context: WorkspaceLastContext::default(),
+            home_favorites: Vec::new(),
         }
     }
 }
@@ -493,7 +516,7 @@ impl Default for AdvancedSettings {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct WorkspaceSettings {
     pub general: GeneralSettings,
     pub appearance: AppearanceSettings,
@@ -510,22 +533,21 @@ pub struct WorkspaceSettings {
     pub advanced: AdvancedSettings,
 }
 
-impl Default for WorkspaceSettings {
-    fn default() -> Self {
-        Self {
-            general: GeneralSettings::default(),
-            appearance: AppearanceSettings::default(),
-            editor: EditorSettings::default(),
-            workspace: WorkspaceBehaviorSettings::default(),
-            ai: AISettings::default(),
-            plugins: PluginsSettings::default(),
-            plugin_settings: std::collections::HashMap::new(),
-            features: FeaturesSettings::default(),
-            hotkeys: HotkeysSettings::default(),
-            files: FilesSettings::default(),
-            advanced: AdvancedSettings::default(),
-        }
-    }
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum PluginExecutionMode {
+    #[default]
+    TrustedWebview,
+    SandboxedWorker,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginNetworkPolicy {
+    #[serde(default)]
+    pub hosts: Vec<String>,
+    #[serde(default)]
+    pub methods: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -544,12 +566,22 @@ pub struct PluginManifest {
     pub entry_point: String,
     #[serde(rename = "apiVersion", default = "default_api_version")]
     pub api_version: String,
+    #[serde(rename = "executionMode", default)]
+    pub execution_mode: PluginExecutionMode,
+    #[serde(rename = "dataVersion", default = "default_plugin_data_version")]
+    pub data_version: u32,
+    /// SDK V2 source of truth. The split capability arrays below are retained
+    /// only for trusted SDK V1 manifest compatibility.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub capabilities: Option<Vec<String>>,
     #[serde(rename = "editorCapabilities", default = "default_editor_capabilities")]
     pub editor_capabilities: Vec<String>,
     #[serde(rename = "uiCapabilities", default)]
     pub ui_capabilities: Vec<String>,
     #[serde(rename = "workspaceCapabilities", default)]
     pub workspace_capabilities: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub network: Option<PluginNetworkPolicy>,
     #[serde(rename = "nevoVersionRange")]
     pub nevo_version_range: Option<String>,
     #[serde(default)]
@@ -606,6 +638,10 @@ pub struct WorkspaceCleanupReport {
 
 fn default_api_version() -> String {
     "1.0.0".to_string()
+}
+
+fn default_plugin_data_version() -> u32 {
+    1
 }
 
 fn default_editor_capabilities() -> Vec<String> {

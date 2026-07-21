@@ -36,16 +36,11 @@
 
 <table align="center">
   <tr>
-    <td><img src="../settings/Screen Shot 2026-05-15 at 00.33.36.png" width="400"></td>
-    <td><img src="../settings/Screen Shot 2026-05-15 at 00.33.38.png" width="400"></td>
+    <td colspan="2" align="center"><img src="screens/welcome.png" width="820" alt="Экран приветствия"><br><sub>Приветствие — создание или открытие локального пространства</sub></td>
   </tr>
   <tr>
-    <td><img src="../settings/Screen Shot 2026-05-15 at 00.33.45.png" width="400"></td>
-    <td><img src="../settings/Screen Shot 2026-05-15 at 00.33.49.png" width="400"></td>
-  </tr>
-  <tr>
-    <td><img src="../settings/Screen Shot 2026-05-15 at 00.33.54.png" width="400"></td>
-    <td><img src="../settings/Screen Shot 2026-05-15 at 00.34.02.png" width="400"></td>
+    <td align="center"><img src="screens/main.png" width="400" alt="Главный экран пространства"><br><sub>Главный экран пространства</sub></td>
+    <td align="center"><img src="screens/settings.png" width="400" alt="Редактор заметки"><br><sub>Редактор заметки</sub></td>
   </tr>
 </table>
 

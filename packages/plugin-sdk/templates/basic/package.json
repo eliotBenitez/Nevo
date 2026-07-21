@@ -1,0 +1,13 @@
+{
+  "name": "nevo-plugin-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "conformance": "nevo-plugin-conformance ./dist/index.js"
+  },
+  "devDependencies": {
+    "@nevo/plugin-sdk": "^2.0.0",
+    "vite": "^6.0.0"
+  }
+}

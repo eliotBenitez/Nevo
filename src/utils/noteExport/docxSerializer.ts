@@ -32,6 +32,8 @@ import { renderMarkmapToSvg } from './markmapToSvg'
 import { renderVegaToSvg } from './vegaToSvg'
 import { renderMathToSvg } from './mathToSvg'
 import type { RasterPng } from './svgRaster'
+import { normalizeDatabaseData, type DatabaseBlockData, type DbCellValue, type DbField } from '../../types/database-block'
+import { visibleRecords } from '../../editor-core/databaseFilterSort'
 
 /** Raster image type accepted by docx's ImageRun (excludes SVG; we rasterize). */
 export type DocxImageType = 'png' | 'jpg' | 'gif' | 'bmp'
@@ -339,6 +341,47 @@ async function tableCell(cell: BlockNode, ctx: Ctx, header: boolean): Promise<Ta
   })
 }
 
+function formatDbCellValue(value: DbCellValue, field: DbField): string {
+  if (value === null || value === undefined) return ''
+  if (field.type === 'select') {
+    const id = typeof value === 'string' ? value : ''
+    if (!id) return ''
+    return field.options?.find(o => o.id === id)?.name ?? id
+  }
+  if (field.type === 'multi_select') {
+    const ids = Array.isArray(value) ? value : []
+    return ids.map(id => field.options?.find(o => o.id === id)?.name ?? id).join(', ')
+  }
+  if (Array.isArray(value)) return value.join(', ')
+  if (typeof value === 'number') return String(value)
+  if (typeof value === 'boolean') return value ? '✓' : ''
+  return String(value)
+}
+
+function databaseBlockRecords(data: DatabaseBlockData) {
+  if (data.version !== 1) return []
+  const view = data.views.find(v => v.id === data.activeView) ?? data.views[0]
+  return view ? visibleRecords(data.records, view.filters, view.sorts, data.fields) : data.records
+}
+
+function databaseBlockTable(data: DatabaseBlockData): Table | null {
+  if (!data.fields.length) return null
+  const records = databaseBlockRecords(data)
+  const headerRow = new TableRow({
+    tableHeader: true,
+    children: data.fields.map(field => new TableCell({
+      children: [new Paragraph({ children: [new TextRun({ text: field.name, bold: true })] })],
+      shading: { type: ShadingType.CLEAR, fill: 'F1F5F9' },
+    })),
+  })
+  const dataRows = records.map(record => new TableRow({
+    children: data.fields.map(field => new TableCell({
+      children: [new Paragraph({ children: [new TextRun({ text: formatDbCellValue(record.cells[field.id] ?? null, field) })] })],
+    })),
+  }))
+  return new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [headerRow, ...dataRows] })
+}
+
 async function tableFor(node: BlockNode, ctx: Ctx): Promise<Table> {
   const rows = node.content ?? []
   const values = computeBlockTableValues(node)
@@ -517,6 +560,15 @@ async function blocksFor(node: BlockNode, ctx: Ctx): Promise<(Paragraph | Table)
       return [new Paragraph({ children: await inlineChildren(node, ctx, true) })]
     case 'table':
       return [await tableFor(node, ctx)]
+    case 'database_block': {
+      const data = normalizeDatabaseData(node.attrs?.data)
+      const out: (Paragraph | Table)[] = []
+      const title = data.title.trim()
+      if (title) out.push(new Paragraph({ children: textRuns(title, { bold: true }) }))
+      const table = databaseBlockTable(data)
+      if (table) out.push(table)
+      return out
+    }
     case 'hard_break':
       return []
     default: {

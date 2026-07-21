@@ -24,6 +24,7 @@ import {
   SquareCode,
   Table,
   Palette,
+  Database,
 } from 'lucide-vue-next'
 import type { NevoSlashItem } from '../../../types/editor-plugin'
 import NvIconPicker from '../../../ui/primitives/NvIconPicker.vue'
@@ -66,6 +67,7 @@ const slashIconById: Record<string, Component> = {
   math: Sigma,
   'math-inline': Sigma,
   table: Table,
+  database: Database,
   image: ImageIcon,
   ul: List,
   ol: ListOrdered,
@@ -173,6 +175,7 @@ function selectEmoji(emoji: string) {
 
     <div v-if="emojiPickerOpen" class="slash-menu__picker" @mousedown.stop @click.stop>
       <NvIconPicker
+        autofocus
         value=""
         :tabs="emojiPickerTabs"
         @close="emit('closeEmojiPicker')"

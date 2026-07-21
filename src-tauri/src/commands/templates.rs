@@ -4,7 +4,7 @@ use serde_json::{Map, Value};
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
-use super::folder::{load_manifest, save_manifest};
+use super::folder::{load_manifest, manifest_lock, save_manifest};
 use super::note::{NoteDocument, NoteProperties};
 use super::path_utils::normalize_workspace_path;
 use super::workspace::{FolderMeta, NoteMeta};
@@ -106,6 +106,9 @@ fn normalize_locale(locale: Option<&str>) -> &'static str {
         .unwrap_or("en")
     {
         "ru" => "ru",
+        "fr" => "fr",
+        "es" => "es",
+        "de" => "de",
         _ => "en",
     }
 }
@@ -152,6 +155,126 @@ fn builtin_text(locale: Option<&str>, template_id: &str) -> BuiltinTemplateText 
             date_prefix: "Дата",
             attendees_prefix: "Участники",
             source_prefix: "Источник",
+        },
+        ("fr", "blank") => BuiltinTemplateText {
+            name: "Note vide",
+            description: "Une note vide.",
+            ..builtin_text(Some("fr"), "shared")
+        },
+        ("fr", "meeting") => BuiltinTemplateText {
+            name: "Réunion",
+            description: "Ordre du jour, participants, notes et tâches.",
+            ..builtin_text(Some("fr"), "shared")
+        },
+        ("fr", "daily") => BuiltinTemplateText {
+            name: "Note quotidienne",
+            description: "Une page quotidienne avec focus, tâches et notes.",
+            ..builtin_text(Some("fr"), "shared")
+        },
+        ("fr", "research") => BuiltinTemplateText {
+            name: "Recherche",
+            description: "Question de recherche, source, conclusions et prochaines étapes.",
+            ..builtin_text(Some("fr"), "shared")
+        },
+        ("fr", _) => BuiltinTemplateText {
+            name: "",
+            description: "",
+            topic: "Sujet",
+            date: "Date",
+            attendees: "Participants",
+            source: "Source",
+            meeting_agenda: "Ordre du jour",
+            meeting_notes: "Notes",
+            action_items: "Tâches",
+            daily_focus: "Focus",
+            daily_tasks: "Tâches",
+            daily_notes: "Notes",
+            research_question: "Question",
+            research_findings: "Conclusions",
+            research_follow_ups: "Prochaines étapes",
+            date_prefix: "Date",
+            attendees_prefix: "Participants",
+            source_prefix: "Source",
+        },
+        ("es", "blank") => BuiltinTemplateText {
+            name: "Nota vacía",
+            description: "Una nota vacía.",
+            ..builtin_text(Some("es"), "shared")
+        },
+        ("es", "meeting") => BuiltinTemplateText {
+            name: "Reunión",
+            description: "Orden del día, asistentes, notas y tareas.",
+            ..builtin_text(Some("es"), "shared")
+        },
+        ("es", "daily") => BuiltinTemplateText {
+            name: "Nota diaria",
+            description: "Una página diaria con enfoque, tareas y notas.",
+            ..builtin_text(Some("es"), "shared")
+        },
+        ("es", "research") => BuiltinTemplateText {
+            name: "Investigación",
+            description: "Pregunta de investigación, fuente, conclusiones y próximos pasos.",
+            ..builtin_text(Some("es"), "shared")
+        },
+        ("es", _) => BuiltinTemplateText {
+            name: "",
+            description: "",
+            topic: "Tema",
+            date: "Fecha",
+            attendees: "Asistentes",
+            source: "Fuente",
+            meeting_agenda: "Orden del día",
+            meeting_notes: "Notas",
+            action_items: "Tareas",
+            daily_focus: "Enfoque",
+            daily_tasks: "Tareas",
+            daily_notes: "Notas",
+            research_question: "Pregunta",
+            research_findings: "Conclusiones",
+            research_follow_ups: "Próximos pasos",
+            date_prefix: "Fecha",
+            attendees_prefix: "Asistentes",
+            source_prefix: "Fuente",
+        },
+        ("de", "blank") => BuiltinTemplateText {
+            name: "Leere Notiz",
+            description: "Eine leere Notiz.",
+            ..builtin_text(Some("de"), "shared")
+        },
+        ("de", "meeting") => BuiltinTemplateText {
+            name: "Besprechung",
+            description: "Tagesordnung, Teilnehmer, Notizen und Aufgaben.",
+            ..builtin_text(Some("de"), "shared")
+        },
+        ("de", "daily") => BuiltinTemplateText {
+            name: "Tagesnotiz",
+            description: "Eine tägliche Seite mit Fokus, Aufgaben und Notizen.",
+            ..builtin_text(Some("de"), "shared")
+        },
+        ("de", "research") => BuiltinTemplateText {
+            name: "Recherche",
+            description: "Recherchefrage, Quelle, Erkenntnisse und nächste Schritte.",
+            ..builtin_text(Some("de"), "shared")
+        },
+        ("de", _) => BuiltinTemplateText {
+            name: "",
+            description: "",
+            topic: "Thema",
+            date: "Datum",
+            attendees: "Teilnehmer",
+            source: "Quelle",
+            meeting_agenda: "Tagesordnung",
+            meeting_notes: "Notizen",
+            action_items: "Aufgaben",
+            daily_focus: "Fokus",
+            daily_tasks: "Aufgaben",
+            daily_notes: "Notizen",
+            research_question: "Frage",
+            research_findings: "Erkenntnisse",
+            research_follow_ups: "Nächste Schritte",
+            date_prefix: "Datum",
+            attendees_prefix: "Teilnehmer",
+            source_prefix: "Quelle",
         },
         (_, "blank") => BuiltinTemplateText {
             name: "Blank note",
@@ -357,7 +480,7 @@ fn read_user_templates(workspace_path: &str) -> Result<Vec<TemplateDocument>, St
         template.built_in = false;
         templates.push(template);
     }
-    templates.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    templates.sort_by_key(|a| a.name.to_lowercase());
     Ok(templates)
 }
 
@@ -488,10 +611,10 @@ fn prune_empty_text_nodes(node: &mut Value) {
                 children.retain(|child| {
                     child
                         .as_object()
-                        .and_then(|map| {
+                        .map(|map| {
                             let node_type = map.get("type").and_then(|value| value.as_str());
                             let text = map.get("text").and_then(|value| value.as_str());
-                            Some(node_type != Some("text") || text != Some(""))
+                            node_type != Some("text") || text != Some("")
                         })
                         .unwrap_or(true)
                 });
@@ -568,7 +691,7 @@ fn normalize_field_values(
     Ok(values)
 }
 
-fn insert_note_in_folder(tree: &mut Vec<FolderMeta>, folder_id: &str, note: NoteMeta) -> bool {
+fn insert_note_in_folder(tree: &mut [FolderMeta], folder_id: &str, note: NoteMeta) -> bool {
     for node in tree.iter_mut() {
         if node.id == folder_id {
             node.notes.push(note);
@@ -581,8 +704,23 @@ fn insert_note_in_folder(tree: &mut Vec<FolderMeta>, folder_id: &str, note: Note
     false
 }
 
+fn manifest_contains_folder(tree: &[FolderMeta], folder_id: &str) -> bool {
+    tree.iter().any(|folder| {
+        folder.id == folder_id || manifest_contains_folder(&folder.children, folder_id)
+    })
+}
+
 #[tauri::command]
-pub fn template_list(
+pub async fn template_list(
+    workspace_path: String,
+    locale: Option<String>,
+) -> Result<Vec<TemplateDocument>, String> {
+    tauri::async_runtime::spawn_blocking(move || template_list_sync(workspace_path, locale))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+fn template_list_sync(
     workspace_path: String,
     locale: Option<String>,
 ) -> Result<Vec<TemplateDocument>, String> {
@@ -593,7 +731,19 @@ pub fn template_list(
 }
 
 #[tauri::command]
-pub fn template_get(
+pub async fn template_get(
+    workspace_path: String,
+    template_id: String,
+    locale: Option<String>,
+) -> Result<TemplateDocument, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        template_get_sync(workspace_path, template_id, locale)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+fn template_get_sync(
     workspace_path: String,
     template_id: String,
     locale: Option<String>,
@@ -603,7 +753,16 @@ pub fn template_get(
 }
 
 #[tauri::command]
-pub fn template_create(
+pub async fn template_create(
+    workspace_path: String,
+    template: TemplateDocument,
+) -> Result<TemplateDocument, String> {
+    tauri::async_runtime::spawn_blocking(move || template_create_sync(workspace_path, template))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+fn template_create_sync(
     workspace_path: String,
     mut template: TemplateDocument,
 ) -> Result<TemplateDocument, String> {
@@ -627,7 +786,19 @@ pub fn template_create(
 }
 
 #[tauri::command]
-pub fn template_update(
+pub async fn template_update(
+    workspace_path: String,
+    template_id: String,
+    template: TemplateDocument,
+) -> Result<TemplateDocument, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        template_update_sync(workspace_path, template_id, template)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+fn template_update_sync(
     workspace_path: String,
     template_id: String,
     mut template: TemplateDocument,
@@ -651,7 +822,13 @@ pub fn template_update(
 }
 
 #[tauri::command]
-pub fn template_delete(workspace_path: String, template_id: String) -> Result<(), String> {
+pub async fn template_delete(workspace_path: String, template_id: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || template_delete_sync(workspace_path, template_id))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+fn template_delete_sync(workspace_path: String, template_id: String) -> Result<(), String> {
     let workspace_path = normalize_workspace(&workspace_path)?;
     if builtin_templates(None)
         .iter()
@@ -667,7 +844,31 @@ pub fn template_delete(workspace_path: String, template_id: String) -> Result<()
 }
 
 #[tauri::command]
-pub fn template_create_note(
+pub async fn template_create_note(
+    workspace_path: String,
+    template_id: String,
+    folder_id: Option<String>,
+    title: String,
+    icon: String,
+    field_values: Map<String, Value>,
+    locale: Option<String>,
+) -> Result<NoteDocument, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        template_create_note_sync(
+            workspace_path,
+            template_id,
+            folder_id,
+            title,
+            icon,
+            field_values,
+            locale,
+        )
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+fn template_create_note_sync(
     workspace_path: String,
     template_id: String,
     folder_id: Option<String>,
@@ -677,7 +878,14 @@ pub fn template_create_note(
     locale: Option<String>,
 ) -> Result<NoteDocument, String> {
     let workspace_path = normalize_workspace(&workspace_path)?;
+    let manifest_lock = manifest_lock(&workspace_path);
+    let _manifest_guard = manifest_lock.lock().map_err(|error| error.to_string())?;
     let mut manifest = load_manifest(&workspace_path)?;
+    if let Some(folder_id) = &folder_id {
+        if !manifest_contains_folder(&manifest.tree, folder_id) {
+            return Err("Target folder not found".to_string());
+        }
+    }
     let template = get_template_document(&workspace_path, &template_id, locale.as_deref())?;
     let values = normalize_field_values(&template, field_values, &title, &manifest.name)?;
     let now = Utc::now().to_rfc3339();
@@ -704,10 +912,9 @@ pub fn template_create_note(
     let note_path = Path::new(&workspace_path)
         .join("notes")
         .join(format!("note-{}.nevo", note.id));
-    let tmp_path = note_path.with_extension("nevo.tmp");
     let serialized = serde_json::to_string_pretty(&note).map_err(|error| error.to_string())?;
-    std::fs::write(&tmp_path, serialized).map_err(|error| error.to_string())?;
-    std::fs::rename(tmp_path, note_path).map_err(|error| error.to_string())?;
+    crate::commands::path_utils::write_atomic(&note_path, serialized.as_bytes())
+        .map_err(|error| error.to_string())?;
 
     let meta = NoteMeta {
         id: note.id.clone(),
@@ -719,13 +926,17 @@ pub fn template_create_note(
 
     if let Some(folder_id) = &folder_id {
         if !insert_note_in_folder(&mut manifest.tree, folder_id, meta) {
+            let _ = std::fs::remove_file(&note_path);
             return Err("Target folder not found".to_string());
         }
     } else {
         manifest.root_order.push(note.id.clone());
         manifest.root_notes.push(meta);
     }
-    save_manifest(&workspace_path, &manifest)?;
+    if let Err(error) = save_manifest(&workspace_path, &manifest) {
+        let _ = std::fs::remove_file(&note_path);
+        return Err(error);
+    }
 
     Ok(note)
 }
@@ -817,7 +1028,7 @@ mod tests {
         template_id: &str,
         fields: Map<String, Value>,
     ) -> NoteDocument {
-        template_create_note(
+        template_create_note_sync(
             workspace_path.to_string(),
             template_id.to_string(),
             None,
@@ -832,8 +1043,8 @@ mod tests {
     #[test]
     fn built_in_templates_localize_metadata_and_content() {
         let workspace = TestWorkspace::new();
-        let templates =
-            template_list(workspace.path_string(), Some("ru".to_string())).expect("list templates");
+        let templates = template_list_sync(workspace.path_string(), Some("ru".to_string()))
+            .expect("list templates");
         let meeting = templates
             .iter()
             .find(|template| template.id == "meeting")
@@ -883,7 +1094,7 @@ mod tests {
     #[test]
     fn required_fields_still_block_template_note_creation() {
         let workspace = TestWorkspace::new();
-        let error = template_create_note(
+        let error = template_create_note_sync(
             workspace.path_string(),
             "meeting".to_string(),
             None,

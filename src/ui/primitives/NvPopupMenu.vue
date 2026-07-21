@@ -13,6 +13,8 @@ interface Props {
   offset?: [number, number]
   width?: string
   position?: { top: number; left: number }
+  /** Optional horizontal boundary for teleported menus (for example, an editor pane). */
+  boundary?: HTMLElement | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -21,6 +23,7 @@ const props = withDefaults(defineProps<Props>(), {
   items: undefined,
   width: undefined,
   position: undefined,
+  boundary: null,
 })
 
 const emit = defineEmits<{ 'update:open': [value: boolean] }>()
@@ -39,6 +42,7 @@ const { position, reposition } = usePopupPosition({
   popupRef: menuRef,
   placement: computed(() => props.placement),
   offset: computed(() => props.offset),
+  boundaryRef: computed(() => props.boundary),
 })
 
 watch(() => props.open, (val) => {
@@ -196,6 +200,7 @@ function resolveProps(item: NvMenuItemDef) {
             top: `${position.top}px`,
             left: `${position.left}px`,
             width: width,
+            maxWidth: position.maxWidth ? `${position.maxWidth}px` : undefined,
             transformOrigin: position.transformOrigin,
             zIndex: 500,
           }"

@@ -81,7 +81,9 @@ export function createDrawSelectionTransforms(opts: {
   function resizeSelectionTo(point: DrawPoint, constrain = false) {
     const g = resizeSel.value
     if (!g) return
-    let { scaleX, scaleY, originX, originY } = computeResize(g.handle, g.startBox, point)
+    const resize = computeResize(g.handle, g.startBox, point)
+    const { originX, originY } = resize
+    let { scaleX, scaleY } = resize
     // Shift-констрейн для угловых маркеров: приравниваем масштабы, чтобы
     // сохранить пропорции (квадратный масштаб).
     if (constrain) {

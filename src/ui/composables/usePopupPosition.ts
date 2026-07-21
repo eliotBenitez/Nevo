@@ -5,6 +5,7 @@ export interface PopupPosition {
   top: number
   left: number
   transformOrigin: string
+  maxWidth?: number
 }
 
 export interface UsePopupPositionOptions {
@@ -13,6 +14,7 @@ export interface UsePopupPositionOptions {
   placement?: Ref<Placement>
   offset?: Ref<[number, number]>
   viewportPadding?: number
+  boundaryRef?: Ref<HTMLElement | null>
 }
 
 export function usePopupPosition(opts: UsePopupPositionOptions) {
@@ -41,7 +43,10 @@ export function usePopupPosition(opts: UsePopupPositionOptions) {
     } else {
       idealLeft = ar.left + offsetX
     }
-    const left = Math.max(PAD, Math.min(idealLeft, W - PAD - pr.width))
+    const boundary = opts.boundaryRef?.value?.getBoundingClientRect()
+    const minLeft = Math.max(PAD, boundary ? boundary.left + PAD : PAD)
+    const maxRight = Math.min(W - PAD, boundary ? boundary.right - PAD : W - PAD)
+    const left = Math.max(minLeft, Math.min(idealLeft, Math.max(minLeft, maxRight - pr.width)))
 
     // Vertical — prefer below, flip above if no room
     const spaceBelow = H - ar.bottom - PAD - offsetY
@@ -62,7 +67,7 @@ export function usePopupPosition(opts: UsePopupPositionOptions) {
     top = Math.max(PAD, Math.min(top, H - PAD - pr.height))
 
     const originH = placement.endsWith('-end') ? 'right' : 'left'
-    position.value = { top, left, transformOrigin: `${originV} ${originH}` }
+    position.value = { top, left, transformOrigin: `${originV} ${originH}`, maxWidth: Math.max(0, maxRight - minLeft) }
   }
 
   return { position, reposition }

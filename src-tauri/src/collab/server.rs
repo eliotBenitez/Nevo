@@ -1,14 +1,32 @@
 use dashmap::DashMap;
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::sync::{
     atomic::{AtomicU64, AtomicUsize, Ordering},
     Arc,
 };
 use tokio::sync::{broadcast, oneshot, Mutex};
-use tokio_tungstenite::tungstenite::Message;
+use tokio_tungstenite::tungstenite::{
+    handshake::server::{Request, Response},
+    protocol::{frame::coding::CloseCode, CloseFrame, WebSocketConfig},
+    Message,
+};
+use uuid::Uuid;
 
 static CLIENT_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
+const MAX_CONNECTIONS: usize = 64;
+const MAX_ROOMS: usize = 128;
+const MAX_CLIENTS_PER_ROOM: usize = 16;
+const MAX_MESSAGE_BYTES: usize = 1024 * 1024;
+
+struct ConnectionGuard(Arc<AtomicUsize>);
+
+impl Drop for ConnectionGuard {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::SeqCst);
+    }
+}
 
 struct Room {
     tx: broadcast::Sender<(u64, Vec<u8>)>,
@@ -33,11 +51,13 @@ struct ServerHandle {
     shutdown_tx: oneshot::Sender<()>,
     port: u16,
     local_ip: String,
+    session_token: String,
 }
 
 pub struct CollabAppState {
     handle: Mutex<Option<ServerHandle>>,
     rooms: Arc<DashMap<String, Room>>,
+    connections: Arc<AtomicUsize>,
 }
 
 impl CollabAppState {
@@ -45,6 +65,7 @@ impl CollabAppState {
         CollabAppState {
             handle: Mutex::new(None),
             rooms: Arc::new(DashMap::new()),
+            connections: Arc::new(AtomicUsize::new(0)),
         }
     }
 }
@@ -55,6 +76,7 @@ pub struct CollabServerInfo {
     pub url: String,
     pub local_ip: String,
     pub port: u16,
+    pub session_token: String,
 }
 
 fn get_local_ip() -> String {
@@ -67,17 +89,99 @@ fn get_local_ip() -> String {
         .unwrap_or_else(|| "127.0.0.1".to_string())
 }
 
-async fn handle_client(stream: tokio::net::TcpStream, rooms: Arc<DashMap<String, Room>>) {
+fn request_token(request: &Request) -> Option<&str> {
+    request.uri().query()?.split('&').find_map(|pair| {
+        let (key, value) = pair.split_once('=')?;
+        (key == "token").then_some(value)
+    })
+}
+
+fn allowed_origin(request: &Request) -> bool {
+    let Some(origin) = request
+        .headers()
+        .get("origin")
+        .and_then(|value| value.to_str().ok())
+    else {
+        return false;
+    };
+    matches!(
+        origin,
+        "tauri://localhost"
+            | "http://tauri.localhost"
+            | "https://tauri.localhost"
+            | "http://localhost:1420"
+            | "http://127.0.0.1:1420"
+    )
+}
+
+fn rejection(
+    status: u16,
+    message: &str,
+) -> tokio_tungstenite::tungstenite::handshake::server::ErrorResponse {
+    let mut response = tokio_tungstenite::tungstenite::handshake::server::ErrorResponse::new(Some(
+        message.to_string(),
+    ));
+    if let Ok(status) = tokio_tungstenite::tungstenite::http::StatusCode::from_u16(status) {
+        *response.status_mut() = status;
+    }
+    response
+}
+
+fn valid_room_name(room: &str) -> bool {
+    !room.is_empty()
+        && room.len() <= 128
+        && room
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
+}
+
+async fn close_with_policy(
+    write: &mut (impl futures_util::Sink<Message, Error = tokio_tungstenite::tungstenite::Error>
+              + Unpin),
+    reason: &'static str,
+) {
+    let _ = write
+        .send(Message::Close(Some(CloseFrame {
+            code: CloseCode::Policy,
+            reason: Cow::Borrowed(reason),
+        })))
+        .await;
+}
+
+#[allow(clippy::result_large_err)]
+async fn handle_client(
+    stream: tokio::net::TcpStream,
+    rooms: Arc<DashMap<String, Room>>,
+    session_token: Arc<String>,
+    connections: Arc<AtomicUsize>,
+) {
+    let _connection_guard = ConnectionGuard(connections);
     let client_id = CLIENT_ID_COUNTER.fetch_add(1, Ordering::SeqCst);
     let mut room_name = String::new();
+    let token_for_handshake = session_token.clone();
+    let config = WebSocketConfig {
+        max_message_size: Some(MAX_MESSAGE_BYTES),
+        max_frame_size: Some(MAX_MESSAGE_BYTES),
+        max_write_buffer_size: MAX_MESSAGE_BYTES * 2,
+        ..Default::default()
+    };
 
-    let ws_result = tokio_tungstenite::accept_hdr_async(
+    let ws_result = tokio_tungstenite::accept_hdr_async_with_config(
         stream,
-        |req: &tokio_tungstenite::tungstenite::handshake::server::Request,
-         resp: tokio_tungstenite::tungstenite::handshake::server::Response| {
+        |req: &Request, resp: Response| {
+            if request_token(req) != Some(token_for_handshake.as_str()) {
+                return Err(rejection(401, "invalid collaboration token"));
+            }
+            if !allowed_origin(req) {
+                return Err(rejection(403, "invalid collaboration origin"));
+            }
             room_name = req.uri().path().trim_start_matches('/').to_string();
+            if !valid_room_name(&room_name) {
+                return Err(rejection(400, "invalid collaboration room"));
+            }
             Ok(resp)
         },
+        Some(config),
     )
     .await;
 
@@ -86,12 +190,21 @@ async fn handle_client(stream: tokio::net::TcpStream, rooms: Arc<DashMap<String,
         Err(_) => return,
     };
 
-    if room_name.is_empty() {
+    if !rooms.contains_key(&room_name) && rooms.len() >= MAX_ROOMS {
+        let (mut write, _) = ws.split();
+        close_with_policy(&mut write, "server room limit reached").await;
         return;
     }
 
     let room = rooms.entry(room_name.clone()).or_insert_with(Room::new);
-    room.clients.fetch_add(1, Ordering::SeqCst);
+    let previous_clients = room.clients.fetch_add(1, Ordering::SeqCst);
+    if previous_clients >= MAX_CLIENTS_PER_ROOM {
+        room.clients.fetch_sub(1, Ordering::SeqCst);
+        drop(room);
+        let (mut write, _) = ws.split();
+        close_with_policy(&mut write, "room client limit reached").await;
+        return;
+    }
     let tx = room.tx.clone();
     let mut rx = tx.subscribe();
     drop(room);
@@ -115,13 +228,16 @@ async fn handle_client(stream: tokio::net::TcpStream, rooms: Arc<DashMap<String,
             relay = rx.recv() => {
                 match relay {
                     Ok((sender_id, data)) => {
-                        if sender_id != client_id {
-                            if write.send(Message::Binary(data)).await.is_err() {
-                                break;
-                            }
+                        if sender_id != client_id
+                            && write.send(Message::Binary(data)).await.is_err()
+                        {
+                            break;
                         }
                     }
-                    Err(broadcast::error::RecvError::Lagged(_)) => {}
+                    Err(broadcast::error::RecvError::Lagged(_)) => {
+                        close_with_policy(&mut write, "resync required after relay lag").await;
+                        break;
+                    }
                     Err(broadcast::error::RecvError::Closed) => break,
                 }
             }
@@ -144,19 +260,14 @@ async fn handle_client(stream: tokio::net::TcpStream, rooms: Arc<DashMap<String,
 async fn run_server(
     port: u16,
     rooms: Arc<DashMap<String, Room>>,
+    session_token: Arc<String>,
+    connections: Arc<AtomicUsize>,
     mut shutdown_rx: oneshot::Receiver<()>,
     bind_result_tx: oneshot::Sender<Result<(), String>>,
 ) {
-    // Binds on all interfaces so devices elsewhere on the LAN can join a
-    // hosted session (this mirrors `startHosting`/`joinSession` in
-    // `src/stores/collab.ts`, which hands the resulting `ws://<lan-ip>:<port>`
-    // URL to other devices). There is no authentication on top of the room
-    // path today: any client on the same network that learns/guesses a room
-    // name (`note-<uuid>`) can join it. Adding a mandatory token would require
-    // updating the y-websocket client URL construction in
-    // `src/editor-core/collaboration/yWebSocket.ts` and `joinSession`, which is
-    // out of scope for this security pass (see security backlog: collab auth).
-    // TODO(security-backlog): add optional token-based room authentication.
+    // LAN hosting intentionally binds all interfaces. Authentication, origin
+    // validation and frame/connection limits are enforced before a peer can
+    // subscribe to a room.
     let addr = format!("0.0.0.0:{}", port);
     let listener = match tokio::net::TcpListener::bind(&addr).await {
         Ok(l) => l,
@@ -172,8 +283,15 @@ async fn run_server(
             accept = listener.accept() => {
                 match accept {
                     Ok((stream, _)) => {
+                        if connections.fetch_add(1, Ordering::SeqCst) >= MAX_CONNECTIONS {
+                            connections.fetch_sub(1, Ordering::SeqCst);
+                            drop(stream);
+                            continue;
+                        }
                         let rooms = rooms.clone();
-                        tokio::spawn(handle_client(stream, rooms));
+                        let session_token = session_token.clone();
+                        let connections = connections.clone();
+                        tokio::spawn(handle_client(stream, rooms, session_token, connections));
                     }
                     Err(_) => break,
                 }
@@ -195,6 +313,7 @@ pub async fn start_collab_server(
             url: format!("ws://{}:{}", existing.local_ip, existing.port),
             local_ip: existing.local_ip.clone(),
             port: existing.port,
+            session_token: existing.session_token.clone(),
         });
     }
 
@@ -202,8 +321,17 @@ pub async fn start_collab_server(
     let (bind_tx, bind_rx) = oneshot::channel();
     let local_ip = get_local_ip();
     let rooms = state.rooms.clone();
+    let connections = state.connections.clone();
+    let session_token = Uuid::new_v4().to_string();
 
-    tokio::spawn(run_server(port, rooms, shutdown_rx, bind_tx));
+    tokio::spawn(run_server(
+        port,
+        rooms,
+        Arc::new(session_token.clone()),
+        connections,
+        shutdown_rx,
+        bind_tx,
+    ));
 
     // Wait for the server task to actually bind before reporting success, so a
     // port conflict (or other bind failure) surfaces to the frontend instead
@@ -218,12 +346,14 @@ pub async fn start_collab_server(
         url: format!("ws://{}:{}", local_ip, port),
         local_ip: local_ip.clone(),
         port,
+        session_token: session_token.clone(),
     };
 
     *handle = Some(ServerHandle {
         shutdown_tx,
         port,
         local_ip,
+        session_token,
     });
 
     Ok(info)
@@ -248,12 +378,14 @@ pub async fn get_collab_server_info(
         url: format!("ws://{}:{}", h.local_ip, h.port),
         local_ip: h.local_ip.clone(),
         port: h.port,
+        session_token: h.session_token.clone(),
     }))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 
     fn free_port() -> u16 {
         std::net::TcpListener::bind("127.0.0.1:0")
@@ -275,7 +407,14 @@ mod tests {
         let (_shutdown_tx, shutdown_rx) = oneshot::channel();
         let (bind_tx, bind_rx) = oneshot::channel();
 
-        let task = tokio::spawn(run_server(port, rooms, shutdown_rx, bind_tx));
+        let task = tokio::spawn(run_server(
+            port,
+            rooms,
+            Arc::new("test-token".to_string()),
+            Arc::new(AtomicUsize::new(0)),
+            shutdown_rx,
+            bind_tx,
+        ));
 
         let result = bind_rx.await.expect("bind_result_tx must not be dropped");
         assert!(
@@ -294,18 +433,30 @@ mod tests {
     async fn room_is_garbage_collected_after_last_client_disconnects() {
         let port = free_port();
         let rooms: Arc<DashMap<String, Room>> = Arc::new(DashMap::new());
+        let connections = Arc::new(AtomicUsize::new(0));
         let (_shutdown_tx, shutdown_rx) = oneshot::channel();
         let (bind_tx, bind_rx) = oneshot::channel();
 
         let rooms_for_server = rooms.clone();
-        tokio::spawn(run_server(port, rooms_for_server, shutdown_rx, bind_tx));
+        tokio::spawn(run_server(
+            port,
+            rooms_for_server,
+            Arc::new("test-token".to_string()),
+            connections,
+            shutdown_rx,
+            bind_tx,
+        ));
         bind_rx
             .await
             .expect("bind_result_tx must not be dropped")
             .expect("server must bind on a free port");
 
-        let url = format!("ws://127.0.0.1:{port}/test-room");
-        let (ws_stream, _) = tokio_tungstenite::connect_async(&url)
+        let url = format!("ws://127.0.0.1:{port}/test-room?token=test-token");
+        let mut request = url.into_client_request().unwrap();
+        request
+            .headers_mut()
+            .insert("origin", "http://tauri.localhost".parse().unwrap());
+        let (ws_stream, _) = tokio_tungstenite::connect_async(request)
             .await
             .expect("client should connect");
 
@@ -338,5 +489,35 @@ mod tests {
             !rooms.contains_key("test-room"),
             "empty room should be garbage collected after the last client disconnects"
         );
+    }
+
+    #[tokio::test]
+    async fn server_rejects_missing_or_invalid_tokens() {
+        let port = free_port();
+        let rooms: Arc<DashMap<String, Room>> = Arc::new(DashMap::new());
+        let (_shutdown_tx, shutdown_rx) = oneshot::channel();
+        let (bind_tx, bind_rx) = oneshot::channel();
+        tokio::spawn(run_server(
+            port,
+            rooms,
+            Arc::new("expected-token".to_string()),
+            Arc::new(AtomicUsize::new(0)),
+            shutdown_rx,
+            bind_tx,
+        ));
+        bind_rx.await.unwrap().unwrap();
+
+        for token in [None, Some("wrong-token")] {
+            let suffix = token
+                .map(|token| format!("?token={token}"))
+                .unwrap_or_default();
+            let mut request = format!("ws://127.0.0.1:{port}/test-room{suffix}")
+                .into_client_request()
+                .unwrap();
+            request
+                .headers_mut()
+                .insert("origin", "http://tauri.localhost".parse().unwrap());
+            assert!(tokio_tungstenite::connect_async(request).await.is_err());
+        }
     }
 }

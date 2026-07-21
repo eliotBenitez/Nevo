@@ -2,6 +2,7 @@ import { Selection } from 'prosemirror-state'
 import { appLogger } from '../../../utils/logger'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import type { EditorCore } from './useEditorCore'
+import { noteCommands } from '../../../tauri/commands'
 
 const IMAGE_EXTENSION = /\.(png|jpe?g|gif|webp|svg|avif|bmp)$/i
 
@@ -75,28 +76,8 @@ export function useImageUpload(
     applyImportedImage(imported.src, file.name, targetPos)
   }
 
-  // Path-based import (importAssetByPath) needs Tauri filesystem access, so it
-  // only works for the local backend; cloud storages reject it.
-  function backendSupportsPathImport(): boolean {
+  function isLocalBackend(): boolean {
     return workspaceStore.backend?.handle.kind === 'local'
-  }
-
-  async function importPathAndApplyImage(sourcePath: string, fileName: string, targetPos: number | null) {
-    const backend = workspaceStore.backend
-    if (!backend || !core.editorView) return
-    try {
-      const imported = await backend.importAssetByPath(sourcePath, fileName)
-      applyImportedImage(imported.src, fileName, targetPos)
-    } catch (error) {
-      await appLogger.error({
-        source: 'frontend.editor',
-        event: 'import_image',
-        message: 'Failed to import pasted image path into note',
-        workspacePath: getWorkspacePath(),
-        error,
-        payload: { sourcePath, fileName },
-      })
-    }
   }
 
   function fileNameFromUrl(url: string): string {
@@ -116,9 +97,6 @@ export function useImageUpload(
       const imported = await backend.importImageFromUrl(url)
       applyImportedImage(imported.src, fileNameFromUrl(url), targetPos)
     } catch (error) {
-      // TEMP DIAGNOSTIC — surfaces the exact download failure reason.
-      // eslint-disable-next-line no-console
-      console.warn('[nevo paste] download FAILED url=', JSON.stringify(url), '\n  error=', String(error))
       await appLogger.error({
         source: 'frontend.editor',
         event: 'import_image',
@@ -133,30 +111,15 @@ export function useImageUpload(
     }
   }
 
-  // Local-backend picker: native dialog → filesystem path → Rust reads the file
-  // off-thread (importAssetByPath), so large images never freeze the UI.
+  // Rust owns both the native picker and the selected path, so the WebView
+  // never receives a filesystem capability or an arbitrary readable path.
   async function pickAndInsertImage(targetPos: number | null = null) {
     const workspacePath = getWorkspacePath()
-    const backend = workspaceStore.backend
-    if (!workspacePath || !backend) return
-
-    let selectedPath: string
+    if (!workspacePath || !isLocalBackend()) return
     try {
-      const { open: openDialog } = await import('@tauri-apps/plugin-dialog')
-      const result = await openDialog({
-        multiple: false,
-        filters: [{ name: 'Image', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'avif', 'bmp'] }],
-      })
-      if (!result || typeof result !== 'string') return
-      selectedPath = result
-    } catch {
-      return
-    }
-
-    const fileName = selectedPath.split(/[\\/]/).pop() ?? 'image'
-    try {
-      const imported = await backend.importAssetByPath(selectedPath, fileName)
-      applyImportedImage(imported.src, fileName, targetPos)
+      const imported = await noteCommands.pickAndImportAsset(workspacePath, 'image')
+      if (!imported) return
+      applyImportedImage(imported.src, imported.fileName, targetPos)
     } catch (error) {
       await appLogger.error({
         source: 'frontend.editor',
@@ -164,7 +127,6 @@ export function useImageUpload(
         message: 'Failed to import image into note',
         workspacePath,
         error,
-        payload: { fileName },
       })
     }
   }
@@ -244,28 +206,6 @@ export function useImageUpload(
       const value = raw.trim()
       if (!value || value.startsWith('#')) continue
 
-      if (backendSupportsPathImport()) {
-        let path: string | null = null
-        if (value.startsWith('file://')) {
-          try {
-            path = decodeURIComponent(new URL(value).pathname)
-          } catch {
-            path = null
-          }
-        } else if (/^([a-zA-Z]:[\\/]|\/)/.test(value)) {
-          path = value
-        }
-        if (path && IMAGE_EXTENSION.test(path)) {
-          const fileName = path.split(/[\\/]/).pop() || 'image'
-          const sourcePath = path
-          void (async () => {
-            await importPathAndApplyImage(sourcePath, fileName, null)
-            core.editorView?.focus()
-          })()
-          return true
-        }
-      }
-
       if (/^https?:\/\//i.test(value)) {
         void (async () => {
           await importUrlAndApplyImage(value, null)
@@ -314,6 +254,20 @@ export function useImageUpload(
       }
     } catch {
       // No bitmap on the clipboard — fall through to the text/path branch.
+    }
+
+    const workspacePath = getWorkspacePath()
+    if (workspacePath && isLocalBackend()) {
+      try {
+        const imported = await noteCommands.importClipboardImagePath(workspacePath)
+        if (imported) {
+          applyImportedImage(imported.src, imported.fileName, null)
+          core.editorView?.focus()
+          return
+        }
+      } catch {
+        // Clipboard text may be a regular URL or text; handle it below.
+      }
     }
 
     try {

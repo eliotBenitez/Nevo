@@ -5,6 +5,7 @@ import { ExternalLink, Link, Trash2 } from 'lucide-vue-next'
 import NvPopupMenu from '../../ui/primitives/NvPopupMenu.vue'
 import { resolveNodePosition, getStringAttr, addClickHandler, type CoreNodeViewOptions, type NodeViewPosition } from './utils'
 import { ensureMediaServer, youTubeEmbedUrl } from '../../tauri/mediaServer'
+import { systemCommands } from '../../tauri/commands'
 import { extractYouTubeVideoId } from '../../utils/oembed'
 
 interface EmbedIframeAttrs {
@@ -156,7 +157,7 @@ export function createEmbedNodeView(
     const cardInner = document.createElement('div')
     cardInner.className = 'nv-embed-generic-card'
     cardInner.style.cursor = 'pointer'
-    cardInner.addEventListener('click', () => window.open(url, '_blank', 'noopener,noreferrer'))
+    cardInner.addEventListener('click', () => { void systemCommands.openExternalUrl(url) })
 
     if (thumbnailUrl) {
       const img = document.createElement('div')
@@ -190,7 +191,7 @@ export function createEmbedNodeView(
   const onOpen = () => {
     const url = getStringAttr(currentNode, 'url')
     if (!url) return
-    window.open(url, '_blank', 'noopener,noreferrer')
+    void systemCommands.openExternalUrl(url)
   }
 
   const onRemove = () => {

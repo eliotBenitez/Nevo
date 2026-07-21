@@ -2,6 +2,8 @@ import type { BlockNode, NoteDocument } from '../../types/note'
 import { getPluginNodeSerializer } from '../../editor-core/plugin-host/active-serialization'
 import { computeBlockTableValues, type FormulaCellResult } from '../../editor-core/tableFormula'
 import type { NevoSerializableNode } from '../../types/editor-plugin'
+import { normalizeDatabaseData, type DatabaseBlockData, type DbCellValue, type DbField } from '../../types/database-block'
+import { visibleRecords } from '../../editor-core/databaseFilterSort'
 
 export interface MarkdownSerializeResult {
   markdown: string
@@ -81,6 +83,45 @@ function tableRowToMd(
     return text.replace(/\|/g, '\\|')
   })
   return `| ${cells.join(' | ')} |`
+}
+
+function formatDbCellValue(value: DbCellValue, field: DbField): string {
+  if (value === null || value === undefined) return ''
+  if (field.type === 'select') {
+    const id = typeof value === 'string' ? value : ''
+    if (!id) return ''
+    return field.options?.find(o => o.id === id)?.name ?? id
+  }
+  if (field.type === 'multi_select') {
+    const ids = Array.isArray(value) ? value : []
+    return ids.map(id => field.options?.find(o => o.id === id)?.name ?? id).join(', ')
+  }
+  if (Array.isArray(value)) return value.join(', ')
+  if (typeof value === 'number') return String(value)
+  if (typeof value === 'boolean') return value ? '✓' : ''
+  return String(value)
+}
+
+function databaseBlockRecords(data: DatabaseBlockData) {
+  if (data.version !== 1) return []
+  const view = data.views.find(v => v.id === data.activeView) ?? data.views[0]
+  return view ? visibleRecords(data.records, view.filters, view.sorts, data.fields) : data.records
+}
+
+function databaseBlockToMd(node: BlockNode): string {
+  const data = normalizeDatabaseData(node.attrs?.data)
+  const title = data.title.trim()
+  const lines: string[] = []
+  if (title) lines.push(`**${title.replace(/\|/g, '\\|')}**`)
+  if (!data.fields.length) return lines.join('\n')
+  const records = databaseBlockRecords(data)
+  lines.push(`| ${data.fields.map(f => f.name.replace(/\|/g, '\\|')).join(' | ')} |`)
+  lines.push(`| ${data.fields.map(() => '---').join(' | ')} |`)
+  for (const record of records) {
+    const cells = data.fields.map(f => formatDbCellValue(record.cells[f.id] ?? null, f).replace(/\|/g, '\\|'))
+    lines.push(`| ${cells.join(' | ')} |`)
+  }
+  return lines.join('\n')
 }
 
 function nodeToMd(node: BlockNode, ctx: SerializeCtx): string {
@@ -243,16 +284,24 @@ function nodeToMd(node: BlockNode, ctx: SerializeCtx): string {
     }
     case 'hard_break':
       return '\n'
+    case 'database_block':
+      return databaseBlockToMd(node)
     default: {
       const pluginSerializer = getPluginNodeSerializer(node.type)?.markdown
       if (pluginSerializer) {
-        return pluginSerializer(node as NevoSerializableNode, {
-          serializeChildren: () => (node.content ?? []).map(child => nodeToMd(child, ctx)).filter(Boolean).join('\n\n'),
+        const children = (node.content ?? []).map(child => nodeToMd(child, ctx)).filter(Boolean).join('\n\n')
+        const result = pluginSerializer(node as NevoSerializableNode, {
+          serializeChildren: () => children,
         })
+        if (typeof result === 'string') return result
+        void result.catch(() => {})
+        const marker = encodeURIComponent(JSON.stringify({ type: node.type, attrs: node.attrs ?? {} }))
+        return [`<!-- nevo-plugin-node:${marker} -->`, children].filter(Boolean).join('\n')
       }
+      const children = (node.content ?? []).map(child => nodeToMd(child, ctx)).filter(Boolean).join('\n\n')
       const text = inlineContent(node, ctx)
-      if (text) return text
-      return (node.content ?? []).map(child => nodeToMd(child, ctx)).filter(Boolean).join('\n\n')
+      const marker = encodeURIComponent(JSON.stringify({ type: node.type, attrs: node.attrs ?? {} }))
+      return [`<!-- nevo-plugin-node:${marker} -->`, children || text].filter(Boolean).join('\n')
     }
   }
 }
@@ -271,4 +320,59 @@ export function serializeNoteToMarkdown(
   const body = nodeToMd(note.content, ctx)
   const markdown = `# ${note.title}\n\n${body}`
   return { markdown, assetSrcs: ctx.assetSrcs }
+}
+
+async function resolveAsyncMarkdownPlugins(
+  node: BlockNode,
+  ctx: SerializeCtx,
+  replacements: Map<string, string>,
+  sequence: { value: number },
+): Promise<BlockNode> {
+  const pluginSerializer = getPluginNodeSerializer(node.type)?.markdown
+  if (pluginSerializer) {
+    const resolvedChildren = await Promise.all((node.content ?? []).map(child =>
+      resolveAsyncMarkdownPlugins(child, ctx, replacements, sequence)))
+    const children = nodeToMd({ type: 'doc', content: resolvedChildren }, ctx)
+    const marker = `NEVO_PLUGIN_MARKDOWN_${++sequence.value}_END`
+    try {
+      replacements.set(marker, await pluginSerializer(node as NevoSerializableNode, {
+        serializeChildren: () => children,
+      }))
+    } catch {
+      const json = encodeURIComponent(JSON.stringify({ type: node.type, attrs: node.attrs ?? {} }))
+      replacements.set(
+        marker,
+        [`<!-- nevo-plugin-node:${json} -->`, children].filter(Boolean).join('\n'),
+      )
+    }
+    return { type: 'paragraph', content: [{ type: 'text', text: marker }] }
+  }
+  if (!node.content?.length) return node
+  return {
+    ...node,
+    content: await Promise.all(node.content.map(child =>
+      resolveAsyncMarkdownPlugins(child, ctx, replacements, sequence))),
+  }
+}
+
+/** Worker-aware export pipeline used by product export flows. */
+export async function serializeNoteToMarkdownAsync(
+  note: NoteDocument,
+  assetsSubfolderName: string,
+): Promise<MarkdownSerializeResult> {
+  const ctx: SerializeCtx = {
+    assetSrcs: [],
+    assetsSubfolderName,
+    listDepth: 0,
+    ordered: false,
+    orderedIndex: 1,
+  }
+  const replacements = new Map<string, string>()
+  const resolved = await resolveAsyncMarkdownPlugins(note.content, ctx, replacements, { value: 0 })
+  let body = nodeToMd(resolved, ctx)
+  for (const [marker, value] of replacements) body = body.split(marker).join(value)
+  return {
+    markdown: `# ${note.title}\n\n${body}`,
+    assetSrcs: ctx.assetSrcs,
+  }
 }

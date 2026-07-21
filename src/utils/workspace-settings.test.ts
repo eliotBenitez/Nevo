@@ -39,6 +39,50 @@ describe('normalizeWorkspaceSettings', () => {
     expect(settings.files.snapshotRetentionCount).toBe(7)
     expect(settings.appearance.accentPreset).toBe(defaults.appearance.accentPreset)
     expect(settings.general.confirmBeforeDelete).toBe(defaults.general.confirmBeforeDelete)
+    expect(settings.general.homeFavorites).toEqual([])
+  })
+
+  it('normalizes Home favorites while preserving the first valid occurrence and order', () => {
+    const settings = normalizeWorkspaceSettings({
+      general: {
+        homeFavorites: [
+          { kind: 'note', id: 'note-1' },
+          { kind: 'unknown', id: 'ignored' },
+          { kind: 'graph' },
+          { kind: 'note', id: 'note-1' },
+          { kind: 'folder', id: '  folder-1  ' },
+          { kind: 'pluginView', pluginId: 'plugin.alpha', contributionId: 'dashboard' },
+          { kind: 'pluginView', pluginId: '', contributionId: 'invalid' },
+          { kind: 'board', id: 'board-1' },
+          { kind: 'note', id: 'note-2' },
+          { kind: 'note', id: 'note-3' },
+          { kind: 'note', id: 'note-4' },
+          { kind: 'note', id: 'note-5' },
+        ],
+      },
+    })
+
+    expect(settings.general.homeFavorites).toEqual([
+      { kind: 'note', id: 'note-1' },
+      { kind: 'graph' },
+      { kind: 'folder', id: 'folder-1' },
+      { kind: 'pluginView', pluginId: 'plugin.alpha', contributionId: 'dashboard' },
+      { kind: 'board', id: 'board-1' },
+      { kind: 'note', id: 'note-2' },
+      { kind: 'note', id: 'note-3' },
+      { kind: 'note', id: 'note-4' },
+    ])
+  })
+
+  it('normalizes sidebarLayout to docked unless floating is explicitly set', () => {
+    const defaults = createDefaultWorkspaceSettings()
+
+    const invalid = normalizeWorkspaceSettings({ workspace: { sidebarLayout: 'not-a-mode' } })
+    expect(invalid.workspace.sidebarLayout).toBe('docked')
+    expect(invalid.workspace.sidebarLayout).toBe(defaults.workspace.sidebarLayout)
+
+    const floating = normalizeWorkspaceSettings({ workspace: { sidebarLayout: 'floating' } })
+    expect(floating.workspace.sidebarLayout).toBe('floating')
   })
 
   it('preserves arbitrary pluginSettings without dropping unknown keys', () => {

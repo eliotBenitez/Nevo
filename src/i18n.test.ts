@@ -17,4 +17,11 @@ describe('applyAppLocale', () => {
     expect(i18n.global.locale.value).toBe('ru')
     expect(document.documentElement.lang).toBe('ru')
   })
+
+  it.each(['fr', 'es', 'de'] as const)('applies the %s locale', (locale) => {
+    applyAppLocale(locale)
+
+    expect(i18n.global.locale.value).toBe(locale)
+    expect(document.documentElement.lang).toBe(locale)
+  })
 })

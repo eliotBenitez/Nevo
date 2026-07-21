@@ -4,6 +4,8 @@ use serde::Deserialize;
 use std::fs::File;
 use std::io::{Seek, Write};
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 use typst::layout::PagedDocument;
 use typst_as_lib::typst_kit_options::TypstKitFontOptions;
 use typst_as_lib::TypstEngine;
@@ -12,6 +14,7 @@ use zip::CompressionMethod;
 use zip::ZipWriter;
 
 use super::path_utils::normalize_workspace_path;
+use crate::commands::note::pick_export_path;
 use crate::logging::{LogContext, LogError};
 
 /// A file made available to the Typst compiler: either inline bytes (base64,
@@ -84,6 +87,23 @@ fn compile_document(
         .map_err(|err| format!("Typst compilation failed: {err}"))
 }
 
+/// Monotonic token identifying a compiled preview so a stale/superseded
+/// render request (e.g. after the user tweaks options again) can be rejected
+/// instead of returning pages from the wrong document.
+static NEXT_TOKEN: AtomicU64 = AtomicU64::new(1);
+
+struct CachedPreview {
+    token: u64,
+    document: PagedDocument,
+}
+
+/// Holds the single most recently compiled preview document so that page
+/// rendering can be requested lazily, in batches, instead of shipping every
+/// rasterised page over IPC in one response (which is what made preview/export
+/// fail for large notes).
+#[derive(Default, Clone)]
+pub struct PdfPreviewCache(Arc<Mutex<Option<CachedPreview>>>);
+
 fn log_failure(stage: &str, workspace: &str, message: &str) {
     let _ = crate::logging::logger().error(
         "tauri.typst",
@@ -102,7 +122,7 @@ fn archive_stem(export_path: &str) -> String {
     Path::new(export_path)
         .file_stem()
         .and_then(|stem| stem.to_str())
-        .map(|stem| stem.replace('/', "_").replace('\\', "_"))
+        .map(|stem| stem.replace(['/', '\\'], "_"))
         .filter(|stem| !stem.is_empty())
         .unwrap_or_else(|| "note".to_string())
 }
@@ -361,6 +381,23 @@ a #link("nevo://note/abc-123")[note reference] here
 
         let _ = std::fs::remove_dir_all(base);
     }
+
+    #[test]
+    fn run_prepare_caches_document_and_run_render_pages_serves_it() {
+        let cache = PdfPreviewCache::default();
+        let source = "#heading[Doc]\n\nHello".to_string();
+
+        let (token, total_pages) =
+            run_prepare(&cache, "/tmp", source, Vec::new()).expect("prepare should succeed");
+        assert!(total_pages >= 1);
+
+        let pages = run_render_pages(&cache, token, 0, 1).expect("render should succeed");
+        assert_eq!(pages.len(), 1);
+        assert!(!pages[0].is_empty());
+
+        let stale = run_render_pages(&cache, token + 999, 0, 1);
+        assert!(stale.is_err(), "mismatched token must be rejected");
+    }
 }
 
 // Typst compilation is CPU-bound and would freeze the webview if run on the
@@ -387,13 +424,18 @@ fn run_export(
     Ok(())
 }
 
-fn run_preview(
+/// Compiles the document once and caches it, returning a token and the total
+/// page count. The frontend then requests only the pages it needs to display
+/// via `run_render_pages`, in small batches, instead of receiving every
+/// rasterised page in one IPC response.
+fn run_prepare(
+    cache: &PdfPreviewCache,
     workspace_path: &str,
     typst_source: String,
     assets: Vec<TypstAsset>,
-) -> Result<Vec<String>, String> {
+) -> Result<(u64, usize), String> {
     let on_err = |message: String| {
-        log_failure("render_note_pdf_preview", workspace_path, &message);
+        log_failure("prepare_note_pdf_preview", workspace_path, &message);
         message
     };
 
@@ -401,16 +443,58 @@ fn run_preview(
     let resolved = resolve_assets(&workspace, &assets).map_err(on_err)?;
     let document = compile_document(typst_source, resolved).map_err(on_err)?;
 
+    let token = NEXT_TOKEN.fetch_add(1, Ordering::Relaxed);
+    let total_pages = document.pages.len();
+
+    let mut guard = cache
+        .0
+        .lock()
+        .map_err(|_| on_err("preview cache poisoned".to_string()))?;
+    *guard = Some(CachedPreview { token, document });
+
+    Ok((token, total_pages))
+}
+
+/// Renders a slice `[start, start + count)` of the previously cached preview
+/// document identified by `token`. Returns an error if no document is cached
+/// or the token no longer matches the cached one (i.e. it was superseded by a
+/// newer `run_prepare` call).
+fn run_render_pages(
+    cache: &PdfPreviewCache,
+    token: u64,
+    start: usize,
+    count: usize,
+) -> Result<Vec<String>, String> {
+    let on_err = |message: String| {
+        log_failure("render_note_pdf_preview_pages", "", &message);
+        message
+    };
+
+    let guard = cache
+        .0
+        .lock()
+        .map_err(|_| on_err("preview cache poisoned".to_string()))?;
+    let cached = match guard.as_ref() {
+        Some(cached) if cached.token == token => cached,
+        _ => return Err(on_err("stale preview token".to_string())),
+    };
+
+    let pages = &cached.document.pages;
+    let end = (start + count).min(pages.len());
+    if start >= end {
+        return Ok(Vec::new());
+    }
+
     // 2x device pixels keeps the on-screen preview crisp without large payloads.
-    let mut pages = Vec::with_capacity(document.pages.len());
-    for page in &document.pages {
+    let mut rendered = Vec::with_capacity(end - start);
+    for page in &pages[start..end] {
         let pixmap = typst_render::render(page, 2.0);
         let png = pixmap
             .encode_png()
             .map_err(|err| on_err(format!("preview render failed: {err}")))?;
-        pages.push(STANDARD.encode(png));
+        rendered.push(STANDARD.encode(png));
     }
-    Ok(pages)
+    Ok(rendered)
 }
 
 fn run_archive_export(
@@ -434,39 +518,86 @@ fn run_archive_export(
 
 #[tauri::command]
 pub async fn export_note_pdf(
+    app: tauri::AppHandle,
     workspace_path: String,
-    export_path: String,
+    default_file_name: String,
     typst_source: String,
     assets: Vec<TypstAsset>,
-) -> Result<(), String> {
+) -> Result<bool, String> {
+    let Some(export_path) = pick_export_path(app, default_file_name, "PDF", "pdf").await? else {
+        return Ok(false);
+    };
     tauri::async_runtime::spawn_blocking(move || {
-        run_export(&workspace_path, &export_path, typst_source, assets)
+        run_export(
+            &workspace_path,
+            &export_path.to_string_lossy(),
+            typst_source,
+            assets,
+        )
     })
     .await
-    .map_err(|err| format!("export task failed: {err}"))?
+    .map_err(|err| format!("export task failed: {err}"))??;
+    Ok(true)
 }
 
 #[tauri::command]
 pub async fn export_note_typst_archive(
+    app: tauri::AppHandle,
     workspace_path: String,
-    export_path: String,
+    default_file_name: String,
     typst_source: String,
     assets: Vec<TypstAsset>,
-) -> Result<(), String> {
+) -> Result<bool, String> {
+    let Some(export_path) =
+        pick_export_path(app, default_file_name, "Typst archive", "zip").await?
+    else {
+        return Ok(false);
+    };
     tauri::async_runtime::spawn_blocking(move || {
-        run_archive_export(&workspace_path, &export_path, typst_source, assets)
+        run_archive_export(
+            &workspace_path,
+            &export_path.to_string_lossy(),
+            typst_source,
+            assets,
+        )
     })
     .await
-    .map_err(|err| format!("export task failed: {err}"))?
+    .map_err(|err| format!("export task failed: {err}"))??;
+    Ok(true)
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PdfPreviewInfo {
+    token: u64,
+    total_pages: usize,
 }
 
 #[tauri::command]
-pub async fn render_note_pdf_preview(
+pub async fn prepare_note_pdf_preview(
     workspace_path: String,
     typst_source: String,
     assets: Vec<TypstAsset>,
+    state: tauri::State<'_, PdfPreviewCache>,
+) -> Result<PdfPreviewInfo, String> {
+    let cache = (*state).clone();
+    let (token, total_pages) = tauri::async_runtime::spawn_blocking(move || {
+        run_prepare(&cache, &workspace_path, typst_source, assets)
+    })
+    .await
+    .map_err(|err| format!("preview task failed: {err}"))??;
+    Ok(PdfPreviewInfo { token, total_pages })
+}
+
+#[tauri::command]
+pub async fn render_note_pdf_preview_pages(
+    token: u64,
+    start: usize,
+    count: usize,
+    state: tauri::State<'_, PdfPreviewCache>,
 ) -> Result<Vec<String>, String> {
-    tauri::async_runtime::spawn_blocking(move || run_preview(&workspace_path, typst_source, assets))
+    let cache = (*state).clone();
+    tauri::async_runtime::spawn_blocking(move || run_render_pages(&cache, token, start, count))
         .await
         .map_err(|err| format!("preview task failed: {err}"))?
 }

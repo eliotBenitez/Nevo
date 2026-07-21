@@ -6,6 +6,7 @@ export interface YWebSocketProviderOptions {
   ydoc: Y.Doc
   noteId: string
   wsUrl: string
+  sessionToken: string
   awareness?: Awareness
   onStatusChange?: (status: 'connecting' | 'connected' | 'disconnected') => void
 }
@@ -16,6 +17,7 @@ export function createWebSocketProvider(options: YWebSocketProviderOptions): Web
     connect: true,
     ...(options.awareness ? { awareness: options.awareness } : {}),
     maxBackoffTime: 5000,
+    params: { token: options.sessionToken },
   })
 
   if (options.onStatusChange) {

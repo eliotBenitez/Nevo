@@ -2,7 +2,13 @@ import type { HotkeyBinding, WorkspaceSettings } from '../../types/workspace'
 import { getHotkeyConflictKey } from '../hotkey-chords'
 
 export { ACCENT_PRESETS, EDITOR_FONT_FAMILY_VARS, EDITOR_LINE_WIDTHS, resolveEditorFontFamilyCss, createDefaultAppConfig, createDefaultWorkspaceSettings } from './defaults'
-export { normalizeWorkspaceSettings, normalizeAppConfig, normalizeHotkeyBindings } from './normalizers'
+export {
+  normalizeWorkspaceSettings,
+  normalizeAppConfig,
+  normalizeHotkeyBindings,
+  normalizeHomeFavorites,
+  workspaceHomeFavoriteKey,
+} from './normalizers'
 
 export function cloneWorkspaceSettings(settings: WorkspaceSettings): WorkspaceSettings {
   // structuredClone is faster than a JSON round-trip; settings is plain data.

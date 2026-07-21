@@ -1,6 +1,7 @@
 import { appLogger } from '../../../utils/logger'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import type { EditorCore } from './useEditorCore'
+import { noteCommands } from '../../../tauri/commands'
 
 const FILE_MIME_MAP: Record<string, string> = {
   pdf: 'application/pdf', zip: 'application/zip', json: 'application/json', csv: 'text/csv',
@@ -63,26 +64,14 @@ export function useFileUpload(
     applyImportedFile(imported.src, file.name, file.type || 'application/octet-stream', file.size, targetPos)
   }
 
-  // Local-backend picker: native dialog → filesystem path → Rust reads the file
-  // off-thread (importAssetByPath), so large files never freeze the UI.
+  // Rust owns the picker and imports the chosen file without exposing its path.
   async function pickAndInsertFile(targetPos: number | null = null) {
     const workspacePath = getWorkspacePath()
-    const backend = workspaceStore.backend
-    if (!workspacePath || !backend) return
-
-    let selectedPath: string
+    if (!workspacePath || workspaceStore.backend?.handle.kind !== 'local') return
     try {
-      const { open: openDialog } = await import('@tauri-apps/plugin-dialog')
-      const result = await openDialog({ multiple: false })
-      if (!result || typeof result !== 'string') return
-      selectedPath = result
-    } catch {
-      return
-    }
-
-    const fileName = selectedPath.split(/[\\/]/).pop() ?? 'file'
-    try {
-      const imported = await backend.importAssetByPath(selectedPath, fileName)
+      const imported = await noteCommands.pickAndImportAsset(workspacePath, 'file')
+      if (!imported) return
+      const fileName = imported.fileName
       const ext = fileName.split('.').pop()?.toLowerCase() ?? ''
       const mime = FILE_MIME_MAP[ext] ?? 'application/octet-stream'
       applyImportedFile(imported.src, fileName, mime, imported.bytes, targetPos)
@@ -93,7 +82,6 @@ export function useFileUpload(
         message: 'Failed to import file into note',
         workspacePath,
         error,
-        payload: { fileName },
       })
     }
   }

@@ -24,7 +24,11 @@ const isLocal = computed(() => mode.value === 'local')
 const isCloud = computed(() => mode.value === 'cloud')
 const isActive = computed(() => isLocal.value || isCloud.value)
 
-const localUrl = computed(() => collabStore.serverInfo?.url ?? '')
+const localUrl = computed(() => {
+  const info = collabStore.serverInfo
+  if (!info) return ''
+  return `${info.url}?token=${encodeURIComponent(info.sessionToken)}`
+})
 const cloudShare = computed(() => {
   const code = collabStore.cloudRoomCode
   const key = collabStore.cloudKeyBase64
@@ -130,7 +134,7 @@ function joinSession() {
           <input
             v-model="joinInput"
             class="cp__input"
-            :placeholder="activeTab === 'cloud' ? 'CODE#k=KEY' : 'ws://192.168.x.x:4444'"
+            :placeholder="activeTab === 'cloud' ? 'CODE#k=KEY' : 'ws://192.168.x.x:4444?token=…'"
             type="text"
             @keydown.enter="joinSession"
           />

@@ -71,3 +71,26 @@ describe('parseMarkdownToBlockNode — wiki links [[...]]', () => {
     expect(nodes[0].text).toBe('See [[Ideas]] plain')
   })
 })
+
+describe('parseMarkdownToBlockNode — extractTitle option', () => {
+  it('extracts the first H1 as the title by default (existing behavior unchanged)', () => {
+    const { title, content } = parseMarkdownToBlockNode('# Heading\n\nBody text', 'Fallback')
+    expect(title).toBe('Heading')
+    const blocks = (content as any).content ?? []
+    expect(blocks.some((b: any) => b.type === 'heading')).toBe(false)
+  })
+
+  it('keeps the H1 in content and uses fallbackTitle when extractTitle is false', () => {
+    const { title, content } = parseMarkdownToBlockNode(
+      '# Heading\n\nBody text',
+      'Fallback',
+      undefined,
+      { extractTitle: false },
+    )
+    expect(title).toBe('Fallback')
+    const blocks = (content as any).content ?? []
+    const heading = blocks.find((b: any) => b.type === 'heading')
+    expect(heading).toBeDefined()
+    expect(heading.attrs.level).toBe(1)
+  })
+})

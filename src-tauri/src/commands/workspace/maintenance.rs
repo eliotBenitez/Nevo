@@ -195,7 +195,7 @@ pub async fn get_workspace_diagnostics(
 
 fn get_workspace_diagnostics_sync(workspace_path: String) -> Result<WorkspaceDiagnostics, String> {
     let logger = crate::logging::logger();
-    let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
+    let workspace_path = normalize_workspace_path(&workspace_path).inspect_err(|message| {
         let _ = logger.error(
             "tauri.workspace",
             "get_workspace_diagnostics",
@@ -206,7 +206,6 @@ fn get_workspace_diagnostics_sync(workspace_path: String) -> Result<WorkspaceDia
                 details: None,
             }),
         );
-        message
     })?;
     let workspace_str = workspace_path.to_string_lossy().into_owned();
     let diagnostics_enabled = is_extended_diagnostics_enabled(&workspace_str);
@@ -276,12 +275,23 @@ fn get_workspace_diagnostics_sync(workspace_path: String) -> Result<WorkspaceDia
 }
 
 #[tauri::command]
-pub fn prune_workspace_snapshots(
+pub async fn prune_workspace_snapshots(
+    workspace_path: String,
+    keep_per_note: u32,
+) -> Result<WorkspaceCleanupReport, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        prune_workspace_snapshots_sync(workspace_path, keep_per_note)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+fn prune_workspace_snapshots_sync(
     workspace_path: String,
     keep_per_note: u32,
 ) -> Result<WorkspaceCleanupReport, String> {
     let logger = crate::logging::logger();
-    let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
+    let workspace_path = normalize_workspace_path(&workspace_path).inspect_err(|message| {
         let _ = logger.error(
             "tauri.workspace",
             "prune_workspace_snapshots",
@@ -292,7 +302,6 @@ pub fn prune_workspace_snapshots(
                 details: None,
             }),
         );
-        message
     })?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let diagnostics_enabled = is_extended_diagnostics_enabled(&workspace_path);
@@ -300,14 +309,13 @@ pub fn prune_workspace_snapshots(
         &snapshots_dir_path(&workspace_path),
         keep_per_note.max(1) as usize,
     )
-    .map_err(|message| {
+    .inspect_err(|message| {
         let _ = logger.error(
             "tauri.workspace",
             "prune_workspace_snapshots",
             "Failed to prune workspace snapshots",
             workspace_error_context(&workspace_path, "io", message.clone()),
         );
-        message
     })?;
     let _ = logger.info(
         "tauri.workspace",
@@ -324,9 +332,17 @@ pub fn prune_workspace_snapshots(
 }
 
 #[tauri::command]
-pub fn cleanup_orphaned_assets(workspace_path: String) -> Result<WorkspaceCleanupReport, String> {
+pub async fn cleanup_orphaned_assets(
+    workspace_path: String,
+) -> Result<WorkspaceCleanupReport, String> {
+    tauri::async_runtime::spawn_blocking(move || cleanup_orphaned_assets_sync(workspace_path))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+fn cleanup_orphaned_assets_sync(workspace_path: String) -> Result<WorkspaceCleanupReport, String> {
     let logger = crate::logging::logger();
-    let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
+    let workspace_path = normalize_workspace_path(&workspace_path).inspect_err(|message| {
         let _ = logger.error(
             "tauri.workspace",
             "cleanup_orphaned_assets",
@@ -337,7 +353,6 @@ pub fn cleanup_orphaned_assets(workspace_path: String) -> Result<WorkspaceCleanu
                 details: None,
             }),
         );
-        message
     })?;
     let workspace_str = workspace_path.to_string_lossy().into_owned();
     let diagnostics_enabled = is_extended_diagnostics_enabled(&workspace_str);
@@ -349,14 +364,13 @@ pub fn cleanup_orphaned_assets(workspace_path: String) -> Result<WorkspaceCleanu
         });
     }
 
-    let refs = collect_referenced_assets(&workspace_str).map_err(|message| {
+    let refs = collect_referenced_assets(&workspace_str).inspect_err(|message| {
         let _ = logger.error(
             "tauri.workspace",
             "cleanup_orphaned_assets",
             "Failed to collect referenced assets",
             workspace_error_context(&workspace_str, "io", message.clone()),
         );
-        message
     })?;
     let mut report = WorkspaceCleanupReport {
         removed_files: 0,
@@ -491,7 +505,7 @@ mod tests {
         note.updated_at = Utc::now().to_rfc3339();
         save_note_impl(workspace_path.clone(), note).expect("save note");
 
-        cleanup_orphaned_assets(workspace_path).expect("cleanup");
+        cleanup_orphaned_assets_sync(workspace_path).expect("cleanup");
 
         assert!(image_path.exists(), "drawing image must survive cleanup");
         assert!(

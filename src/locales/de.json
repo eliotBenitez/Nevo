@@ -1,0 +1,2406 @@
+{
+  "confirmDialog": {
+    "title": "Aktion bestätigen",
+    "delete": "Löschen",
+    "discard": "Änderungen verwerfen"
+  },
+  "updater": {
+    "availableTitle": "Version {version} verfügbar",
+    "whatsNew": "Was ist neu",
+    "update": "Aktualisieren",
+    "later": "Später",
+    "downloading": "Wird heruntergeladen… {percent}%",
+    "readyTitle": "Aktualisierung installiert",
+    "readyBody": "Starten Sie die App neu, um die Aktualisierung zu übernehmen.",
+    "restart": "Neu starten",
+    "upToDateTitle": "Sie sind auf dem neuesten Stand",
+    "upToDateBody": "Sie haben die neueste Version von Nevo.",
+    "errorTitle": "Aktualisierung fehlgeschlagen",
+    "errorBody": "Aktualisierung konnte nicht geprüft oder installiert werden. Bitte versuchen Sie es später erneut.",
+    "retry": "Erneut versuchen",
+    "close": "Schließen",
+    "checking": "Wird geprüft…"
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "Willkommen bei",
+      "brand": "Nevo",
+      "subtitle": "Ein ruhiger, lokaler Arbeitsbereich zum Nachdenken, Schreiben und Verknüpfen von Ideen. Ihre Notizen bleiben auf Ihrem Gerät — immer.",
+      "createWorkspace": "Arbeitsbereich erstellen",
+      "createSub": "Frisch starten — wählen Sie einen Ordner und eine Vorlage.",
+      "openExisting": "Bestehendes öffnen",
+      "openSub": "Richten Sie Nevo auf einen beliebigen Ordner auf der Festplatte.",
+      "recent": "Zuletzt verwendet",
+      "pages": "Seiten",
+      "localFirst": "Lokal · nichts verlässt dieses Gerät"
+    },
+    "create": {
+      "title": "Erstellen Sie Ihren Arbeitsbereich",
+      "subtitle": "Wählen Sie einen Namen, eine Farbe und den Speicherort. Sie können ihn später umbenennen oder verschieben.",
+      "step": "Schritt {n} von {total}",
+      "steps": {
+        "name": "Name & Symbol",
+        "location": "Speicherort wählen",
+        "template": "Vorlage wählen"
+      },
+      "sideTitle": "Ein Ort für Ihre Gedanken.",
+      "sideBody": "Arbeitsbereiche sind einfache Ordner auf der Festplatte. Sie können sie kopieren, über iCloud oder Dropbox synchronisieren und in jedem Texteditor öffnen.",
+      "nameLabel": "Name",
+      "nameHint": "Wird in der Seitenleiste und in der gesamten App angezeigt",
+      "namePlaceholder": "Mein Arbeitsbereich",
+      "iconLabel": "Symbol & Farbe",
+      "iconHint": "Jederzeit in den Arbeitsbereich-Einstellungen änderbar",
+      "locationLabel": "Speicherort",
+      "locationHint": "Wo die Dateien auf Ihrem Gerät liegen",
+      "locationBrowse": "Durchsuchen…",
+      "templateLabel": "Vorlage",
+      "templateHint": "Optional — fügt einige Startseiten hinzu",
+      "templates": {
+        "empty": {
+          "name": "Leer",
+          "sub": "Nur eine Tagesseite"
+        },
+        "researcher": {
+          "name": "Forscher",
+          "sub": "Literaturnotizen + Quellen",
+          "starter": {
+            "litReview": "Literaturrecherche",
+            "journals": "Journale",
+            "ideas": "Forschungsideen"
+          }
+        },
+        "pm": {
+          "name": "Projektmanager",
+          "sub": "Roadmap, OKRs",
+          "starter": {
+            "roadmaps": "Roadmaps",
+            "specs": "Spezifikationen",
+            "notes": "Besprechungsnotizen"
+          }
+        },
+        "writer": {
+          "name": "Autor",
+          "sub": "Entwürfe, Journal",
+          "starter": {
+            "drafts": "Entwürfe",
+            "characters": "Charaktere",
+            "ideas": "Handlungsideen"
+          }
+        }
+      },
+      "serverLabel": "Server-URL",
+      "serverHint": "Basis-URL Ihres selbst gehosteten Relays",
+      "serverPlaceholder": "http://localhost:8080",
+      "serverCheck": "Verbindung testen",
+      "serverChecking": "Wird geprüft…",
+      "serverOk": "Verbunden",
+      "serverFail": "Unerreichbar",
+      "back": "Zurück",
+      "encryption": "Verschlüsselt im Ruhezustand",
+      "create": "Arbeitsbereich erstellen"
+    },
+    "open": {
+      "title": "Arbeitsbereich öffnen",
+      "subtitle": "Wählen Sie aus den letzten, suchen Sie einen Ordner oder legen Sie einen anywhere in diesem Fenster ab.",
+      "browse": "Ordner durchsuchen",
+      "new": "Neuer Arbeitsbereich",
+      "filter": "Arbeitsbereiche filtern…",
+      "recent": "Zuletzt verwendet",
+      "dropHint": "Legen Sie einen Ordner anywhere in diesem Fenster ab, um ihn zu öffnen.",
+      "open": "Öffnen",
+      "pages": "Seiten",
+      "unread": "ungelesen",
+      "dropTitle": "Loslassen, um als Arbeitsbereich zu öffnen",
+      "moreOptions": "Weitere Optionen",
+      "removeRecent": "Aus „Zuletzt verwendet“ entfernen",
+      "removeRecentConfirm": "„{name}“ aus „Zuletzt verwendet“ entfernen? Dateien bleiben auf der Festplatte.",
+      "deleteStorage": "Speicher löschen",
+      "deleteStorageConfirm": "„{name}“ löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "deleteFailed": "Speicher konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "common": {
+    "back": "Zurück",
+    "loading": "Wird geladen...",
+    "keyboard": {
+      "esc": "Esc",
+      "ctrlCmdEnter": "Strg/Cmd + Eingabe"
+    }
+  },
+  "workspace": {
+    "back": "Arbeitsbereiche",
+    "localWorkspace": "Lokaler Arbeitsbereich",
+    "cloudWorkspace": "Cloud-Speicher",
+    "toggleSidebar": "Seitenleiste umschalten",
+    "toggleRightPanel": "Rechtes Panel umschalten",
+    "openDrawer": "Seitenleiste öffnen",
+    "closeDrawer": "Seitenleiste schließen",
+    "createNote": "Neue Notiz",
+    "createFolder": "Neuer Ordner",
+    "importMd": ".md importieren",
+    "importObsidian": "Obsidian-Tresor importieren",
+    "importMenu": "Importieren",
+    "obsidianImport": {
+      "title": "Obsidian-Tresor importieren",
+      "description": "Wähle einen Obsidian-Tresor-Ordner aus. Dessen Ordner, Notizen, [[Links]], Anhänge, Tags und Callouts werden in den aktuellen Arbeitsbereich importiert.",
+      "selectFolder": "Tresor-Ordner auswählen…",
+      "cancel": "Abbrechen",
+      "close": "Schließen",
+      "phase": {
+        "reading": "Tresor wird gelesen…",
+        "folders": "Ordner werden erstellt…",
+        "creating": "Notizen werden erstellt…",
+        "writing": "Inhalt wird importiert…"
+      },
+      "progressCount": "{processed} von {total} Notizen",
+      "doneTitle": "Import abgeschlossen",
+      "vaultName": "Tresor",
+      "notesCreated": "Importierte Notizen",
+      "foldersCreated": "Erstellte Ordner",
+      "attachmentsImported": "Importierte Anhänge",
+      "tagsCollected": "Gesammelte Tags",
+      "notesWithFrontmatter": "Notizen mit Frontmatter",
+      "unresolvedLinks": "Ungelöste Links",
+      "unresolvedEmbeds": "Ungelöste Einbettungen",
+      "skippedFiles": "Übersprungene Dateien",
+      "errorTitle": "Import fehlgeschlagen"
+    },
+    "home": {
+      "eyebrow": "Workspace-Start",
+      "subtitle": "Ein ruhiger Ort, um die Arbeit fortzusetzen.",
+      "search": "Notizen, Ordner und Einstellungen durchsuchen",
+      "searchShortcut": "Ctrl P",
+      "quickActions": "Schnellaktionen",
+      "addToHome": "Zu Start hinzufügen",
+      "removeFromHome": "Von Start entfernen",
+      "types": { "note": "Notiz", "folder": "Ordner", "board": "Board", "graph": "Graph", "pluginView": "Plugin-Ansicht" },
+      "empty": { "title": "Dein Workspace ist bereit", "subtitle": "Erstelle die erste Notiz und sammle hier das Wichtigste.", "action": "Erste Notiz erstellen" },
+      "favorites": {
+        "kicker": "Wichtiges im Blick",
+        "title": "Favoriten",
+        "manage": "Verwalten",
+        "emptyTitle": "Gestalte deinen Start",
+        "emptySubtitle": "Fixiere häufig verwendete Notizen, Ordner und Ansichten.",
+        "choose": "Favoriten wählen",
+        "loadingPlugin": "Plugin-Ansicht wird geladen…"
+      },
+      "recent": { "kicker": "Im gesamten Workspace", "title": "Kürzlich aktualisiert" },
+      "manager": {
+        "title": "Favoriten verwalten",
+        "subtitle": "Wähle bis zu acht Ziele und ordne sie an.",
+        "current": "Auf Start",
+        "library": "Verfügbare Elemente",
+        "search": "Elemente suchen…",
+        "filters": "Typen filtern",
+        "filter": { "all": "Alle", "note": "Notizen", "folder": "Ordner", "board": "Boards", "graph": "Graph", "pluginView": "Plugins" },
+        "unavailable": "Nicht verfügbar — manuell entfernen",
+        "noFavorites": "Noch keine Favoriten.",
+        "noResults": "Keine passenden Elemente.",
+        "keyboardHint": "Mit Alt + ↑ oder Alt + ↓ neu anordnen.",
+        "reorder": "{title} neu anordnen",
+        "moveUp": "Nach oben",
+        "moveDown": "Nach unten",
+        "remove": "{title} von Start entfernen",
+        "add": "{title} zu Start hinzufügen",
+        "addShort": "Hinzufügen",
+        "onHome": "Auf Start",
+        "limit": "Start ist voll. Entferne zuerst ein Element.",
+        "added": "{title} wurde zu Start hinzugefügt.",
+        "removed": "{title} wurde von Start entfernt.",
+        "moved": "{title} wurde auf Position {position} verschoben.",
+        "footer": "Favoriten werden mit diesem Workspace gespeichert.",
+        "done": "Fertig"
+      }
+    },
+    "pluginUi": {
+      "loading": "Plugin-Ansicht wird geladen…",
+      "unavailable": "Diese Plugin-Ansicht ist nicht verfügbar.",
+      "unsupportedMobile": "Plugin-Iframe-Ansichten werden auf Mobilgeräten noch nicht unterstützt.",
+      "closeModal": "Plugin-Dialog schließen"
+    },
+    "actions": {
+      "new": "Neu",
+      "newNote": "Neue Notiz",
+      "newFolder": "Neuer Ordner",
+      "newBoard": "Neues Board",
+      "collapseAll": "Alle einklappen",
+      "expandAll": "Alle ausklappen",
+      "sort": "Sortieren",
+      "sortManual": "Manuell",
+      "sortNameAsc": "Name (A→Z)",
+      "sortNameDesc": "Name (Z→A)",
+      "sortUpdated": "Kürzlich aktualisiert"
+    },
+    "rightPanel": {
+      "outline": "Gliederung",
+      "noHeadings": "Noch keine Überschriften",
+      "backlinks": "Rückverweise",
+      "noBacklinks": "Keine Rückverweise",
+      "properties": {
+        "title": "Eigenschaften",
+        "type": "Typ",
+        "typeNone": "Nicht festgelegt",
+        "status": "Status",
+        "date": "Datum",
+        "datePlaceholder": "Kein Datum",
+        "tags": "Tags",
+        "addTag": "Tag hinzufügen",
+        "tagsPlaceholder": "Tags...",
+        "removeTag": "Tag {tag} entfernen",
+        "types": {
+          "note": "Notiz",
+          "task": "Aufgabe",
+          "idea": "Idee",
+          "meeting": "Besprechung",
+          "project": "Projekt",
+          "research": "Recherche"
+        },
+        "statuses": {
+          "none": "Kein Status",
+          "draft": "Entwurf",
+          "active": "Aktiv",
+          "waiting": "Wartend",
+          "done": "Erledigt"
+        }
+      },
+      "metadata": "Info",
+      "words": "{n} Wörter",
+      "readTime": "{n} Min. Lesezeit",
+      "created": "Erstellt",
+      "updated": "Aktualisiert",
+      "externalLinks": "Externe Links",
+      "noExternalLinks": "Keine externen Links"
+    },
+    "noPages": "Noch keine Seiten",
+    "noWorkspace": "Kein Arbeitsbereich ausgewählt",
+    "noPath": "Pfad ist nicht festgelegt",
+    "untitledNote": "Unbenannt",
+    "newFolderPrompt": "Ordnername",
+    "emptyTree": {
+      "title": "Noch keine Seiten",
+      "subtitle": "Erstellen Sie eine Notiz oder einen Ordner, um diesen Arbeitsbereich zu starten."
+    },
+    "sidebarPreview": {
+      "tagsLabel": "Notiz-Tags",
+      "allNotesTitle": "Alle Notizen",
+      "selectedTitle": "Ausgewählte Tags",
+      "clear": "Leeren",
+      "emptyPreview": "Keine Textvorschau",
+      "empty": {
+        "no-notes": {
+          "title": "Noch keine Notizen",
+          "subtitle": "Erstellen Sie eine Notiz und sie erscheint hier."
+        },
+        "no-matches": {
+          "title": "Keine Treffer",
+          "subtitle": "Wählen Sie andere Tags oder leeren Sie den Filter."
+        }
+      }
+    },
+    "boards": {
+      "title": "Boards",
+      "new": "Neues Board",
+      "emptyTitle": "Noch keine Boards",
+      "emptySubtitle": "Erstellen Sie ein Kanban-Board für Aufgaben oder Projekte."
+    },
+    "tabs": {
+      "label": "Geöffnete Notizen",
+      "close": "{title} schließen"
+    },
+    "createFolderModal": {
+      "title": "Ordner erstellen",
+      "description": "Bewahren Sie zusammengehörige Notizen und Dateien an einem Ort auf.",
+      "placeholder": "Ordnername",
+      "submit": "Erstellen",
+      "emptyName": "Geben Sie einen Ordnernamen ein."
+    },
+    "emptyTitle": "Beginnen Sie mit Ihrer ersten Notiz",
+    "emptySubtitle": "Erstellen Sie eine Notiz oder wählen Sie eine aus der Seitenleiste, um zu schreiben.",
+    "emptyFolderTitle": "Ordner: {folder}",
+    "emptyFolderSubtitle": "Dieser Ordner hat noch keine Notizen. Erstellen Sie eine zum Beginnen.",
+    "cover": "Cover",
+    "removeCover": "Cover entfernen",
+    "coverGradients": "Verläufe",
+    "coverPastel": "Pastellfarben",
+    "coverUpload": "Bild hochladen",
+    "iconPicker": {
+      "tabs": {
+        "emoji": "Emoji",
+        "icons": "Symbole"
+      },
+      "searchEmoji": "Emoji suchen…",
+      "searchIcons": "Symbol suchen…",
+      "noResults": "Keine Ergebnisse",
+      "categories": {
+        "smileys": "Smileys",
+        "people": "Personen",
+        "nature": "Natur",
+        "food": "Essen",
+        "activities": "Aktivitäten",
+        "travel": "Reisen",
+        "objects": "Objekte",
+        "symbols": "Symbole"
+      }
+    },
+    "titlePlaceholder": "Unbenannt",
+    "contentPlaceholder": "Schreiben Sie hier Ihre Gedanken...",
+    "linkUrlLabel": "Link-URL",
+    "linkPlaceholder": "https://beispiel.com",
+    "linkApply": "Link anwenden",
+    "linkUpdate": "Link aktualisieren",
+    "linkRemove": "Link entfernen",
+    "linkInvalid": "Geben Sie eine gültige URL ein",
+    "inlineMathLabel": "Inline-Formel",
+    "mathBlockLabel": "Mathe-Block",
+    "mathPlaceholder": "\\frac{a}{b}",
+    "mathPopoverHint": "Formel anwenden",
+    "mathApply": "Formel anwenden",
+    "mathRemove": "Formel entfernen",
+    "context": {
+      "rename": "Umbenennen",
+      "delete": "Löschen",
+      "search": "Suchen",
+      "export": "Exportieren",
+      "importIntoNote": ".md in Notiz importieren",
+      "importAsNote": ".md als Notiz importieren",
+      "renamePrompt": "Neuer Name",
+      "deleteConfirm": "Dieses Element löschen?",
+      "searchPrompt": "Nach Titel suchen",
+      "searchNoResults": "Nichts gefunden",
+      "renameModalTitle": "Umbenennen",
+      "openNoteMenu": "Notizmenü öffnen",
+      "renameModalPlaceholder": "Neuen Namen eingeben",
+      "moveUp": "Nach oben",
+      "moveDown": "Nach unten",
+      "cancel": "Abbrechen",
+      "confirm": "Bestätigen"
+    },
+    "drag": {
+      "moveToFolder": "In Ordner verschieben",
+      "reorderHint": "Ziehen zum Sortieren",
+      "manualSortRequired": "Auf manuelle Sortierung wechseln, um Ziehen zu aktivieren"
+    },
+    "system": {
+      "home": "Start",
+      "graph": "Graph",
+      "history": "Verlauf",
+      "trash": "Papierkorb",
+      "plugins": "Plugins",
+      "settings": "Einstellungen"
+    },
+    "trash": {
+      "title": "Papierkorb",
+      "description": "Gelöschte Elemente wiederherstellen oder endgültig entfernen.",
+      "countLabel": "Elemente im Papierkorb: {count}",
+      "searchLabel": "Papierkorb durchsuchen",
+      "emptyAction": "Papierkorb leeren",
+      "emptyTitle": "Papierkorb ist leer",
+      "emptyState": "Gelöschte Notizen und Ordner erscheinen hier.",
+      "noResultsTitle": "Nichts gefunden",
+      "noResultsDescription": "Versuchen Sie einen anderen Titel oder leeren Sie das Suchfeld.",
+      "deletedAt": "Gelöscht am: {date}",
+      "folderType": "Ordner",
+      "noteType": "Notiz",
+      "itemActions": "Aktionen für {title}",
+      "restore": "Wiederherstellen",
+      "restoreItem": "{title} wiederherstellen",
+      "deletePermanently": "Endgültig löschen",
+      "deleteItem": "{title} endgültig löschen",
+      "actionHint": "Endgültiges Löschen kann nicht rückgängig gemacht werden.",
+      "deletePermanentlyConfirm": "Möchten Sie diese Notiz wirklich endgültig löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "emptyConfirm": "Möchten Sie den Papierkorb wirklich leeren? Alle Elemente werden endgültig gelöscht."
+    },
+    "titlebarSearch": {
+      "placeholder": "Notizen, Blöcke, Einstellungen suchen...",
+      "rootLabel": "Arbeitsbereich-Stamm",
+      "loading": "Notizinhalt im Arbeitsbereich wird durchsucht...",
+      "loadingShort": "Notizinhalt wird durchsucht...",
+      "loadingTitle": "Wird gesucht...",
+      "idleTitle": "Globale Arbeitsbereich-Suche",
+      "idleDescription": "Durchsuchen Sie Notizen, Ordner, Notizblöcke und Einstellungen aus einem Feld.",
+      "emptyTitle": "Keine Treffer",
+      "emptyDescription": "Versuchen Sie einen kürzeren Begriff oder suchen Sie nach einem Notiztitel, Blocktext oder Einstellungsnamen.",
+      "groups": {
+        "entities": "Notizen & Ordner",
+        "blocks": "Blöcke",
+        "settings": "Einstellungen"
+      }
+    },
+    "searchOverlay": {
+      "ariaLabel": "Arbeitsbereich durchsuchen",
+      "close": "Suche schließen"
+    },
+    "history": {
+      "title": "Dateiverlauf",
+      "description": "Gespeicherte Snapshots prüfen, Änderungen vergleichen und eine frühere Version wiederherstellen.",
+      "files": "Dateien",
+      "filesHint": "Notizen mit gespeicherten Snapshots",
+      "versions": "Versionen",
+      "versionsHint": "Snapshots der ausgewählten Notiz",
+      "previewCompare": "Vorschau / Vergleichen",
+      "previewCompareHint": "Snapshot prüfen oder mit der aktuellen Notiz vergleichen",
+      "preview": "Vorschau",
+      "compare": "Vergleichen",
+      "searchLabel": "Verlauf durchsuchen",
+      "searchPlaceholder": "Notizen suchen...",
+      "snapshotCount": "{count} Snapshots",
+      "latestSnapshotAt": "Neueste {value}",
+      "noteUpdatedAt": "Notiz aktualisiert {value}",
+      "updatedAt": "Aktualisiert {value}",
+      "snapshotCreatedAt": "Snapshot vom {value}",
+      "noSnapshotSelection": "Keine Version ausgewählt",
+      "restore": "Snapshot wiederherstellen",
+      "restoreSelectionHint": "Wiederherstellen ersetzt die aktuelle Notiz durch den ausgewählten Snapshot.",
+      "restoreConfirm": "Diesen Snapshot auf die aktuelle Notiz wiederherstellen?",
+      "restoring": "Wird wiederhergestellt…",
+      "coverValue": "Cover: {value}",
+      "snapshotVersion": "Snapshot",
+      "currentVersion": "Aktuelle Notiz",
+      "fields": {
+        "title": "Titel",
+        "icon": "Symbol",
+        "cover": "Cover"
+      },
+      "rowKinds": {
+        "added": "Hinzugefügt",
+        "removed": "Entfernt",
+        "changed": "Geändert"
+      },
+      "states": {
+        "loadingFilesTitle": "Verlauf wird geladen",
+        "loadingFiles": "Notizverlauf wird geladen…",
+        "noFilesTitle": "Noch kein Verlauf",
+        "noFiles": "Noch keine Notizen mit Verlauf.",
+        "noSearchResultsTitle": "Keine Treffer",
+        "noSearchResults": "Keine Notizen passen zur Suche.",
+        "noFileSelectedTitle": "Notiz wählen",
+        "noFileSelected": "Wählen Sie eine Notiz, um den Verlauf zu durchsuchen.",
+        "noSnapshotsTitle": "Keine Versionen",
+        "noSnapshots": "Diese Notiz hat keine Snapshots.",
+        "noSnapshotSelectedTitle": "Version wählen",
+        "noSnapshotSelected": "Wählen Sie eine Version zur Vorschau.",
+        "loadingPreviewTitle": "Snapshot wird geladen",
+        "loadingPreview": "Snapshot wird geladen…",
+        "emptySnapshotTitle": "Leerer Snapshot",
+        "emptySnapshot": "Dieser Snapshot ist leer.",
+        "noDiffTitle": "Keine Unterschiede",
+        "noDiff": "Keine sichtbaren Unterschiede zwischen aktueller Notiz und diesem Snapshot."
+      },
+      "errors": {
+        "noWorkspace": "Öffnen Sie einen Arbeitsbereich, um den Verlauf zu durchsuchen.",
+        "loadFiles": "Notizverlauf konnte nicht geladen werden.",
+        "loadSnapshot": "Dieser Snapshot konnte nicht geladen werden.",
+        "loadCurrent": "Aktuelle Notiz für den Vergleich konnte nicht geladen werden.",
+        "restore": "Dieser Snapshot konnte nicht wiederhergestellt werden."
+      }
+    },
+    "status": {
+      "saved": "Gespeichert",
+      "saving": "Wird gespeichert…",
+      "unsaved": "Ungespeicherte Änderungen",
+      "error": "Speichern fehlgeschlagen"
+    },
+    "relativeTime": {
+      "justNow": "gerade eben",
+      "hourAgo": "vor 1 Stunde",
+      "hoursAgo": "vor {count} Stunden",
+      "yesterday": "gestern",
+      "daysAgo": "vor {count} Tagen"
+    },
+    "blockMenu": {
+      "turnInto": "Umwandeln in",
+      "paragraph": "Absatz",
+      "heading1": "Überschrift 1",
+      "heading2": "Überschrift 2",
+      "heading3": "Überschrift 3",
+      "heading4": "Überschrift 4",
+      "heading5": "Überschrift 5",
+      "heading6": "Überschrift 6",
+      "bulletList": "Aufzählung",
+      "numberedList": "Nummerierte Liste",
+      "codeBlock": "Code-Block",
+      "callout": "Hinweis",
+      "checklist": "Checkliste",
+      "duplicate": "Duplizieren",
+      "insertAbove": "Block darüber einfügen",
+      "insertBelow": "Block darunter einfügen",
+      "copyRef": "Blockreferenz kopieren",
+      "delete": "Löschen"
+    }
+  },
+  "templates": {
+    "title": "Vorlagen",
+    "createTitle": "Neue Notiz aus Vorlage",
+    "insertTitle": "Vorlage einfügen",
+    "subtitle": "Wählen Sie eine integrierte oder Arbeitsbereich-Vorlage und füllen Sie die Felder.",
+    "search": "Vorlagen suchen...",
+    "newTemplate": "Neue Vorlage",
+    "builtIn": "Integriert",
+    "empty": "Keine Vorlagen gefunden.",
+    "required": "Erforderlich",
+    "noFields": "Diese Vorlage hat keine Felder.",
+    "createNote": "Notiz erstellen",
+    "insert": "Einfügen",
+    "edit": "Bearbeiten",
+    "duplicateEdit": "Zum Bearbeiten duplizieren",
+    "duplicate": "Duplizieren",
+    "copySuffix": "Kopie",
+    "delete": "Löschen",
+    "deleteConfirm": "Vorlage „{name}“ löschen?",
+    "editorTitle": "Vorlageneditor",
+    "editorSubtitle": "Vorlagentext unterstützt Datum, Uhrzeit, Notiztitel, Arbeitsbereichname, benutzerdefinierte Felder und einen Cursor-Marker.",
+    "name": "Name",
+    "id": "Bezeichner",
+    "icon": "Symbol",
+    "description": "Beschreibung",
+    "content": "Inhalt",
+    "contentPlaceholder": "Vorlageninhalt schreiben...",
+    "fields": "Felder",
+    "addField": "Feld hinzufügen",
+    "fieldLabel": "Beschriftung",
+    "fieldId": "Bezeichner",
+    "type": "Typ",
+    "requiredShort": "Erforderlich",
+    "defaultValue": "Standard",
+    "options": "Optionen, eine pro Zeile",
+    "save": "Vorlage speichern",
+    "fieldTypes": {
+      "text": "Text",
+      "multiline": "Mehrzeilig",
+      "date": "Datum",
+      "select": "Auswahl",
+      "checkbox": "Kontrollkästchen"
+    },
+    "errors": {
+      "nameRequired": "Vorlagenname und -bezeichner sind erforderlich.",
+      "invalidId": "Verwenden Sie nur Buchstaben, Zahlen, Bindestriche und Unterstriche im Bezeichner.",
+      "templateNameRequired": "Vorlagenname ist erforderlich.",
+      "contentDoc": "Vorlageninhalt muss ein Dokument sein.",
+      "reservedId": "Bezeichner integrierter Vorlagen sind reserviert.",
+      "builtInEdit": "Integrierte Vorlagen können nicht bearbeitet werden.",
+      "builtInDelete": "Integrierte Vorlagen können nicht gelöscht werden.",
+      "notFound": "Vorlage nicht gefunden.",
+      "requiredFieldMissing": "Erforderliches Feld „{field}“ fehlt."
+    }
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "sections": {
+      "general": "Allgemein",
+      "appearance": "Erscheinungsbild",
+      "editor": "Editor",
+      "workspace": "Arbeitsbereich",
+      "ai": "KI",
+      "plugins": "Plugins",
+      "hotkeys": "Tastenkürzel",
+      "files": "Dateien & Speicher",
+      "advanced": "Erweitert",
+      "about": "Über"
+    },
+    "navigationLabel": "Einstellungsabschnitte",
+    "search": {
+      "label": "Einstellungen durchsuchen",
+      "placeholder": "Einstellungen suchen...",
+      "resultsTitle": "Ergebnisse für „{query}“",
+      "resultsCount": "{count} passende Einstellungen im Katalog.",
+      "openResult": "{title} in {section} öffnen",
+      "emptyTitle": "Keine passenden Einstellungen.",
+      "emptyDescription": "Suchen Sie nach „Theme“, „Plugin“, „Block“ oder „Arbeitsbereich“."
+    },
+    "common": {
+      "desktop": "Desktop",
+
+      "resetToDefaults": "Auf Standard zurücksetzen",
+      "on": "Ein",
+      "off": "Aus",
+      "enabled": "Aktiviert",
+      "disabled": "Deaktiviert"
+    },
+    "state": {
+      "functional": "Funktional",
+      "coming": "Kommt später",
+      "info": "Info"
+    },
+    "options": {
+      "theme": {
+        "light": "Hell",
+        "dark": "Dunkel",
+        "system": "System"
+      },
+      "editorFont": {
+        "ui": "UI Sans",
+        "serif": "Serif",
+        "mono": "Mono"
+      },
+      "accent": {
+        "violet": "Ruhiges Violett",
+        "ember": "Glut",
+        "sage": "Salbei",
+        "ocean": "Ozean",
+        "rose": "Rose"
+      },
+      "density": {
+        "compact": "Kompakt",
+        "comfortable": "Komfortabel"
+      },
+      "reducedMotion": {
+        "reduce": "Reduziert",
+        "full": "Voll"
+      },
+      "lineWidth": {
+        "narrow": "Schmal",
+        "medium": "Mittel",
+        "wide": "Breit"
+      },
+      "language": {
+        "ru": "Russisch",
+        "en": "Englisch",
+        "fr": "Französisch",
+        "es": "Spanisch",
+        "de": "Deutsch"
+      },
+      "startupView": {
+        "editor": "Editor (leer)",
+        "lastNote": "Zuletzt geöffnetes Dokument",
+        "specificNote": "Bestimmtes Dokument",
+        "graph": "Notiz-Graph",
+        "kanban": "Kanban-Board"
+      },
+      "focusMode": {
+        "off": "Aus",
+        "soft": "Sanft"
+      },
+      "caretAnimation": {
+        "system": "System",
+        "steady": "Ruhig",
+        "blink": "Blinkend"
+      },
+      "tabKeyBehavior": {
+        "indent": "Einrücken",
+        "focus": "Fokus"
+      },
+      "autosavePolicy": {
+        "immediate": "Sofort",
+        "window-idle": "Bei Inaktivität"
+      },
+      "pasteBehavior": {
+        "smart": "Intelligent",
+        "plain-text": "Klartext"
+      },
+      "editorStats": {
+        "off": "Aus",
+        "corner": "Ecke"
+      },
+      "typewriterPosition": {
+        "upper": "Oben",
+        "center": "Mitte",
+        "lower": "Unten"
+      },
+      "scrollbarVisibility": {
+        "hidden": "Ausgeblendet",
+        "thin": "Schmal",
+        "system": "System"
+      },
+      "focusRingStyle": {
+        "accent": "Akzent",
+        "high-contrast": "Hoher Kontrast"
+      },
+      "windowChromeStyle": {
+        "default": "Standard",
+        "immersive": "Immersiv",
+        "minimal": "Minimal"
+      },
+      "roundness": {
+        "sharp": "Eckig",
+        "default": "Standard",
+        "soft": "Weich"
+      },
+      "backgroundScene": {
+        "aurora": "Aurora",
+        "paper": "Papier",
+        "studio": "Studio",
+        "plain": "Schlicht"
+      },
+      "surfaceStyle": {
+        "glass": "Glas",
+        "solid": "Solid",
+        "tinted": "Getönt"
+      },
+      "contrastMode": {
+        "soft": "Sanft",
+        "balanced": "Ausgeglichen",
+        "high": "Hoch"
+      },
+      "sidebarStyle": {
+        "floating": "Schwebend",
+        "solid": "Solid",
+        "minimal": "Minimal"
+      },
+      "sidebarContentMode": {
+        "tree": "Baum",
+        "tag-preview": "Tags & Vorschauen"
+      },
+      "sidebarLayout": {
+        "docked": "Angedockt",
+        "floating": "Schwebend"
+      },
+      "workspaceType": {
+        "general": "Allgemein",
+        "research": "Recherche",
+        "writing": "Schreiben",
+        "product": "Produkt",
+        "knowledge-base": "Wissensbasis"
+      },
+      "workspaceStatus": {
+        "active": "Aktiv",
+        "archived": "Archiviert",
+        "draft": "Entwurf"
+      },
+      "sidebarDefaultState": {
+        "expanded": "Ausgeklappt",
+        "collapsed": "Eingeklappt"
+      },
+      "itemPlacement": {
+        "current-folder": "Aktueller Ordner",
+        "root": "Stamm"
+      },
+      "defaultChildSort": {
+        "manual": "Manuell",
+        "title-asc": "Titel A–Z",
+        "updated-desc": "Zuletzt geändert"
+      },
+      "noteTitlePattern": {
+        "untitled": "Unbenannt",
+        "date": "Datum",
+        "date-time": "Datum & Uhrzeit"
+      },
+      "noteTemplate": {
+        "blank": "Leer",
+        "meeting": "Besprechung",
+        "daily": "Tagesnotiz",
+        "research": "Recherche"
+      },
+      "starterStructure": {
+        "off": "Aus",
+        "light": "Leicht",
+        "structured": "Strukturiert"
+      },
+      "graphEntryMode": {
+        "global": "Global",
+        "from-current-note": "Ab aktueller Notiz"
+      },
+      "graphScope": {
+        "workspace": "Arbeitsbereich",
+        "current-folder": "Aktueller Ordner"
+      },
+      "searchScope": {
+        "workspace": "Arbeitsbereich",
+        "current-folder": "Aktueller Ordner"
+      },
+      "historyRange": {
+        "7d": "Letzte 7 Tage",
+        "30d": "Letzte 30 Tage",
+        "all": "Gesamter Zeitraum"
+      }
+    },
+    "general": {
+      "description": "Arbeitsbereich-Standards und alltägliches Verhalten.",
+      "groups": {
+        "application": "Anwendung",
+        "startup": "Start"
+      },
+      "language": {
+        "title": "Anwendungssprache",
+        "description": "Globale App-Sprache für Onboarding, Einstellungen und die Arbeitsbereich-Shell"
+      },
+      "startupView": {
+        "title": "Startansicht",
+        "description": "Standardansicht beim Öffnen des Arbeitsbereichs"
+      },
+      "startupNote": {
+        "title": "Startdokument",
+        "description": "Wählen Sie das Dokument, das beim Start geöffnet wird",
+        "placeholder": "Dokument wählen..."
+      },
+      "restoreLastContext": {
+        "title": "Letzten Kontext wiederherstellen",
+        "description": "Letzten Ordner oder Notiz dieses Arbeitsbereichs erneut öffnen"
+      },
+      "deleteConfirmations": {
+        "title": "Löschbestätigungen",
+        "description": "Bestätigung für zerstörerische Aktionen verlangen",
+        "panelDescription": "Bestätigung vor zerstörerischen Baumaktionen verlangen"
+      }
+    },
+    "appearance": {
+      "description": "Visuelle Einstellungen — App-weite Einstellungen und Arbeitsbereich-Stil.",
+      "groups": {
+        "application": "Anwendung",
+        "comfort": "Komfort & Barrierefreiheit",
+        "workspaceStyle": "Arbeitsbereich-Stil"
+      },
+      "mode": {
+        "title": "Modus",
+        "description": "Globale Einstellung in AppConfig gespeichert"
+      },
+      "themeSchedule": {
+        "title": "Automatischer Theme-Zeitplan",
+        "description": "Wechselt nach Uhrzeit zwischen Hell und Dunkel. Setzt den Modus oben außer Kraft, wenn aktiv.",
+        "lightLabel": "Helles Theme ab",
+        "darkLabel": "Dunkles Theme ab"
+      },
+      "accent": {
+        "title": "Akzentfarbe",
+        "description": "Verwendet für Auswahlen, Fokus-Ringe und Links"
+      },
+      "interfaceDensity": {
+        "title": "Interface-Dichte",
+        "description": "Kompakter oder komfortabler Shell-Abstand"
+      },
+      "reducedMotion": {
+        "title": "Animationen",
+        "description": "Animationsintensität in der Shell steuern"
+      },
+      "scrollbarVisibility": {
+        "title": "Scrollleisten",
+        "description": "Darstellung der Scrollleisten in der App"
+      },
+      "focusRingStyle": {
+        "title": "Fokus-Ring",
+        "description": "Stil der Tastaturfokus-Anzeige"
+      },
+      "windowChromeStyle": {
+        "title": "Fensterdesign",
+        "description": "Präsentationsstil von Titelleiste und Oberflächen"
+      },
+      "backgroundScene": {
+        "title": "Hintergrundszene",
+        "description": "Ambienter Hintergrund dieses Arbeitsbereichs"
+      },
+      "surfaceStyle": {
+        "title": "Oberflächenstil",
+        "description": "Wie glasig oder solide Panels wirken"
+      },
+      "contrastMode": {
+        "title": "Kontrast",
+        "description": "Trennungsstärke von Panels und Text"
+      },
+      "sidebarStyle": {
+        "title": "Stil der Seitenleiste",
+        "description": "Visuelles Gewicht der Navigations-Shell"
+      },
+      "editorFont": {
+        "title": "Editor-Schrift",
+        "description": "Schriftart der Schreibfläche"
+      },
+      "interfaceZoom": {
+        "title": "Interface-Zoom",
+        "description": "Gesamtes Interface skalieren"
+      },
+      "reduceTransparency": {
+        "title": "Transparenz reduzieren",
+        "description": "Hintergrundunschärfe deaktivieren für Klarheit und Leistung"
+      },
+      "interfaceRoundness": {
+        "title": "Eckabrundung",
+        "description": "Abrundung von Panels, Schaltflächen und Feldern"
+      }
+    },
+    "editor": {
+      "description": "Blockverhalten, typografischer Rhythmus und Schreibfluss.",
+      "groups": {
+        "layout": "Layout",
+        "focusFlow": "Fokus & Fluss",
+        "behaviour": "Verhalten",
+        "workflow": "Bearbeitungsablauf"
+      },
+      "preview": {
+        "label": "Live-Vorschau",
+        "heading": "Eine Unterüberschrift",
+        "body": "Längerer Fließtext — die zentrierte Lesespalte, in der Sie die meiste Zeit verbringen. Passen Sie eine Einstellung an und dieses Panel spiegelt den tatsächlichen Editor-Ton wider."
+      },
+      "documentWidth": {
+        "title": "Dokumentbreite",
+        "description": "Breite der zentrierten Lesespalte",
+        "panelDescription": "Breite der zentrierten Lesespalte"
+      },
+      "fontSize": {
+        "title": "Editor-Schriftgröße",
+        "description": "Typografieskala der Schreibfläche",
+        "panelDescription": "Aktuelle Textskala in Seiten"
+      },
+      "accentColoredHeadings": {
+        "title": "Farbige Überschriften",
+        "description": "Überschriften (H1-H6) in der Akzentfarbe einfärben"
+      },
+      "spellcheck": {
+        "title": "Rechtschreibprüfung",
+        "description": "Verwendet native Systemwörterbücher, wenn verfügbar"
+      },
+      "slashCommands": {
+        "title": "Slash-Befehle",
+        "description": "/-Befehlsvorschläge im Editor aktivieren",
+        "panelDescription": "Tippen Sie /, um Blöcke einzufügen"
+      },
+      "smoothScrolling": {
+        "title": "Sanftes Scrollen",
+        "description": "Steuert das Scrollverhalten des Editor-Panels",
+        "panelDescription": "Steuert das Scrollverhalten des Dokuments im Editor-Panel"
+      },
+      "markdownShortcuts": {
+        "title": "Markdown-Kurzbefehle",
+        "description": "Markdown-Muster automatisch in Rich-Blöcke umwandeln"
+      },
+      "focusMode": {
+        "title": "Fokusmodus",
+        "description": "Sanft: blendet sekundäre Shell beim Schreiben dezent aus"
+      },
+      "typewriterScrolling": {
+        "title": "Schreibmaschinen-Scrollen",
+        "description": "Aktiven Block während des Tippens nahe der Mitte halten"
+      },
+      "activeBlockEmphasis": {
+        "title": "Aktive Block-Hervorhebung",
+        "description": "Angrenzende Blöcke leicht abdunkeln, um auf den aktuellen zu fokussieren"
+      },
+      "caretAnimation": {
+        "title": "Cursor-Animation",
+        "description": "Steuert das Blinken des Cursors im Editor"
+      },
+      "tabKeyBehavior": {
+        "title": "Tabulatortaste",
+        "description": "Einrücken: Tab rückt Listen ein und bewegt Tabellenzellen. Fokus: Tab verlässt den Editor"
+      },
+      "autosavePolicy": {
+        "title": "Autom. Speichern",
+        "description": "Sofort: nach jeder Änderung speichern. Bei Inaktivität: speichern, wenn das Fenster den Fokus verliert"
+      },
+      "pasteBehavior": {
+        "title": "Einfügeverhalten",
+        "description": "Intelligent: Rich-Formatierung erhalten. Klartext: Formatierung entfernen, Zeilenumbrüche behalten"
+      },
+      "slashMenuHints": {
+        "title": "Slash-Menü-Hinweise",
+        "description": "Kategorie- und Kurzbefehlshinweise im Slash-Menü anzeigen"
+      },
+      "editorStats": {
+        "title": "Wortanzahl",
+        "description": "Wort- und Zeichenanzahl unten rechts im Editor anzeigen"
+      },
+      "typewriterPosition": {
+        "title": "Cursor-Position",
+        "description": "Ziel-Viewport-Position beim Schreibmaschinen-Scrollen"
+      }
+    },
+    "workspace": {
+      "description": "Identität, Struktur und Standardverhalten des Arbeitsbereichs.",
+      "descriptionField": {
+        "title": "Beschreibung",
+        "description": "Kurze Zusammenfassung auf der Arbeitsbereich-Karte",
+        "placeholder": "Beschreiben Sie diesen Arbeitsbereich…"
+      },
+      "groups": {
+        "identity": "Identität",
+        "sidebarMode": "Seitenleistenmodus",
+        "sidebarLayout": "Platzierung der Seitenleiste",
+        "navigation": "Navigation",
+        "structure": "Struktur",
+        "creationDefaults": "Erstellungs-Standards",
+        "systemViews": "Systemansichten"
+      },
+      "identity": {
+        "title": "Arbeitsbereich-Identität",
+        "description": "Benennen Sie den Arbeitsbereich um und aktualisieren Sie Glyph oder Verlauf",
+        "panelDescription": "Benennen Sie den Arbeitsbereich um und aktualisieren Sie Glyph oder Verlauf nach der Erstellung",
+        "namePlaceholder": "Arbeitsbereich-Name",
+        "preview": "Aktuelle Identitätsvorschau",
+        "glyphLabel": "Glyph wählen",
+        "glyphPickerTitle": "Arbeitsbereich-Glyph",
+        "save": "Identität speichern"
+      },
+      "sidebarContentMode": {
+        "title": "Seitenleisteninhalt",
+        "description": "Wählen Sie den klassischen Baum oder einen Tag-basierten Notizvorschau-Feed.",
+        "treeDescription": "Ordner und Notizen bleiben im klassischen Baum.",
+        "tagPreviewDescription": "Tags links, passende Notizvorschauen rechts."
+      },
+      "sidebarLayout": {
+        "title": "Platzierung der Seitenleiste",
+        "description": "Docken Sie die Seitenleiste neben den Inhalt an oder lassen Sie sie schweben und sich automatisch ausblenden.",
+        "dockedDescription": "Die Seitenleiste ist neben dem Inhalt angeheftet.",
+        "floatingDescription": "Die Seitenleiste wird ausgeblendet und erscheint beim Überfahren des linken Rands."
+      },
+      "workspaceType": {
+        "title": "Arbeitsbereich-Typ",
+        "description": "Diesen Arbeitsbereich nach seinem Hauptzweck kategorisieren"
+      },
+      "workspaceStatus": {
+        "title": "Status",
+        "description": "Aktiv, archiviert oder Entwurf"
+      },
+      "tags": {
+        "title": "Tags",
+        "description": "Labels zum Organisieren von Arbeitsbereichen",
+        "placeholder": "Tag hinzufügen…"
+      },
+      "customCss": {
+        "title": "Benutzerdefinierte Stile",
+        "description": "custom.css-Datei aktivieren, um das Design dieses Arbeitsbereichs anzupassen"
+      },
+      "openLastVisitedSystemView": {
+        "title": "Letzte Systemansicht wiederherstellen",
+        "description": "Letzte besuchte Systemansicht (Graph, Verlauf usw.) beim Start erneut öffnen"
+      },
+      "rememberExpandedFolders": {
+        "title": "Ausgeklappte Ordner merken",
+        "description": "Ausklappstatus der Ordner zwischen Sitzungen beibehalten"
+      },
+      "sidebarDefaultState": {
+        "title": "Standardzustand der Seitenleiste",
+        "description": "Ob die Seitenleiste beim Start ausgeklappt oder eingeklappt ist"
+      },
+      "graphLabels": {
+        "title": "Graph-Beschriftungen",
+        "description": "Notiztitel auf Graph-Knoten standardmäßig anzeigen",
+        "panelDescription": "Bereits gespeichert, aber der Graph-Bildschirm steht noch aus"
+      },
+      "rootNotesVisible": {
+        "title": "Notizen auf Stammebene anzeigen",
+        "description": "Notizen im Arbeitsbereich-Stamm in der Seitenleiste anzeigen"
+      },
+      "newNotePlacement": {
+        "title": "Platzierung neuer Notizen",
+        "description": "Wo neue Notizen standardmäßig erstellt werden"
+      },
+      "newFolderPlacement": {
+        "title": "Platzierung neuer Ordner",
+        "description": "Wo neue Ordner standardmäßig erstellt werden"
+      },
+      "defaultChildSort": {
+        "title": "Standard-Sortierreihenfolge",
+        "description": "Wie Elemente in Ordnern standardmäßig sortiert werden"
+      },
+      "showEmptyFolders": {
+        "title": "Leere Ordner anzeigen",
+        "description": "Leere Ordner in der Seitenleiste sichtbar lassen"
+      },
+      "defaultNoteIcon": {
+        "title": "Standard-Notizsymbol",
+        "description": "Emoji oder Symbol für neue Notizen"
+      },
+      "defaultFolderIcon": {
+        "title": "Standard-Ordnersymbol",
+        "description": "Emoji oder Symbol für neue Ordner"
+      },
+      "defaultNoteTitlePattern": {
+        "title": "Standard-Notiztitel",
+        "description": "Titelmuster beim Erstellen einer neuen Notiz"
+      },
+      "newNoteTemplate": {
+        "title": "Vorlage für neue Notizen",
+        "description": "Startinhalt für neue Notizen"
+      },
+      "newWorkspaceHomeNote": {
+        "title": "Startnotiz erstellen",
+        "description": "Automatisch eine Startnotiz beim Einrichten eines neuen Arbeitsbereichs erstellen"
+      },
+      "autoCreateStarterStructure": {
+        "title": "Startstruktur",
+        "description": "Initiale Ordnerstruktur für neue Arbeitsbereiche generieren"
+      },
+      "graphEntryMode": {
+        "title": "Graph-Einstiegsmodus",
+        "description": "Wo die Graphansicht beim Öffnen startet"
+      },
+      "graphScopeDefault": {
+        "title": "Graph-Umfang",
+        "description": "Standardumfang der Graphansicht"
+      },
+      "searchStartScope": {
+        "title": "Suchumfang",
+        "description": "Wo die Suche standardmäßig beginnt"
+      },
+      "historyDefaultRange": {
+        "title": "Verlaufszeitraum",
+        "description": "Standardzeitraum in der Verlaufsansicht"
+      }
+    },
+    "ai": {
+      "description": "Bringen Sie Ihr eigenes Modell mit. Alles läuft lokal, sofern Sie sich nicht für die Cloud entscheiden.",
+      "status": "● Lokal · bereit",
+      "groups": {
+        "provider": "Anbieter",
+        "inlineBehaviour": "Inline-Verhalten"
+      },
+      "models": {
+        "llama3": {
+          "label": "Lokal · llama3",
+          "description": "Standard lokales Modell für Slash-Befehle und Inline-Aktionen"
+        },
+        "mistral": {
+          "label": "Lokal · mistral",
+          "description": "Alternatives lokales Modellprofil"
+        },
+        "cloudGpt": {
+          "label": "Cloud · Platzhalter",
+          "description": "Reservierter Platzhalter bis Cloud-Anbieter integriert sind"
+        }
+      },
+      "enabled": {
+        "title": "KI aktivieren",
+        "description": "Lokale KI-Funktionen aktivieren"
+      },
+      "apiKind": {
+        "title": "API-Typ",
+        "description": "Protokoll der lokalen Server-API",
+        "ollama": "Ollama",
+        "openai": "OpenAI-kompatibel (LM Studio, llama.cpp)"
+      },
+      "endpoint": {
+        "title": "Ollama-Endpunkt",
+        "description": "URL des lokalen Ollama-Servers",
+        "placeholder": "http://localhost:11434"
+      },
+      "testConnection": {
+        "button": "Verbindung testen",
+        "checking": "Wird geprüft…",
+        "success": "Verbunden · {count} Modelle",
+        "error": "Verbindung fehlgeschlagen"
+      },
+      "maxTokens": {
+        "title": "Max. Tokens pro Anfrage",
+        "description": "Obergrenze für generierte Tokens"
+      },
+      "defaultModel": {
+        "title": "Standardmodell",
+        "description": "Verwendet für Slash-Befehle und Inline-Aktionen"
+      },
+      "privacyMode": {
+        "title": "Datenschutzmodus",
+        "description": "Alle ausgehenden Netzwerkaufrufe der KI blockieren"
+      },
+      "slashCommands": {
+        "title": "KI-Slash-Befehle",
+        "description": "KI-Befehle im Slash-Menü anzeigen"
+      },
+      "contextSuggestions": {
+        "title": "Kontextvorschläge",
+        "description": "Kontextbezogene Vorschläge bei markiertem Text anzeigen"
+      },
+      "streamingOutput": {
+        "title": "Streaming-Ausgabe",
+        "description": "Partielle gestreamte Antworten zulassen"
+      },
+      "cloudCredentials": {
+        "title": "Cloud-Anmeldedaten",
+        "description": "Anbieter-Geheimnisse bleiben außerhalb von `.nevo/settings.json`, bis sicherer Speicher existiert"
+      }
+    },
+    "plugins": {
+      "description": "Erweitern Sie Nevo, ohne den Editor zu verlassen. Drittanbieter-Plugins werden als vertrauenswürdiger Code mit App-Zugriff ausgeführt.",
+      "trustWarningTitle": "Diesem Plugin vertrauen?",
+      "trustWarning": "{plugin} ist nicht isolierter Drittanbieter-Code. Es kann auf das Nevo-Fenster und für die App verfügbare Daten zugreifen. Installieren Sie es nur aus einer vertrauenswürdigen Quelle.",
+      "permissionReviewTitle": "Plugin-Berechtigungen erlauben?",
+      "permissionReview": "{plugin} fordert diese Funktionen an: {capabilities}. Netzwerkdomänen: {domains}.",
+      "noDomains": "Kein Netzwerkzugriff",
+      "marketplace": "Marktplatz",
+      "rescan": "Plugins neu scannen",
+      "refreshCatalog": "Katalog aktualisieren",
+      "systemLabel": "System",
+      "builtIn": "Integriert",
+      "install": "Installieren",
+      "update": "Aktualisieren",
+      "remove": "Entfernen",
+      "openSource": "Open Source",
+      "cacheNotice": "Zwischengespeicherte Daten",
+      "catalogLoading": "Katalog wird geladen…",
+      "catalogLoadingDescription": "Marktplatz-Metadaten werden abgerufen und mit installierten Plugins abgeglichen.",
+      "catalogEmptyTitle": "Der Marktplatz ist leer.",
+      "catalogEmptyDescription": "Das Marktplatz-Repository enthält noch keine `plugins/<pluginId>`-Ordner oder ist nicht erreichbar.",
+      "installedVersion": "installiert v{version}",
+      "summary": {
+        "label": "Plugin-Übersicht",
+        "installed": "Installiert",
+        "enabled": "Aktiviert",
+        "issues": "Probleme",
+        "catalog": "Katalog",
+        "cache": "Cache"
+      },
+      "kanban": {
+        "title": "Kanban-Boards",
+        "description": "Kanban-Board-Ansicht aktivieren. Bei Deaktivierung werden Boards ausgeblendet, Daten aber erhalten."
+      },
+      "templates": {
+        "title": "Vorlagen",
+        "description": "Notizen aus wiederverwendbaren Arbeitsbereich-Vorlagen erstellen und Vorlageninhalte aus dem Editor einfügen."
+      },
+      "vega": {
+        "title": "Vega-Lite-Diagramme",
+        "description": "Interaktive Datenvisualisierungen über Vega-Lite-Spezifikationen direkt in Notizen einbetten."
+      },
+      "markmap": {
+        "title": "Mindmaps",
+        "description": "Interaktive Mindmaps aus Markdown-Gliederungen direkt in Notizen erzeugen."
+      },
+      "githubSync": {
+        "title": "GitHub-Synchronisierung",
+        "description": "Arbeitsbereich in ein GitHub-Repository sichern.",
+        "fields": {
+          "repo": "Repository",
+          "branch": "Branch",
+          "token": "Zugriffstoken",
+          "tokenHint": "Persönlicher Zugriffstoken mit Repo-Umfang",
+          "commitMessage": "Commit-Nachricht",
+          "autoSync": "Automatische Synchronisierung",
+          "intervalMinutes": "Intervall (Minuten)"
+        },
+        "actions": {
+          "test": "Verbindung testen",
+          "syncNow": "Jetzt synchronisieren"
+        },
+        "status": {
+          "testing": "Wird geprüft…",
+          "syncing": "Synchronisierung…",
+          "connectionOk": "Verbindung erfolgreich",
+          "never": "Nie synchronisiert",
+          "lastSynced": "Zuletzt synchronisiert: {time}",
+          "filesCount": "{count} Dateien",
+          "failed": "Fehler: {message}"
+        },
+        "toast": {
+          "successTitle": "GitHub-Sync",
+          "success": "Arbeitsbereich mit GitHub synchronisiert.",
+          "successDetail": "Arbeitsbereich mit GitHub synchronisiert · {count} Dateien.",
+          "errorTitle": "GitHub-Sync fehlgeschlagen",
+          "error": "Arbeitsbereich konnte nicht mit GitHub synchronisiert werden."
+        }
+      },
+      "filters": {
+        "all": "Alle · {count}",
+        "enabled": "Aktiviert · {count}",
+        "manifestIssues": "Manifest-Probleme · {count}"
+      },
+      "tabs": {
+        "label": "Plugin-Abschnitte",
+        "installed": "Installiert · {count}",
+        "catalog": "Marktplatz · {count}"
+      },
+      "marketplaceStatus": {
+        "notInstalled": "Nicht installiert",
+        "installed": "Installiert",
+        "updateAvailable": "Aktualisierung verfügbar",
+        "disabled": "Deaktiviert",
+        "invalid": "Ungültig",
+        "conflict": "Konflikt"
+      },
+      "noDescription": "Keine Beschreibung im Manifest.",
+      "fallbackDescription": "Plugin-Manifest des Arbeitsbereichs",
+      "permissions": "Berechtigungen",
+      "noPermissions": "Keine Berechtigungen",
+      "source": "Quelle",
+      "execution": {
+        "sandboxed": "Isolierter Worker",
+        "trusted": "Vertrauenswürdige WebView"
+      },
+      "manifestIssue": "Manifest-Problem",
+      "manifestValid": "Manifest gültig",
+      "emptyTitle": "Keine Plugins gefunden.",
+      "emptyDescription": "Legen Sie Plugin-Ordner in `.nevo/plugins` ab und scannen Sie diesen Arbeitsbereich neu.",
+      "settings": {
+        "configure": "Konfigurieren",
+        "hide": "Ausblenden",
+        "secretSet": "Gesetzt",
+        "secretPlaceholder": "Wert eingeben",
+        "saved": "Gespeichert"
+      }
+    },
+    "hotkeys": {
+      "description": "Bearbeitbare Tastaturbefehle in Nevo können hier aufgenommen werden. Formatierungskürzel des Editors sind fix.",
+      "resetAll": "Alle zurücksetzen",
+      "resetOne": "{command} zurücksetzen",
+      "editable": "Bearbeitbar",
+      "conflictSummary": "Konflikte",
+      "searchLabel": "Kürzel suchen",
+      "searchPlaceholder": "Kürzel suchen...",
+      "matches": "{count} Treffer",
+      "conflicts": "Konflikt mit {count} Belegung(en)",
+      "pressKeys": "Tasten drücken…",
+      "fixed": "Fix",
+      "table": {
+        "command": "Befehl",
+        "state": "Status",
+        "shortcut": "Kürzel"
+      },
+      "scope": {
+        "workspace": "Arbeitsbereich",
+        "app": "App"
+      },
+      "keys": {
+        "space": "Leertaste"
+      },
+      "commands": {
+        "undo": "Rückgängig",
+        "redo": "Wiederholen",
+        "bold": "Fett",
+        "italic": "Kursiv",
+        "strikethrough": "Durchgestrichen",
+        "underline": "Unterstrichen",
+        "kbd": "Tastaturtaste",
+        "tag": "Tag",
+        "heading1": "Überschrift 1",
+        "heading2": "Überschrift 2",
+        "heading3": "Überschrift 3",
+        "heading4": "Überschrift 4",
+        "heading5": "Überschrift 5",
+        "heading6": "Überschrift 6",
+        "orderedList": "Nummerierte Liste",
+        "bulletList": "Aufzählung",
+        "blockquote": "Zitat",
+        "inlineMath": "Inline-Mathe",
+        "newNote": "Notiz erstellen",
+        "newFolder": "Ordner erstellen",
+        "saveNote": "Notiz speichern",
+        "searchTitles": "Globale Suche",
+        "toggleSidebar": "Seitenleiste umschalten",
+        "toggleRightPanel": "Rechtes Panel umschalten",
+        "openGraph": "Graph öffnen",
+        "openHistory": "Verlauf öffnen",
+        "openTrash": "Papierkorb öffnen",
+        "openSettings": "Einstellungen öffnen"
+      }
+    },
+    "files": {
+      "description": "Arbeitsbereich-Pfade, Bereinigungsvorgänge und lokale Diagnose.",
+      "groups": {
+        "paths": "Pfade",
+        "retention": "Aufbewahrung",
+        "diagnostics": "Diagnose"
+      },
+      "paths": {
+        "title": "Arbeitsbereich-Pfade",
+        "description": "Direkt zum Arbeitsbereich-Stamm und zum versteckten `.nevo`-Speicher springen",
+        "revealWorkspace": "Arbeitsbereich anzeigen",
+        "openNotes": "Notizen öffnen",
+        "openAssets": "Assets öffnen",
+        "openNevo": ".nevo öffnen"
+      },
+      "snapshotRetention": {
+        "title": "Snapshot-Aufbewahrung",
+        "searchDescription": "Wie viele Snapshots pro Notiz behalten werden",
+        "description": "{count} Snapshots pro Notiz behalten",
+        "pruneNow": "Jetzt bereinigen"
+      },
+      "trashRetention": {
+        "title": "Papierkorb-Aufbewahrung",
+        "description": "Wie lange gelöschte Notizen vor endgültiger Löschung behalten werden",
+        "7days": "7 Tage",
+        "30days": "30 Tage",
+        "90days": "90 Tage",
+        "never": "Nie"
+      },
+      "orphanedAssets": {
+        "title": "Verwaiste Assets bereinigen",
+        "description": "`.nevo/assets`-Dateien entfernen, die nicht mehr von Notizen referenziert werden",
+        "clean": "Assets bereinigen"
+      },
+      "diagnostics": {
+        "notes": "Notizen",
+        "folders": "Ordner",
+        "plugins": "Plugins",
+        "snapshots": "Snapshots",
+        "assets": "Assets",
+        "workspaceSize": "Arbeitsbereich-Größe"
+      }
+    },
+    "advanced": {
+      "description": "Bewusst schlank: Experten-Optionen, Rohdateien und Schema-Metadaten.",
+      "groups": {
+        "diagnostics": "Diagnose"
+      },
+      "schemaMetadata": {
+        "title": "Schema-Metadaten",
+        "description": "Aktuelle Version des Arbeitsbereich-Einstellungsschema"
+      },
+      "experimentalGraphTools": {
+        "title": "Experimentelle Graph-Werkzeuge",
+        "description": "Erweiterte Graph-Optionen ohne eigenen Einstellungsabschnitt"
+      },
+      "developerLogging": {
+        "title": "Erweiterte Diagnose-Protokollierung",
+        "description": "Schreibt Warn-, Info- und Debug-Diagnosen in rotierende Support-Logs, während Fehler stets aktiv bleiben"
+      },
+      "revealLogs": {
+        "title": "Logs anzeigen",
+        "description": "Rotierende Support-Logs im App-Datenverzeichnis öffnen",
+        "action": "Logs anzeigen"
+      },
+      "rawSettings": {
+        "title": "Rohes Einstellungs-JSON öffnen",
+        "description": "Einstellungsdatei des Arbeitsbereichs direkt auf der Festplatte anzeigen",
+        "reveal": "settings.json anzeigen"
+      },
+      "resetSettings": {
+        "title": "Arbeitsbereich-Einstellungen zurücksetzen",
+        "description": "Aktuelle Einstellungsdatei durch v1-Standards ersetzen",
+        "action": "Einstellungen zurücksetzen"
+      }
+    },
+    "about": {
+      "description": "Basiert auf Tauri. Lokal-first als Standard.",
+      "tagline": "Ein ruhiger, lokaler Arbeitsbereich für Blöcke, Seiten und die Verbindungen dazwischen.",
+      "notAvailable": "Nicht verfügbar",
+      "meta": {
+        "version": "Version",
+        "engine": "Engine",
+        "platform": "Plattform",
+        "workspace": "Arbeitsbereich"
+      },
+      "actions": {
+        "checkUpdates": "Nach Aktualisierungen suchen",
+        "revealConfig": "Konfiguration anzeigen",
+        "openUserFolder": "Benutzerordner öffnen",
+        "acknowledgements": "Danksagung"
+      },
+      "openSourceTitle": "Auf Open Source aufgebaut",
+      "openSourceBody": "Tauri, Rust, ProseMirror und die lokalen Arbeitsbereich-Dateien auf Ihrer Festplatte. Die App sucht nach Aktualisierungen und installiert diese nach Bestätigung."
+    },
+    "feedback": {
+      "workspaceIdentitySaved": "Arbeitsbereich-Identität gespeichert.",
+      "snapshotCleanup": "{removedFiles} alte Snapshot-Dateien entfernt und {bytesFreed} freigegeben.",
+      "assetCleanup": "{removedFiles} verwaiste Assets entfernt und {bytesFreed} freigegeben.",
+      "logsPathUnavailable": "Log-Pfad noch nicht verfügbar.",
+      "revealPathOpened": "Pfad mit der System-App geöffnet.",
+      "revealPathFailed": "Pfad konnte nicht im System-Dateimanager angezeigt werden.",
+      "openFolderFailed": "Ordner konnte nicht im System-Dateimanager geöffnet werden."
+    }
+  },
+  "editor": {
+    "toolbar": {
+      "bold": "Fett (strong) Mod+B",
+      "italic": "Kursiv (em) Mod+I",
+      "strikethrough": "Durchgestrichen (s) Mod+Shift+S",
+      "underline": "Unterstrichen (u) Mod+U",
+      "code": "Code (code)",
+      "kbd": "Tastaturtaste (kbd) Mod+E",
+      "tag": "Tag (span.nv-tag) Mod+Shift+T",
+      "link": "Link (a)",
+      "superscript": "Hochgestellt (sup)",
+      "subscript": "Tiefgestellt (sub)",
+      "highlight": "Hervorhebung (mark)",
+      "textColor": "Textfarbe",
+      "math": "Inline-Mathe",
+      "image": "Bild einfügen"
+    },
+    "linkPicker": {
+      "createNote": "Notiz „{title}“ erstellen",
+      "anchorHint": "Anker: {anchor}",
+      "aliasHint": "Alias: {alias}",
+      "aliasAnchorHint": "Alias: {alias} · Anker: {anchor}"
+    },
+    "blockHandle": {
+      "drag": "Ziehen zum Sortieren",
+      "options": "Block-Optionen"
+    },
+    "colorPicker": {
+      "none": "Keine",
+      "color": "Farbe",
+      "hue": "Farbton",
+      "picker": "Farbauswahl",
+      "presets": "Vordefinierte Farben",
+      "hex": "HEX-Farbe",
+      "sv": "Sättigung und Helligkeit",
+      "custom": "Benutzerdefinierte Farbauswahl"
+    },
+    "table": {
+      "title": "Tabellenformatierung",
+      "selection": "{rows}×{cols} ausgewählt",
+      "rowAddAbove": "Zeile + Darüber",
+      "rowAddBelow": "Zeile + Darunter",
+      "colAddLeft": "Spalte + Links",
+      "colAddRight": "Spalte + Rechts",
+      "formula": "Formel",
+      "formulaLabel": "Zellenformel",
+      "formulaHint": "Excel-Stil, z.B. =SUM(A1:A3)",
+      "formulaPlaceholder": "=SUM(A1:A3)",
+      "formulaApply": "Anwenden",
+      "formulaRemove": "Entfernen",
+      "mergeCells": "Zellen verbinden",
+      "splitCell": "Zelle teilen",
+      "toggleHeaderRow": "Kopfzeile umschalten",
+      "toggleHeaderCol": "Kopfspalte umschalten",
+      "alignLeft": "Links ausrichten",
+      "alignCenter": "Zentrieren",
+      "alignRight": "Rechts ausrichten",
+      "clearAlignment": "Ausrichtung entfernen",
+      "bgWarm": "HG Warm",
+      "bgCool": "HG Kalt",
+      "clearBackground": "Hintergrund entfernen",
+      "borderAccent": "Rahmen-Akzent",
+      "textAccent": "Text-Akzent",
+      "padding16": "Innenabstand 16px",
+      "deleteRow": "Zeile löschen",
+      "deleteCol": "Spalte löschen",
+      "deleteTable": "Tabelle löschen",
+      "categories": {
+        "insert": "Einfügen",
+        "cells": "Zellen",
+        "alignment": "Ausrichtung",
+        "styling": "Stil",
+        "actions": "Aktionen"
+      }
+    },
+    "mermaid": {
+      "label": "Mermaid-Diagramm",
+      "placeholder": "graph TD\n  A --> B",
+      "applyHint": "zum Anwenden",
+      "apply": "Anwenden",
+      "delete": "Löschen"
+    },
+    "vega": {
+      "label": "Vega-Lite-Diagramm",
+      "placeholder": "{\n  \"$schema\": \"https://vega.github.io/schema/vega-lite/v5.json\",\n  \"mark\": \"bar\",\n  \"data\": { \"values\": [{\"a\": \"A\", \"b\": 28}] },\n  \"encoding\": { \"x\": { \"field\": \"a\" }, \"y\": { \"field\": \"b\" } }\n}",
+      "applyHint": "zum Anwenden",
+      "apply": "Anwenden",
+      "delete": "Löschen"
+    },
+    "markmap": {
+      "label": "Mindmap",
+      "placeholder": "# Thema\n## Idee A\n## Idee B",
+      "applyHint": "zum Anwenden",
+      "apply": "Anwenden",
+      "delete": "Löschen"
+    },
+    "pluginBlock": {
+      "applyHint": "zum Anwenden",
+      "apply": "Anwenden",
+      "delete": "Löschen"
+    },
+    "draw": {
+      "label": "Zeichnung",
+      "openCanvas": "Leinwand öffnen",
+      "empty": "Leere Zeichnung — klicken, um die Leinwand zu öffnen",
+      "settings": {
+        "title": "Leinwand",
+        "bgColor": "Hintergrundfarbe",
+        "gridType": "Raster",
+        "gridNone": "Kein Raster",
+        "gridSquare": "Quadrate",
+        "gridLines": "Linien",
+        "gridDots": "Punkte",
+        "autoDetect": "Formen automatisch erkennen"
+      },
+      "export": {
+        "title": "Zeichnung exportieren",
+        "format": "Format",
+        "scope": "Bereich",
+        "scopeAll": "Gesamte Zeichnung",
+        "scopeViewport": "Sichtbarer Bereich",
+        "scopeSelection": "Auswahl",
+        "transparent": "Transparenter Hintergrund",
+        "button": "Exportieren",
+        "errorSelectionEmpty": "Nichts ausgewählt!",
+        "exporting": "Wird exportiert..."
+      },
+      "props": {
+        "stroke": "Strich",
+        "fill": "Füllung",
+        "width": "Breite",
+        "lineStyle": "Linienstil",
+        "sloppiness": "Unpräzision",
+        "opacity": "Deckkraft",
+        "none": "Keine",
+        "solid": "Durchgehend",
+        "dashed": "Gestrichelt",
+        "dotted": "Gepunktet",
+        "hachure": "Schraffur",
+        "fillSolid": "Durchgehend",
+        "crossHatch": "Kreuzschraffur",
+        "architect": "Architekt",
+        "artist": "Künstler",
+        "cartoonist": "Karikaturist",
+        "arrowShape": "Pfeiltyp",
+        "arrowStraight": "Gerade",
+        "arrowElbow": "Abgewinkelt",
+        "arrowCurved": "Gebogen",
+        "arrowEnds": "Pfeilenden",
+        "capStart": "Start",
+        "capEnd": "Ende",
+        "capArrow": "Pfeil",
+        "capDot": "Punkt",
+        "capNone": "Keine",
+        "fontFamily": "Schriftfamilie",
+        "sansSerif": "Sans-Serif",
+        "serif": "Serif",
+        "monospace": "Monospace",
+        "fontSize": "Schriftgröße"
+      },
+      "actions": {
+        "title": "Aktionen",
+        "alignLeft": "Links ausrichten",
+        "alignCenterH": "Zentrieren",
+        "alignRight": "Rechts ausrichten",
+        "alignTop": "Oben ausrichten",
+        "alignCenterV": "Mitte ausrichten",
+        "alignBottom": "Unten ausrichten",
+        "distributeH": "Horizontal verteilen",
+        "distributeV": "Vertikal verteilen",
+        "flipH": "Horizontal spiegeln",
+        "flipV": "Vertikal spiegeln",
+        "group": "Gruppieren",
+        "ungroup": "Gruppierung aufheben",
+        "lock": "Sperren",
+        "unlock": "Entsperren"
+      },
+      "templates": {
+        "title": "Komponenten",
+        "open": "Komponentenbibliothek",
+        "close": "Schließen",
+        "ui": "UI-Elemente",
+        "diagram": "Flussdiagramm",
+        "button": "Schaltfläche",
+        "input": "Eingabefeld",
+        "checkbox": "Kontrollkästchen",
+        "card": "Karte",
+        "browser": "Browserfenster",
+        "phone": "Mobilbildschirm",
+        "process": "Prozess",
+        "decision": "Entscheidung",
+        "terminator": "Start / Ende",
+        "connector": "Verbinder",
+        "sticky": "Haftnotiz",
+        "person": "Person"
+      }
+    },
+    "slash": {
+      "ai": {
+        "continue": {
+          "title": "Weiterschreiben"
+        },
+        "summarize": {
+          "title": "Zusammenfassen"
+        },
+        "ask": {
+          "title": "KI fragen"
+        }
+      }
+    },
+    "aiAsk": {
+      "title": "KI fragen",
+      "placeholder": "Beschreiben Sie, was Sie möchten…",
+      "confirm": "Generieren",
+      "cancel": "Abbrechen"
+    }
+  },
+  "version": "v{version} · Tauri",
+  "graph": {
+    "title": "Graph",
+    "localGraph": "Lokaler Graph",
+    "showLocalGraph": "Lokalen Graph anzeigen",
+    "hideLocalGraph": "Lokalen Graph ausblenden",
+    "backToEditor": "Zurück",
+    "loading": "Graph wird erstellt…",
+    "noConnections": "Keine Verbindungen",
+    "noConnectionsHint": "Verknüpfen Sie diese Notiz mit anderen über [[Notizname]]",
+    "emptyTitle": "Noch keine Notizen",
+    "emptySub": "Erstellen Sie Notizen und verknüpfen Sie sie mit [[Notizname]] — sie erscheinen hier als Netzwerk.",
+    "searchPlaceholder": "Knoten suchen…",
+    "untitled": "Unbenannt",
+    "connections": "Verbindungen",
+    "nodes": "Knoten",
+    "edges": "Kanten",
+    "showLabels": "Beschriftungen",
+    "showArrows": "Pfeile",
+    "zoomIn": "Vergrößern",
+    "zoomOut": "Verkleinern",
+    "resetView": "Ansicht zurücksetzen",
+    "clearFocus": "Fokus entfernen",
+    "kind": {
+      "link": "Links",
+      "embed": "Einbettungen",
+      "mention": "Erwähnungen",
+      "parent": "Übergeordnet"
+    }
+  },
+  "import": {
+    "openDialogTitle": "Markdown importieren",
+    "success": "„{title}“ importiert",
+    "error": "Datei konnte nicht importiert werden"
+  },
+  "export": {
+    "buttonTitle": "Notiz exportieren",
+    "modalTitle": "Exportieren als",
+    "formatMarkdown": "Markdown (.md)",
+    "formatHtml": "HTML (.html)",
+    "formatDocx": "Word (.docx)",
+    "formatTypst": "Typst-Archiv (.zip)",
+    "formatPdf": "PDF",
+    "saveDialogTitle": "Als Markdown exportieren",
+    "saveHtmlDialogTitle": "Als HTML exportieren",
+    "saveDocxDialogTitle": "Als Word exportieren",
+    "saveTypstDialogTitle": "Als Typst-Archiv exportieren",
+    "savePdfDialogTitle": "Als PDF exportieren",
+    "savePdf": "PDF speichern",
+    "pdfSavingProgress": "Seite {current} / {total}",
+    "printButton": "PDF exportieren",
+    "pageSize": "Seitengröße",
+    "orientation": "Ausrichtung",
+    "portrait": "Hochformat",
+    "landscape": "Querformat",
+    "sections": {
+      "page": "Seite",
+      "typography": "Typografie",
+      "document": "Dokument",
+      "preview": "Vorschau"
+    },
+    "fontSize": "Größe",
+    "fontFamily": "Schriftart",
+    "fontDefault": "Standard",
+    "margins": "Ränder",
+    "marginTop": "Oben",
+    "marginRight": "Rechts",
+    "marginBottom": "Unten",
+    "marginLeft": "Links",
+    "paragraphSpacing": "Absatzabstand",
+    "exportNoteTitle": "Notiztitel",
+    "marginPresets": {
+      "narrow": "Schmal",
+      "normal": "Normal",
+      "wide": "Breit"
+    },
+    "lineSpacing": "Zeilenabstand",
+    "lineSpacings": {
+      "compact": "Kompakt",
+      "normal": "Normal",
+      "relaxed": "Entspannt"
+    },
+    "pageNumbers": "Seitenzahlen",
+    "headingNumbers": "Überschriftsnummern",
+    "tableOfContents": "Inhaltsverzeichnis",
+    "titlePage": "Titelseite",
+    "runningHeader": "Laufende Kopfzeile",
+    "previewZoom": "Vorschau-Zoom",
+    "fitWidth": "An Breite anpassen",
+    "pdfGenerating": "PDF wird erstellt…",
+    "pdfGenerateError": "PDF-Vorschau konnte nicht erstellt werden.",
+    "pdfSaveError": "PDF konnte nicht gespeichert werden.",
+    "pdfPreviewTitle": "PDF-Vorschau",
+    "previewLoadingPage": "Seite wird geladen…",
+    "saveDocx": "DOCX speichern",
+    "docxPreviewTitle": "Word-Vorschau",
+    "docxGenerating": "Word-Dokument wird vorbereitet…",
+    "docxSaveError": "DOCX konnte nicht gespeichert werden.",
+    "pageBreak": "Seitenumbruch",
+    "formatDocxModalTitle": "Word-Format"
+  },
+  "media": {
+    "attachVideo": "Video anhängen",
+    "attachAudio": "Audio anhängen",
+    "video": "Video",
+    "audio": "Audio",
+    "replace": "Ersetzen",
+    "remove": "Entfernen",
+    "videoFile": "Videodatei",
+    "audioFile": "Audiodatei",
+    "play": "Wiedergeben",
+    "pause": "Pause"
+  },
+  "slashMenu": {
+    "categories": {
+      "text": "Text",
+      "lists": "Listen",
+      "code": "Code",
+      "media": "Medien",
+      "layout": "Layout"
+    },
+    "items": {
+      "paragraph": "Absatz",
+      "h1": "Überschrift 1",
+      "h2": "Überschrift 2",
+      "h3": "Überschrift 3",
+      "h4": "Überschrift 4",
+      "h5": "Überschrift 5",
+      "h6": "Überschrift 6",
+      "emoji": "Emoji",
+      "ul": "Aufzählung",
+      "ol": "Nummerierte Liste",
+      "checklist": "Aufgabe",
+      "toggle": "Umschalten",
+      "code": "Code-Block",
+      "math": "Mathe-Block",
+      "math_inline": "Inline-Mathe",
+      "image": "Bild",
+      "video": "Video",
+      "audio": "Audio",
+      "file": "Dateianhang",
+      "table": "Tabelle",
+      "mermaid": "Mermaid-Diagramm",
+      "draw": "Zeichnung",
+      "markmap": "Mindmap",
+      "chart": "Diagramm",
+      "database": "Datenbank",
+      "note_embed": "Notiz einbetten",
+      "embed": "Einbettung",
+      "insert_template": "Vorlage einfügen",
+      "quote": "Zitat",
+      "callout": "Hinweis",
+      "divider": "Trennlinie",
+      "ai_continue": "Weiterschreiben",
+      "ai_summarize": "Zusammenfassen",
+      "ai_ask": "KI fragen"
+    }
+  },
+  "noteEmbed": {
+    "pickNote": "Notiz wählen",
+    "change": "Ändern",
+    "open": "Öffnen",
+    "remove": "Entfernen",
+    "noNoteSelected": "Keine Notiz ausgewählt",
+    "untitled": "(unbenannt)",
+    "searchPlaceholder": "Notizen suchen...",
+    "noNotesFound": "Keine Notizen gefunden"
+  },
+  "embed": {
+    "pasteUrl": "URL einfügen",
+    "changeUrl": "URL ändern",
+    "open": "Öffnen",
+    "remove": "Entfernen",
+    "loading": "Einbettung wird geladen…",
+    "error": "Einbettung konnte nicht geladen werden",
+    "unsupported": "Nicht unterstützte URL"
+  },
+  "image": {
+    "menu": {
+      "caption": "Beschriftung",
+      "copy": "Kopieren",
+      "cut": "Ausschneiden",
+      "delete": "Löschen",
+      "align": "Ausrichten",
+      "alignLeft": "Links",
+      "alignCenter": "Zentriert",
+      "alignRight": "Rechts",
+      "width": "Breite"
+    },
+    "size": {
+      "small": "Klein",
+      "medium": "Mittel",
+      "large": "Groß",
+      "full": "Volle Breite"
+    }
+  },
+  "database": {
+    "titlePlaceholder": "Unbenannte Datenbank",
+    "view": {
+      "table": "Tabelle",
+      "list": "Liste",
+      "chart": "Diagramm",
+      "cards": "Karten",
+      "renamePlaceholder": "Ansichtsname"
+    },
+    "toolbar": {
+      "addView": "Ansicht hinzufügen",
+      "importCsv": "CSV importieren",
+      "deleteView": "Ansicht löschen",
+      "filter": "Filtern",
+      "sort": "Sortieren",
+      "settings": "Einstellungen"
+    },
+    "table": {
+      "rowNumber": "#",
+      "addField": "Feld hinzufügen",
+      "sum": "Summe",
+      "addRow": "Neue Zeile",
+      "empty": "Keine Datensätze"
+    },
+    "cell": {
+      "urlPlaceholder": "https://…",
+      "numberPlaceholder": "0",
+      "edit": "Bearbeiten",
+      "selectPlaceholder": "Auswählen…",
+      "noOptions": "Keine Optionen",
+      "checked": "Markiert",
+      "unchecked": "Nicht markiert"
+    },
+    "field": {
+      "defaultName": "Feld",
+      "namePlaceholder": "Feldname",
+      "type": "Feldtyp",
+      "options": "Optionen",
+      "optionNamePlaceholder": "Optionsname",
+      "addOption": "Option hinzufügen",
+      "delete": "Feld löschen"
+    },
+    "fieldTypes": {
+      "text": "Text",
+      "number": "Zahl",
+      "date": "Datum",
+      "select": "Auswahl",
+      "multi_select": "Mehrfachauswahl",
+      "checkbox": "Kontrollkästchen",
+      "url": "URL"
+    },
+    "list": {
+      "untitled": "Unbenannt"
+    },
+    "filter": {
+      "where": "Wo",
+      "and": "und",
+      "empty": "Keine Filter",
+      "checked": "Markiert",
+      "unchecked": "Nicht markiert",
+      "selectValue": "Wert auswählen",
+      "noOptions": "Keine Optionen",
+      "valuePlaceholder": "Wert",
+      "removeRule": "Filter entfernen",
+      "addRule": "Filter hinzufügen",
+      "clearAll": "Alle leeren",
+      "op": {
+        "contains": "enthält",
+        "not_contains": "enthält nicht",
+        "is": "ist",
+        "is_not": "ist nicht",
+        "is_empty": "ist leer",
+        "is_not_empty": "ist nicht leer",
+        "eq": "=",
+        "neq": "≠",
+        "gt": ">",
+        "lt": "<",
+        "gte": "≥",
+        "lte": "≤",
+        "before": "vor",
+        "after": "nach",
+        "has_any": "hat eines von",
+        "has_all": "hat alle von",
+        "has_none": "hat keines von"
+      }
+    },
+    "sort": {
+      "empty": "Keine Sortierung",
+      "sortBy": "Sortieren nach",
+      "then": "dann nach",
+      "asc": "Aufsteigend",
+      "desc": "Absteigend",
+      "removeRule": "Sortierung entfernen",
+      "addRule": "Sortierung hinzufügen",
+      "clearAll": "Alle leeren"
+    },
+    "settings": {
+      "renameView": "Ansichtsname",
+      "gridLines": "Gitterlinien",
+      "stripedRows": "Gestreifte Zeilen",
+      "compact": "Kompakte Zeilen",
+      "showRowNumbers": "Zeilennummern anzeigen",
+      "rowColorScheme": "Zeilenfarbe",
+      "rowColorSchemes": {
+        "neutral": "Neutral",
+        "blue": "Sanftes Blau",
+        "green": "Sanftes Grün",
+        "amber": "Warmes Bernstein",
+        "lavender": "Lavendel"
+      },
+      "deleteDatabase": "Datenbank löschen"
+    },
+    "chart": {
+      "kinds": {
+        "bar": "Balken",
+        "line": "Linie",
+        "area": "Fläche",
+        "pie": "Torte"
+      },
+      "xField": "X-Achse",
+      "yFields": "Werte",
+      "selected": "ausgewählt",
+      "addSeries": "Wert hinzufügen",
+      "removeSeries": "Wert entfernen",
+      "countHint": "Keine Werte ausgewählt — das Diagramm zeigt die Datensatzanzahl.",
+      "yFieldCount": "Anzahl",
+      "aggregates": {
+        "sum": "Summe",
+        "count": "Anzahl",
+        "avg": "Durchschnitt",
+        "min": "Min",
+        "max": "Max"
+      },
+      "emptyGroup": "(leer)",
+      "noFields": "Fügen Sie ein Feld hinzu, um ein Diagramm zu erstellen",
+      "empty": "Keine Daten anzuzeigen",
+      "importPrompt": "CSV importieren"
+    },
+    "csv": {
+      "title": "CSV importieren",
+      "chooseFile": "Datei wählen…",
+      "dropHint": ".csv-Datei zum Importieren auswählen",
+      "parseError": "Datei konnte nicht geparst werden",
+      "delimiter": "Spaltentrennzeichen",
+      "delimiters": {
+        "comma": "Komma ( , )",
+        "semicolon": "Semikolon ( ; )",
+        "tab": "Tabulator",
+        "pipe": "Senkrechter Strich ( | )"
+      },
+      "firstRowHeader": "Erste Zeile ist Kopfzeile",
+      "columnMapping": "Spaltenzuordnung",
+      "columnName": "Spalte",
+      "preview": "Vorschau",
+      "rowsCount": "Zeilen",
+      "mode": "Importmodus",
+      "modeReplace": "Bestehende Daten ersetzen",
+      "modeAppend": "An bestehende Daten anhängen",
+      "cancel": "Abbrechen",
+      "import": "Importieren"
+    }
+  },
+  "kanban": {
+    "common": {
+      "back": "Zurück",
+      "close": "Schließen",
+      "cancel": "Abbrechen",
+      "clear": "Leeren",
+      "save": "Speichern",
+      "saving": "Wird gespeichert…",
+      "retry": "Erneut versuchen",
+      "delete": "Löschen"
+    },
+    "defaultTags": {
+      "fieldName": "Tags",
+      "urgent": "Dringend",
+      "feature": "In Arbeit"
+    },
+    "view": {
+      "loading": "Wird geladen…",
+      "loadBoardErrorTitle": "Dieses Board konnte nicht geladen werden.",
+      "loadBoardFallback": "Board konnte nicht geladen werden.",
+      "loadCardsFallback": "Karten konnten nicht geladen werden.",
+      "boardNotFound": "Board nicht gefunden.",
+      "boardUnavailable": "Board ist nicht verfügbar.",
+      "moveFailed": "Verschieben fehlgeschlagen: {message}",
+      "cardCount": "{n} Elemente",
+      "openAutomations": "Automatisierungen",
+      "emptyTitle": "Ein leeres Board.",
+      "emptyHint": "Fügen Sie Ihre erste Spalte hinzu und beginnen Sie, oder starten Sie aus einer Vorlage.",
+      "openTemplates": "Vorlagen…",
+      "addColumn": "Spalte hinzufügen",
+      "renameColumn": "Spalte umbenennen",
+      "deleteColumn": "Spalte löschen",
+      "newColumn": "Neue Spalte",
+      "columnMenu": "Spaltenmenü",
+      "editingColumn": "Bearbeiten",
+      "noResultsTitle": "Keine passenden Karten.",
+      "noResultsHint": "Leeren Sie die Suche oder passen Sie die Filter an, um Karten zurückzuholen."
+    },
+    "board": {
+      "addCard": "Karte hinzufügen",
+      "newCard": "Neue Karte",
+      "quickAdd": "Neu",
+      "quickAddPlaceholder": "Aufgabenname…",
+      "wipCap": "am WIP-Limit",
+      "dropHere": "Hier ablegen · Status →",
+      "dropCard": "Karte hier ablegen",
+      "emptyColumn": "Hier ablegen oder Karte erstellen",
+      "dragCard": "Karte ziehen"
+    },
+    "card": {
+      "untitled": "Unbenannt",
+      "unknownCard": "Unbekannte Karte",
+      "addField": "Feld hinzufügen",
+      "addTag": "Tag hinzufügen",
+      "enableTags": "Tags aktivieren",
+      "linkCard": "Karte verknüpfen",
+      "notes": "Notizen",
+      "notesPlaceholder": "Notizen, Akzeptanzkriterien, Kontext hinzufügen…",
+      "linked": "Verknüpfte Karten",
+      "linkedEmpty": "Noch keine verknüpften Karten",
+      "blocked": "Blockiert durch",
+      "blocks": "Blockiert",
+      "related": "Verknüpft",
+      "searchCards": "Karten suchen…",
+      "noCardsFound": "Keine Karten gefunden",
+      "properties": "Eigenschaften",
+      "checked": "Markiert",
+      "unchecked": "Nicht markiert",
+      "automation": "Automatisierung",
+      "unsavedChanges": "Sie haben ungespeicherte Änderungen. Verwerfen?",
+      "deleteConfirm": "Diese Karte löschen?",
+      "dialogLabel": "Kartendetails",
+      "titlePlaceholder": "Kartentitel",
+      "fieldType": "Feldtyp",
+      "fieldOptions": "Feldoptionen",
+      "fieldNamePlaceholder": "Feldname",
+      "optionPlaceholder": "Optionsname",
+      "optionDefault": "Option",
+      "addOption": "Option hinzufügen",
+      "newField": "Neues Feld",
+      "checkboxLabel": "Markiert",
+      "askAI": "KI fragen",
+      "share": "Teilen",
+      "createdAt": "Erstellt",
+      "updatedAt": "Zuletzt bearbeitet",
+      "saveHint": "Strg/Cmd + Eingabe zum Speichern",
+      "progress": "Fortschritt",
+      "progressTasks": "{done} / {total} Aufgaben ({pct}%)",
+      "progressNoTasks": "Keine Aufgaben",
+      "priority": "Priorität",
+      "priorityLevels": {
+        "none": "Keine Priorität",
+        "low": "Niedrig",
+        "medium": "Mittel",
+        "high": "Hoch",
+        "urgent": "Dringend"
+      },
+      "fieldTypes": {
+        "text": "Text",
+        "number": "Zahl",
+        "date": "Datum",
+        "checkbox": "Kontrollkästchen",
+        "select": "Auswahl",
+        "multiSelect": "Mehrfachauswahl"
+      }
+    },
+    "modal": {
+      "addCardTitle": "Karte hinzufügen",
+      "titlePlaceholder": "Kartentitel…",
+      "column": "Spalte",
+      "add": "Karte hinzufügen"
+    },
+    "toolbar": {
+      "filter": "Filtern",
+      "sort": "Sortieren",
+      "search": "Karten filtern…",
+      "viewBoard": "Board",
+      "viewTable": "Tabelle",
+      "viewCalendar": "Kalender",
+      "filters": "{n} Filter",
+      "sorts": "{n} Sortierungen",
+      "display": "Anzeige",
+      "displayProperties": "Karteneigenschaften",
+      "showPreview": "Vorschau anzeigen",
+      "cardDensity": "Kartendichte",
+      "densityComfortable": "Komfortabel",
+      "densityCompact": "Kompakt",
+      "noProperties": "Keine Karteneigenschaften",
+      "boardSettings": "Board-Einstellungen"
+    },
+    "filter": {
+      "empty": "Keine Filter. Fügen Sie eine Regel hinzu, um Karten einzugrenzen.",
+      "where": "Wo",
+      "and": "Und",
+      "addRule": "Filter hinzufügen",
+      "clearAll": "Alle leeren",
+      "removeRule": "Filter entfernen",
+      "valuePlaceholder": "Wert…",
+      "selectValue": "Auswählen…",
+      "checked": "Markiert",
+      "unchecked": "Nicht markiert",
+      "noOptions": "Keine Optionen",
+      "op": {
+        "contains": "enthält",
+        "not_contains": "enthält nicht",
+        "is": "ist",
+        "is_not": "ist nicht",
+        "is_empty": "ist leer",
+        "is_not_empty": "ist nicht leer",
+        "eq": "=",
+        "neq": "≠",
+        "gt": ">",
+        "lt": "<",
+        "gte": "≥",
+        "lte": "≤",
+        "before": "vor",
+        "after": "nach",
+        "has_any": "hat eines von",
+        "has_all": "hat alle",
+        "has_none": "hat keines von"
+      }
+    },
+    "sort": {
+      "empty": "Keine Sortierung. Feld hinzufügen, um Karten zu sortieren.",
+      "sortBy": "Sortieren nach",
+      "then": "Dann nach",
+      "addRule": "Sortierung hinzufügen",
+      "clearAll": "Alle leeren",
+      "removeRule": "Sortierung entfernen",
+      "asc": "Aufst.",
+      "desc": "Abst."
+    },
+    "calendar": {
+      "today": "Heute",
+      "month": "Monat",
+      "week": "Woche",
+      "day": "Tag",
+      "chooseField": "Feld wählen",
+      "pickFirstField": "Erstes Datumsfeld verwenden",
+      "noDateProp": "Kein Datumsfeld ausgewählt",
+      "noDateHint": "Wählen Sie ein lokales Datumsfeld aus Karten für die Kalenderansicht.",
+      "dropReschedule": "Ablegen zum Verschieben",
+      "noEvents": "Keine Termine",
+      "allDay": "Ganztägig"
+    },
+    "automations": {
+      "title": "Automatisierungen & Vorlagen",
+      "openButton": "Automatisierungen",
+      "sectionAutomations": "Automatisierungen",
+      "active": "{n} aktiv",
+      "newRule": "Neue Regel",
+      "noAutomations": "Keine Automatisierungen",
+      "noAutomationsHint": "Regeln werden automatisch ausgeführt, wenn die Triggerbedingungen erfüllt sind.",
+      "depGraph": "Abhängigkeitsgraph",
+      "noDeps": "Noch keine Abhängigkeiten erfasst",
+      "noDepsHint": "Verknüpfen Sie Karten als „blockiert“ oder „blockiert durch“ im Karten-Dialog, um einen Abhängigkeitsgraphen aufzubauen.",
+      "templates": "Kartenvorlagen",
+      "saveAs": "Aktuelle speichern als…",
+      "insertTemplate": "Aus Vorlage einfügen",
+      "runCount": "{n}× diese Woche ausgeführt",
+      "triggerPrefix": "Wenn",
+      "action": {
+        "moveTo": "verschieben nach {value}",
+        "setProgress": "Fortschritt auf 100% setzen",
+        "addTag": "taggen #{value}",
+        "notify": "Verantwortlichen benachrichtigen"
+      },
+      "trigger": {
+        "subtasksDone": "alle Unteraufgaben erledigt",
+        "statusChange": "Status → {value}",
+        "dueDateNear": "Fälligkeit in 3 Tagen"
+      },
+      "templatesData": {
+        "engineeringTicket": {
+          "name": "Engineering-Ticket",
+          "description": "5 Felder · 3-stufige Unteraufgaben"
+        },
+        "designReview": {
+          "name": "Design-Review",
+          "description": "Cover + Kritik-Checkliste"
+        },
+        "weeklyRetro": {
+          "name": "Wöchentliche Retro",
+          "description": "4 Fragen · vorausgefüllt"
+        },
+        "bugReport": {
+          "name": "Fehlerbericht",
+          "description": "Reproduktion + Umgebung + Schweregrad"
+        }
+      }
+    },
+    "groups": {
+      "status": "Status",
+      "priority": "Priorität",
+      "tag": "Tag",
+      "owner": "Verantwortlicher",
+      "date": "Datum",
+      "chooseField": "Feld wählen",
+      "noFieldSelected": "Wählen Sie ein Feld, um Gruppen zu bilden.",
+      "pickFirstField": "Erstes passendes Feld verwenden",
+      "unassigned": "Nicht zugewiesen",
+      "untagged": "Ohne Tag",
+      "noPriority": "Keine Priorität",
+      "noDate": "Kein Datum",
+      "today": "Heute",
+      "thisWeek": "Diese Woche",
+      "later": "Später",
+      "overdue": "Überfällig",
+      "allCards": "Alle Karten"
+    },
+    "table": {
+      "title": "Titel",
+      "status": "Status",
+      "chooseFields": "Felder wählen",
+      "noFields": "Keine lokalen Felder",
+      "noTitle": "Unbenannt",
+      "items": "{n} Elemente · {g} Gruppen",
+      "avgProgress": "ø {n}%"
+    },
+    "propertyPanel": {
+      "title": "Board-Eigenschaften",
+      "columns": "Spalten (Status)",
+      "properties": "Karteneigenschaften",
+      "addColumn": "Spalte hinzufügen",
+      "addProperty": "Eigenschaft hinzufügen",
+      "addOption": "Option hinzufügen",
+      "impactTitle": "Änderungen wirken sich auf bestehende Karten aus",
+      "impactColumns": "{n} Karte(n) in gelöschter(n) Spalte(n) werden in die erste verbleibende Spalte verschoben.",
+      "impactProperties": "{n} Karte(n) mit Werten in gelöschter(n) Eigenschaft(en) verlieren diese Werte.",
+      "validationMissingStatus": "Statuseigenschaft fehlt",
+      "validationNeedColumn": "Mindestens eine Spalte ist erforderlich",
+      "newColumn": "Neue Spalte",
+      "newProperty": "Neue Eigenschaft",
+      "option": "Option",
+      "types": {
+        "text": "Text",
+        "select": "Auswahl",
+        "multi_select": "Mehrfachauswahl",
+        "date": "Datum",
+        "number": "Zahl",
+        "checkbox": "Kontrollkästchen"
+      }
+    },
+    "boardModal": {
+      "createTitle": "Neues Board",
+      "createDescription": "Legen Sie einen Namen und ein Symbol fest, um Ihren Workflow zu starten.",
+      "renameTitle": "Board umbenennen",
+      "deleteTitle": "Board löschen",
+      "boardName": "Boardname",
+      "boardNamePlaceholder": "Boardname",
+      "icon": "Symbol",
+      "newBoard": "Neues Board",
+      "untitled": "Unbenannt",
+      "thisBoard": "dieses Board",
+      "deleteConfirm": "{title} löschen? Alle Karten werden endgültig entfernt.",
+      "create": "Erstellen"
+    },
+    "embedded": {
+      "cardCount": "{n} Karten",
+      "openFullView": "Vollständige Ansicht öffnen",
+      "linkedTo": "Verknüpft mit {title}",
+      "syncedSeconds": "vor {n}s synchronisiert",
+      "syncedMinutes": "vor {n}min synchronisiert",
+      "noColumns": "Keine Spalten definiert",
+      "openFooter": "Vollständige Ansicht öffnen ↗"
+    }
+  },
+  "cloud": {
+    "signIn": {
+      "title": "Bei Nevo anmelden",
+      "subtitle": "Melden Sie sich an, um gemeinsam genutzte Speicher mit Ihrem Team zu erstellen und beizutreten. Ihre persönlichen Arbeitsbereiche bleiben lokal.",
+      "google": "Mit Google fortfahren",
+      "github": "Mit GitHub fortfahren",
+      "serverLabel": "Server-URL",
+      "authenticating": "Warten auf Browser…",
+      "back": "Zurück"
+    },
+    "account": {
+      "signedInAs": "Angemeldet als {name}",
+      "signOut": "Abmelden",
+      "signIn": "Anmelden"
+    },
+    "storages": {
+      "title": "Gemeinsam genutzte Speicher",
+      "empty": "Keine gemeinsam genutzten Speicher. Erstellen Sie einen, um mit Ihrem Team zusammenzuarbeiten.",
+      "create": "Neuer gemeinsam genutzter Speicher",
+      "namePlaceholder": "Speichername",
+      "createAction": "Erstellen",
+      "open": "Öffnen",
+      "documents": "{n} Dokumente"
+    },
+    "roles": {
+      "owner": "Eigentümer",
+      "admin": "Administrator",
+      "editor": "Bearbeiter",
+      "viewer": "Betrachter"
+    },
+    "members": {
+      "title": "Mitglieder",
+      "you": "Sie",
+      "pending": "Ausstehender Schlüssel",
+      "approve": "Zugriff gewähren",
+      "remove": "Entfernen",
+      "invite": "Einladen",
+      "invitePlaceholder": "email{'@'}beispiel.com",
+      "inviteAction": "Einladung senden",
+      "pendingInvites": "Ausstehende Einladungen",
+      "approveHint": "Dieses Mitglied wartet auf den Verschlüsselungsschlüssel. Gewähren Sie Zugang, um es hereinzulassen."
+    },
+    "errors": {
+      "noKey": "Sie haben noch nicht den Schlüssel für diesen Speicher — bitten Sie einen Eigentümer oder Administrator um Zugang.",
+      "generic": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
+    }
+  }
+}

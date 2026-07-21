@@ -1,6 +1,6 @@
 use super::paths::{plugins_dir_path, workspace_context, workspace_error_context};
 use super::settings::is_extended_diagnostics_enabled;
-use super::types::PluginManifest;
+use super::types::{PluginExecutionMode, PluginManifest};
 use crate::commands::path_utils::normalize_workspace_path;
 use crate::logging::{LogContext, LogError};
 
@@ -92,6 +92,9 @@ fn bundled_system_plugins() -> Vec<(PluginManifest, &'static str)> {
                 source: "bundled".to_string(),
                 entry_point: "index.js".to_string(),
                 api_version: "1.0.0".to_string(),
+                execution_mode: PluginExecutionMode::TrustedWebview,
+                data_version: 1,
+                capabilities: None,
                 editor_capabilities: vec![],
                 ui_capabilities: vec![
                     "workspace.view.register".to_string(),
@@ -102,6 +105,7 @@ fn bundled_system_plugins() -> Vec<(PluginManifest, &'static str)> {
                     "kanban.write".to_string(),
                     "workspace.read".to_string(),
                 ],
+                network: None,
                 nevo_version_range: Some("^1.0.0".to_string()),
                 priority: Some(40),
                 settings_schema: vec![],
@@ -119,6 +123,9 @@ fn bundled_system_plugins() -> Vec<(PluginManifest, &'static str)> {
                 source: "bundled".to_string(),
                 entry_point: "index.js".to_string(),
                 api_version: "1.0.0".to_string(),
+                execution_mode: PluginExecutionMode::TrustedWebview,
+                data_version: 1,
+                capabilities: None,
                 editor_capabilities: vec![],
                 ui_capabilities: vec!["workspace.view.register".to_string()],
                 workspace_capabilities: vec![
@@ -126,6 +133,7 @@ fn bundled_system_plugins() -> Vec<(PluginManifest, &'static str)> {
                     "template.write".to_string(),
                     "note.write".to_string(),
                 ],
+                network: None,
                 nevo_version_range: Some("^1.0.0".to_string()),
                 priority: Some(30),
                 settings_schema: vec![],
@@ -143,9 +151,13 @@ fn bundled_system_plugins() -> Vec<(PluginManifest, &'static str)> {
                 source: "bundled".to_string(),
                 entry_point: "index.js".to_string(),
                 api_version: "1.0.0".to_string(),
+                execution_mode: PluginExecutionMode::TrustedWebview,
+                data_version: 1,
+                capabilities: None,
                 editor_capabilities: vec!["editor.write".to_string()],
                 ui_capabilities: vec![],
                 workspace_capabilities: vec![],
+                network: None,
                 nevo_version_range: Some("^1.0.0".to_string()),
                 priority: Some(20),
                 settings_schema: vec![],
@@ -163,9 +175,13 @@ fn bundled_system_plugins() -> Vec<(PluginManifest, &'static str)> {
                 source: "bundled".to_string(),
                 entry_point: "index.js".to_string(),
                 api_version: "1.0.0".to_string(),
+                execution_mode: PluginExecutionMode::TrustedWebview,
+                data_version: 1,
+                capabilities: None,
                 editor_capabilities: vec!["editor.write".to_string()],
                 ui_capabilities: vec![],
                 workspace_capabilities: vec![],
+                network: None,
                 nevo_version_range: Some("^1.0.0".to_string()),
                 priority: Some(20),
                 settings_schema: vec![],
@@ -183,9 +199,13 @@ fn bundled_system_plugins() -> Vec<(PluginManifest, &'static str)> {
                 source: "bundled".to_string(),
                 entry_point: "index.js".to_string(),
                 api_version: "1.0.0".to_string(),
+                execution_mode: PluginExecutionMode::TrustedWebview,
+                data_version: 1,
+                capabilities: None,
                 editor_capabilities: vec![],
                 ui_capabilities: vec![],
                 workspace_capabilities: vec![],
+                network: None,
                 nevo_version_range: Some("^1.0.0".to_string()),
                 priority: Some(10),
                 settings_schema: vec![
@@ -275,7 +295,7 @@ pub(crate) fn ensure_bundled_system_plugins(workspace_path: &str) -> Result<(), 
 #[tauri::command]
 pub fn list_plugins(workspace_path: String) -> Result<Vec<PluginManifest>, String> {
     let logger = crate::logging::logger();
-    let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
+    let workspace_path = normalize_workspace_path(&workspace_path).inspect_err(|message| {
         let _ = logger.error(
             "tauri.workspace",
             "list_plugins",
@@ -286,7 +306,6 @@ pub fn list_plugins(workspace_path: String) -> Result<Vec<PluginManifest>, Strin
                 details: None,
             }),
         );
-        message
     })?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let diagnostics_enabled = is_extended_diagnostics_enabled(&workspace_path);
@@ -359,7 +378,7 @@ pub fn validate_plugin_manifest(
 ) -> Result<PluginManifest, String> {
     validate_plugin_id(&plugin_id)?;
     let logger = crate::logging::logger();
-    let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
+    let workspace_path = normalize_workspace_path(&workspace_path).inspect_err(|message| {
         let _ = logger.error(
             "tauri.workspace",
             "validate_plugin_manifest",
@@ -370,7 +389,6 @@ pub fn validate_plugin_manifest(
                 details: None,
             }),
         );
-        message
     })?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let diagnostics_enabled = is_extended_diagnostics_enabled(&workspace_path);
@@ -417,7 +435,7 @@ pub fn set_plugin_enabled(
 ) -> Result<(), String> {
     validate_plugin_id(&plugin_id)?;
     let logger = crate::logging::logger();
-    let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
+    let workspace_path = normalize_workspace_path(&workspace_path).inspect_err(|message| {
         let _ = logger.error(
             "tauri.workspace",
             "set_plugin_enabled",
@@ -428,7 +446,6 @@ pub fn set_plugin_enabled(
                 details: None,
             }),
         );
-        message
     })?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let diagnostics_enabled = is_extended_diagnostics_enabled(&workspace_path);
@@ -493,7 +510,7 @@ pub fn set_plugin_enabled(
 mod tests {
     use super::{ensure_bundled_system_plugins, validate_plugin_id};
     use crate::commands::workspace::paths::plugins_dir_path;
-    use crate::commands::workspace::types::PluginManifest;
+    use crate::commands::workspace::types::{PluginExecutionMode, PluginManifest};
     use std::path::PathBuf;
 
     fn temp_workspace(name: &str) -> PathBuf {
@@ -521,6 +538,25 @@ mod tests {
         assert!(validate_plugin_id("a/b").is_err());
         assert!(validate_plugin_id("a\\b").is_err());
         assert!(validate_plugin_id("a b").is_err());
+    }
+
+    #[test]
+    fn legacy_manifests_default_to_trusted_webview_execution() {
+        let manifest: PluginManifest = serde_json::from_str(
+            r#"{
+  "id": "plugin.legacy",
+  "name": "Legacy",
+  "version": "1.0.0",
+  "enabled": true,
+  "entryPoint": "index.js",
+  "apiVersion": "1.0.0"
+}"#,
+        )
+        .expect("parse legacy manifest");
+
+        assert_eq!(manifest.execution_mode, PluginExecutionMode::TrustedWebview);
+        let serialized = serde_json::to_value(manifest).expect("serialize manifest");
+        assert_eq!(serialized["executionMode"], "trusted-webview");
     }
 
     #[test]

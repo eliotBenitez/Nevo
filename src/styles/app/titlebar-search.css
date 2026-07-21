@@ -10,6 +10,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 100%;
   min-height: 30px;
   padding: 0 10px;
   border: 1px solid var(--line-1);
@@ -20,13 +21,19 @@
     0 10px 26px -20px oklch(0 0 0 / 0.3);
 }
 
-.titlebar-search__field.is-open {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 55%, transparent);
+.titlebar-search__field--trigger {
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
 
-.titlebar-search__field:focus-within {
+.titlebar-search__field--trigger:hover,
+.titlebar-search__field--trigger:focus-visible {
   border-color: var(--accent);
+}
+
+.titlebar-search__field--trigger:focus-visible {
+  outline: none;
   box-shadow: 0 0 0 2px var(--accent-soft), 0 0 0 1px color-mix(in oklab, var(--accent) 62%, transparent);
 }
 
@@ -35,18 +42,15 @@
   flex-shrink: 0;
 }
 
-.titlebar-search__input {
+.titlebar-search__label {
+  overflow: hidden;
   width: 100%;
   min-width: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--text-1);
-  font-size: 12px;
-}
-
-.titlebar-search__input::placeholder {
   color: var(--text-4);
+  font-size: 12px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .titlebar-search__hints {
@@ -67,139 +71,6 @@
 .titlebar-search__hint-key {
   min-width: 18px;
   color: var(--text-4);
-}
-
-.titlebar-search__dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  right: 0;
-  max-height: min(68vh, 520px);
-  overflow: auto;
-  padding: 10px;
-  border: 1px solid var(--line-2);
-  border-radius: calc(18px * var(--radius-scale, 1));
-  background: color-mix(in oklab, var(--glass-2) 98%, var(--canvas-1));
-  box-shadow:
-    0 28px 70px oklch(0 0 0 / 0.28),
-    inset 0 1px 0 oklch(1 0 0 / 0.06);
-  backdrop-filter: blur(28px) saturate(155%);
-  -webkit-backdrop-filter: blur(28px) saturate(155%);
-}
-
-.titlebar-search__group + .titlebar-search__group {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line-1);
-}
-
-.titlebar-search__group-title {
-  margin-bottom: 6px;
-  color: var(--text-4);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.titlebar-search__result {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
-  border: 0;
-  border-radius: calc(12px * var(--radius-scale, 1));
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.titlebar-search__result:hover,
-.titlebar-search__result.is-active,
-.titlebar-search__result:focus-visible {
-  background: color-mix(in oklab, var(--accent) 16%, transparent);
-}
-
-.titlebar-search__result:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 1px var(--accent);
-}
-
-.titlebar-search__result-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.titlebar-search__result-title {
-  color: var(--text-1);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.titlebar-search__result-subtitle {
-  color: var(--text-4);
-  font-size: 11px;
-}
-
-.titlebar-search__result-body {
-  color: var(--text-3);
-  font-size: 11px;
-  line-height: 1.45;
-}
-
-.titlebar-search__empty {
-  padding: 14px 12px;
-}
-
-.titlebar-search__empty-title {
-  color: var(--text-2);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.titlebar-search__empty-subtitle {
-  margin-top: 4px;
-  color: var(--text-4);
-  font-size: 11px;
-  line-height: 1.45;
-}
-
-.titlebar-search__loading {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-  padding: 9px 12px;
-  border-radius: calc(10px * var(--radius-scale, 1));
-  background: color-mix(in oklab, var(--hover) 80%, transparent);
-  color: var(--text-3);
-  font-size: 11.5px;
-}
-
-.titlebar-search__loading--empty {
-  margin-top: 0;
-  padding: 0;
-  background: transparent;
-  color: var(--text-2);
-  font-weight: 600;
-}
-
-.titlebar-search__spinner {
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  border: 2px solid color-mix(in oklab, var(--accent) 18%, transparent);
-  border-top-color: var(--accent);
-  animation: titlebar-search-spin 800ms linear infinite;
-  flex: 0 0 auto;
-}
-
-@keyframes titlebar-search-spin {
-  to { transform: rotate(360deg); }
 }
 
 @media (max-width: 960px) {

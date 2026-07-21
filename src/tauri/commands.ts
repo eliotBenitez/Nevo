@@ -8,8 +8,10 @@ import type {
   WorkspaceSettings,
   PluginManifest,
   MarketplaceCatalog,
+  MarketplacePreparedPlugin,
+  MarketplaceMigrationBundle,
 } from '../types/workspace'
-import type { FolderMeta, ImportedImageAsset, NoteDocument, NoteSnapshotMeta, NoteSnapshotsEntry, SidebarNotePreview } from '../types/note'
+import type { FolderMeta, ImportedImageAsset, NoteDocument, NoteSnapshotMeta, NoteSnapshotsEntry, PickedImportedAsset, SidebarNotePreview, VaultManifest } from '../types/note'
 import type { WorkspaceBlockSearchItem } from '../types/search'
 import type { BacklinkRef, GraphEdge, ExtractedEdge } from '../types/graph'
 import type { KanbanBoard, KanbanCard } from '../types/kanban'
@@ -68,6 +70,31 @@ export const configCommands = {
     invokeCommand<string[]>('list_system_fonts'),
 }
 
+export type WorkspaceLocation = 'root' | 'notes' | 'assets' | 'metadata' | 'settings' | 'plugins'
+export type AppLocation = 'config' | 'appData' | 'logs'
+
+export const systemCommands = {
+  openWorkspaceLocation: (
+    workspacePath: string,
+    location: WorkspaceLocation,
+    options: { pluginId?: string; reveal?: boolean } = {},
+  ) => invokeCommand<void>('open_workspace_location', {
+    workspacePath,
+    location,
+    pluginId: options.pluginId,
+    reveal: options.reveal ?? false,
+  }),
+
+  openAppLocation: (location: AppLocation, reveal = false) =>
+    invokeCommand<void>('open_app_location', { location, reveal }),
+
+  openExternalUrl: (url: string) =>
+    invokeCommand<void>('open_external_url', { url }),
+
+  pickWorkspaceDirectory: () =>
+    invokeCommand<string | null>('pick_workspace_directory'),
+}
+
 export const workspaceCommands = {
   createWorkspace: (args: { path: string; name: string; glyph: string; gradient: string }) =>
     invokeCommand<WorkspaceManifest>('create_workspace', args),
@@ -99,14 +126,199 @@ export const workspaceCommands = {
   setPluginEnabled: (workspacePath: string, pluginId: string, enabled: boolean) =>
     invokeCommand<void>('set_plugin_enabled', { workspacePath, pluginId, enabled }),
 
+  createPluginCodeSession: (workspacePath: string, pluginId: string, entryPoint: string) =>
+    invokeCommand<{ token: string; entryUrl: string }>('plugin_create_code_session', {
+      workspacePath,
+      pluginId,
+      entryPoint,
+    }),
+
+  createStagedPluginCodeSession: (
+    workspacePath: string,
+    transactionId: string,
+    pluginId: string,
+    entryPoint: string,
+  ) => invokeCommand<{ token: string; entryUrl: string }>('plugin_create_staged_code_session', {
+    workspacePath,
+    transactionId,
+    pluginId,
+    entryPoint,
+  }),
+
+  revokePluginCodeSession: (token: string) =>
+    invokeCommand<void>('plugin_revoke_code_session', { token }),
+
+  pluginStorageGet: <T = unknown>(
+    workspacePath: string,
+    pluginId: string,
+    scope: 'workspace' | 'local',
+    key: string,
+  ) => invokeCommand<T | null>('plugin_storage_get', { workspacePath, pluginId, scope, key }),
+
+  pluginStorageSet: (
+    workspacePath: string,
+    pluginId: string,
+    scope: 'workspace' | 'local',
+    key: string,
+    value: unknown,
+  ) => invokeCommand<void>('plugin_storage_set', { workspacePath, pluginId, scope, key, value }),
+
+  pluginStorageDelete: (
+    workspacePath: string,
+    pluginId: string,
+    scope: 'workspace' | 'local',
+    key: string,
+  ) => invokeCommand<void>('plugin_storage_delete', { workspacePath, pluginId, scope, key }),
+
+  pluginStorageSnapshot: (
+    workspacePath: string,
+    pluginId: string,
+    scope: 'workspace' | 'local',
+  ) => invokeCommand<Record<string, unknown>>('plugin_storage_snapshot', {
+    workspacePath,
+    pluginId,
+    scope,
+  }),
+
+  pluginAssetWrite: (
+    workspacePath: string,
+    pluginId: string,
+    dataBase64: string,
+  ) => invokeCommand<string>('plugin_asset_write', { workspacePath, pluginId, dataBase64 }),
+
+  pluginAssetRead: (
+    workspacePath: string,
+    pluginId: string,
+    assetId: string,
+  ) => invokeCommand<string | null>('plugin_asset_read', { workspacePath, pluginId, assetId }),
+
+  pluginAssetDelete: (
+    workspacePath: string,
+    pluginId: string,
+    assetId: string,
+  ) => invokeCommand<void>('plugin_asset_delete', { workspacePath, pluginId, assetId }),
+
+  pluginAssetBeginUpload: (
+    workspacePath: string,
+    pluginId: string,
+  ) => invokeCommand<string>('plugin_asset_begin_upload', { workspacePath, pluginId }),
+
+  pluginAssetAppendChunk: (
+    workspacePath: string,
+    pluginId: string,
+    uploadId: string,
+    chunkBase64: string,
+  ) => invokeCommand<void>('plugin_asset_append_chunk', {
+    workspacePath,
+    pluginId,
+    uploadId,
+    chunkBase64,
+  }),
+
+  pluginAssetFinishUpload: (
+    workspacePath: string,
+    pluginId: string,
+    uploadId: string,
+  ) => invokeCommand<string>('plugin_asset_finish_upload', { workspacePath, pluginId, uploadId }),
+
+  pluginAssetAbortUpload: (
+    workspacePath: string,
+    pluginId: string,
+    uploadId: string,
+  ) => invokeCommand<void>('plugin_asset_abort_upload', { workspacePath, pluginId, uploadId }),
+
+  pluginAssetUrl: (
+    workspacePath: string,
+    pluginId: string,
+    assetId: string,
+  ) => invokeCommand<string>('plugin_asset_url', { workspacePath, pluginId, assetId }),
+
+  pluginRegistryLoad: (workspacePath: string) =>
+    invokeCommand<{
+      version: 1
+      plugins: Record<string, {
+        version: string
+        dataVersion: number
+        contributions: Array<Record<string, unknown>>
+      }>
+    }>('plugin_registry_load', { workspacePath }),
+
+  pluginRegistrySave: (
+    workspacePath: string,
+    registry: {
+      version: 1
+      plugins: Record<string, {
+        version: string
+        dataVersion: number
+        contributions: Array<Record<string, unknown>>
+      }>
+    },
+  ) => invokeCommand<void>('plugin_registry_save', { workspacePath, registry }),
+
+  pluginNetworkFetch: (
+    workspacePath: string,
+    pluginId: string,
+    request: {
+      url: string
+      method: string
+      headers?: Record<string, string>
+      bodyBase64?: string
+    },
+  ) => invokeCommand<{
+    status: number
+    headers: Record<string, string>
+    bodyBase64: string
+  }>('plugin_network_fetch', { workspacePath, pluginId, request }),
+
   marketplaceListPlugins: (workspacePath: string, forceRefresh = false) =>
     invokeCommand<MarketplaceCatalog>('marketplace_list_plugins', { workspacePath, forceRefresh }),
 
-  marketplaceInstallPlugin: (workspacePath: string, pluginId: string, version?: string) =>
-    invokeCommand<PluginManifest>('marketplace_install_plugin', { workspacePath, pluginId, version }),
+  marketplaceInstallPlugin: (
+    workspacePath: string,
+    pluginId: string,
+    permissionFingerprint: string,
+    version?: string,
+  ) => invokeCommand<PluginManifest>('marketplace_install_plugin', {
+    workspacePath,
+    pluginId,
+    version,
+    permissionFingerprint,
+  }),
 
-  marketplaceUpdatePlugin: (workspacePath: string, pluginId: string) =>
-    invokeCommand<PluginManifest>('marketplace_update_plugin', { workspacePath, pluginId }),
+  marketplaceUpdatePlugin: (workspacePath: string, pluginId: string, permissionFingerprint: string) =>
+    invokeCommand<PluginManifest>('marketplace_update_plugin', {
+      workspacePath,
+      pluginId,
+      permissionFingerprint,
+    }),
+
+  marketplacePreparePlugin: (
+    workspacePath: string,
+    pluginId: string,
+    permissionFingerprint: string,
+    options: { version?: string; update: boolean },
+  ) => invokeCommand<MarketplacePreparedPlugin>('marketplace_prepare_plugin', {
+    workspacePath,
+    pluginId,
+    version: options.version,
+    update: options.update,
+    permissionFingerprint,
+  }),
+
+  marketplaceCommitPlugin: (
+    workspacePath: string,
+    transactionId: string,
+    permissionFingerprint: string,
+    migration?: MarketplaceMigrationBundle,
+  ) => invokeCommand<PluginManifest>('marketplace_commit_plugin', {
+    workspacePath,
+    transactionId,
+    permissionFingerprint,
+    migration,
+  }),
+
+  marketplaceAbortPlugin: (workspacePath: string, transactionId: string) =>
+    invokeCommand<void>('marketplace_abort_plugin', { workspacePath, transactionId }),
 
   marketplaceRemovePlugin: (workspacePath: string, pluginId: string) =>
     invokeCommand<void>('marketplace_remove_plugin', { workspacePath, pluginId }),
@@ -151,6 +363,12 @@ export const noteCommands = {
   moveNote: (workspacePath: string, noteId: string, targetFolderId: string | null) =>
     invokeCommand<void>('move_note', { workspacePath, noteId, targetFolderId }),
 
+  // Bumps a note's `updated_at` (note file + manifest entry) without touching
+  // content. For callers that mutate a note's Y.Doc directly (bypassing
+  // saveNote), e.g. draw-canvas sync, so "recently modified" stays accurate.
+  touchNoteUpdatedAt: (workspacePath: string, noteId: string) =>
+    invokeCommand<string>('touch_note_updated_at', { workspacePath, noteId }),
+
   listSidebarNotePreviews: (workspacePath: string) =>
     invokeCommand<SidebarNotePreview[]>('list_sidebar_note_previews', { workspacePath }),
 
@@ -181,8 +399,11 @@ export const noteCommands = {
   importImageAsset: (workspacePath: string, fileName: string, bytes: number[]) =>
     invokeCommand<ImportedImageAsset>('import_image_asset', { workspacePath, fileName, bytes }),
 
-  importAssetByPath: (workspacePath: string, sourcePath: string, fileName: string) =>
-    invokeCommand<ImportedImageAsset>('import_asset_by_path', { workspacePath, sourcePath, fileName }),
+  pickAndImportAsset: (workspacePath: string, kind: 'image' | 'audio' | 'video' | 'file') =>
+    invokeCommand<PickedImportedAsset | null>('pick_and_import_asset', { workspacePath, kind }),
+
+  importClipboardImagePath: (workspacePath: string) =>
+    invokeCommand<PickedImportedAsset | null>('import_clipboard_image_path', { workspacePath }),
 
   importAssetFromUrl: (workspacePath: string, url: string) =>
     invokeCommand<ImportedImageAsset>('import_asset_from_url', { workspacePath, url }),
@@ -205,32 +426,63 @@ export const noteCommands = {
   searchWorkspaceBlocks: (workspacePath: string, query: string) =>
     invokeCommand<WorkspaceBlockSearchItem[]>('search_workspace_blocks', { workspacePath, query }),
 
-  exportNoteMarkdown: (workspacePath: string, exportPath: string, content: string, assetSrcs: string[]) =>
-    invokeCommand<void>('export_note_markdown', { workspacePath, exportPath, content, assetSrcs }),
+  exportNoteMarkdown: (
+    workspacePath: string,
+    defaultFileName: string,
+    content: string,
+    assetSrcs: string[],
+    assetsSubfolderName: string,
+  ) => invokeCommand<boolean>('export_note_markdown', {
+    workspacePath,
+    defaultFileName,
+    content,
+    assetSrcs,
+    assetsSubfolderName,
+  }),
 
-  exportNoteHtml: (workspacePath: string, exportPath: string, content: string, assetSrcs: string[]) =>
-    invokeCommand<void>('export_note_html', { workspacePath, exportPath, content, assetSrcs }),
+  exportNoteHtml: (
+    workspacePath: string,
+    defaultFileName: string,
+    content: string,
+    assetSrcs: string[],
+    assetsSubfolderName: string,
+  ) => invokeCommand<boolean>('export_note_html', {
+    workspacePath,
+    defaultFileName,
+    content,
+    assetSrcs,
+    assetsSubfolderName,
+  }),
 
-  exportNoteDocx: (exportPath: string, bytes: number[]) =>
-    invokeCommand<void>('export_note_docx', { exportPath, bytes }),
+  exportNoteDocx: (defaultFileName: string, bytes: number[]) =>
+    invokeCommand<boolean>('export_note_docx', { defaultFileName, bytes }),
 
-  exportNotePdf: (workspacePath: string, exportPath: string, typstSource: string, assets: TypstAsset[]) =>
-    invokeCommand<void>('export_note_pdf', { workspacePath, exportPath, typstSource, assets }),
+  exportNotePdf: (workspacePath: string, defaultFileName: string, typstSource: string, assets: TypstAsset[]) =>
+    invokeCommand<boolean>('export_note_pdf', { workspacePath, defaultFileName, typstSource, assets }),
 
-  exportNoteTypstArchive: (workspacePath: string, exportPath: string, typstSource: string, assets: TypstAsset[]) =>
-    invokeCommand<void>('export_note_typst_archive', { workspacePath, exportPath, typstSource, assets }),
+  exportNoteTypstArchive: (workspacePath: string, defaultFileName: string, typstSource: string, assets: TypstAsset[]) =>
+    invokeCommand<boolean>('export_note_typst_archive', { workspacePath, defaultFileName, typstSource, assets }),
 
-  exportDrawFile: (exportPath: string, bytes: number[]) =>
-    invokeCommand<void>('export_draw_file', { exportPath, bytes }),
+  exportDrawFile: (defaultFileName: string, bytes: number[]) =>
+    invokeCommand<boolean>('export_draw_file', { defaultFileName, bytes }),
 
-  renderNotePdfPreview: (workspacePath: string, typstSource: string, assets: TypstAsset[]) =>
-    invokeCommand<string[]>('render_note_pdf_preview', { workspacePath, typstSource, assets }),
+  prepareNotePdfPreview: (workspacePath: string, typstSource: string, assets: TypstAsset[]) =>
+    invokeCommand<{ token: number; totalPages: number }>('prepare_note_pdf_preview', { workspacePath, typstSource, assets }),
 
-  readTextFile: (path: string) =>
-    invokeCommand<string>('read_text_file', { path }),
+  renderNotePdfPreviewPages: (token: number, start: number, count: number) =>
+    invokeCommand<string[]>('render_note_pdf_preview_pages', { token, start, count }),
 
-  openFilePath: (path: string) =>
-    invokeCommand<void>('open_file_path', { path }),
+  pickAndReadTextFile: () =>
+    invokeCommand<{ content: string; fileName: string } | null>('pick_and_read_text_file'),
+
+  openWorkspaceAsset: (workspacePath: string, assetSrc: string) =>
+    invokeCommand<void>('open_workspace_asset', { workspacePath, assetSrc }),
+
+  readObsidianVault: (vaultPath: string) =>
+    invokeCommand<VaultManifest>('read_obsidian_vault', { vaultPath }),
+
+  importVaultAsset: (workspacePath: string, vaultPath: string, relativePath: string) =>
+    invokeCommand<ImportedImageAsset>('import_vault_asset', { workspacePath, vaultPath, relativePath }),
 }
 
 export const templateCommands = {
@@ -257,6 +509,7 @@ export interface CollabServerInfo {
   url: string
   localIp: string
   port: number
+  sessionToken: string
 }
 
 export const collabCommands = {

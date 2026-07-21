@@ -1,4 +1,4 @@
-import type { AppConfig, HotkeyBinding, HotkeyScope, RecentWorkspace, ThemeSchedule, WorkspaceSettings, WorkspaceView } from '../../types/workspace'
+import type { AppConfig, HotkeyBinding, HotkeyScope, RecentWorkspace, ThemeSchedule, WorkspaceHomeFavorite, WorkspaceSettings, WorkspaceView } from '../../types/workspace'
 import { normalizeHotkeyChord } from '../hotkey-chords'
 import { DEFAULT_HOTKEY_BINDINGS, createDefaultAppConfig, createDefaultWorkspaceSettings } from './defaults'
 
@@ -71,6 +71,57 @@ function normalizeThemeSchedule(value: unknown, fallback: ThemeSchedule): ThemeS
   }
 }
 
+export function workspaceHomeFavoriteKey(favorite: WorkspaceHomeFavorite): string {
+  if (favorite.kind === 'graph') return 'graph'
+  if (favorite.kind === 'pluginView') {
+    return `pluginView:${favorite.pluginId}:${favorite.contributionId}`
+  }
+  return `${favorite.kind}:${favorite.id}`
+}
+
+export function normalizeHomeFavorites(value: unknown): WorkspaceHomeFavorite[] {
+  if (!Array.isArray(value)) return []
+
+  const normalized: WorkspaceHomeFavorite[] = []
+  const seen = new Set<string>()
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue
+    const raw = entry as Record<string, unknown>
+    let favorite: WorkspaceHomeFavorite | null = null
+
+    if (raw.kind === 'graph') {
+      favorite = { kind: 'graph' }
+    } else if (
+      (raw.kind === 'note' || raw.kind === 'folder' || raw.kind === 'board')
+      && typeof raw.id === 'string'
+      && raw.id.trim()
+    ) {
+      favorite = { kind: raw.kind, id: raw.id.trim() }
+    } else if (
+      raw.kind === 'pluginView'
+      && typeof raw.pluginId === 'string'
+      && raw.pluginId.trim()
+      && typeof raw.contributionId === 'string'
+      && raw.contributionId.trim()
+    ) {
+      favorite = {
+        kind: 'pluginView',
+        pluginId: raw.pluginId.trim(),
+        contributionId: raw.contributionId.trim(),
+      }
+    }
+
+    if (!favorite) continue
+    const key = workspaceHomeFavoriteKey(favorite)
+    if (seen.has(key)) continue
+    seen.add(key)
+    normalized.push(favorite)
+    if (normalized.length === 8) break
+  }
+
+  return normalized
+}
+
 export function normalizeWorkspaceSettings(input: unknown): WorkspaceSettings {
   const defaults = createDefaultWorkspaceSettings()
   const raw = input && typeof input === 'object' ? input as Record<string, unknown> : {}
@@ -92,6 +143,7 @@ export function normalizeWorkspaceSettings(input: unknown): WorkspaceSettings {
   normalized.general.recentItemsBehavior = general.recentItemsBehavior === 'manual' ? 'manual' : defaults.general.recentItemsBehavior
   normalized.general.confirmBeforeDelete = typeof general.confirmBeforeDelete === 'boolean' ? general.confirmBeforeDelete : defaults.general.confirmBeforeDelete
   normalized.general.startupNoteId = typeof general.startupNoteId === 'string' ? general.startupNoteId : null
+  normalized.general.homeFavorites = normalizeHomeFavorites(general.homeFavorites)
   if (general.lastContext && typeof general.lastContext === 'object') {
     const lastContext = general.lastContext as Record<string, unknown>
     normalized.general.lastContext = {
@@ -181,6 +233,9 @@ export function normalizeWorkspaceSettings(input: unknown): WorkspaceSettings {
   normalized.workspace.sidebarContentMode = workspace.sidebarContentMode === 'tag-preview'
     ? 'tag-preview'
     : defaults.workspace.sidebarContentMode
+  normalized.workspace.sidebarLayout = workspace.sidebarLayout === 'floating'
+    ? 'floating'
+    : defaults.workspace.sidebarLayout
   normalized.workspace.sidebarSortMode = workspace.sidebarSortMode === 'name-asc' || workspace.sidebarSortMode === 'name-desc' || workspace.sidebarSortMode === 'updated'
     ? workspace.sidebarSortMode : defaults.workspace.sidebarSortMode
   normalized.workspace.graphEntryMode = workspace.graphEntryMode === 'from-current-note' ? 'from-current-note' : defaults.workspace.graphEntryMode
@@ -234,7 +289,7 @@ export function normalizeAppConfig(input: unknown): AppConfig {
   return {
     version: typeof raw.version === 'string' && raw.version.trim() ? raw.version : defaults.version,
     theme: raw.theme === 'dark' || raw.theme === 'light' || raw.theme === 'system' ? raw.theme : defaults.theme,
-    locale: raw.locale === 'en' || raw.locale === 'ru' ? raw.locale : defaults.locale,
+    locale: raw.locale === 'en' || raw.locale === 'ru' || raw.locale === 'fr' || raw.locale === 'es' || raw.locale === 'de' ? raw.locale : defaults.locale,
     recents: Array.isArray(raw.recents)
       ? raw.recents.map((r: { path?: string; storageId?: string; kind?: string }) => {
           const p = r.path

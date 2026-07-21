@@ -17,6 +17,9 @@ const { settings, appConfig } = storeToRefs(workspaceStore)
 const languageOptions = computed<Array<{ value: AppLocale; label: string }>>(() => [
   { value: 'ru', label: t('settings.options.language.ru') },
   { value: 'en', label: t('settings.options.language.en') },
+  { value: 'fr', label: t('settings.options.language.fr') },
+  { value: 'es', label: t('settings.options.language.es') },
+  { value: 'de', label: t('settings.options.language.de') },
 ])
 
 const startupViewOptions = computed<Array<{ value: WorkspaceView; label: string }>>(() => [

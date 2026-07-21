@@ -1,4 +1,5 @@
 import type { BlockNode } from '../../types/note'
+import { countWordsInNoteContent } from '../../utils/noteWordCount'
 
 export interface OutlineItem {
   level: 1 | 2 | 3 | 4 | 5 | 6
@@ -18,16 +19,7 @@ function extractText(node: BlockNode): string {
 }
 
 function countNodeWords(node: BlockNode): number {
-  let count = 0
-  const walk = (n: BlockNode) => {
-    if (n.text) {
-      const trimmed = n.text.trim()
-      if (trimmed) count += trimmed.split(/\s+/).length
-    }
-    n.content?.forEach(walk)
-  }
-  walk(node)
-  return count
+  return countWordsInNoteContent(node)
 }
 
 /** Flattens column containers so headings nested inside columns are still picked up. */
@@ -68,9 +60,9 @@ export function extractOutline(content: BlockNode): OutlineItem[] {
   return items
 }
 
-/** Counts all words across all text leaves in a BlockNode tree. */
+/** Counts all words across the note while preserving block and hard-break boundaries. */
 export function countWords(content: BlockNode): number {
-  return (content.content ?? []).reduce((acc, node) => acc + countNodeWords(node), 0)
+  return countWordsInNoteContent(content)
 }
 
 /** Extracts unique external http/https links from the note content. */

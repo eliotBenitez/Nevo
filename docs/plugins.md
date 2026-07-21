@@ -1,562 +1,223 @@
-# Руководство по разработке плагинов для Nevo
+# Nevo Plugin SDK V2
 
-**Nevo** поддерживает расширение возможностей редактора и рабочего пространства с помощью системы плагинов. Плагины загружаются динамически в runtime для каждого конкретного воркспейса и интегрируются с ProseMirror-редактором.
+Новые marketplace-плагины Nevo используют `@nevo/plugin-sdk` 2.0 и исполняются в
+постоянном изолированном Worker. Плагин не получает DOM, ProseMirror, Tauri,
+filesystem, storage или сеть напрямую. Он регистрирует JSON-дескрипторы, а
+функции остаются внутри Worker под непрозрачными handler IDs.
 
----
+Trusted SDK V1 сохранён для bundled/system, folder plugins и уже установленных
+legacy-плагинов. Новые marketplace-публикации с V1 отклоняются backend.
 
-## 📁 Структура плагина
-
-Все плагины воркспейса располагаются в его внутренней директории `.nevo/plugins/`. Каждый плагин должен находиться в своей собственной папке, имя которой совпадает с идентификатором плагина (`id`).
-
-```text
-<workspace_path>/
-├── .nevo/
-│   ├── plugins/
-│   │   └── my-plugin/
-│   │       ├── manifest.json
-│   │       └── index.js
-```
-
-Для работы плагина необходимы как минимум два файла:
-1. `manifest.json` — конфигурационный файл с метаданными.
-2. Файл точки входа (например, `index.js`), указанный в манифесте.
-
----
-
-## 📄 Спецификация манифеста (`manifest.json`)
-
-Манифест описывает основные свойства плагина, его зависимости и требуемые права доступа (capabilities).
-
-### Пример `manifest.json`
+## Manifest V2
 
 ```json
 {
-  "id": "my-custom-plugin",
-  "name": "My Custom Plugin",
-  "version": "1.0.0",
-  "description": "Добавляет кастомные команды и элементы в слэш-меню",
-  "enabled": true,
-  "kind": "user",
-  "source": "folder",
-  "entryPoint": "index.js",
-  "apiVersion": "1.0.0",
-  "nevoVersionRange": "^1.0.0",
-  "editorCapabilities": [
-    "editor.read",
-    "editor.write"
-  ],
-  "uiCapabilities": [
-    "workspace.view.register"
-  ],
-  "workspaceCapabilities": [
-    "workspace.read"
-  ],
-  "priority": 10
-}
-```
-
-### Описание полей манифеста
-
-| Поле | Тип | Обязательное | Описание |
-| --- | --- | --- | --- |
-| `id` | `string` | Да | Уникальный идентификатор плагина. Разрешены только символы `[A-Za-z0-9._-]`. Должен в точности совпадать с именем папки плагина. |
-| `name` | `string` | Да | Отображаемое имя плагина в настройках. |
-| `version` | `string` | Да | Семантическая версия плагина (например, `"1.0.0"`). |
-| `description` | `string` | Нет | Краткое описание плагина. |
-| `enabled` | `boolean` | Да | Состояние включения плагина по умолчанию. |
-| `kind` | `"system" \| "user" \| "marketplace"` | Нет | Тип плагина. Для старых манифестов по умолчанию используется `"user"`. |
-| `source` | `"bundled" \| "folder" \| "marketplace"` | Нет | Источник установки. Для старых манифестов по умолчанию используется `"folder"`. |
-| `entryPoint` | `string` | Да | Путь к основному JS-файлу плагина относительно папки плагина. |
-| `apiVersion` | `string` | Да | Версия Nevo SDK API, под которую написан плагин (по умолчанию `"1.0.0"`). Мажорная версия должна совпадать с текущей версией SDK приложения. |
-| `nevoVersionRange` | `string` | Нет | Совместимый диапазон версий Nevo (например, `^1.0.0`, `*` или `latest`). |
-| `editorCapabilities` | `string[]` | Да | Разрешения редактора: регистрация команд, нод, slash items, node views, сериализаторов. |
-| `uiCapabilities` | `string[]` | Нет | Разрешения UI рабочего пространства: view/sidebar/modal/navigation. |
-| `workspaceCapabilities` | `string[]` | Нет | Разрешения на чтение/запись доменных данных workspace, notes, templates и kanban. |
-| `priority` | `number` | Нет | Приоритет загрузки. Плагины с более высоким приоритетом инициализируются раньше, а их горячие клавиши перехватывают события первыми. |
-
----
-
-## 🔒 Разрешения и возможности (Capabilities)
-
-Система безопасности Nevo требует явного указания возможностей, которые использует плагин:
-
-*   **`editor.read`**: Разрешает чтение состояния редактора (например, подписку на транзакции).
-*   **`editor.write`**: Разрешает изменять состояние редактора: регистрировать команды, клавиши, узлы, отметки, элементы slash-меню, node views и сериализацию.
-*   **`workspace.view.register`**: Разрешает регистрировать workspace views, элементы сайдбара и модальные окна.
-*   **`workspace.navigation`**: Разрешает переходы через `ctx.navigation.open(route)` и возврат к корню workspace.
-*   **`workspace.read` / `workspace.write`**: Доступ к чтению и записи данных рабочего пространства.
-*   **`note.read` / `note.write`**: Доступ к данным заметок.
-*   **`template.read` / `template.write`**: Доступ к командам шаблонов (`template_*`).
-*   **`kanban.read` / `kanban.write`**: Доступ к командам Kanban (`kanban_*`).
-
-`ctx.workspace.invoke(commandId, args)` принимает только команды из allow-list SDK. Например, `kanban_list_boards` требует `kanban.read`, а `kanban_create_board` требует `kanban.write`. Неизвестные команды не прокидываются в Tauri напрямую.
-
----
-
-## 🧩 Системные bundled-плагины
-
-Системные возможности Nevo поставляются как обычные workspace-плагины с `kind: "system"` и `source: "bundled"`. При создании или открытии локального workspace приложение автоматически устанавливает или обновляет эти пакеты в `.nevo/plugins/<id>`:
-
-*   `nevo.kanban` — workspace view `/workspace/plugin/nevo.kanban/:boardId` и доступ к `kanban_*`.
-*   `nevo.templates` — modal/интеграция шаблонов и доступ к `template_*`.
-*   `nevo.vega` — slash item для блока Vega-Lite.
-*   `nevo.markmap` — slash item для блока Markmap.
-
-Состояние включения хранится только в `manifest.enabled`. Legacy-поле `settings.features.*` читается нормализатором старых настроек, но не является источником истины для UI и логики плагинов. При обновлении bundled-плагина сохраняется пользовательское значение `enabled`; пользовательские плагины с `kind: "user"` или `source: "folder"` не перезаписываются.
-
----
-
-## 🛒 Marketplace-плагины
-
-Каталог плагинов Nevo читается из публичного GitHub-репозитория `eliotBenitez/nevo-marketplace`, ветка `main`. Приложение не использует ZIP-архивы, releases или `git clone`: оно читает GitHub tree API, скачивает файлы через raw URLs и устанавливает выбранный плагин в текущий workspace.
-
-Структура marketplace-репозитория:
-
-```text
-nevo-marketplace/
-├── marketplace.json
-└── plugins/
-    └── my-plugin/
-        ├── manifest.json
-        ├── index.js
-        ├── README.md
-        ├── icon.svg
-        └── screenshots/
-```
-
-`marketplace.json` в корне опционален. Он может содержать `schemaVersion`, `name`, `updatedAt`, `featured` и `categories`; если файла нет, Nevo строит каталог сканированием `plugins/*/manifest.json`.
-
-Marketplace-манифест использует тот же формат `PluginManifest`, но обязан указывать `kind: "marketplace"` и `source: "marketplace"`:
-
-```json
-{
-  "id": "my-plugin",
-  "name": "My Marketplace Plugin",
-  "version": "1.0.0",
-  "description": "Добавляет команду workspace",
+  "id": "example.plugin",
+  "name": "Example",
+  "version": "2.0.0",
+  "description": "An example sandboxed plugin.",
   "enabled": true,
   "kind": "marketplace",
   "source": "marketplace",
   "entryPoint": "index.js",
-  "apiVersion": "1.0.0",
-  "editorCapabilities": ["editor.read"],
-  "uiCapabilities": ["workspace.view.register"],
-  "workspaceCapabilities": ["workspace.read"]
-}
-```
-
-Правила безопасности:
-
-*   `id` должен совпадать с именем папки `plugins/<pluginId>` и содержать только `[A-Za-z0-9._-]`.
-*   Все скачиваемые файлы должны находиться внутри `plugins/<pluginId>/`.
-*   Пути с `..`, абсолютные пути, обратные слеши и symlink-like entries из GitHub tree отклоняются.
-*   `entryPoint` должен существовать среди файлов плагина.
-*   Marketplace-плагин не устанавливается поверх `system` или `user` плагина с тем же `id`.
-
-При установке Nevo создаёт `.nevo/plugins/<pluginId>/.nevo-marketplace.json`:
-
-```json
-{
-  "repo": "eliotBenitez/nevo-marketplace",
-  "branch": "main",
-  "pluginPath": "plugins/my-plugin",
-  "treeSha": "sha-list",
-  "installedVersion": "1.0.0",
-  "installedAt": "2026-07-05T19:00:00Z",
-  "files": ["manifest.json", "index.js"]
-}
-```
-
-Жизненный цикл:
-
-*   **Install**: Nevo скачивает всю папку `plugins/<pluginId>`, проверяет манифест и заменяет целевую папку в `.nevo/plugins`.
-*   **Update**: плагин переустанавливается из активной ветки marketplace, но текущее значение `manifest.enabled` сохраняется.
-*   **Remove**: удаляются только плагины с `kind/source = marketplace` и metadata-файлом `.nevo-marketplace.json`; пользовательские и системные плагины защищены от удаления этой командой.
-*   **Offline/cache**: каталог кэшируется в `.nevo/marketplace/cache.json`. Если GitHub недоступен, UI может показать кэшированные данные с явной пометкой.
-
----
-
-## 🔄 Жизненный цикл плагина
-
-Плагин представляет собой ES-модуль (ES Module). Приложение импортирует его динамически. Экспортировать плагин можно одним из трех способов:
-
-1. **Default export** (рекомендуется):
-   ```javascript
-   export default {
-     onRegister(ctx) { ... },
-     onActivate(ctx) { ... }
-   };
-   ```
-2. **Named export `plugin`**:
-   ```javascript
-   export const plugin = { ... };
-   ```
-3. **Named function `createPlugin`**:
-   ```javascript
-   export function createPlugin() {
-     return { ... };
-   }
-   ```
-
-### Методы жизненного цикла
-
-Каждый метод принимает объект контекста `NevoEditorContext` (подробнее см. ниже).
-
-*   **`onRegister(ctx: NevoEditorContext): void | Promise<void>`**  
-    Вызывается при первичной регистрации плагина. Это идеальное место для регистрации расширений редактора (схем, команд, горячих клавиш и т.д.).
-*   **`onActivate(ctx: NevoEditorContext): void | Promise<void>`**  
-    Вызывается, когда плагин переходит в активное состояние (после того, как зарегистрированы все плагины).
-*   **`onDeactivate(ctx: NevoEditorContext): void | Promise<void>`**  
-    Вызывается, когда плагин отключается пользователем в настройках воркспейса или при переключении воркспейса. Здесь следует отменять временные подписки или сбрасывать состояние.
-*   **`onDispose(ctx: NevoEditorContext): void | Promise<void>`**  
-    Вызывается перед уничтожением хоста плагинов/редактора. Используется для очистки памяти.
-
----
-
-## 🛠 API контекста (`NevoEditorContext`)
-
-Объект `ctx`, передаваемый в методы жизненного цикла, предоставляет доступ к расширению редактора и инфраструктуре приложения.
-
-> [!IMPORTANT]
-> Для вызова методов регистрации узлов, команд и интерфейса требуется разрешение `editor.write` в манифесте.
-
-### Свойства контекста
-
-*   **`pluginId: string`** — идентификатор текущего плагина.
-*   **`capabilities: Set<NevoEditorCapability>`** — набор одобренных разрешений плагина.
-
-### Регистрация элементов ProseMirror
-
-*   **`registerNode(name: string, spec: NodeSpec): void`**  
-    Регистрирует новый тип узла (Node) в схеме ProseMirror.
-*   **`registerMark(name: string, spec: MarkSpec): void`**  
-    Регистрирует новый тип отметки (Mark/стиля текста) в схеме ProseMirror.
-*   **`registerNodeView(nodeName: string, nodeView: NodeViewConstructor): void`**  
-    Привязывает кастомный рендерер (`NodeView`) для узла с именем `nodeName`.
-
-### Регистрация логики и клавиатурных сокращений
-
-*   **`registerCommand(id: string, command: Command): void`**  
-    Добавляет команду в глобальный реестр команд Nevo. Команда имеет стандартную сигнатуру ProseMirror:
-    `type Command = (state: EditorState, dispatch?: (tr: Transaction) => void, view?: EditorView) => boolean`.
-*   **`registerKeymap(priority: number, bindings: Record<string, Command>): void`**  
-    Регистрирует комбинации клавиш. Комбинации задаются в формате `prosemirror-keymap` (например, `"Ctrl-Shift-h"` или `"Mod-b"`). Чем выше `priority`, тем раньше перехватывается нажатие.
-
-### Интерфейс пользователя (UI)
-
-*   **`registerSlashItem(item: NevoSlashItem): void`**  
-    Добавляет элемент в быстрое всплывающее меню по клавише `/` (Slash-меню).
-    ```typescript
-    interface NevoSlashItem {
-      id: string
-      title: string
-      category?: string // 'text' | 'lists' | 'code' | 'media' | 'layout'
-      keywords?: string[]
-      run: (ctx: { view: EditorView; state: EditorState; dispatch: (tr: Transaction) => void }) => void
-    }
-    ```
-*   **`registerToolbarAction(action: NevoToolbarAction): void`**  
-    Добавляет кнопку/действие в плавающую панель форматирования выделенного текста.
-    ```typescript
-    interface NevoToolbarAction {
-      id: string
-      title: string
-      order?: number
-      run: (ctx: { view: EditorView; state: EditorState; dispatch: (tr: Transaction) => void }) => void
-    }
-    ```
-*   **`registerDecorationProvider(id: string, provider: (state: EditorState) => Decoration[] | DecorationSet, options?: { dependsOnSelection?: boolean }): void`**  
-    Регистрирует провайдер динамических декораций (выделения цветом, добавления виджетов, классов) на основе текущего состояния редактора. По умолчанию провайдер перевызывается только при изменении документа; если результат провайдера зависит от текущего выделения (например, подсветка текущего блока), укажите `{ dependsOnSelection: true }`, чтобы он также перевызывался при простом перемещении курсора.
-
-### UI рабочего пространства
-
-*   **`registerWorkspaceView({ id, title, route, component, icon?, order? }): void`**  
-    Регистрирует view рабочего пространства. First-party bundled-плагины могут указывать Vue-компонент приложения, сторонние плагины должны предоставлять совместимый компонент через SDK.
-*   **`registerSidebarItem({ id, title, route, icon?, order? }): void`**  
-    Регистрирует элемент навигации в сайдбаре.
-*   **`registerModal({ id, component }): void`**  
-    Регистрирует модальное окно, которое может быть открыто host-логикой плагина.
-*   **`workspace.invoke(commandId, args?): Promise<T>`**  
-    Выполняет разрешённую workspace-команду по capability allow-list.
-*   **`navigation.open(route)` / `navigation.backToWorkspace()`**  
-    Навигация внутри workspace при наличии `workspace.navigation`.
-*   **`i18n.t(key, params?)`**  
-    Доступ к локализации приложения.
-
-### Кастомные блоки, поповеры и сериализация
-
-*   **`registerNodePopover(nodeName: string, config: NevoNodePopoverConfig): void`**  
-    Привязывает к узлу декларативный поповер редактирования. Nevo сам строит форму из описанных полей, позиционирует её и применяет значения к `attrs` узла — писать собственный Vue-компонент не нужно.
-    ```typescript
-    interface NevoNodePopoverField {
-      key: string                 // ключ attr
-      type?: 'text' | 'textarea' | 'select' | 'number' | 'checkbox' | 'color'
-      label?: string
-      placeholder?: string
-      rows?: number               // для textarea
-      options?: Array<{ value: string; label: string }> // для select
-      min?: number; max?: number; step?: number          // для number
-    }
-    interface NevoNodePopoverConfig {
-      title?: string
-      fields: NevoNodePopoverField[]
-      removable?: boolean         // показывать кнопку удаления (по умолчанию true)
-      read?: (attrs) => Record<string, unknown>   // attrs -> значения полей
-      apply?: (values) => Record<string, unknown> // значения полей -> патч attrs
-    }
-    ```
-*   **`requestNodeEdit(view: EditorView, position: number, anchorRect?: DOMRect): void`**  
-    Открывает зарегистрированный поповер для узла на позиции `position` (используется из своего `NodeView`).
-*   **`registerNodeSerializer(nodeName: string, serializer: NevoNodeSerializer): void`**  
-    Учит экспорт сериализовать узел в Markdown / HTML / Typst. Без этого кастомный узел теряется при экспорте.
-    ```typescript
-    interface NevoNodeSerializer {
-      markdown?: (node, helpers: { serializeChildren }) => string
-      html?: (node, helpers: { serializeChildren; escapeHtml }) => string
-      typst?: (node, helpers: { serializeChildren }) => string
-    }
-    ```
-*   **`registerNodeImporter(importer: NevoNodeImporter): void`**  
-    Восстанавливает узел из fenced-блока Markdown с заданным языком (round-trip импорта).
-    ```typescript
-    interface NevoNodeImporter {
-      fencedLang: string
-      fromFenced: (code: string) => NevoSerializableNode | null
-    }
-    ```
-*   **`registerBlockType(config: NevoBlockTypeConfig): void`** — **рекомендуемый путь.**  
-    Регистрирует кастомный блок одним вызовом: узел схемы, рендеринг, поповер, сериализаторы, импортёр и пункт slash-меню. Внутри использует методы выше.
-    ```typescript
-    interface NevoBlockTypeConfig {
-      name: string
-      schema: NodeSpec
-      render: (node, helpers: { requestEdit: (anchorRect?) => void }) => HTMLElement
-      popover?: NevoNodePopoverConfig
-      serialize?: NevoNodeSerializer
-      importer?: NevoNodeImporter
-      slashItem?: { id; title; category?; keywords?; defaultAttrs?: Record<string, unknown> }
-    }
-    ```
-
-### События (`eventBus`)
-
-Шина событий позволяет реагировать на действия в редакторе:
-
-```typescript
-interface NevoEditorEventBus {
-  emit<K extends keyof NevoEditorEventMap>(event: K, payload: NevoEditorEventMap[K]): void
-  on<K extends keyof NevoEditorEventMap>(event: K, listener: (payload: NevoEditorEventMap[K]) => void): () => void
-}
-```
-
-Доступные события:
-*   `transactionApplied`: `{ state: EditorState; transaction: Transaction }` — срабатывает при каждом обновлении содержимого редактора.
-*   `pluginActivated`: `{ pluginId: string }`
-*   `pluginDeactivated`: `{ pluginId: string }`
-
-### Хранилище (`storage`)
-
-Предоставляет простое изолированное хранилище данных плагина между перезапусками воркспейса (сохраняется в памяти сессии):
-
-*   **`ctx.storage.get<T>(key: string): T | undefined`**
-*   **`ctx.storage.set<T>(key: string, value: T): void`**
-*   **`ctx.storage.delete(key: string): void`**
-
----
-
-## 💡 Практические примеры
-
-### Пример 1. Простой плагин форматирования текста (Добавление отметки `Highlight` и кнопки в тулбар)
-
-Ниже представлен полноценный код плагина, который регистрирует стиль выделения текста фоном (отметку `<mark>`) и добавляет кнопку переключения этого стиля в плавающую панель инструментов.
-
-```javascript
-// index.js
-
-// Вспомогательная команда ProseMirror для переключения отметки
-function toggleMark(markType) {
-  return function(state, dispatch) {
-    const { $from, $to, empty } = state.selection;
-    if (empty) return false;
-    
-    if (dispatch) {
-      const hasMark = state.doc.rangeHasMark($from.pos, $to.pos, markType);
-      const tr = state.tr;
-      if (hasMark) {
-        tr.removeMark($from.pos, $to.pos, markType);
-      } else {
-        tr.addMark($from.pos, $to.pos, markType.create());
-      }
-      dispatch(tr);
-    }
-    return true;
-  };
-}
-
-export default {
-  onRegister(ctx) {
-    // 1. Регистрируем спецификацию отметки (MarkSpec)
-    ctx.registerMark('highlight', {
-      parseDOM: [{ tag: 'mark' }],
-      toDOM() { return ['mark', { class: 'plugin-highlight' }, 0]; }
-    });
+  "apiVersion": "2.0.0",
+  "executionMode": "sandboxed-worker",
+  "dataVersion": 1,
+  "capabilities": ["editor.write"],
+  "network": {
+    "hosts": ["api.example.com"],
+    "methods": ["GET"]
   },
+  "settingsSchema": []
+}
+```
 
-  onActivate(ctx) {
-    // В момент активации схема скомпилирована, и мы можем получить доступ к типу отметки
-    const highlightMarkType = ctx.eventBus.on('transactionApplied', () => {}); // placeholder, реальный тип получаем из состояния
-  
-    // Регистрируем команду переключения
-    ctx.registerCommand('plugin.toggle_highlight', (state, dispatch) => {
-      const highlight = state.schema.marks.highlight;
-      if (!highlight) return false;
-      return toggleMark(highlight)(state, dispatch);
-    });
+V2 использует только единый `capabilities`. Поля `editorCapabilities`,
+`uiCapabilities` и `workspaceCapabilities` читаются только для trusted V1.
+`network` разрешён только вместе с `network.fetch`.
 
-    // Привязываем горячую клавишу Ctrl+Shift+H
-    ctx.registerKeymap(10, {
-      'Ctrl-Shift-h': (state, dispatch) => {
-        const command = toggleMark(state.schema.marks.highlight);
-        return command(state, dispatch);
-      }
-    });
+## Plugin entry
 
-    // Регистрируем кнопку в плавающем тулбаре
-    ctx.registerToolbarAction({
-      id: 'plugin.highlight.toolbar',
-      title: 'Выделить желтым',
-      order: 100,
-      run({ state, dispatch }) {
-        const highlight = state.schema.marks.highlight;
-        if (highlight) {
-          toggleMark(highlight)(state, dispatch);
-        }
-      }
-    });
-    
-    // Добавляем команду в слэш-меню
-    ctx.registerSlashItem({
-      id: 'plugin.highlight.slash',
-      title: 'Маркер (Выделение)',
+```ts
+import { definePlugin, transaction } from '@nevo/plugin-sdk'
+
+export default definePlugin({
+  setup(api) {
+    api.slashItem({
+      id: `${api.pluginId}.hello`,
+      title: 'Insert hello',
       category: 'text',
-      keywords: ['marker', 'highlight', 'маркер', 'выделить'],
-      run({ state, dispatch }) {
-        const highlight = state.schema.marks.highlight;
-        if (highlight) {
-          toggleMark(highlight)(state, dispatch);
-        }
-      }
-    });
-  }
-};
-```
-
-Для стилизации выделения плагин может использовать стили, определенные в файле `style.css` плагина (при условии их импорта или сборки) либо использовать встроенные системные классы.
-
-### Пример 2. Логирование изменений и подсчет слов
-
-Этот плагин использует `eventBus` для прослушивания транзакций редактора и подсчета слов в документе, выводя информацию в консоль при каждом изменении.
-
-```javascript
-// index.js
-export default {
-  onActivate(ctx) {
-    console.log(`Плагин ${ctx.pluginId} успешно активирован!`);
-    
-    // Подписываемся на транзакции редактора
-    this.unsubscribe = ctx.eventBus.on('transactionApplied', ({ state, transaction }) => {
-      // Реагируем только на фактическое изменение документа
-      if (!transaction.docChanged) return;
-      
-      let textContent = '';
-      state.doc.descendants((node) => {
-        if (node.isText) {
-          textContent += node.text + ' ';
-        }
-      });
-      
-      const words = textContent.trim().split(/\s+/).filter(Boolean);
-      console.log(`[Plugin: WordCounter] Всего слов в документе: ${words.length}`);
-    });
+    }, (_input, { editor }) => transaction(editor?.revision ?? 0, [{
+      type: 'insertText',
+      text: 'Hello',
+      from: 'selection.from',
+      to: 'selection.to',
+    }]))
   },
-
-  onDeactivate(ctx) {
-    // Обязательно отписываемся от событий при отключении плагина
-    if (this.unsubscribe) {
-      this.unsubscribe();
-    }
-    console.log(`Плагин ${ctx.pluginId} деактивирован.`);
-  }
-};
+  async activate() {},
+  async deactivate() {},
+  async dispose() {},
+})
 ```
 
----
+`setup` поддерживает commands, keymaps, slash/toolbar actions, schema
+nodes/marks, block types, popovers, decorations, serializers/importers,
+workspace views, sidebar items, modals и editor events. Для сложных view/modal
+используется iframe broker; iframe запускается с `sandbox="allow-scripts"` без
+same-origin, navigation, popup и прямой сети.
 
-## 🧱 Пример: кастомный блок одним вызовом
+На desktop workspace views доступны по host-owned маршрутам
+`/workspace/plugin/<pluginId>/<viewId>`, sidebar items открывают только маршруты
+своего plugin namespace, а modals монтируются host поверх workspace. URL iframe
+всегда использует opaque `nevoplugin` token. Iframe получает только locale,
+theme и versioned события через `postMessage`; payload ограничен 256 KiB.
+Android/iOS возвращают явное `unsupported` до отдельного mobile E2E.
 
-`registerBlockType` решает сразу всё: добавляет узел, рисует его, даёт поповер редактирования и сохраняет блок при экспорте/импорте.
+Отложенная работа регистрируется через `api.scheduling.setTimeout` или
+`api.scheduling.setInterval`. Таймер принадлежит host, ограничен квотой и
+автоматически очищается при deactivate/dispose; глобальные timers внутри Worker
+недоступны.
 
-```javascript
-// index.js
-export default {
-  onRegister(ctx) {
-    ctx.registerBlockType({
-      name: 'callout_card',
-      schema: {
-        group: 'block',
-        atom: true,
-        attrs: { title: { default: '' }, tone: { default: 'info' }, body: { default: '' } },
-      },
-      // Отрисовка содержимого блока. Клик откроет поповер автоматически.
-      render: (node) => {
-        const el = document.createElement('div');
-        el.className = `callout-card tone-${node.attrs.tone}`;
-        el.innerHTML = `<strong>${node.attrs.title}</strong><p>${node.attrs.body}</p>`;
-        return el;
-      },
-      // Декларативный поповер — форму строит сам Nevo.
-      popover: {
-        title: 'Карточка',
-        fields: [
-          { key: 'title', type: 'text', label: 'Заголовок' },
-          { key: 'tone', type: 'select', label: 'Тон', options: [
-            { value: 'info', label: 'Инфо' },
-            { value: 'warn', label: 'Предупреждение' },
-          ] },
-          { key: 'body', type: 'textarea', label: 'Текст', rows: 4 },
-        ],
-      },
-      // Экспорт во все форматы.
-      serialize: {
-        markdown: (node) => `> [!${node.attrs.tone}] ${node.attrs.title}\n> ${node.attrs.body}`,
-        html: (node, { escapeHtml }) => `<aside class="card">${escapeHtml(node.attrs.body)}</aside>`,
-        typst: (node) => `#callout[${node.attrs.body}]`,
-      },
-      // Импорт обратно из Markdown: ```card ... ```
-      importer: {
-        fencedLang: 'card',
-        fromFenced: (code) => ({ type: 'callout_card', attrs: { body: code, title: '', tone: 'info' } }),
-      },
-      slashItem: { id: 'callout-card.insert', title: 'Карточка', category: 'layout', defaultAttrs: { tone: 'info' } },
-    });
-  },
-};
+## Editor transactions
+
+Handler получает snapshot с `revision`, selection, schema names и host time
+context (`now`, `locale`, `timeZone`). Поле `doc` присутствует только при
+`editor.read`. Handler возвращает один атомарный transaction intent.
+
+Абсолютные позиции отклоняются с `STALE_EDITOR_STATE`, если revision изменился.
+Операции с `selection.from`/`selection.to` применяются к актуальному выделению.
+Host проверяет диапазоны, node/mark types, JSON, размеры и число операций.
+
+## Host services
+
+SDK предоставляет только broker-вызовы:
+
+- `api.storage.workspace` — `.nevo/plugin-data/<pluginId>.json`, синхронизируется;
+- `api.storage.local` — app data с workspace/plugin namespace;
+- `api.settings` — существующий `.nevo/settings.json`;
+- `api.secrets.get` — secure store, значение не попадает в iframe;
+- `api.assets` — plugin-scoped бинарное хранилище (см. ниже);
+- `api.network.fetch` — declared HTTPS hosts/methods;
+- `api.workspace.invoke` — фиксированный allow-list template/kanban команд.
+
+Квота каждого storage scope — 5 MiB, одного значения — 256 KiB. Network broker
+запрещает credentials/cookies и опасные headers, проверяет DNS и каждый redirect
+на private/link-local адреса, pin-ит проверенные DNS-адреса, допускает не более
+пяти redirects, 30 секунд и 5 MiB ответа.
+
+## Asset store (Tier 3)
+
+Плагину, которому нужно хранить бинарные данные (иконки, сгенерированные изображения,
+кэш), доступен plugin-scoped content-addressed store. Значения не проходят через
+ProseMirror и не попадают в note JSON — узел хранит только `assetId`.
+
+```ts
+const assetId = await api.assets.write(base64Payload)  // ≤ 512 KiB single-shot, sha256
+const bigId = await api.assets.upload(largeBase64)      // ≤ 8 MiB, авто-чанкинг
+const dataBase64 = await api.assets.read(assetId)       // null, если объект отсутствует
+const src = await api.assets.url(bigId)                 // nevoplugin-asset:// URL для <img>
+await api.assets.delete(assetId)
 ```
 
----
+Объекты лежат под `.nevo/plugin-assets/<pluginId>/<assetId>` (workspace-scoped,
+namespaced по плагину). Store content-addressed: одинаковые байты дедуплицируются и
+не расходуют квоту повторно. Capabilities: `assets.write` (write/upload/delete) и
+`assets.read` (read/url). `assetId` — 64 hex-символа; `pluginId` и `assetId` —
+валидированные одиночные компоненты пути, поэтому traversal невозможен. Суммарная
+квота на плагин — 64 MiB.
 
-## 📦 Сборка и сборщики (Bundling)
+**Chunked upload (C.2).** `api.assets.upload` прозрачно грузит крупные бинарники:
+мелкие идут single-shot `write`, крупные — потоком чанков ≤ 512 KiB (base64 режется
+по 4-символьной границе, каждый чанк декодируется независимо) в staging-файл
+`.nevo/plugin-assets/<pluginId>/.uploads/<uploadId>.part`, который на `finish`
+хэшируется и коммитится в content-addressed store; при любой ошибке upload
+абортится и staging удаляется. Одно значение ≤ 8 MiB, до 8 одновременных загрузок
+на плагин. `read` остаётся ограничен 512 KiB — крупные ассеты потребляются через URL,
+а не обратным каналом Worker.
 
-Так как плагины загружаются приложением динамически прямо в браузере (через WebView), они должны представлять собой **валидные ES-модули без внешних bare-импортов** (таких как `import { Plugin } from 'prosemirror-state'`), которые веб-браузер не сможет разрешить автоматически.
+**Renderable URL (C.2).** `api.assets.url(assetId)` выдаёт стабильный
+`nevoplugin-asset://<token>/<assetId>` для использования как `<img src>` **внутри
+Tier 2 frame** (в Tier 1 SVG-санитайзер вырезает внешние ссылки). Токен opaque и
+привязан к каталогу *своего* плагина, поэтому URL нельзя навести на чужие ассеты
+даже зная их id. Хендлер протокола определяет content-type по magic-байтам (PNG,
+JPEG, GIF, WebP, AVIF) и отказывает всему, что не является изображением, — SVG/HTML
+и произвольные octet-stream через этот канал не отдаются. Frame CSP расширен до
+`img-src ... nevoplugin-asset:`.
 
-Рекомендуется использовать сборщики (например, **esbuild**, **Rollup** или **Vite**):
+## Schema and fallback
 
-1. **Если вы используете сторонние npm-пакеты:**  
-   Скомпилируйте плагин в один самодостаточный JS-файл (bundle), упаковав все зависимости внутрь вашего файла.
-2. **Если вы хотите импортировать ProseMirror-библиотеки:**  
-   Поскольку Nevo не предоставляет глобальных путей к ProseMirror, вы можете упаковать нужные вспомогательные функции прямо в бандл плагина, либо использовать plain-объекты для конфигураций (таких как `NodeSpec`, `MarkSpec`), так как NevoEditorContext принимает именно их, не требуя инстанцирования классов ProseMirror напрямую.
+Schema/UI descriptors преобразуются host в безопасные `NodeSpec`/`MarkSpec` и
+allow-listed DOM DSL. Raw HTML, DOM callbacks, внешние URL, `@import`, `url()`,
+`:global`, `html`, `body` и `:root` запрещены.
 
-Пример сборки с помощью `esbuild`:
-```bash
-esbuild src/index.js --bundle --format=esm --outfile=.nevo/plugins/my-plugin/index.js
+Последняя валидная schema сохраняется в `.nevo/plugin-registry.json`. При
+disabled/missing/broken plugin она загружается без запуска кода: attrs и rich
+children остаются в документе. Fallback export добавляет безопасный JSON marker
+и сохраняет children.
+
+## Render channel (Tier 1)
+
+Для блоков, чей вид вычисляется из данных (диаграммы, charts, badges), `blockType`
+может объявить `render: 'svg'` и передать handler. Host на монтировании и при
+изменении attrs узла вызывает handler в Worker с `{ attrs }`, ожидает
+`{ svg: string }`, санитайзит результат (DOMPurify SVG-профиль: запрет `script`,
+`foreignObject`, `style`, `on*`, внешних `url()`/`href`) и монтирует его как живой
+NodeView. Плагин не касается DOM — SVG пересекает границу sandbox как данные.
+
+```ts
+api.blockType({
+  id: `${api.pluginId}.spark`,
+  name: 'spark_block',
+  render: 'svg',
+  schema: { group: 'block', atom: true, attrs: { points: { default: '' } } },
+}, ({ attrs }) => ({ svg: renderSparklineSvg(String((attrs as JsonObject).points ?? '')) }))
 ```
+
+Требования: render-блок обязан быть content-less (`schema.content` запрещён),
+handler обязателен, единственный поддерживаемый режим — `'svg'`. Рендер
+асинхронный и debounced; устаревшие результаты отбрасываются, ошибка деградирует
+в пустую поверхность без падения редактора. Используйте presentation-атрибуты
+(`fill`, `stroke`, …) вместо inline `style` — он вырезается санитайзером. Стойкая
+schema и статичный `toDOM` остаются fallback'ом для export/copy и
+disabled-плагинов.
+
+## Frame blocks (Tier 2)
+
+Для интерактивных блоков (canvas, grid, D3) `blockType` объявляет
+`frame: { source: 'view.html' }`. View-бандл плагина исполняется в
+`sandbox="allow-scripts"` iframe из `nevoplugin://` (без host-API и сети). Единый
+источник истины — attrs узла: host шлёт их сообщением `node`, iframe предлагает
+патчи сообщением `patch`, а host применяет их как **node-scoped** транзакцию после
+capability- и JSON-валидации. Привилегированная логика делегируется в Worker через
+`invoke`.
+
+Capabilities: `ui.blockFrame` (встроить frame) и `editor.write.self` (патчить attrs
+своего узла; без неё frame рендерится read-only). `frame` и `render` взаимно
+исключающи, `source` — только plugin-relative, блок обязан быть content-less.
+
+Iframe-рантайм — `defineBlockView`:
+
+```ts
+import { defineBlockView } from '@nevo/plugin-sdk'
+
+defineBlockView((api) => {
+  api.onNode(({ attrs, editable, theme }) => renderBoard(attrs, { editable, theme }))
+  boardEl.addEventListener('change', () => api.patchAttrs({ title: boardEl.value }))
+  // api.invoke('<handlerId>', input) — делегировать в Worker (сеть/секреты)
+})
+```
+
+## Build and conformance
+
+```sh
+pnpm add -D @nevo/plugin-sdk@^2.0.0 vite
+pnpm build
+pnpm exec nevo-plugin-conformance ./dist/index.js
+```
+
+До отдельной npm-публикации marketplace CI может устанавливать tarball,
+созданный из `packages/plugin-sdk` checkout Nevo.
+
+См. также [migration guide](./plugin-sdk-v2-migration.md),
+[capability reference](./plugin-capabilities.md) и
+[security model](./plugin-security.md).

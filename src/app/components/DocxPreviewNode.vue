@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { sanitizeSvg } from '../../utils/sanitizeSvg'
 
 interface ProcessedNode {
   type: string
@@ -15,6 +16,8 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+const safeSvgPreview = computed(() => sanitizeSvg(String(props.node.attrs?.svgPreview ?? '')))
 
 const markClasses = computed(() => {
   const classes: string[] = []
@@ -146,7 +149,7 @@ export default {
   </td>
 
   <!-- Drawings -->
-  <div v-else-if="node.type === 'draw_block'" class="docx-page__draw-block" v-html="node.attrs?.svgPreview"></div>
+  <div v-else-if="node.type === 'draw_block'" class="docx-page__draw-block" v-html="safeSvgPreview"></div>
 
   <!-- Fallback for other node types -->
   <div v-else-if="node.content && node.content.length">

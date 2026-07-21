@@ -4,12 +4,12 @@
  * CloudBackend) и растеризация SVG. Вынесены из сериализатора, чтобы тот
  * оставался чистым и тестируемым.
  */
-import { convertFileSrc } from '@tauri-apps/api/core'
 import { CloudBackend, CLOUD_ASSET_SCHEME } from '../../core/workspace-backend'
 import { useWorkspaceStore } from '../../stores/workspace'
 import { sniffImageMime } from '../draw/imageAsset'
 import { rasterizeSvgToPng, type RasterPng } from './svgRaster'
 import type { DocxExportHelpers, DocxImageType, LoadedDocxImage } from './docxSerializer'
+import { workspaceAssetUrl } from '../workspaceAssetUrl'
 
 function mimeToDocxType(mime: string): DocxImageType | null {
   switch (mime) {
@@ -75,7 +75,7 @@ export function createDocxExportHelpers(workspacePath: string): DocxExportHelper
       return url
     }
     if (!workspacePath) return null
-    return convertFileSrc(`${workspacePath}/${src}`)
+    return workspaceAssetUrl(src)
   }
 
   async function loadAssetImage(src: string): Promise<LoadedDocxImage | null> {

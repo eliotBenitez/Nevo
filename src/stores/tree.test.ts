@@ -64,6 +64,22 @@ describe('useTreeStore computeds', () => {
     expect(treeStore.noteById.size).toBe(0)
   })
 
+  it('replaces note metadata so a renamed title invalidates the tree view', () => {
+    const workspaceStore = useWorkspaceStore()
+    workspaceStore.manifest = buildManifest()
+    const treeStore = useTreeStore()
+    const previousRootMeta = treeStore.noteById.get('rn1')
+    const previousNestedMeta = treeStore.noteById.get('n-child')
+
+    treeStore.syncNoteMeta('rn1', { title: 'Renamed root note' })
+    treeStore.syncNoteMeta('n-child', { title: 'Renamed nested note' })
+
+    expect(treeStore.noteById.get('rn1')).toMatchObject({ title: 'Renamed root note' })
+    expect(treeStore.noteById.get('n-child')).toMatchObject({ title: 'Renamed nested note' })
+    expect(treeStore.noteById.get('rn1')).not.toBe(previousRootMeta)
+    expect(treeStore.noteById.get('n-child')).not.toBe(previousNestedMeta)
+  })
+
   describe('resolveNoteIdByTitle (wiki-link resolution)', () => {
     it('resolves a note id by exact title (case-insensitive)', () => {
       const workspaceStore = useWorkspaceStore()

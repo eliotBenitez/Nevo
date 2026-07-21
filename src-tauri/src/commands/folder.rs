@@ -1,9 +1,21 @@
 use chrono::Utc;
+use dashmap::DashMap;
 use std::path::Path;
+use std::sync::{Arc, Mutex, OnceLock};
 use uuid::Uuid;
 
 use super::path_utils::{normalize_workspace_path, write_atomic};
 use super::workspace::{FolderMeta, NoteMeta, WorkspaceManifest};
+
+static MANIFEST_LOCKS: OnceLock<DashMap<String, Arc<Mutex<()>>>> = OnceLock::new();
+
+pub fn manifest_lock(workspace_path: &str) -> Arc<Mutex<()>> {
+    MANIFEST_LOCKS
+        .get_or_init(DashMap::new)
+        .entry(workspace_path.to_string())
+        .or_insert_with(|| Arc::new(Mutex::new(())))
+        .clone()
+}
 
 pub fn load_manifest(workspace_path: &str) -> Result<WorkspaceManifest, String> {
     let path = Path::new(workspace_path).join(".nevo/workspace.json");
@@ -41,7 +53,7 @@ fn insert_folder(
     false
 }
 
-fn rename_in_tree(tree: &mut Vec<FolderMeta>, folder_id: &str, title: &str) -> bool {
+fn rename_in_tree(tree: &mut [FolderMeta], folder_id: &str, title: &str) -> bool {
     for node in tree.iter_mut() {
         if node.id == folder_id {
             node.title = title.to_string();
@@ -89,7 +101,20 @@ fn folder_is_empty(folder: &FolderMeta) -> bool {
 }
 
 #[tauri::command]
-pub fn create_folder(
+pub async fn create_folder(
+    workspace_path: String,
+    parent_id: Option<String>,
+    title: String,
+    icon: String,
+) -> Result<FolderMeta, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        create_folder_sync(workspace_path, parent_id, title, icon)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+pub(crate) fn create_folder_sync(
     workspace_path: String,
     parent_id: Option<String>,
     title: String,
@@ -97,6 +122,8 @@ pub fn create_folder(
 ) -> Result<FolderMeta, String> {
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
+    let manifest_lock = manifest_lock(&workspace_path);
+    let _manifest_guard = manifest_lock.lock().map_err(|error| error.to_string())?;
     let mut manifest = load_manifest(&workspace_path)?;
     let order = manifest.tree.len() as i32;
     let folder = FolderMeta {
@@ -109,7 +136,9 @@ pub fn create_folder(
         notes: vec![],
     };
     let folder_id = folder.id.clone();
-    insert_folder(&mut manifest.tree, &parent_id, folder.clone());
+    if !insert_folder(&mut manifest.tree, &parent_id, folder.clone()) {
+        return Err("Parent folder not found".to_string());
+    }
     if parent_id.is_none() {
         manifest.root_order.push(folder_id);
     }
@@ -118,26 +147,54 @@ pub fn create_folder(
 }
 
 #[tauri::command]
-pub fn rename_folder(
+pub async fn rename_folder(
+    workspace_path: String,
+    folder_id: String,
+    title: String,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        rename_folder_sync(workspace_path, folder_id, title)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+fn rename_folder_sync(
     workspace_path: String,
     folder_id: String,
     title: String,
 ) -> Result<(), String> {
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
+    let manifest_lock = manifest_lock(&workspace_path);
+    let _manifest_guard = manifest_lock.lock().map_err(|error| error.to_string())?;
     let mut manifest = load_manifest(&workspace_path)?;
     rename_in_tree(&mut manifest.tree, &folder_id, &title);
     save_manifest(&workspace_path, &manifest)
 }
 
 #[tauri::command]
-pub fn delete_folder(
+pub async fn delete_folder(
+    workspace_path: String,
+    folder_id: String,
+    recursive: bool,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        delete_folder_sync(workspace_path, folder_id, recursive)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+pub(crate) fn delete_folder_sync(
     workspace_path: String,
     folder_id: String,
     recursive: bool,
 ) -> Result<(), String> {
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
+    let manifest_lock = manifest_lock(&workspace_path);
+    let _manifest_guard = manifest_lock.lock().map_err(|error| error.to_string())?;
     let mut manifest = load_manifest(&workspace_path)?;
 
     if !recursive {
@@ -225,7 +282,7 @@ mod tests {
         let ws = TestWorkspace::new();
         let workspace_path = ws.path_string();
 
-        let folder = create_folder(
+        let folder = create_folder_sync(
             workspace_path.clone(),
             None,
             "Parent".to_string(),
@@ -242,7 +299,7 @@ mod tests {
 
         let manifest_before = load_manifest(&workspace_path).expect("load manifest");
 
-        let result = delete_folder(workspace_path.clone(), folder.id.clone(), false);
+        let result = delete_folder_sync(workspace_path.clone(), folder.id.clone(), false);
         assert!(
             result.is_err(),
             "non-recursive delete of a non-empty folder must fail"
@@ -269,7 +326,7 @@ mod tests {
         let ws = TestWorkspace::new();
         let workspace_path = ws.path_string();
 
-        let folder = create_folder(
+        let folder = create_folder_sync(
             workspace_path.clone(),
             None,
             "Empty".to_string(),
@@ -277,7 +334,7 @@ mod tests {
         )
         .expect("create folder");
 
-        let result = delete_folder(workspace_path.clone(), folder.id.clone(), false);
+        let result = delete_folder_sync(workspace_path.clone(), folder.id.clone(), false);
         assert!(
             result.is_ok(),
             "non-recursive delete of an empty folder must succeed"

@@ -20,13 +20,13 @@ export function encodeYDocState(ydoc: Y.Doc): Uint8Array {
 
 type YXmlChild = Y.XmlElement | Y.XmlFragment | Y.XmlText | Y.XmlHook
 
-function findDrawBlockElement(nodes: YXmlChild[], drawId: string): Y.XmlElement | null {
+function findBlockElementByAttr(nodes: YXmlChild[], nodeName: string, attrName: string, attrValue: string): Y.XmlElement | null {
   for (const node of nodes) {
     if (node instanceof Y.XmlElement) {
-      if (node.nodeName === 'draw_block' && node.getAttribute('drawId') === drawId) {
+      if (node.nodeName === nodeName && node.getAttribute(attrName) === attrValue) {
         return node
       }
-      const found = findDrawBlockElement(node.toArray(), drawId)
+      const found = findBlockElementByAttr(node.toArray(), nodeName, attrName, attrValue)
       if (found) return found
     }
   }
@@ -47,7 +47,7 @@ export function updateDrawBlockAttrsInYDoc(
   attrs: Record<string, string>,
 ): boolean {
   const fragment = ydoc.getXmlFragment(Y_FRAGMENT_NAME)
-  const target = findDrawBlockElement(fragment.toArray(), drawId)
+  const target = findBlockElementByAttr(fragment.toArray(), 'draw_block', 'drawId', drawId)
   if (!target) return false
   ydoc.transact(() => {
     for (const [key, value] of Object.entries(attrs)) target.setAttribute(key, value)

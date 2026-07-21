@@ -4,13 +4,13 @@ import { ChevronRight, ExternalLink, FileText, Hash, X } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { useTimeAgo, useDateFormat, refDebounced } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
-import { openUrl } from '@tauri-apps/plugin-opener'
 import type { NoteDocument, NoteProperties, NoteStatus, NoteType } from '../../types/note'
 import { extractOutline, countWords, extractExternalLinks } from '../composables/useNoteOutline'
 import { useGraphStore } from '../../stores/graph'
 import { useNoteStore } from '../../stores/note'
 import NvSelect from '../../ui/primitives/NvSelect.vue'
 import NvDatePicker from '../../ui/primitives/NvDatePicker.vue'
+import { systemCommands } from '../../tauri/commands'
 
 interface Props {
   note: NoteDocument | null
@@ -103,7 +103,7 @@ function scrollToHeading(index: number) {
 }
 
 async function onOpenLink(url: string) {
-  try { await openUrl(url) } catch { window.open(url, '_blank') }
+  await systemCommands.openExternalUrl(url)
 }
 
 function linkDomain(url: string): string {

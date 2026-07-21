@@ -13,6 +13,7 @@ mod search;
 mod sidebar;
 mod snapshots;
 mod trash;
+mod vault_import;
 
 #[cfg(test)]
 mod tests;
@@ -28,6 +29,7 @@ pub use search::*;
 pub use sidebar::*;
 pub use snapshots::*;
 pub use trash::*;
+pub use vault_import::*;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct NoteDocument {
@@ -108,6 +110,14 @@ pub struct ImportedImageAsset {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct PickedImportedAsset {
+    #[serde(flatten)]
+    pub asset: ImportedImageAsset,
+    pub file_name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct WorkspaceBlockSearchResult {
     pub id: String,
     pub note_id: String,
@@ -149,7 +159,7 @@ fn note_error_context(workspace_path: &str, kind: &str, message: String) -> LogC
     })
 }
 
-fn insert_note_in_folder(tree: &mut Vec<FolderMeta>, folder_id: &str, note: NoteMeta) -> bool {
+fn insert_note_in_folder(tree: &mut [FolderMeta], folder_id: &str, note: NoteMeta) -> bool {
     for node in tree.iter_mut() {
         if node.id == folder_id {
             node.notes.push(note);
@@ -162,7 +172,19 @@ fn insert_note_in_folder(tree: &mut Vec<FolderMeta>, folder_id: &str, note: Note
     false
 }
 
-fn extract_note_from_tree(tree: &mut Vec<FolderMeta>, note_id: &str) -> Option<NoteMeta> {
+fn folder_exists(tree: &[FolderMeta], folder_id: &str) -> bool {
+    tree.iter()
+        .any(|folder| folder.id == folder_id || folder_exists(&folder.children, folder_id))
+}
+
+fn note_exists_in_tree(tree: &[FolderMeta], note_id: &str) -> bool {
+    tree.iter().any(|folder| {
+        folder.notes.iter().any(|note| note.id == note_id)
+            || note_exists_in_tree(&folder.children, note_id)
+    })
+}
+
+fn extract_note_from_tree(tree: &mut [FolderMeta], note_id: &str) -> Option<NoteMeta> {
     for node in tree.iter_mut() {
         if let Some(pos) = node.notes.iter().position(|n| n.id == note_id) {
             return Some(node.notes.remove(pos));
@@ -175,21 +197,43 @@ fn extract_note_from_tree(tree: &mut Vec<FolderMeta>, note_id: &str) -> Option<N
 }
 
 fn update_note_meta_in_tree(
-    tree: &mut Vec<FolderMeta>,
+    tree: &mut [FolderMeta],
     note_id: &str,
     title: &str,
     icon: &str,
     updated_at: &str,
-) {
+) -> bool {
     for node in tree.iter_mut() {
         for note in node.notes.iter_mut() {
             if note.id == note_id {
                 note.title = title.to_string();
                 note.icon = icon.to_string();
                 note.updated_at = updated_at.to_string();
-                return;
+                return true;
             }
         }
-        update_note_meta_in_tree(&mut node.children, note_id, title, icon, updated_at);
+        if update_note_meta_in_tree(&mut node.children, note_id, title, icon, updated_at) {
+            return true;
+        }
     }
+
+    false
+}
+
+fn update_note_meta_in_manifest(
+    root_notes: &mut [NoteMeta],
+    tree: &mut [FolderMeta],
+    note_id: &str,
+    title: &str,
+    icon: &str,
+    updated_at: &str,
+) -> bool {
+    if let Some(note) = root_notes.iter_mut().find(|note| note.id == note_id) {
+        note.title = title.to_string();
+        note.icon = icon.to_string();
+        note.updated_at = updated_at.to_string();
+        return true;
+    }
+
+    update_note_meta_in_tree(tree, note_id, title, icon, updated_at)
 }

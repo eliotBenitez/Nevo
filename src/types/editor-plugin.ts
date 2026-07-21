@@ -5,12 +5,21 @@ import type { NodeSpec, MarkSpec } from 'prosemirror-model'
 import type { Decoration, DecorationSet } from 'prosemirror-view'
 
 export const NEVO_EDITOR_SDK_VERSION = '1.0.0'
+export const NEVO_SANDBOX_SDK_VERSION = '2.0.0'
+
+export type NevoPluginExecutionMode = 'trusted-webview' | 'sandboxed-worker'
 
 export type NevoEditorCapability =
   | 'editor.read'
   | 'editor.write'
+  | 'editor.write.self'
+  | 'editor.schema'
 
 export type NevoUiCapability =
+  | 'ui.contributions'
+  | 'ui.iframe'
+  | 'ui.blockFrame'
+  | 'ui.navigation'
   | 'workspace.view.register'
   | 'workspace.navigation'
 
@@ -23,6 +32,16 @@ export type NevoWorkspaceCapability =
   | 'template.write'
   | 'kanban.read'
   | 'kanban.write'
+  | 'settings.read'
+  | 'settings.write'
+  | 'secrets.read'
+  | 'storage.local'
+  | 'storage.workspace'
+  | 'assets.read'
+  | 'assets.write'
+  | 'runtime.events'
+  | 'runtime.scheduling'
+  | 'network.fetch'
 
 export type NevoPluginCapability =
   | NevoEditorCapability
@@ -37,11 +56,101 @@ export interface NevoEditorPluginManifest {
   enabled: boolean
   entryPoint: string
   apiVersion: string
+  executionMode?: NevoPluginExecutionMode
+  dataVersion?: number
+  kind?: 'system' | 'user' | 'marketplace'
+  source?: 'bundled' | 'folder' | 'marketplace'
   nevoVersionRange?: string
+  /** SDK V2 source of truth. Legacy capability arrays are V1-only. */
+  capabilities?: NevoPluginCapability[]
   editorCapabilities: NevoEditorCapability[]
   uiCapabilities?: NevoUiCapability[]
   workspaceCapabilities?: NevoWorkspaceCapability[]
+  network?: {
+    hosts: string[]
+    methods: Array<'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'>
+  }
   priority?: number
+}
+
+export type NevoSandboxContributionKind =
+  | 'command'
+  | 'keymap'
+  | 'slashItem'
+  | 'toolbarAction'
+  | 'schemaNode'
+  | 'schemaMark'
+  | 'blockType'
+  | 'popover'
+  | 'decoration'
+  | 'serializer'
+  | 'importer'
+  | 'workspaceView'
+  | 'sidebarItem'
+  | 'modal'
+  | 'editorEvent'
+
+export interface NevoSandboxContribution {
+  kind: NevoSandboxContributionKind
+  id: string
+  handlerId?: string
+  descriptor: Record<string, unknown>
+}
+
+/** Serializable registration result produced inside a persistent Worker. */
+export interface NevoSandboxPluginDefinition {
+  contributions: NevoSandboxContribution[]
+  dataVersion?: number
+}
+
+export interface NevoPluginMigrationInput {
+  fromDataVersion: number
+  storage: Record<string, unknown>
+  nodes: Array<Record<string, unknown>>
+}
+
+export interface NevoPluginMigrationResult {
+  dataVersion: number
+  storage: Record<string, unknown>
+  nodes: Array<Record<string, unknown>>
+}
+
+export interface NevoSandboxEditorSnapshot {
+  revision: number
+  selection: {
+    from: number
+    to: number
+    empty: boolean
+    anchor: number
+    head: number
+  }
+  schema: {
+    nodes: string[]
+    marks: string[]
+  }
+  doc?: Record<string, unknown>
+  now: string
+  locale: string
+  timeZone: string
+}
+
+export type NevoTransactionPosition = number | 'selection.from' | 'selection.to'
+
+export type NevoTransactionOperation =
+  | { type: 'insertText'; text: string; from?: NevoTransactionPosition; to?: NevoTransactionPosition }
+  | { type: 'insertNode'; nodeType: string; attrs?: Record<string, unknown>; at?: NevoTransactionPosition }
+  | { type: 'replaceSelection'; content: Record<string, unknown> | Record<string, unknown>[] }
+  | { type: 'setNodeAttrs'; position: NevoTransactionPosition; attrs: Record<string, unknown> }
+  | { type: 'addMark'; markType: string; attrs?: Record<string, unknown>; from: NevoTransactionPosition; to: NevoTransactionPosition }
+  | { type: 'removeMark'; markType: string; from: NevoTransactionPosition; to: NevoTransactionPosition }
+  | { type: 'wrap'; nodeType: string; attrs?: Record<string, unknown>; from: NevoTransactionPosition; to: NevoTransactionPosition }
+  | { type: 'setSelection'; from: NevoTransactionPosition; to?: NevoTransactionPosition }
+
+export interface NevoTransactionIntent {
+  type: 'transaction'
+  revision: number
+  operations: NevoTransactionOperation[]
+  scrollIntoView?: boolean
 }
 
 export interface NevoEditorPluginCompatibility {
@@ -49,12 +158,30 @@ export interface NevoEditorPluginCompatibility {
   nevoVersion: string
 }
 
+export interface NevoSlashListContext {
+  /** Позиция текущего list_item в документе после удаления slash-запроса. */
+  listItemPos: number
+  /** Позиция текстового блока, из которого была вызвана slash-команда. */
+  paragraphPos: number
+}
+
+export interface NevoSlashCommandContext {
+  view: EditorView
+  state: EditorState
+  dispatch: (tr: Transaction) => void
+}
+
 export interface NevoSlashItem {
   id: string
   title: string
   category?: string
   keywords?: string[]
-  run: (ctx: { view: EditorView; state: EditorState; dispatch: (tr: Transaction) => void }) => void
+  run: (ctx: NevoSlashCommandContext) => void
+  /**
+   * Безопасное выполнение команды внутри list_item. Вызывается только при
+   * явном opt-in; команды без этого обработчика сохраняют обычное поведение.
+   */
+  runInList?: (ctx: NevoSlashCommandContext & { list: NevoSlashListContext }) => void
 }
 
 export interface NevoSlashMenuState {
@@ -94,6 +221,44 @@ export interface NevoModalRegistration {
   component: unknown
 }
 
+export interface NevoSandboxFrameDescriptor {
+  type: 'sandboxed-plugin-iframe'
+  pluginId: string
+  source: string
+  sandbox: 'allow-scripts'
+}
+
+export interface NevoSandboxWorkspaceView {
+  id: string
+  pluginId: string
+  title: string
+  route: string
+  icon?: string
+  order?: number
+  frame: NevoSandboxFrameDescriptor
+}
+
+export interface NevoSandboxSidebarItem {
+  id: string
+  pluginId: string
+  title: string
+  route: string
+  icon?: string
+  order?: number
+}
+
+export interface NevoSandboxModal {
+  id: string
+  pluginId: string
+  frame: NevoSandboxFrameDescriptor
+}
+
+export interface NevoSandboxUiContributionSnapshot {
+  workspaceViews: NevoSandboxWorkspaceView[]
+  sidebarItems: NevoSandboxSidebarItem[]
+  modals: NevoSandboxModal[]
+}
+
 /**
  * Лёгкое представление ноды для сериализации/импорта. Структурно совместимо с
  * BlockNode из ../types/note, но не зависит от него, чтобы плагины могли
@@ -118,15 +283,15 @@ export interface NevoNodeHtmlSerializerHelpers extends NevoNodeSerializerHelpers
 
 /** Хуки сериализации плагинной ноды во все форматы экспорта. */
 export interface NevoNodeSerializer {
-  markdown?: (node: NevoSerializableNode, helpers: NevoNodeSerializerHelpers) => string
-  html?: (node: NevoSerializableNode, helpers: NevoNodeHtmlSerializerHelpers) => string
-  typst?: (node: NevoSerializableNode, helpers: NevoNodeSerializerHelpers) => string
+  markdown?: (node: NevoSerializableNode, helpers: NevoNodeSerializerHelpers) => string | Promise<string>
+  html?: (node: NevoSerializableNode, helpers: NevoNodeHtmlSerializerHelpers) => string | Promise<string>
+  typst?: (node: NevoSerializableNode, helpers: NevoNodeSerializerHelpers) => string | Promise<string>
 }
 
 /** Импорт плагинной ноды из fenced code block Markdown по языку. */
 export interface NevoNodeImporter {
   fencedLang: string
-  fromFenced: (code: string) => NevoSerializableNode | null
+  fromFenced: (code: string) => NevoSerializableNode | null | Promise<NevoSerializableNode | null>
 }
 
 export type NevoNodePopoverFieldType = 'text' | 'textarea' | 'select' | 'number' | 'checkbox' | 'color'

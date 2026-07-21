@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { watchDebounced } from '@vueuse/core'
-import { ArrowLeft, Download, FolderPen, History, Kanban, MoreHorizontal, Network, Plus, Search, Settings, Tag, Trash2, Upload } from 'lucide-vue-next'
+import { ArrowLeft, Download, FolderPen, History, House, Kanban, MoreHorizontal, Network, Pin, PinOff, Plus, Search, Settings, Tag, Trash2, Upload } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import type { SidebarNotePreview, TreeNode } from '../../types/note'
 import type { KanbanBoardMeta } from '../../types/kanban'
-import type { SidebarContentMode } from '../../types/workspace'
+import type { SidebarContentMode, WorkspaceHomeFavorite } from '../../types/workspace'
+import type { NevoSandboxSidebarItem } from '../../types/editor-plugin'
 import WorkspaceTreeNode from './WorkspaceTreeNode.vue'
 import SidebarActionBar from './SidebarActionBar.vue'
 import { collectFolderIds, filterTree, sortTree, type SortMode } from '../composables/useSidebarTree'
@@ -20,6 +21,7 @@ import { useWorkspaceStore } from '../../stores/workspace'
 import { useTreeStore } from '../../stores/tree'
 import { filterSidebarPreviewsByTags, sortSidebarPreviews } from '../../utils/sidebar/sidebarNotePreviews'
 import { useSidebarDrag, type SidebarDragTarget, type SidebarDragSource } from '../composables/useSidebarDrag'
+import { workspaceHomeFavoriteKey } from '../../utils/workspace-settings'
 
 interface Props {
   workspaceName: string
@@ -33,10 +35,13 @@ interface Props {
   backendKind?: 'local' | 'cloud' | null
   sidebarMode?: SidebarContentMode
   notePreviews?: SidebarNotePreview[]
+  pluginItems?: NevoSandboxSidebarItem[]
+  homeFavoriteKeys?: string[]
 }
 
 const props = defineProps<Props>()
 const route = useRoute()
+const isHomeActive = computed(() => route.path === '/workspace')
 const isGraphActive = computed(() => route.path === '/workspace/graph')
 
 type TreeMenuAction = 'rename' | 'delete' | 'search' | 'history' | 'export'
@@ -53,6 +58,7 @@ const emit = defineEmits<{
   'create-note': []
   'create-folder': []
   'import-md': []
+  'import-obsidian': []
   'import-into-folder': [folderId: string]
   'import-into-note': [noteId: string]
   'open-note': [noteId: string]
@@ -66,6 +72,9 @@ const emit = defineEmits<{
   'open-graph': [],
   'open-board': [boardId: string]
   'create-board': []
+  'open-plugin-item': [item: NevoSandboxSidebarItem]
+  'open-home': []
+  'toggle-home': [favorite: WorkspaceHomeFavorite]
   'back-to-onboarding': []
 }>()
 const { t } = useI18n()
@@ -140,7 +149,9 @@ watch(isRememberEnabled, (enabled) => {
         if (saved) {
           Object.assign(collapsedFolders, JSON.parse(saved))
         }
-      } catch {}
+      } catch {
+        // Ignore malformed legacy collapse state.
+      }
     }
   }
 })
@@ -157,6 +168,12 @@ const boardContextMenu = reactive<{
   boardIcon: string
 }>({ open: false, boardId: null, boardTitle: '', boardIcon: '' })
 const boardCursorPos = ref({ top: 0, left: 0 })
+const homeContextMenu = reactive<{
+  open: boolean
+  favorite: WorkspaceHomeFavorite | null
+}>({ open: false, favorite: null })
+const homeCursorPos = ref({ top: 0, left: 0 })
+const homeFavoriteKeySet = computed(() => new Set(props.homeFavoriteKeys ?? []))
 const isTreeEmpty = computed(() => !props.tree.length)
 const selectedTags = ref<Set<string>>(new Set())
 const sidebarMode = computed(() => props.sidebarMode ?? 'tree')
@@ -372,6 +389,24 @@ function runContextAction(action: TreeMenuAction) {
   contextMenu.target = null
 }
 
+function isHomeFavorite(favorite: WorkspaceHomeFavorite) {
+  return homeFavoriteKeySet.value.has(workspaceHomeFavoriteKey(favorite))
+}
+
+function contextTargetFavorite(): WorkspaceHomeFavorite | null {
+  const target = contextMenu.target
+  if (!target) return null
+  return { kind: target.kind, id: target.id }
+}
+
+function toggleContextHome() {
+  const favorite = contextTargetFavorite()
+  if (!favorite) return
+  emit('toggle-home', favorite)
+  contextMenu.open = false
+  contextMenu.target = null
+}
+
 function runExportContextAction(format: ExportFormat) {
   const target = contextMenu.target
   if (!target) return
@@ -432,6 +467,27 @@ function runBoardAction(action: BoardMenuAction) {
   emit('board-action', { action, boardId: boardContextMenu.boardId, boardTitle: boardContextMenu.boardTitle, boardIcon: boardContextMenu.boardIcon })
   boardContextMenu.open = false
 }
+
+function toggleBoardHome() {
+  if (!boardContextMenu.boardId) return
+  emit('toggle-home', { kind: 'board', id: boardContextMenu.boardId })
+  boardContextMenu.open = false
+}
+
+function openHomeContextMenu(event: MouseEvent, favorite: WorkspaceHomeFavorite) {
+  event.preventDefault()
+  event.stopPropagation()
+  homeCursorPos.value = { top: event.clientY, left: event.clientX }
+  homeContextMenu.favorite = favorite
+  homeContextMenu.open = true
+}
+
+function toggleGenericHome() {
+  if (!homeContextMenu.favorite) return
+  emit('toggle-home', homeContextMenu.favorite)
+  homeContextMenu.open = false
+  homeContextMenu.favorite = null
+}
 </script>
 
 <template>
@@ -457,6 +513,7 @@ function runBoardAction(action: BoardMenuAction) {
       @create-folder="emit('create-folder')"
       @create-board="emit('create-board')"
       @import-md="emit('import-md')"
+      @import-obsidian="emit('import-obsidian')"
       @toggle-collapse-all="toggleCollapseAll"
       @update:sort-mode="onSortModeChange"
     />
@@ -621,8 +678,27 @@ function runBoardAction(action: BoardMenuAction) {
       </button>
     </div>
 
+    <div v-if="pluginItems?.length" class="sidebar-plugin-items">
+      <button
+        v-for="item in pluginItems"
+        :key="item.id"
+        type="button"
+        class="sidebar-system__item"
+        :class="{ 'sidebar-system__item--active': route.path === item.route }"
+        @click="emit('open-plugin-item', item)"
+        @contextmenu="openHomeContextMenu($event, { kind: 'pluginView', pluginId: item.pluginId, contributionId: item.id })"
+      >
+        <NvNoteIcon :value="item.icon ?? 'lucide:blocks'" :size="14" />
+        <span>{{ item.title }}</span>
+      </button>
+    </div>
+
     <div class="sidebar-system">
-      <button type="button" class="sidebar-system__item" :class="{ 'sidebar-system__item--active': isGraphActive }" @click="emit('open-graph')">
+      <button type="button" class="sidebar-system__item" :class="{ 'sidebar-system__item--active': isHomeActive }" @click="emit('open-home')">
+        <House :size="14" />
+        <span>{{ t('workspace.system.home') }}</span>
+      </button>
+      <button type="button" class="sidebar-system__item" :class="{ 'sidebar-system__item--active': isGraphActive }" @click="emit('open-graph')" @contextmenu="openHomeContextMenu($event, { kind: 'graph' })">
         <Network :size="14" />
         <span>{{ t('workspace.system.graph') }}</span>
       </button>
@@ -650,11 +726,31 @@ function runBoardAction(action: BoardMenuAction) {
     <NvMenuItem v-if="contextMenu.target?.kind === 'note'" :icon="Upload" :label="t('workspace.context.importIntoNote')" @select="runImportIntoNote" />
     <NvMenuItem v-if="contextMenu.target?.kind === 'note'" :icon="History" :label="t('workspace.system.history')" @select="runContextAction('history')" />
     <NvMenuItem v-if="contextMenu.target?.kind === 'note'" :icon="Download" :label="t('workspace.context.export')" :items="exportMenuItems" />
+    <NvMenuSeparator />
+    <NvMenuItem
+      :icon="contextTargetFavorite() && isHomeFavorite(contextTargetFavorite()!) ? PinOff : Pin"
+      :label="contextTargetFavorite() && isHomeFavorite(contextTargetFavorite()!) ? t('workspace.home.removeFromHome') : t('workspace.home.addToHome')"
+      @select="toggleContextHome"
+    />
   </NvPopupMenu>
 
   <NvPopupMenu v-model:open="boardContextMenu.open" :position="boardCursorPos" width="180px">
     <NvMenuItem :icon="FolderPen" :label="t('workspace.context.rename')" @select="runBoardAction('rename')" />
     <NvMenuSeparator />
+    <NvMenuItem
+      :icon="boardContextMenu.boardId && isHomeFavorite({ kind: 'board', id: boardContextMenu.boardId }) ? PinOff : Pin"
+      :label="boardContextMenu.boardId && isHomeFavorite({ kind: 'board', id: boardContextMenu.boardId }) ? t('workspace.home.removeFromHome') : t('workspace.home.addToHome')"
+      @select="toggleBoardHome"
+    />
     <NvMenuItem :icon="Trash2" :label="t('workspace.context.delete')" danger @select="runBoardAction('delete')" />
+  </NvPopupMenu>
+
+  <NvPopupMenu v-model:open="homeContextMenu.open" :position="homeCursorPos" width="190px">
+    <NvMenuItem
+      v-if="homeContextMenu.favorite"
+      :icon="isHomeFavorite(homeContextMenu.favorite) ? PinOff : Pin"
+      :label="isHomeFavorite(homeContextMenu.favorite) ? t('workspace.home.removeFromHome') : t('workspace.home.addToHome')"
+      @select="toggleGenericHome"
+    />
   </NvPopupMenu>
 </template>

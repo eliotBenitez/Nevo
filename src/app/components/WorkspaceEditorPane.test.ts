@@ -4,7 +4,6 @@ import { createI18n } from 'vue-i18n'
 import { createPinia } from 'pinia'
 import { nextTick } from 'vue'
 import type { EditorView } from 'prosemirror-view'
-import { openPath } from '@tauri-apps/plugin-opener'
 import WorkspaceEditorPane from './WorkspaceEditorPane.vue'
 import { focusBlockSearchTarget } from './editor/blockNavigation'
 import en from '../../locales/en.json'
@@ -73,6 +72,7 @@ const editorCoreMocks = vi.hoisted(() => {
     insertEmojiFromSlashPicker: vi.fn(() => false),
     executeCommandById: vi.fn(() => false),
     flushPendingContentUpdate: vi.fn(),
+    flushDatabaseCleanup: vi.fn(),
   }
 
   return {
@@ -133,10 +133,6 @@ vi.mock('@tauri-apps/api/core', () => ({
   convertFileSrc: (src: string) => `asset://${src}`,
 }))
 
-vi.mock('@tauri-apps/plugin-opener', () => ({
-  openPath: vi.fn(),
-}))
-
 vi.mock('../../tauri/commands', () => ({
   workspaceCommands: {
     cleanupOrphanedAssets: vi.fn(),
@@ -144,6 +140,7 @@ vi.mock('../../tauri/commands', () => ({
   noteCommands: {
     importImageAsset: vi.fn(),
     deleteUnreferencedAsset: vi.fn(),
+    openWorkspaceAsset: vi.fn(),
     getMediaServerInfo: vi.fn(async () => ({ port: 1429, token: 'test-token' })),
   },
 }))
@@ -302,6 +299,7 @@ const defaultSettings: WorkspaceSettings = {
     confirmBeforeDelete: true,
     lastContext: { kind: 'workspace', folderId: null, noteId: null },
     startupNoteId: null,
+    homeFavorites: [],
   },
   appearance: {
     accentPreset: 'violet',
@@ -356,6 +354,7 @@ const defaultSettings: WorkspaceSettings = {
     newWorkspaceHomeNote: true,
     autoCreateStarterStructure: 'light',
     sidebarContentMode: 'tree',
+    sidebarLayout: 'docked',
     sidebarSortMode: 'manual',
     graphEntryMode: 'global',
     graphScopeDefault: 'workspace',
@@ -610,7 +609,7 @@ describe('WorkspaceEditorPane scrollbar overlay', () => {
 
     const appearance = wrapper.findComponent({ name: 'DocAppearance' })
     expect(appearance.props('noteCoverStyle')).toEqual({
-      backgroundImage: 'url("asset:///workspace/.nevo/assets/cover.jpg")',
+      backgroundImage: 'url("asset://.nevo/assets/cover.jpg")',
       backgroundSize: 'cover',
       backgroundPosition: 'center',
     })
@@ -659,7 +658,7 @@ describe('WorkspaceEditorPane scrollbar overlay', () => {
     editorCoreMocks.callbacks?.onFileOpenRequest('.nevo/assets/doc.pdf')
     await flushPane()
 
-    expect(openPath).toHaveBeenCalledWith('/workspace/.nevo/assets/doc.pdf')
+    expect(noteCommands.openWorkspaceAsset).toHaveBeenCalledWith('/workspace', '.nevo/assets/doc.pdf')
   })
 
   it('keeps the embed URL popover open through the slash menu opening click', async () => {
@@ -721,6 +720,7 @@ describe('WorkspaceEditorPane scrollbar overlay', () => {
       height: 10,
     } as DOMRect)
     await flushPane()
+    const setupCallCount = editorCoreMocks.editorSetup.setupEditorForNote.mock.calls.length
 
     await wrapper.setProps({
       note: {
@@ -732,6 +732,7 @@ describe('WorkspaceEditorPane scrollbar overlay', () => {
 
     const overlay = wrapper.findComponent({ name: 'EditorOverlayContainer' })
     expect(overlay.props('embedUrlPopover')).toMatchObject({ open: true, nodePos: 1 })
+    expect(editorCoreMocks.editorSetup.setupEditorForNote).toHaveBeenCalledTimes(setupCallCount)
   })
 
   it('opens the breadcrumb overflow menu when the trigger is clicked', async () => {

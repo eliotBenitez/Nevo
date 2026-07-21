@@ -1,0 +1,40 @@
+{
+  "name": "@nevo/plugin-sdk",
+  "version": "2.0.0",
+  "description": "Sandboxed Plugin SDK for Nevo",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "templates",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./test-host": {
+      "types": "./dist/test-host.d.ts",
+      "import": "./dist/test-host.js"
+    }
+  },
+  "bin": {
+    "nevo-plugin-conformance": "./dist/conformance.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "~5.6.2",
+    "vitest": "^4.1.6"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

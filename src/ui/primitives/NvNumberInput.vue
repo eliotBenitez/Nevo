@@ -10,6 +10,7 @@ interface Props {
   disabled?: boolean
   placeholder?: string
   size?: 'sm' | 'md'
+  allowEmpty?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -19,16 +20,19 @@ const props = withDefaults(defineProps<Props>(), {
   size: 'sm',
   min: undefined,
   max: undefined,
+  allowEmpty: false,
 })
 
 const emit = defineEmits<{ 'update:modelValue': [value: number] }>()
 
+const currentValue = computed(() => Number.isFinite(props.modelValue) ? props.modelValue : 0)
+
 const canDecrement = computed(
-  () => !props.disabled && (props.min === undefined || props.modelValue > props.min),
+  () => !props.disabled && (props.min === undefined || currentValue.value > props.min),
 )
 
 const canIncrement = computed(
-  () => !props.disabled && (props.max === undefined || props.modelValue < props.max),
+  () => !props.disabled && (props.max === undefined || currentValue.value < props.max),
 )
 
 function clamp(value: number): number {
@@ -40,16 +44,20 @@ function clamp(value: number): number {
 
 function decrement() {
   if (!canDecrement.value) return
-  emit('update:modelValue', clamp(props.modelValue - props.step))
+  emit('update:modelValue', clamp(currentValue.value - props.step))
 }
 
 function increment() {
   if (!canIncrement.value) return
-  emit('update:modelValue', clamp(props.modelValue + props.step))
+  emit('update:modelValue', clamp(currentValue.value + props.step))
 }
 
 function onInput(event: Event) {
   const raw = (event.target as HTMLInputElement).value
+  if (raw === '') {
+    if (props.allowEmpty) emit('update:modelValue', Number.NaN)
+    return
+  }
   const parsed = parseFloat(raw)
   if (!isNaN(parsed)) emit('update:modelValue', clamp(parsed))
 }
@@ -78,7 +86,7 @@ function onKeydown(event: KeyboardEvent) {
     <input
       type="number"
       class="nni-input"
-      :value="modelValue"
+      :value="allowEmpty && !Number.isFinite(modelValue) ? '' : modelValue"
       :min="min"
       :max="max"
       :step="step"

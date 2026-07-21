@@ -9,6 +9,7 @@ import en from '../../locales/en.json'
 import type { SidebarNotePreview, TreeNode } from '../../types/note'
 import type { KanbanBoardMeta } from '../../types/kanban'
 import type { SidebarContentMode } from '../../types/workspace'
+import type { NevoSandboxSidebarItem } from '../../types/editor-plugin'
 import type { SortMode } from '../composables/useSidebarTree'
 import { useWorkspaceStore } from '../../stores/workspace'
 import { useTreeStore } from '../../stores/tree'
@@ -32,9 +33,11 @@ const tree: TreeNode[] = [
   },
 ]
 
-function mountSidebar(options: { boards?: KanbanBoardMeta[]; kanbanEnabled?: boolean; tree?: TreeNode[]; sidebarMode?: SidebarContentMode; notePreviews?: SidebarNotePreview[]; sidebarSortMode?: SortMode } = {}) {
+function mountSidebar(options: { boards?: KanbanBoardMeta[]; kanbanEnabled?: boolean; tree?: TreeNode[]; sidebarMode?: SidebarContentMode; notePreviews?: SidebarNotePreview[]; sidebarSortMode?: SortMode; pluginItems?: NevoSandboxSidebarItem[]; homeFavoriteKeys?: string[] } = {}) {
+  const history = createMemoryHistory()
+  history.push('/workspace')
   const router = createRouter({
-    history: createMemoryHistory(),
+    history,
     routes: [{ path: '/workspace', component: { template: '<div />' } }],
   })
   const pinia = createPinia()
@@ -49,8 +52,6 @@ function mountSidebar(options: { boards?: KanbanBoardMeta[]; kanbanEnabled?: boo
       },
     }
   }
-
-  void router.push('/workspace')
 
   return mount(WorkspaceSidebar, {
     attachTo: document.body,
@@ -67,6 +68,8 @@ function mountSidebar(options: { boards?: KanbanBoardMeta[]; kanbanEnabled?: boo
       kanbanEnabled: options.kanbanEnabled,
       sidebarMode: options.sidebarMode,
       notePreviews: options.notePreviews,
+      pluginItems: options.pluginItems,
+      homeFavoriteKeys: options.homeFavoriteKeys,
     },
   })
 }
@@ -110,6 +113,36 @@ afterEach(() => {
 })
 
 describe('WorkspaceSidebar', () => {
+  it('renders Home as the first active system destination', async () => {
+    const wrapper = mountSidebar()
+    await flushUi()
+    const systemItems = wrapper.findAll('.sidebar-system .sidebar-system__item')
+
+    expect(systemItems[0].text()).toContain('Home')
+    expect(systemItems[0].classes()).toContain('sidebar-system__item--active')
+    await systemItems[0].trigger('click')
+    expect(wrapper.emitted('open-home')).toEqual([[]])
+    wrapper.unmount()
+  })
+
+  it('renders sandboxed plugin contributions and emits the selected descriptor', async () => {
+    const pluginItem: NevoSandboxSidebarItem = {
+      id: 'plugin.frame.dashboard',
+      pluginId: 'plugin.frame',
+      title: 'Plugin dashboard',
+      route: '/workspace/plugin/plugin.frame/dashboard',
+      icon: 'lucide:blocks',
+    }
+    const wrapper = mountSidebar({ pluginItems: [pluginItem] })
+
+    const button = wrapper.get('.sidebar-plugin-items .sidebar-system__item')
+    expect(button.text()).toContain('Plugin dashboard')
+    await button.trigger('click')
+
+    expect(wrapper.emitted('open-plugin-item')).toEqual([[pluginItem]])
+    wrapper.unmount()
+  })
+
   it('emits open-history when the sidebar history button is clicked', async () => {
     const wrapper = mountSidebar()
 
@@ -138,6 +171,39 @@ describe('WorkspaceSidebar', () => {
 
     expect(wrapper.emitted('tree-action')).toEqual([
       [{ action: 'history', target: expect.objectContaining({ kind: 'note', id: 'note-1' }) }],
+    ])
+    wrapper.unmount()
+  })
+
+  it('toggles a note favorite from its context menu', async () => {
+    const wrapper = mountSidebar()
+    await openNoteContextMenu(wrapper)
+    await activateMenuButton('Add to Home')
+
+    expect(wrapper.emitted('toggle-home')).toEqual([[{ kind: 'note', id: 'note-1' }]])
+    wrapper.unmount()
+  })
+
+  it('toggles board and plugin-view favorites from their context menus', async () => {
+    const pluginItem: NevoSandboxSidebarItem = {
+      id: 'dashboard',
+      pluginId: 'plugin.frame',
+      title: 'Plugin dashboard',
+      route: '/workspace/plugin/plugin.frame/dashboard',
+    }
+    const wrapper = mountSidebar({
+      boards: [{ id: 'board-1', title: 'Roadmap', icon: '🗂️', updatedAt: '2026-07-19T10:00:00.000Z' }],
+      pluginItems: [pluginItem],
+    })
+
+    await wrapper.get('.sidebar-board-item').trigger('contextmenu', { clientX: 30, clientY: 40 })
+    await activateMenuButton('Add to Home')
+    await wrapper.get('.sidebar-plugin-items .sidebar-system__item').trigger('contextmenu', { clientX: 50, clientY: 60 })
+    await activateMenuButton('Add to Home')
+
+    expect(wrapper.emitted('toggle-home')).toEqual([
+      [{ kind: 'board', id: 'board-1' }],
+      [{ kind: 'pluginView', pluginId: 'plugin.frame', contributionId: 'dashboard' }],
     ])
     wrapper.unmount()
   })

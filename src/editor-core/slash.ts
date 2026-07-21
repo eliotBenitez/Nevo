@@ -1,7 +1,7 @@
-import { Plugin, PluginKey } from 'prosemirror-state'
+import { Plugin, PluginKey, TextSelection } from 'prosemirror-state'
 import type { EditorState, Transaction } from 'prosemirror-state'
 import type { EditorView } from 'prosemirror-view'
-import type { NevoSlashItem, NevoSlashMenuState } from '../types/editor-plugin'
+import type { NevoSlashItem, NevoSlashListContext, NevoSlashMenuState } from '../types/editor-plugin'
 
 interface SlashMetaMove {
   type: 'move'
@@ -242,6 +242,62 @@ function getActiveSlashItem(state: InternalSlashState, items: NevoSlashItem[]): 
   return items.find((item) => item.id === itemId) ?? null
 }
 
+function getListSlashContext(state: EditorState): NevoSlashListContext | null {
+  const { $from } = state.selection
+  if (!$from.parent.isTextblock) return null
+
+  for (let depth = $from.depth; depth >= 1; depth -= 1) {
+    if ($from.node(depth).type !== state.schema.nodes.list_item) continue
+
+    return {
+      listItemPos: $from.before(depth),
+      paragraphPos: $from.before($from.depth),
+    }
+  }
+
+  return null
+}
+
+/**
+ * Очищает абзац, из которого вызвана slash-команда, и добавляет следующий
+ * пустой абзац в тот же list_item. Встроенная блочная команда затем заменяет
+ * этот временный абзац своим результатом, не нарушая правило схемы о первом
+ * paragraph в list_item.
+ */
+export function prepareListItemForBlockSlash(state: EditorState, list: NevoSlashListContext): Transaction | null {
+  const listItem = state.doc.nodeAt(list.listItemPos)
+  const sourceParagraph = state.doc.nodeAt(list.paragraphPos)
+  const paragraph = state.schema.nodes.paragraph
+  if (!listItem || listItem.type !== state.schema.nodes.list_item || !sourceParagraph || sourceParagraph.type !== paragraph) {
+    return null
+  }
+
+  const emptyParagraph = paragraph.createAndFill()
+  if (!emptyParagraph) return null
+
+  const firstParagraphPos = list.listItemPos + 1
+  const firstParagraph = state.doc.nodeAt(firstParagraphPos)
+  const $source = state.doc.resolve(list.paragraphPos)
+  if (!firstParagraph || firstParagraph.type !== paragraph || $source.parent !== listItem) return null
+
+  let tr = state.tr.replaceWith(firstParagraphPos, firstParagraphPos + firstParagraph.nodeSize, emptyParagraph)
+  if (list.paragraphPos !== firstParagraphPos) {
+    const sourcePos = tr.mapping.map(list.paragraphPos, -1)
+    const mappedSource = tr.doc.nodeAt(sourcePos)
+    if (!mappedSource || mappedSource.type !== paragraph) return null
+    tr = tr.delete(sourcePos, sourcePos + mappedSource.nodeSize)
+  }
+
+  const mappedListItemPos = tr.mapping.map(list.listItemPos, -1)
+  const mappedFirstParagraphPos = mappedListItemPos + 1
+  const clearedParagraph = tr.doc.nodeAt(mappedFirstParagraphPos)
+  if (!clearedParagraph || clearedParagraph.type !== paragraph) return null
+
+  const insertPos = mappedFirstParagraphPos + clearedParagraph.nodeSize
+  tr = tr.insert(insertPos, paragraph.createAndFill() ?? paragraph.create())
+  return tr.setSelection(TextSelection.create(tr.doc, insertPos + 1)).scrollIntoView()
+}
+
 export function getSlashMenuState(state: EditorState): NevoSlashMenuState {
   const pluginState = nevoSlashPluginKey.getState(state)
   if (!pluginState) {
@@ -266,16 +322,30 @@ export function getSlashMenuState(state: EditorState): NevoSlashMenuState {
 export function executeSlashItem(view: EditorView, item: NevoSlashItem, slashState: NevoSlashMenuState): boolean {
   if (!slashState.range) return false
 
+  const listContext = getListSlashContext(view.state)
+
   const tr = view.state.tr.delete(slashState.range.from, slashState.range.to).setMeta(nevoSlashPluginKey, {
     type: 'close',
   } satisfies SlashMeta)
   view.dispatch(tr)
 
-  item.run({
+  const context = {
     view,
     state: view.state,
     dispatch: view.dispatch.bind(view),
-  })
+  }
+
+  if (listContext && item.runInList) {
+    item.runInList({
+      ...context,
+      list: {
+        listItemPos: tr.mapping.map(listContext.listItemPos, -1),
+        paragraphPos: tr.mapping.map(listContext.paragraphPos, -1),
+      },
+    })
+  } else {
+    item.run(context)
+  }
 
   return true
 }

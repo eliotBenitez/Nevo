@@ -1,6 +1,7 @@
 pub mod ai;
 pub mod auth;
 pub mod config;
+pub mod database;
 pub mod folder;
 pub mod fonts;
 pub mod github_sync;
@@ -9,6 +10,7 @@ pub mod kanban;
 pub mod kanban_ops;
 pub mod note;
 pub mod path_utils;
+pub mod system;
 pub mod templates;
 pub mod typst_export;
 pub mod workspace;

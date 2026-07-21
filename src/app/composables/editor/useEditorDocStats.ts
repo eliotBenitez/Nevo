@@ -4,6 +4,7 @@ import type { EditorCore } from './useEditorCore'
 import type { WorkspaceSettings } from '../../../types/workspace'
 import { useGraphStore } from '../../../stores/graph'
 import { extractLinks } from '../../../editor-core/extract-links'
+import { countWordsInText } from '../../../utils/noteWordCount'
 
 const STATS_UPDATE_DELAY_MS = 200
 const GRAPH_UPDATE_DELAY_MS = 600
@@ -19,6 +20,7 @@ export function useEditorDocStats(
   const graphStore = useGraphStore()
 
   const editorDocText = ref('')
+  const editorWordText = ref('')
   let statsUpdateTimer: ReturnType<typeof setTimeout> | null = null
   let lastStatsDoc: object | null = null
   let graphUpdateTimer: ReturnType<typeof setTimeout> | null = null
@@ -47,11 +49,14 @@ export function useEditorDocStats(
     clearStatsUpdateTimer()
     if (!statsVisible()) {
       if (editorDocText.value) editorDocText.value = ''
+      if (editorWordText.value) editorWordText.value = ''
       return
     }
     const currentDoc = core.editorView?.state.doc ?? null
-    const next = currentDoc?.textContent ?? ''
-    if (next !== editorDocText.value) editorDocText.value = next
+    const nextDocText = currentDoc?.textContent ?? ''
+    const nextWordText = currentDoc?.textBetween(0, currentDoc.content.size, '\n', '\n') ?? ''
+    if (nextDocText !== editorDocText.value) editorDocText.value = nextDocText
+    if (nextWordText !== editorWordText.value) editorWordText.value = nextWordText
     lastStatsDoc = currentDoc
   }
 
@@ -59,6 +64,7 @@ export function useEditorDocStats(
     clearStatsUpdateTimer()
     if (!statsVisible()) {
       if (editorDocText.value) editorDocText.value = ''
+      if (editorWordText.value) editorWordText.value = ''
       return
     }
     statsUpdateTimer = setTimeout(updateEditorStatsNow, STATS_UPDATE_DELAY_MS)
@@ -106,9 +112,10 @@ export function useEditorDocStats(
 
   const editorWordCount = computed(() => {
     if (getSettings().editor.editorStatsVisibility !== 'corner') return null
-    const text = editorDocText.value
-    const words = text.trim() ? text.trim().split(/\s+/).length : 0
-    return { words, chars: text.length }
+    return {
+      words: countWordsInText(editorWordText.value),
+      chars: editorDocText.value.length,
+    }
   })
 
   return {

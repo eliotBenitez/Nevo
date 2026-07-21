@@ -3,11 +3,10 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRaw, watch, type
 import type { EditorView } from 'prosemirror-view'
 import { TextSelection } from 'prosemirror-state'
 import { useI18n } from 'vue-i18n'
-import { convertFileSrc } from '@tauri-apps/api/core'
-import { openPath } from '@tauri-apps/plugin-opener'
 import { noteCommands } from '../../../tauri/commands'
 import { mediaHttpUrl } from '../../../tauri/mediaServer'
 import { appLogger } from '../../../utils/logger'
+import { workspaceAssetUrl } from '../../../utils/workspaceAssetUrl'
 import { blockNode } from '../../../utils/noteExport/htmlSerializer'
 import { createDefaultWorkspaceSettings, EDITOR_LINE_WIDTHS, resolveEditorFontFamilyCss } from '../../../utils/workspace-settings'
 import { CloudBackend, CLOUD_ASSET_SCHEME } from '../../../core/workspace-backend'
@@ -259,9 +258,8 @@ function resolveCloudAsset(src: string): string {
 function resolveAssetSrc(src: string): string {
   if (/^(https?|data|blob):/.test(src)) return src
   if (src.startsWith(CLOUD_ASSET_SCHEME)) return resolveCloudAsset(src) || src
-  const wp = props.workspacePath
-  if (!wp) return src
-  return convertFileSrc(`${wp}/${src}`)
+  if (!props.workspacePath) return src
+  return workspaceAssetUrl(src)
 }
 
 function resolveMediaSrc(src: string): string | null {
@@ -269,7 +267,7 @@ function resolveMediaSrc(src: string): string | null {
   if (src.startsWith(CLOUD_ASSET_SCHEME)) return resolveCloudAsset(src) || null
   const wp = props.workspacePath
   if (!wp) return null
-  return mediaHttpUrl(`${wp}/${src}`)
+  return mediaHttpUrl(`${wp}/${src}`, src)
 }
 
 function backendSupportsPathImport(): boolean {
@@ -280,12 +278,7 @@ async function openFileAsset(src: string) {
   const workspacePath = props.workspacePath
   if (!workspacePath || !src.startsWith('.nevo/assets/')) return
   try {
-    const fullPath = `${workspacePath}/${src}`
-    try {
-      await openPath(fullPath)
-    } catch {
-      await noteCommands.openFilePath(fullPath)
-    }
+    await noteCommands.openWorkspaceAsset(workspacePath, src)
   } catch (error) {
     await appLogger.warn({
       source: 'frontend.editor',
@@ -369,7 +362,7 @@ const editorSetup = useEditorCore(core, {
         /\bsrc="__EMBED__\/([^"]+)"/g,
         (_, filename: string) => {
           const original = ctx.assetSrcs.find(s => s.endsWith(filename)) ?? filename
-          return `src="${convertFileSrc(`${workspacePath}/${original}`)}"`
+          return `src="${workspaceAssetUrl(original)}"`
         },
       )
       setHtml(html || '')
@@ -647,7 +640,7 @@ async function setupSurfaceEditor() {
   await nextTick()
   if (editorRoot.value) {
     await editorSetup.setupEditorForDocument(props.content, props.documentId, editorRoot.value, props.settings)
-    if (!isTouch.value) blockHandleComposable.mount()
+    blockHandleComposable.mount()
     refreshIsEmpty()
   }
   hasInitializedPluginHost.value = true
@@ -699,7 +692,7 @@ watch(
     await nextTick()
     if (editorRoot.value) {
       await editorSetup.setupEditorForDocument(content, documentId, editorRoot.value, props.settings)
-      if (!isTouch.value) blockHandleComposable.mount()
+      blockHandleComposable.mount()
       refreshIsEmpty()
     }
   },
@@ -734,13 +727,10 @@ watch(
   },
 )
 
-watch(isTouch, (touch) => {
-  if (touch) {
-    blockHandleComposable.closeTypeMenu()
-    blockHandleComposable.unmount()
-  } else {
-    blockHandleComposable.mount()
-  }
+watch(isTouch, () => {
+  // mount() binds both mouse and touch handling and is idempotent, so a
+  // pointer-type change just re-ensures the (single) binding.
+  blockHandleComposable.mount()
 })
 
 watch(

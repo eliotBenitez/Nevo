@@ -53,10 +53,18 @@ export function useDrawKeyboard(options: DrawKeyboardOptions) {
       if (options.selection.value.size) { event.preventDefault(); options.duplicateSelection() }
     }
     else if (mod && event.key === ']') {
-      if (options.selection.value.size) { event.preventDefault(); event.shiftKey ? options.bringToFront() : options.bringForward() }
+      if (options.selection.value.size) {
+        event.preventDefault()
+        if (event.shiftKey) options.bringToFront()
+        else options.bringForward()
+      }
     }
     else if (mod && event.key === '[') {
-      if (options.selection.value.size) { event.preventDefault(); event.shiftKey ? options.sendToBack() : options.sendBackward() }
+      if (options.selection.value.size) {
+        event.preventDefault()
+        if (event.shiftKey) options.sendToBack()
+        else options.sendBackward()
+      }
     }
     else if (event.key === 'Delete' || event.key === 'Backspace') {
       if (options.selection.value.size) { event.preventDefault(); options.deleteSelection() }
@@ -82,7 +90,8 @@ export function useDrawKeyboard(options: DrawKeyboardOptions) {
     }
     else if (mod && key === 'g') {
       event.preventDefault()
-      event.shiftKey ? options.ungroup() : options.group()
+      if (event.shiftKey) options.ungroup()
+      else options.group()
     }
     else if (!mod && !typing && !options.textEditorActive()) {
       const toolMap: Record<string, string> = {

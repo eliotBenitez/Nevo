@@ -1,0 +1,2406 @@
+{
+  "confirmDialog": {
+    "title": "Confirmar acción",
+    "delete": "Eliminar",
+    "discard": "Descartar cambios"
+  },
+  "updater": {
+    "availableTitle": "Versión {version} disponible",
+    "whatsNew": "Novedades",
+    "update": "Actualizar",
+    "later": "Más tarde",
+    "downloading": "Descargando… {percent}%",
+    "readyTitle": "Actualización instalada",
+    "readyBody": "Reinicia la aplicación para aplicar la actualización.",
+    "restart": "Reiniciar",
+    "upToDateTitle": "Estás al día",
+    "upToDateBody": "Tienes la última versión de Nevo.",
+    "errorTitle": "Error de actualización",
+    "errorBody": "No se pudo comprobar ni instalar la actualización. Inténtalo de nuevo más tarde.",
+    "retry": "Reintentar",
+    "close": "Cerrar",
+    "checking": "Comprobando…"
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "Bienvenido a",
+      "brand": "Nevo",
+      "subtitle": "Un espacio de trabajo tranquilo y local-first para pensar, escribir y conectar ideas. Tus notas se quedan en tu dispositivo — siempre.",
+      "createWorkspace": "Crear un espacio",
+      "createSub": "Empieza de cero — elige una carpeta y una plantilla.",
+      "openExisting": "Abrir existente",
+      "openSub": "Apunta Nevo a cualquier carpeta del disco.",
+      "recent": "Recientes",
+      "pages": "páginas",
+      "localFirst": "Local-first · nada sale de este dispositivo"
+    },
+    "create": {
+      "title": "Crea tu espacio de trabajo",
+      "subtitle": "Elige un nombre, un color y dónde guardarlo. Puedes renombrarlo o moverlo más tarde.",
+      "step": "Paso {n} de {total}",
+      "steps": {
+        "name": "Nombre e icono",
+        "location": "Elegir ubicación",
+        "template": "Elegir plantilla"
+      },
+      "sideTitle": "Un espacio para tu pensamiento.",
+      "sideBody": "Los espacios de trabajo son simples carpetas en el disco. Puedes copiarlas, sincronizarlas con iCloud o Dropbox y abrirlas en cualquier editor de texto.",
+      "nameLabel": "Nombre",
+      "nameHint": "Se muestra en la barra lateral y en toda la app",
+      "namePlaceholder": "Mi espacio",
+      "iconLabel": "Icono y color",
+      "iconHint": "Cámbialo cuando quieras desde los ajustes del espacio",
+      "locationLabel": "Ubicación",
+      "locationHint": "Dónde se guardan los archivos en tu máquina",
+      "locationBrowse": "Examinar…",
+      "templateLabel": "Plantilla",
+      "templateHint": "Opcional — añade algunas páginas iniciales",
+      "templates": {
+        "empty": {
+          "name": "Vacío",
+          "sub": "Solo una página diaria"
+        },
+        "researcher": {
+          "name": "Investigador",
+          "sub": "Notas de lectura + fuentes",
+          "starter": {
+            "litReview": "Revisión de literatura",
+            "journals": "Diarios",
+            "ideas": "Ideas de investigación"
+          }
+        },
+        "pm": {
+          "name": "Responsable de producto",
+          "sub": "Hoja de ruta, OKR",
+          "starter": {
+            "roadmaps": "Hojas de ruta",
+            "specs": "Especificaciones",
+            "notes": "Actas de reuniones"
+          }
+        },
+        "writer": {
+          "name": "Escritor",
+          "sub": "Borradores, diario",
+          "starter": {
+            "drafts": "Borradores",
+            "characters": "Personajes",
+            "ideas": "Ideas de trama"
+          }
+        }
+      },
+      "serverLabel": "URL del servidor",
+      "serverHint": "URL base de tu relé autoalojado",
+      "serverPlaceholder": "http://localhost:8080",
+      "serverCheck": "Probar conexión",
+      "serverChecking": "Comprobando…",
+      "serverOk": "Conectado",
+      "serverFail": "Inalcanzable",
+      "back": "Atrás",
+      "encryption": "Cifrado en reposo",
+      "create": "Crear espacio"
+    },
+    "open": {
+      "title": "Abrir un espacio de trabajo",
+      "subtitle": "Elige entre los recientes, busca una carpeta o suelta una en cualquier parte de esta ventana.",
+      "browse": "Buscar carpeta",
+      "new": "Nuevo espacio",
+      "filter": "Filtrar espacios…",
+      "recent": "Recientes",
+      "dropHint": "Suelta una carpeta en cualquier parte de esta ventana para abrirla.",
+      "open": "Abrir",
+      "pages": "páginas",
+      "unread": "sin leer",
+      "dropTitle": "Soltar para abrir como espacio",
+      "moreOptions": "Más opciones",
+      "removeRecent": "Quitar de recientes",
+      "removeRecentConfirm": "¿Quitar «{name}» de recientes? Los archivos se quedan en el disco.",
+      "deleteStorage": "Eliminar almacenamiento",
+      "deleteStorageConfirm": "¿Eliminar «{name}»? Esta acción no se puede deshacer.",
+      "deleteFailed": "No se pudo eliminar el almacenamiento. Inténtalo de nuevo."
+    }
+  },
+  "common": {
+    "back": "Atrás",
+    "loading": "Cargando...",
+    "keyboard": {
+      "esc": "Esc",
+      "ctrlCmdEnter": "Ctrl/Cmd + Intro"
+    }
+  },
+  "workspace": {
+    "back": "Espacios",
+    "localWorkspace": "Espacio local",
+    "cloudWorkspace": "Almacenamiento en la nube",
+    "toggleSidebar": "Alternar barra lateral",
+    "toggleRightPanel": "Alternar panel derecho",
+    "openDrawer": "Abrir barra lateral",
+    "closeDrawer": "Cerrar barra lateral",
+    "createNote": "Nueva nota",
+    "createFolder": "Nueva carpeta",
+    "importMd": "Importar .md",
+    "importObsidian": "Importar bóveda de Obsidian",
+    "importMenu": "Importar",
+    "obsidianImport": {
+      "title": "Importar bóveda de Obsidian",
+      "description": "Elige una carpeta de bóveda de Obsidian. Sus carpetas, notas, [[enlaces]], archivos adjuntos, etiquetas y llamadas se importan al espacio de trabajo actual.",
+      "selectFolder": "Seleccionar carpeta de la bóveda…",
+      "cancel": "Cancelar",
+      "close": "Cerrar",
+      "phase": {
+        "reading": "Leyendo la bóveda…",
+        "folders": "Creando carpetas…",
+        "creating": "Creando notas…",
+        "writing": "Importando contenido…"
+      },
+      "progressCount": "{processed} de {total} notas",
+      "doneTitle": "Importación finalizada",
+      "vaultName": "Bóveda",
+      "notesCreated": "Notas importadas",
+      "foldersCreated": "Carpetas creadas",
+      "attachmentsImported": "Archivos adjuntos importados",
+      "tagsCollected": "Etiquetas recopiladas",
+      "notesWithFrontmatter": "Notas con frontmatter",
+      "unresolvedLinks": "Enlaces no resueltos",
+      "unresolvedEmbeds": "Inclusiones no resueltas",
+      "skippedFiles": "Archivos omitidos",
+      "errorTitle": "Error de importación"
+    },
+    "home": {
+      "eyebrow": "Inicio del espacio",
+      "subtitle": "Un lugar tranquilo para retomar el trabajo.",
+      "search": "Buscar notas, carpetas y ajustes",
+      "searchShortcut": "Ctrl P",
+      "quickActions": "Acciones rápidas",
+      "addToHome": "Añadir a Inicio",
+      "removeFromHome": "Quitar de Inicio",
+      "types": { "note": "Nota", "folder": "Carpeta", "board": "Tablero", "graph": "Grafo", "pluginView": "Vista de plugin" },
+      "empty": { "title": "Tu espacio está listo", "subtitle": "Crea la primera nota y reúne aquí lo más importante.", "action": "Crear la primera nota" },
+      "favorites": {
+        "kicker": "Lo importante a mano",
+        "title": "Favoritos",
+        "manage": "Gestionar",
+        "emptyTitle": "Personaliza tu Inicio",
+        "emptySubtitle": "Fija las notas, carpetas y vistas que usas a menudo.",
+        "choose": "Elegir favoritos",
+        "loadingPlugin": "Cargando vista del plugin…"
+      },
+      "recent": { "kicker": "En todo el espacio", "title": "Actualizado recientemente" },
+      "manager": {
+        "title": "Gestionar favoritos",
+        "subtitle": "Elige hasta ocho destinos y ordénalos a tu gusto.",
+        "current": "En Inicio",
+        "library": "Elementos disponibles",
+        "search": "Buscar elementos…",
+        "filters": "Filtrar tipos",
+        "filter": { "all": "Todos", "note": "Notas", "folder": "Carpetas", "board": "Tableros", "graph": "Grafo", "pluginView": "Plugins" },
+        "unavailable": "No disponible — quítalo manualmente",
+        "noFavorites": "Aún no hay favoritos.",
+        "noResults": "No hay coincidencias.",
+        "keyboardHint": "Usa Alt + ↑ o Alt + ↓ para reordenar.",
+        "reorder": "Reordenar {title}",
+        "moveUp": "Subir",
+        "moveDown": "Bajar",
+        "remove": "Quitar {title} de Inicio",
+        "add": "Añadir {title} a Inicio",
+        "addShort": "Añadir",
+        "onHome": "En Inicio",
+        "limit": "Inicio está lleno. Quita un elemento antes de añadir otro.",
+        "added": "{title} se añadió a Inicio.",
+        "removed": "{title} se quitó de Inicio.",
+        "moved": "{title} se movió a la posición {position}.",
+        "footer": "Los favoritos se guardan con este espacio.",
+        "done": "Listo"
+      }
+    },
+    "pluginUi": {
+      "loading": "Cargando vista del plugin…",
+      "unavailable": "Esta vista del plugin no está disponible.",
+      "unsupportedMobile": "Las vistas iframe de plugins aún no son compatibles con dispositivos móviles.",
+      "closeModal": "Cerrar diálogo del plugin"
+    },
+    "actions": {
+      "new": "Nuevo",
+      "newNote": "Nueva nota",
+      "newFolder": "Nueva carpeta",
+      "newBoard": "Nuevo tablero",
+      "collapseAll": "Contraer todo",
+      "expandAll": "Expandir todo",
+      "sort": "Ordenar",
+      "sortManual": "Manual",
+      "sortNameAsc": "Nombre (A→Z)",
+      "sortNameDesc": "Nombre (Z→A)",
+      "sortUpdated": "Modificados recientemente"
+    },
+    "rightPanel": {
+      "outline": "Esquema",
+      "noHeadings": "Aún sin títulos",
+      "backlinks": "Enlaces inversos",
+      "noBacklinks": "Sin enlaces inversos",
+      "properties": {
+        "title": "Propiedades",
+        "type": "Tipo",
+        "typeNone": "Sin definir",
+        "status": "Estado",
+        "date": "Fecha",
+        "datePlaceholder": "Sin fecha",
+        "tags": "Etiquetas",
+        "addTag": "Añadir etiqueta",
+        "tagsPlaceholder": "Etiquetas...",
+        "removeTag": "Quitar etiqueta {tag}",
+        "types": {
+          "note": "Nota",
+          "task": "Tarea",
+          "idea": "Idea",
+          "meeting": "Reunión",
+          "project": "Proyecto",
+          "research": "Investigación"
+        },
+        "statuses": {
+          "none": "Sin estado",
+          "draft": "Borrador",
+          "active": "Activo",
+          "waiting": "En espera",
+          "done": "Hecho"
+        }
+      },
+      "metadata": "Acerca de",
+      "words": "{n} palabras",
+      "readTime": "{n} min de lectura",
+      "created": "Creado",
+      "updated": "Actualizado",
+      "externalLinks": "Enlaces externos",
+      "noExternalLinks": "Sin enlaces externos"
+    },
+    "noPages": "Aún no hay páginas",
+    "noWorkspace": "Ningún espacio seleccionado",
+    "noPath": "La ruta no está definida",
+    "untitledNote": "Sin título",
+    "newFolderPrompt": "Nombre de la carpeta",
+    "emptyTree": {
+      "title": "Aún no hay páginas",
+      "subtitle": "Crea una nota o carpeta para iniciar este espacio."
+    },
+    "sidebarPreview": {
+      "tagsLabel": "Etiquetas de la nota",
+      "allNotesTitle": "Todas las notas",
+      "selectedTitle": "Etiquetas seleccionadas",
+      "clear": "Limpiar",
+      "emptyPreview": "Sin vista previa de texto",
+      "empty": {
+        "no-notes": {
+          "title": "Aún no hay notas",
+          "subtitle": "Crea una nota y aparecerá aquí."
+        },
+        "no-matches": {
+          "title": "Sin coincidencias",
+          "subtitle": "Elige otras etiquetas o limpia el filtro."
+        }
+      }
+    },
+    "boards": {
+      "title": "Tableros",
+      "new": "Nuevo tablero",
+      "emptyTitle": "Aún no hay tableros",
+      "emptySubtitle": "Crea un tablero Kanban para tareas o proyectos."
+    },
+    "tabs": {
+      "label": "Notas abiertas",
+      "close": "Cerrar {title}"
+    },
+    "createFolderModal": {
+      "title": "Crear carpeta",
+      "description": "Mantén las notas y archivos relacionados en un mismo lugar.",
+      "placeholder": "Nombre de la carpeta",
+      "submit": "Crear",
+      "emptyName": "Introduce un nombre de carpeta."
+    },
+    "emptyTitle": "Empieza con tu primera nota",
+    "emptySubtitle": "Crea una nota o elige una de la barra lateral para empezar a escribir.",
+    "emptyFolderTitle": "Carpeta: {folder}",
+    "emptyFolderSubtitle": "Esta carpeta aún no tiene notas. Crea una para empezar.",
+    "cover": "Portada",
+    "removeCover": "Quitar portada",
+    "coverGradients": "Degradados",
+    "coverPastel": "Colores pastel",
+    "coverUpload": "Subir imagen",
+    "iconPicker": {
+      "tabs": {
+        "emoji": "Emoticono",
+        "icons": "Iconos"
+      },
+      "searchEmoji": "Buscar emoticono…",
+      "searchIcons": "Buscar icono…",
+      "noResults": "Sin resultados",
+      "categories": {
+        "smileys": "Emoticonos",
+        "people": "Personas",
+        "nature": "Naturaleza",
+        "food": "Comida",
+        "activities": "Actividades",
+        "travel": "Viajes",
+        "objects": "Objetos",
+        "symbols": "Símbolos"
+      }
+    },
+    "titlePlaceholder": "Sin título",
+    "contentPlaceholder": "Escribe tus pensamientos aquí...",
+    "linkUrlLabel": "URL del enlace",
+    "linkPlaceholder": "https://ejemplo.com",
+    "linkApply": "Aplicar enlace",
+    "linkUpdate": "Actualizar enlace",
+    "linkRemove": "Quitar enlace",
+    "linkInvalid": "Introduce una URL válida",
+    "inlineMathLabel": "Fórmula en línea",
+    "mathBlockLabel": "Bloque matemático",
+    "mathPlaceholder": "\\frac{a}{b}",
+    "mathPopoverHint": "Aplicar fórmula",
+    "mathApply": "Aplicar fórmula",
+    "mathRemove": "Quitar fórmula",
+    "context": {
+      "rename": "Renombrar",
+      "delete": "Eliminar",
+      "search": "Buscar",
+      "export": "Exportar",
+      "importIntoNote": "Importar .md en la nota",
+      "importAsNote": "Importar .md como nota",
+      "renamePrompt": "Nuevo nombre",
+      "deleteConfirm": "¿Eliminar este elemento?",
+      "searchPrompt": "Buscar por título",
+      "searchNoResults": "Nada encontrado",
+      "renameModalTitle": "Renombrar",
+      "openNoteMenu": "Abrir menú de la nota",
+      "renameModalPlaceholder": "Introduce un nuevo nombre",
+      "moveUp": "Subir",
+      "moveDown": "Bajar",
+      "cancel": "Cancelar",
+      "confirm": "Confirmar"
+    },
+    "drag": {
+      "moveToFolder": "Mover a la carpeta",
+      "reorderHint": "Arrastra para reordenar",
+      "manualSortRequired": "Cambia a orden manual para habilitar el arrastre"
+    },
+    "system": {
+      "home": "Inicio",
+      "graph": "Grafo",
+      "history": "Historial",
+      "trash": "Papelera",
+      "plugins": "Plugins",
+      "settings": "Ajustes"
+    },
+    "trash": {
+      "title": "Papelera",
+      "description": "Restaura elementos eliminados o elimínalos definitivamente.",
+      "countLabel": "Elementos en la papelera: {count}",
+      "searchLabel": "Buscar en la papelera",
+      "emptyAction": "Vaciar papelera",
+      "emptyTitle": "La papelera está vacía",
+      "emptyState": "Las notas y carpetas eliminadas aparecerán aquí.",
+      "noResultsTitle": "Nada encontrado",
+      "noResultsDescription": "Prueba con otro título o limpia el campo de búsqueda.",
+      "deletedAt": "Eliminado el: {date}",
+      "folderType": "Carpeta",
+      "noteType": "Nota",
+      "itemActions": "Acciones para {title}",
+      "restore": "Restaurar",
+      "restoreItem": "Restaurar {title}",
+      "deletePermanently": "Eliminar definitivamente",
+      "deleteItem": "Eliminar {title} definitivamente",
+      "actionHint": "La eliminación definitiva no se puede deshacer.",
+      "deletePermanentlyConfirm": "¿Seguro que quieres eliminar definitivamente esta nota? Esta acción no se puede deshacer.",
+      "emptyConfirm": "¿Seguro que quieres vaciar la papelera? Todos los elementos se eliminarán definitivamente."
+    },
+    "titlebarSearch": {
+      "placeholder": "Buscar notas, bloques, ajustes...",
+      "rootLabel": "Raíz del espacio",
+      "loading": "Buscando en el contenido de las notas del espacio...",
+      "loadingShort": "Buscando en el contenido...",
+      "loadingTitle": "Buscando...",
+      "idleTitle": "Búsqueda global del espacio",
+      "idleDescription": "Busca notas, carpetas, bloques de notas y ajustes desde un solo campo.",
+      "emptyTitle": "Sin coincidencias",
+      "emptyDescription": "Prueba un término más corto o busca un título de nota, frase de bloque o nombre de ajuste.",
+      "groups": {
+        "entities": "Notas y carpetas",
+        "blocks": "Bloques",
+        "settings": "Ajustes"
+      }
+    },
+    "searchOverlay": {
+      "ariaLabel": "Buscar en el espacio de trabajo",
+      "close": "Cerrar búsqueda"
+    },
+    "history": {
+      "title": "Historial del archivo",
+      "description": "Revisa las instantáneas guardadas, compara los cambios y restaura una versión anterior.",
+      "files": "Archivos",
+      "filesHint": "Notas con instantáneas guardadas",
+      "versions": "Versiones",
+      "versionsHint": "Instantáneas de la nota seleccionada",
+      "previewCompare": "Vista previa / Comparar",
+      "previewCompareHint": "Inspecciona la instantánea o compárala con la nota actual",
+      "preview": "Vista previa",
+      "compare": "Comparar",
+      "searchLabel": "Buscar en el historial",
+      "searchPlaceholder": "Buscar notas...",
+      "snapshotCount": "{count} instantáneas",
+      "latestSnapshotAt": "Última {value}",
+      "noteUpdatedAt": "Nota actualizada {value}",
+      "updatedAt": "Actualizado {value}",
+      "snapshotCreatedAt": "Instantánea del {value}",
+      "noSnapshotSelection": "Ninguna versión seleccionada",
+      "restore": "Restaurar instantánea",
+      "restoreSelectionHint": "Restaurar reemplaza la nota actual por la instantánea seleccionada.",
+      "restoreConfirm": "¿Restaurar esta instantánea en la nota actual?",
+      "restoring": "Restaurando…",
+      "coverValue": "Portada: {value}",
+      "snapshotVersion": "Instantánea",
+      "currentVersion": "Nota actual",
+      "fields": {
+        "title": "Título",
+        "icon": "Icono",
+        "cover": "Portada"
+      },
+      "rowKinds": {
+        "added": "Añadido",
+        "removed": "Eliminado",
+        "changed": "Modificado"
+      },
+      "states": {
+        "loadingFilesTitle": "Cargando historial",
+        "loadingFiles": "Cargando historial de notas…",
+        "noFilesTitle": "Aún sin historial",
+        "noFiles": "Aún no hay notas con historial.",
+        "noSearchResultsTitle": "Sin coincidencias",
+        "noSearchResults": "Ninguna nota coincide con esa búsqueda.",
+        "noFileSelectedTitle": "Elige una nota",
+        "noFileSelected": "Selecciona una nota para ver su historial.",
+        "noSnapshotsTitle": "Sin versiones",
+        "noSnapshots": "Esta nota no tiene instantáneas.",
+        "noSnapshotSelectedTitle": "Elige una versión",
+        "noSnapshotSelected": "Selecciona una versión para previsualizarla.",
+        "loadingPreviewTitle": "Cargando instantánea",
+        "loadingPreview": "Cargando instantánea…",
+        "emptySnapshotTitle": "Instantánea vacía",
+        "emptySnapshot": "Esta instantánea está vacía.",
+        "noDiffTitle": "Sin diferencias",
+        "noDiff": "Sin diferencias visibles entre la nota actual y esta instantánea."
+      },
+      "errors": {
+        "noWorkspace": "Abre un espacio de trabajo para explorar el historial.",
+        "loadFiles": "Error al cargar el historial de notas.",
+        "loadSnapshot": "Error al cargar esta instantánea.",
+        "loadCurrent": "Error al cargar la nota actual para comparar.",
+        "restore": "Error al restaurar esta instantánea."
+      }
+    },
+    "status": {
+      "saved": "Guardado",
+      "saving": "Guardando…",
+      "unsaved": "Cambios sin guardar",
+      "error": "Error al guardar"
+    },
+    "relativeTime": {
+      "justNow": "justo ahora",
+      "hourAgo": "hace 1 hora",
+      "hoursAgo": "hace {count} horas",
+      "yesterday": "ayer",
+      "daysAgo": "hace {count} días"
+    },
+    "blockMenu": {
+      "turnInto": "Convertir en",
+      "paragraph": "Párrafo",
+      "heading1": "Encabezado 1",
+      "heading2": "Encabezado 2",
+      "heading3": "Encabezado 3",
+      "heading4": "Encabezado 4",
+      "heading5": "Encabezado 5",
+      "heading6": "Encabezado 6",
+      "bulletList": "Lista de viñetas",
+      "numberedList": "Lista numerada",
+      "codeBlock": "Bloque de código",
+      "callout": "Llamada",
+      "checklist": "Lista de tareas",
+      "duplicate": "Duplicar",
+      "insertAbove": "Insertar bloque arriba",
+      "insertBelow": "Insertar bloque abajo",
+      "copyRef": "Copiar referencia del bloque",
+      "delete": "Eliminar"
+    }
+  },
+  "templates": {
+    "title": "Plantillas",
+    "createTitle": "Nueva nota desde plantilla",
+    "insertTitle": "Insertar plantilla",
+    "subtitle": "Elige una plantilla predefinida o del espacio y rellena los campos.",
+    "search": "Buscar plantillas...",
+    "newTemplate": "Nueva plantilla",
+    "builtIn": "Integrada",
+    "empty": "No se encontraron plantillas.",
+    "required": "Requerido",
+    "noFields": "Esta plantilla no tiene campos.",
+    "createNote": "Crear nota",
+    "insert": "Insertar",
+    "edit": "Editar",
+    "duplicateEdit": "Duplicar para editar",
+    "duplicate": "Duplicar",
+    "copySuffix": "copia",
+    "delete": "Eliminar",
+    "deleteConfirm": "¿Eliminar la plantilla «{name}»?",
+    "editorTitle": "Editor de plantillas",
+    "editorSubtitle": "El texto de la plantilla admite fecha, hora, título de nota, nombre del espacio, campos personalizados y un marcador de cursor.",
+    "name": "Nombre",
+    "id": "Identificador",
+    "icon": "Icono",
+    "description": "Descripción",
+    "content": "Contenido",
+    "contentPlaceholder": "Escribe el contenido de la plantilla...",
+    "fields": "Campos",
+    "addField": "Añadir campo",
+    "fieldLabel": "Etiqueta",
+    "fieldId": "Identificador",
+    "type": "Tipo",
+    "requiredShort": "Requerido",
+    "defaultValue": "Predeterminado",
+    "options": "Opciones, una por línea",
+    "save": "Guardar plantilla",
+    "fieldTypes": {
+      "text": "Texto",
+      "multiline": "Multilínea",
+      "date": "Fecha",
+      "select": "Selección",
+      "checkbox": "Casilla"
+    },
+    "errors": {
+      "nameRequired": "El nombre y el identificador de la plantilla son obligatorios.",
+      "invalidId": "Usa solo letras, números, guiones y guiones bajos en el identificador.",
+      "templateNameRequired": "El nombre de la plantilla es obligatorio.",
+      "contentDoc": "El contenido de la plantilla debe ser un documento.",
+      "reservedId": "Los identificadores de plantillas integradas están reservados.",
+      "builtInEdit": "Las plantillas integradas no se pueden editar.",
+      "builtInDelete": "Las plantillas integradas no se pueden eliminar.",
+      "notFound": "Plantilla no encontrada.",
+      "requiredFieldMissing": "Falta el campo obligatorio «{field}»."
+    }
+  },
+  "settings": {
+    "title": "Ajustes",
+    "sections": {
+      "general": "General",
+      "appearance": "Apariencia",
+      "editor": "Editor",
+      "workspace": "Espacio",
+      "ai": "IA",
+      "plugins": "Plugins",
+      "hotkeys": "Atajos",
+      "files": "Archivos y almacenamiento",
+      "advanced": "Avanzado",
+      "about": "Acerca de"
+    },
+    "navigationLabel": "Secciones de ajustes",
+    "search": {
+      "label": "Buscar en ajustes",
+      "placeholder": "Buscar en ajustes...",
+      "resultsTitle": "Resultados para «{query}»",
+      "resultsCount": "{count} ajustes coincidentes en el catálogo.",
+      "openResult": "Abrir {title} en {section}",
+      "emptyTitle": "Sin ajustes coincidentes.",
+      "emptyDescription": "Prueba a buscar «tema», «plugin», «bloque» o «espacio»."
+    },
+    "common": {
+      "desktop": "escritorio",
+
+      "resetToDefaults": "Restablecer",
+      "on": "Activado",
+      "off": "Desactivado",
+      "enabled": "Habilitado",
+      "disabled": "Deshabilitado"
+    },
+    "state": {
+      "functional": "Funcional",
+      "coming": "Próximamente",
+      "info": "Información"
+    },
+    "options": {
+      "theme": {
+        "light": "Claro",
+        "dark": "Oscuro",
+        "system": "Sistema"
+      },
+      "editorFont": {
+        "ui": "Sans UI",
+        "serif": "Serif",
+        "mono": "Mono"
+      },
+      "accent": {
+        "violet": "Violeta discreto",
+        "ember": "Brasa",
+        "sage": "Salvia",
+        "ocean": "Océano",
+        "rose": "Rosa"
+      },
+      "density": {
+        "compact": "Compacta",
+        "comfortable": "Cómoda"
+      },
+      "reducedMotion": {
+        "reduce": "Reducir",
+        "full": "Completa"
+      },
+      "lineWidth": {
+        "narrow": "Estrecha",
+        "medium": "Media",
+        "wide": "Ancha"
+      },
+      "language": {
+        "ru": "Ruso",
+        "en": "Inglés",
+        "fr": "Francés",
+        "es": "Español",
+        "de": "Alemán"
+      },
+      "startupView": {
+        "editor": "Editor (vacío)",
+        "lastNote": "Último documento abierto",
+        "specificNote": "Documento específico",
+        "graph": "Grafo de notas",
+        "kanban": "Tablero Kanban"
+      },
+      "focusMode": {
+        "off": "Desactivado",
+        "soft": "Suave"
+      },
+      "caretAnimation": {
+        "system": "Sistema",
+        "steady": "Fijo",
+        "blink": "Parpadeo"
+      },
+      "tabKeyBehavior": {
+        "indent": "Sangrar",
+        "focus": "Navegar"
+      },
+      "autosavePolicy": {
+        "immediate": "Inmediato",
+        "window-idle": "En reposo"
+      },
+      "pasteBehavior": {
+        "smart": "Inteligente",
+        "plain-text": "Texto sin formato"
+      },
+      "editorStats": {
+        "off": "Desactivado",
+        "corner": "Esquina"
+      },
+      "typewriterPosition": {
+        "upper": "Arriba",
+        "center": "Centro",
+        "lower": "Abajo"
+      },
+      "scrollbarVisibility": {
+        "hidden": "Oculta",
+        "thin": "Fina",
+        "system": "Sistema"
+      },
+      "focusRingStyle": {
+        "accent": "Acento",
+        "high-contrast": "Alto contraste"
+      },
+      "windowChromeStyle": {
+        "default": "Predeterminado",
+        "immersive": "Inmersivo",
+        "minimal": "Minimalista"
+      },
+      "roundness": {
+        "sharp": "Anguloso",
+        "default": "Predeterminado",
+        "soft": "Suave"
+      },
+      "backgroundScene": {
+        "aurora": "Aurora",
+        "paper": "Papel",
+        "studio": "Estudio",
+        "plain": "Plano"
+      },
+      "surfaceStyle": {
+        "glass": "Cristal",
+        "solid": "Sólido",
+        "tinted": "Matizado"
+      },
+      "contrastMode": {
+        "soft": "Suave",
+        "balanced": "Equilibrado",
+        "high": "Alto"
+      },
+      "sidebarStyle": {
+        "floating": "Flotante",
+        "solid": "Sólida",
+        "minimal": "Minimalista"
+      },
+      "sidebarContentMode": {
+        "tree": "Árbol",
+        "tag-preview": "Etiquetas y vistas previas"
+      },
+      "sidebarLayout": {
+        "docked": "Acoplada",
+        "floating": "Flotante"
+      },
+      "workspaceType": {
+        "general": "General",
+        "research": "Investigación",
+        "writing": "Escritura",
+        "product": "Producto",
+        "knowledge-base": "Base de conocimiento"
+      },
+      "workspaceStatus": {
+        "active": "Activo",
+        "archived": "Archivado",
+        "draft": "Borrador"
+      },
+      "sidebarDefaultState": {
+        "expanded": "Expandida",
+        "collapsed": "Contraída"
+      },
+      "itemPlacement": {
+        "current-folder": "Carpeta actual",
+        "root": "Raíz"
+      },
+      "defaultChildSort": {
+        "manual": "Manual",
+        "title-asc": "Título A–Z",
+        "updated-desc": "Última modificación"
+      },
+      "noteTitlePattern": {
+        "untitled": "Sin título",
+        "date": "Fecha",
+        "date-time": "Fecha y hora"
+      },
+      "noteTemplate": {
+        "blank": "Vacío",
+        "meeting": "Reunión",
+        "daily": "Nota diaria",
+        "research": "Investigación"
+      },
+      "starterStructure": {
+        "off": "Desactivado",
+        "light": "Ligero",
+        "structured": "Estructurado"
+      },
+      "graphEntryMode": {
+        "global": "Global",
+        "from-current-note": "Desde la nota actual"
+      },
+      "graphScope": {
+        "workspace": "Espacio",
+        "current-folder": "Carpeta actual"
+      },
+      "searchScope": {
+        "workspace": "Espacio",
+        "current-folder": "Carpeta actual"
+      },
+      "historyRange": {
+        "7d": "Últimos 7 días",
+        "30d": "Últimos 30 días",
+        "all": "Todo el historial"
+      }
+    },
+    "general": {
+      "description": "Valores predeterminados del espacio y comportamiento habitual.",
+      "groups": {
+        "application": "Aplicación",
+        "startup": "Inicio"
+      },
+      "language": {
+        "title": "Idioma de la aplicación",
+        "description": "Idioma global usado en el onboarding, los ajustes y la shell del espacio"
+      },
+      "startupView": {
+        "title": "Vista de inicio",
+        "description": "Selecciona la vista predeterminada al abrir el espacio"
+      },
+      "startupNote": {
+        "title": "Documento de inicio",
+        "description": "Selecciona el documento que se abre al iniciar la aplicación",
+        "placeholder": "Elegir un documento..."
+      },
+      "restoreLastContext": {
+        "title": "Restaurar último contexto",
+        "description": "Reabrir la última carpeta o nota de este espacio"
+      },
+      "deleteConfirmations": {
+        "title": "Confirmaciones de eliminación",
+        "description": "Pedir confirmación para acciones destructivas",
+        "panelDescription": "Pedir confirmación antes de acciones destructivas del árbol"
+      }
+    },
+    "appearance": {
+      "description": "Preferencias visuales — ajustes globales y estilo del espacio.",
+      "groups": {
+        "application": "Aplicación",
+        "comfort": "Comodidad y accesibilidad",
+        "workspaceStyle": "Estilo del espacio"
+      },
+      "mode": {
+        "title": "Modo",
+        "description": "Preferencia global guardada en AppConfig"
+      },
+      "themeSchedule": {
+        "title": "Programación automática del tema",
+        "description": "Alterna entre claro y oscuro según el reloj. Anula el modo de arriba cuando está activo.",
+        "lightLabel": "Tema claro desde las",
+        "darkLabel": "Tema oscuro desde las"
+      },
+      "accent": {
+        "title": "Color de acento",
+        "description": "Usado para selecciones, anillos de foco y enlaces"
+      },
+      "interfaceDensity": {
+        "title": "Densidad de la interfaz",
+        "description": "Espaciado compacto o cómodo de la shell"
+      },
+      "reducedMotion": {
+        "title": "Animaciones",
+        "description": "Controla la intensidad de las animaciones en la shell"
+      },
+      "scrollbarVisibility": {
+        "title": "Barras de desplazamiento",
+        "description": "Cómo aparecen las barras en toda la app"
+      },
+      "focusRingStyle": {
+        "title": "Anillo de foco",
+        "description": "Estilo del indicador de foco de teclado"
+      },
+      "windowChromeStyle": {
+        "title": "Marco de ventana",
+        "description": "Estilo de presentación de la barra de título y las superficies"
+      },
+      "backgroundScene": {
+        "title": "Escena de fondo",
+        "description": "Fondo ambiental de este espacio"
+      },
+      "surfaceStyle": {
+        "title": "Estilo de superficie",
+        "description": "Aspecto cristalino o sólido de los paneles"
+      },
+      "contrastMode": {
+        "title": "Contraste",
+        "description": "Fuerza de separación de paneles y texto"
+      },
+      "sidebarStyle": {
+        "title": "Estilo de la barra lateral",
+        "description": "Peso visual del marco de navegación"
+      },
+      "editorFont": {
+        "title": "Fuente del editor",
+        "description": "Tipografía usada en la superficie de escritura"
+      },
+      "interfaceZoom": {
+        "title": "Zoom de interfaz",
+        "description": "Escala toda la interfaz"
+      },
+      "reduceTransparency": {
+        "title": "Reducir transparencia",
+        "description": "Desactivar el desenfoque de fondo para claridad y rendimiento"
+      },
+      "interfaceRoundness": {
+        "title": "Redondez de esquinas",
+        "description": "Redondez de paneles, botones y campos"
+      }
+    },
+    "editor": {
+      "description": "Comportamiento de bloques, ritmo tipográfico y flujo de escritura.",
+      "groups": {
+        "layout": "Disposición",
+        "focusFlow": "Foco y flujo",
+        "behaviour": "Comportamiento",
+        "workflow": "Flujo de edición"
+      },
+      "preview": {
+        "label": "Vista previa en vivo",
+        "heading": "Un encabezado de subsección",
+        "body": "Texto de cuerpo extenso — la columna de lectura centrada donde pasarás la mayor parte del tiempo. Ajusta un control y este panel refleja el tono real del editor."
+      },
+      "documentWidth": {
+        "title": "Ancho del documento",
+        "description": "Ancho de la columna de lectura centrada",
+        "panelDescription": "Ancho de la columna de lectura centrada"
+      },
+      "fontSize": {
+        "title": "Tamaño de fuente del editor",
+        "description": "Escala tipográfica de la superficie de escritura",
+        "panelDescription": "Escala actual del texto en páginas"
+      },
+      "accentColoredHeadings": {
+        "title": "Encabezados coloreados",
+        "description": "Colorear encabezados (H1-H6) con el color de acento del espacio"
+      },
+      "spellcheck": {
+        "title": "Corrector ortográfico",
+        "description": "Usa los diccionarios nativos del sistema cuando estén disponibles"
+      },
+      "slashCommands": {
+        "title": "Comandos slash",
+        "description": "Activar sugerencias de comandos / en el editor",
+        "panelDescription": "Escribe / para insertar bloques"
+      },
+      "smoothScrolling": {
+        "title": "Desplazamiento suave",
+        "description": "Controla el desplazamiento del panel del editor",
+        "panelDescription": "Controla el desplazamiento del documento dentro del panel del editor"
+      },
+      "markdownShortcuts": {
+        "title": "Atajos Markdown",
+        "description": "Convertir automáticamente patrones Markdown en bloques enriquecidos"
+      },
+      "focusMode": {
+        "title": "Modo de foco",
+        "description": "Suave: atenúa discretamente el marco secundario al escribir"
+      },
+      "typewriterScrolling": {
+        "title": "Desplazamiento máquina de escribir",
+        "description": "Mantener el bloque activo cerca del centro durante la escritura"
+      },
+      "activeBlockEmphasis": {
+        "title": "Énfasis del bloque activo",
+        "description": "Atenúa ligeramente los bloques adyacentes para foco en el actual"
+      },
+      "caretAnimation": {
+        "title": "Animación del cursor",
+        "description": "Controla el parpadeo del cursor en el editor"
+      },
+      "tabKeyBehavior": {
+        "title": "Tecla Tab",
+        "description": "Sangrar: Tab sangra listas y mueve celdas de tabla. Navegar: Tab sale del editor"
+      },
+      "autosavePolicy": {
+        "title": "Autoguardado",
+        "description": "Inmediato: guardar tras cada cambio. En reposo: guardar cuando la ventana pierde el foco"
+      },
+      "pasteBehavior": {
+        "title": "Comportamiento al pegar",
+        "description": "Inteligente: conservar formato enriquecido. Texto sin formato: quitar formato, mantener saltos de línea"
+      },
+      "slashMenuHints": {
+        "title": "Pistas del menú slash",
+        "description": "Mostrar pistas de categoría y atajo en el menú de comandos slash"
+      },
+      "editorStats": {
+        "title": "Conteo de palabras",
+        "description": "Mostrar palabras y caracteres en la esquina inferior derecha del editor"
+      },
+      "typewriterPosition": {
+        "title": "Posición del cursor",
+        "description": "Posición objetivo durante el desplazamiento máquina de escribir"
+      }
+    },
+    "workspace": {
+      "description": "Identidad, estructura y comportamientos del espacio.",
+      "descriptionField": {
+        "title": "Descripción",
+        "description": "Breve resumen mostrado en la tarjeta del espacio",
+        "placeholder": "Describe este espacio…"
+      },
+      "groups": {
+        "identity": "Identidad",
+        "sidebarMode": "Modo de barra lateral",
+        "sidebarLayout": "Ubicación de la barra lateral",
+        "navigation": "Navegación",
+        "structure": "Estructura",
+        "creationDefaults": "Valores de creación",
+        "systemViews": "Vistas del sistema"
+      },
+      "identity": {
+        "title": "Identidad del espacio",
+        "description": "Renombra el espacio y actualiza su glifo o degradado",
+        "panelDescription": "Renombra el espacio y actualiza su glifo o degradado tras la creación",
+        "namePlaceholder": "Nombre del espacio",
+        "preview": "Vista previa de la identidad actual",
+        "glyphLabel": "Elegir glifo",
+        "glyphPickerTitle": "Glifo del espacio",
+        "save": "Guardar identidad"
+      },
+      "sidebarContentMode": {
+        "title": "Contenido de la barra lateral",
+        "description": "Elige el árbol clásico o un flujo de vistas previas basado en etiquetas.",
+        "treeDescription": "Las carpetas y notas permanecen en el árbol clásico.",
+        "tagPreviewDescription": "Etiquetas a la izquierda, vistas previas de notas a la derecha."
+      },
+      "sidebarLayout": {
+        "title": "Ubicación de la barra lateral",
+        "description": "Acopla la barra lateral junto al contenido o déjala flotar y ocultarse.",
+        "dockedDescription": "La barra lateral está fijada junto al contenido.",
+        "floatingDescription": "La barra lateral se oculta y aparece al pasar el ratón por el borde izquierdo."
+      },
+      "workspaceType": {
+        "title": "Tipo de espacio",
+        "description": "Categoriza este espacio por su propósito principal"
+      },
+      "workspaceStatus": {
+        "title": "Estado",
+        "description": "Activo, archivado o borrador"
+      },
+      "tags": {
+        "title": "Etiquetas",
+        "description": "Etiquetas para organizar los espacios",
+        "placeholder": "Añadir etiqueta…"
+      },
+      "customCss": {
+        "title": "Estilos personalizados",
+        "description": "Activar el archivo custom.css para personalizar el diseño de este espacio"
+      },
+      "openLastVisitedSystemView": {
+        "title": "Restaurar última vista del sistema",
+        "description": "Reabrir la última vista del sistema (grafo, historial, etc.) al iniciar"
+      },
+      "rememberExpandedFolders": {
+        "title": "Recordar carpetas expandidas",
+        "description": "Mantener el estado de expansión entre sesiones"
+      },
+      "sidebarDefaultState": {
+        "title": "Estado predeterminado de la barra lateral",
+        "description": "Si la barra lateral inicia expandida o contraída"
+      },
+      "graphLabels": {
+        "title": "Etiquetas del grafo",
+        "description": "Mostrar títulos de nota en los nodos por defecto",
+        "panelDescription": "Guardado ahora, pero la pantalla del grafo sigue pendiente"
+      },
+      "rootNotesVisible": {
+        "title": "Mostrar notas raíz",
+        "description": "Mostrar las notas de la raíz del espacio en la barra lateral"
+      },
+      "newNotePlacement": {
+        "title": "Ubicación de notas nuevas",
+        "description": "Dónde se crean las notas nuevas por defecto"
+      },
+      "newFolderPlacement": {
+        "title": "Ubicación de carpetas nuevas",
+        "description": "Dónde se crean las carpetas nuevas por defecto"
+      },
+      "defaultChildSort": {
+        "title": "Orden predeterminado",
+        "description": "Cómo se ordenan los elementos dentro de las carpetas por defecto"
+      },
+      "showEmptyFolders": {
+        "title": "Mostrar carpetas vacías",
+        "description": "Mantener las carpetas vacías visibles en la barra lateral"
+      },
+      "defaultNoteIcon": {
+        "title": "Icono de nota por defecto",
+        "description": "Emoticono o símbolo para notas nuevas"
+      },
+      "defaultFolderIcon": {
+        "title": "Icono de carpeta por defecto",
+        "description": "Emoticono o símbolo para carpetas nuevas"
+      },
+      "defaultNoteTitlePattern": {
+        "title": "Título de nota por defecto",
+        "description": "Patrón de título aplicado al crear una nota"
+      },
+      "newNoteTemplate": {
+        "title": "Plantilla de nota nueva",
+        "description": "Contenido inicial para notas nuevas"
+      },
+      "newWorkspaceHomeNote": {
+        "title": "Crear nota de inicio",
+        "description": "Crear automáticamente una nota de inicio al configurar un nuevo espacio"
+      },
+      "autoCreateStarterStructure": {
+        "title": "Estructura inicial",
+        "description": "Generar una estructura de carpetas inicial para nuevos espacios"
+      },
+      "graphEntryMode": {
+        "title": "Modo de entrada del grafo",
+        "description": "Dónde empieza la vista del grafo al abrirse"
+      },
+      "graphScopeDefault": {
+        "title": "Alcance del grafo",
+        "description": "Alcance predeterminado de la vista del grafo"
+      },
+      "searchStartScope": {
+        "title": "Alcance de búsqueda",
+        "description": "Dónde empieza la búsqueda por defecto"
+      },
+      "historyDefaultRange": {
+        "title": "Rango de historial",
+        "description": "Rango de tiempo predeterminado en la vista de historial"
+      }
+    },
+    "ai": {
+      "description": "Trae tu propio modelo. Todo se procesa localmente salvo que optes por la nube.",
+      "status": "● Local · listo",
+      "groups": {
+        "provider": "Proveedor",
+        "inlineBehaviour": "Comportamiento en línea"
+      },
+      "models": {
+        "llama3": {
+          "label": "Local · llama3",
+          "description": "Modelo local por defecto para comandos slash y acciones en línea"
+        },
+        "mistral": {
+          "label": "Local · mistral",
+          "description": "Perfil de modelo local alternativo"
+        },
+        "cloudGpt": {
+          "label": "Nube · placeholder",
+          "description": "Marcador reservado hasta integrar proveedores en la nube"
+        }
+      },
+      "enabled": {
+        "title": "Activar IA",
+        "description": "Activar las funciones de IA local"
+      },
+      "apiKind": {
+        "title": "Tipo de API",
+        "description": "Protocolo del servidor local",
+        "ollama": "Ollama",
+        "openai": "Compatible con OpenAI (LM Studio, llama.cpp)"
+      },
+      "endpoint": {
+        "title": "Endpoint de Ollama",
+        "description": "URL del servidor Ollama local",
+        "placeholder": "http://localhost:11434"
+      },
+      "testConnection": {
+        "button": "Probar conexión",
+        "checking": "Comprobando…",
+        "success": "Conectado · {count} modelos",
+        "error": "Error de conexión"
+      },
+      "maxTokens": {
+        "title": "Tokens máximos por petición",
+        "description": "Límite superior de tokens generados"
+      },
+      "defaultModel": {
+        "title": "Modelo por defecto",
+        "description": "Usado para comandos slash y acciones en línea"
+      },
+      "privacyMode": {
+        "title": "Modo privacidad",
+        "description": "Bloquear todas las llamadas de red salientes de la IA"
+      },
+      "slashCommands": {
+        "title": "Comandos IA slash",
+        "description": "Mostrar comandos de IA en el menú slash"
+      },
+      "contextSuggestions": {
+        "title": "Sugerencias contextuales",
+        "description": "Mostrar sugerencias contextuales sobre el texto resaltado"
+      },
+      "streamingOutput": {
+        "title": "Salida en flujo",
+        "description": "Permitir respuestas parciales en flujo"
+      },
+      "cloudCredentials": {
+        "title": "Credenciales en la nube",
+        "description": "Los secretos de proveedores se mantienen fuera de `.nevo/settings.json` hasta que exista almacenamiento seguro"
+      }
+    },
+    "plugins": {
+      "description": "Amplía Nevo sin salir del editor. Los plugins de terceros se ejecutan como código de confianza con acceso a la aplicación.",
+      "trustWarningTitle": "¿Confiar en este plugin?",
+      "trustWarning": "{plugin} es código de terceros sin aislamiento. Puede acceder a la ventana de Nevo y a los datos disponibles para la aplicación. Instálalo solo desde una fuente de confianza.",
+      "permissionReviewTitle": "¿Permitir los permisos del complemento?",
+      "permissionReview": "{plugin} solicita estas capacidades: {capabilities}. Dominios de red: {domains}.",
+      "noDomains": "Sin acceso a la red",
+      "marketplace": "Catálogo",
+      "rescan": "Reescanear plugins",
+      "refreshCatalog": "Actualizar catálogo",
+      "systemLabel": "Sistema",
+      "builtIn": "Integrado",
+      "install": "Instalar",
+      "update": "Actualizar",
+      "remove": "Quitar",
+      "openSource": "Código abierto",
+      "cacheNotice": "Datos en caché",
+      "catalogLoading": "Cargando catálogo…",
+      "catalogLoadingDescription": "Obteniendo metadatos del catálogo y comparándolos con los plugins instalados.",
+      "catalogEmptyTitle": "El catálogo está vacío.",
+      "catalogEmptyDescription": "El repositorio del catálogo aún no contiene carpetas `plugins/<pluginId>`, o no es accesible.",
+      "installedVersion": "instalado v{version}",
+      "summary": {
+        "label": "Resumen de plugins",
+        "installed": "Instalados",
+        "enabled": "Activados",
+        "issues": "Problemas",
+        "catalog": "Catálogo",
+        "cache": "Caché"
+      },
+      "kanban": {
+        "title": "Tableros Kanban",
+        "description": "Activar la vista de tablero Kanban. Si se desactiva, los tableros se ocultan pero los datos se conservan."
+      },
+      "templates": {
+        "title": "Plantillas",
+        "description": "Crea notas desde plantillas reutilizables del espacio e inserta contenido de plantilla desde el editor."
+      },
+      "vega": {
+        "title": "Gráficos Vega-Lite",
+        "description": "Incrusta gráficos de datos interactivos con especificaciones Vega-Lite directamente en las notas."
+      },
+      "markmap": {
+        "title": "Mapas mentales",
+        "description": "Genera mapas mentales interactivos a partir de esquemas Markdown directamente en las notas."
+      },
+      "githubSync": {
+        "title": "Sincronización con GitHub",
+        "description": "Haz una copia de seguridad del espacio en un repositorio de GitHub.",
+        "fields": {
+          "repo": "Repositorio",
+          "branch": "Rama",
+          "token": "Token de acceso",
+          "tokenHint": "Token de acceso personal con alcance repo",
+          "commitMessage": "Mensaje de commit",
+          "autoSync": "Sincronización automática",
+          "intervalMinutes": "Intervalo (minutos)"
+        },
+        "actions": {
+          "test": "Probar conexión",
+          "syncNow": "Sincronizar"
+        },
+        "status": {
+          "testing": "Comprobando…",
+          "syncing": "Sincronizando…",
+          "connectionOk": "Conexión correcta",
+          "never": "Nunca sincronizado",
+          "lastSynced": "Última sync: {time}",
+          "filesCount": "{count} archivos",
+          "failed": "Error: {message}"
+        },
+        "toast": {
+          "successTitle": "Sincronización con GitHub",
+          "success": "Espacio sincronizado con GitHub.",
+          "successDetail": "Espacio sincronizado con GitHub · {count} archivos.",
+          "errorTitle": "Error de sincronización con GitHub",
+          "error": "No se pudo sincronizar el espacio con GitHub."
+        }
+      },
+      "filters": {
+        "all": "Todos · {count}",
+        "enabled": "Activados · {count}",
+        "manifestIssues": "Problemas de manifiesto · {count}"
+      },
+      "tabs": {
+        "label": "Secciones de plugins",
+        "installed": "Instalados · {count}",
+        "catalog": "Catálogo · {count}"
+      },
+      "marketplaceStatus": {
+        "notInstalled": "No instalado",
+        "installed": "Instalado",
+        "updateAvailable": "Actualización disponible",
+        "disabled": "Deshabilitado",
+        "invalid": "Inválido",
+        "conflict": "Conflicto"
+      },
+      "noDescription": "Sin descripción en el manifiesto.",
+      "fallbackDescription": "Manifiesto del plugin del espacio",
+      "permissions": "Permisos",
+      "noPermissions": "Sin capacidades",
+      "source": "Origen",
+      "execution": {
+        "sandboxed": "Worker aislado",
+        "trusted": "WebView de confianza"
+      },
+      "manifestIssue": "Problema de manifiesto",
+      "manifestValid": "Manifiesto válido",
+      "emptyTitle": "No se encontraron plugins.",
+      "emptyDescription": "Suelta carpetas de plugins en `.nevo/plugins` y vuelve a escanear este espacio.",
+      "settings": {
+        "configure": "Configurar",
+        "hide": "Ocultar",
+        "secretSet": "Definido",
+        "secretPlaceholder": "Introduce el valor",
+        "saved": "Guardado"
+      }
+    },
+    "hotkeys": {
+      "description": "Los comandos de teclado editables de Nevo se pueden registrar aquí. Los atajos de formato del editor son fijos.",
+      "resetAll": "Restablecer todo",
+      "resetOne": "Restablecer {command}",
+      "editable": "Editable",
+      "conflictSummary": "Conflictos",
+      "searchLabel": "Buscar atajos",
+      "searchPlaceholder": "Buscar atajos...",
+      "matches": "{count} coincidencias",
+      "conflicts": "Conflicto con {count} atajo(s)",
+      "pressKeys": "Pulsa las teclas…",
+      "fixed": "Fijo",
+      "table": {
+        "command": "Comando",
+        "state": "Estado",
+        "shortcut": "Atajo"
+      },
+      "scope": {
+        "workspace": "espacio",
+        "app": "app"
+      },
+      "keys": {
+        "space": "Espacio"
+      },
+      "commands": {
+        "undo": "Deshacer",
+        "redo": "Rehacer",
+        "bold": "Negrita",
+        "italic": "Cursiva",
+        "strikethrough": "Tachado",
+        "underline": "Subrayado",
+        "kbd": "Tecla del teclado",
+        "tag": "Etiqueta",
+        "heading1": "Encabezado 1",
+        "heading2": "Encabezado 2",
+        "heading3": "Encabezado 3",
+        "heading4": "Encabezado 4",
+        "heading5": "Encabezado 5",
+        "heading6": "Encabezado 6",
+        "orderedList": "Lista ordenada",
+        "bulletList": "Lista de viñetas",
+        "blockquote": "Cita",
+        "inlineMath": "Matemática en línea",
+        "newNote": "Crear nota",
+        "newFolder": "Crear carpeta",
+        "saveNote": "Guardar nota",
+        "searchTitles": "Búsqueda global",
+        "toggleSidebar": "Alternar barra lateral",
+        "toggleRightPanel": "Alternar panel derecho",
+        "openGraph": "Abrir grafo",
+        "openHistory": "Abrir historial",
+        "openTrash": "Abrir papelera",
+        "openSettings": "Abrir ajustes"
+      }
+    },
+    "files": {
+      "description": "Rutas del espacio, operaciones de limpieza y diagnósticos locales.",
+      "groups": {
+        "paths": "Rutas",
+        "retention": "Retención",
+        "diagnostics": "Diagnósticos"
+      },
+      "paths": {
+        "title": "Rutas del espacio",
+        "description": "Salta directamente a la raíz del espacio y al almacenamiento oculto `.nevo`",
+        "revealWorkspace": "Mostrar espacio",
+        "openNotes": "Abrir notas",
+        "openAssets": "Abrir recursos",
+        "openNevo": "Abrir .nevo"
+      },
+      "snapshotRetention": {
+        "title": "Retención de instantáneas",
+        "searchDescription": "Cuántas instantáneas conservar por nota",
+        "description": "Conservar {count} instantáneas por nota",
+        "pruneNow": "Eliminar"
+      },
+      "trashRetention": {
+        "title": "Retención de papelera",
+        "description": "Cuánto tiempo conservar las notas eliminadas antes del borrado definitivo",
+        "7days": "7 días",
+        "30days": "30 días",
+        "90days": "90 días",
+        "never": "Nunca"
+      },
+      "orphanedAssets": {
+        "title": "Limpieza de recursos huérfanos",
+        "description": "Eliminar archivos `.nevo/assets` que ya no son referenciados por las notas",
+        "clean": "Limpiar recursos"
+      },
+      "diagnostics": {
+        "notes": "Notas",
+        "folders": "Carpetas",
+        "plugins": "Plugins",
+        "snapshots": "Instantáneas",
+        "assets": "Recursos",
+        "workspaceSize": "Tamaño del espacio"
+      }
+    },
+    "advanced": {
+      "description": "Minimalista por diseño: opciones expertas, archivos en bruto y metadatos de esquema.",
+      "groups": {
+        "diagnostics": "Diagnósticos"
+      },
+      "schemaMetadata": {
+        "title": "Metadatos del esquema",
+        "description": "Versión actual del esquema de ajustes del espacio"
+      },
+      "experimentalGraphTools": {
+        "title": "Herramientas de grafo experimentales",
+        "description": "Opciones avanzadas del grafo sin una sección separada"
+      },
+      "developerLogging": {
+        "title": "Registro de diagnóstico extendido",
+        "description": "Escribe diagnósticos warn, info y debug en logs rotativos mientras los errores permanecen siempre activos"
+      },
+      "revealLogs": {
+        "title": "Mostrar logs",
+        "description": "Abrir los logs rotativos almacenados en el directorio de datos de la app",
+        "action": "Mostrar logs"
+      },
+      "rawSettings": {
+        "title": "Abrir JSON de ajustes en bruto",
+        "description": "Mostrar el archivo de ajustes del espacio directamente en el disco",
+        "reveal": "Mostrar settings.json"
+      },
+      "resetSettings": {
+        "title": "Restablecer ajustes del espacio",
+        "description": "Reemplazar el archivo de ajustes actual por los valores v1",
+        "action": "Restablecer ajustes"
+      }
+    },
+    "about": {
+      "description": "Construido sobre Tauri. Local-first por defecto.",
+      "tagline": "Un espacio de trabajo tranquilo y local-first para bloques, páginas y los hilos entre ellos.",
+      "notAvailable": "No disponible",
+      "meta": {
+        "version": "Versión",
+        "engine": "Motor",
+        "platform": "Plataforma",
+        "workspace": "Espacio"
+      },
+      "actions": {
+        "checkUpdates": "Buscar actualizaciones",
+        "revealConfig": "Mostrar config",
+        "openUserFolder": "Abrir carpeta de usuario",
+        "acknowledgements": "Agradecimientos"
+      },
+      "openSourceTitle": "Construido sobre código abierto",
+      "openSourceBody": "Tauri, Rust, ProseMirror y los archivos del espacio local en tu disco. La app busca actualizaciones y las instala tras tu confirmación."
+    },
+    "feedback": {
+      "workspaceIdentitySaved": "Identidad del espacio guardada.",
+      "snapshotCleanup": "Eliminados {removedFiles} archivos de instantáneas antiguas y liberado {bytesFreed}.",
+      "assetCleanup": "Eliminados {removedFiles} recursos huérfanos y liberado {bytesFreed}.",
+      "logsPathUnavailable": "La ruta de logs aún no está disponible.",
+      "revealPathOpened": "Ruta abierta con la app del sistema.",
+      "revealPathFailed": "No se pudo mostrar esta ruta en el gestor de archivos.",
+      "openFolderFailed": "No se pudo abrir esta carpeta en el gestor de archivos."
+    }
+  },
+  "editor": {
+    "toolbar": {
+      "bold": "Negrita (strong) Mod+B",
+      "italic": "Cursiva (em) Mod+I",
+      "strikethrough": "Tachado (s) Mod+Shift+S",
+      "underline": "Subrayado (u) Mod+U",
+      "code": "Código (code)",
+      "kbd": "Tecla del teclado (kbd) Mod+E",
+      "tag": "Etiqueta (span.nv-tag) Mod+Shift+T",
+      "link": "Enlace (a)",
+      "superscript": "Superíndice (sup)",
+      "subscript": "Subíndice (sub)",
+      "highlight": "Resaltado (mark)",
+      "textColor": "Color del texto",
+      "math": "Matemática en línea",
+      "image": "Insertar imagen"
+    },
+    "linkPicker": {
+      "createNote": "Crear nota «{title}»",
+      "anchorHint": "Ancla: {anchor}",
+      "aliasHint": "Alias: {alias}",
+      "aliasAnchorHint": "Alias: {alias} · Ancla: {anchor}"
+    },
+    "blockHandle": {
+      "drag": "Arrastra para reordenar",
+      "options": "Opciones del bloque"
+    },
+    "colorPicker": {
+      "none": "Ninguno",
+      "color": "Color",
+      "hue": "Tono",
+      "picker": "Selector de color",
+      "presets": "Colores predefinidos",
+      "hex": "Color HEX",
+      "sv": "Saturación y valor",
+      "custom": "Selector personalizado"
+    },
+    "table": {
+      "title": "Formato de tabla",
+      "selection": "{rows}×{cols} seleccionado",
+      "rowAddAbove": "Fila + Arriba",
+      "rowAddBelow": "Fila + Abajo",
+      "colAddLeft": "Columna + Izquierda",
+      "colAddRight": "Columna + Derecha",
+      "formula": "Fórmula",
+      "formulaLabel": "Fórmula de celda",
+      "formulaHint": "Estilo Excel, ej. =SUM(A1:A3)",
+      "formulaPlaceholder": "=SUM(A1:A3)",
+      "formulaApply": "Aplicar",
+      "formulaRemove": "Quitar",
+      "mergeCells": "Combinar celdas",
+      "splitCell": "Dividir celda",
+      "toggleHeaderRow": "Alternar fila de encabezado",
+      "toggleHeaderCol": "Alternar columna de encabezado",
+      "alignLeft": "Alinear izquierda",
+      "alignCenter": "Alinear centro",
+      "alignRight": "Alinear derecha",
+      "clearAlignment": "Quitar alineación",
+      "bgWarm": "Fondo cálido",
+      "bgCool": "Fondo frío",
+      "clearBackground": "Quitar fondo",
+      "borderAccent": "Borde acento",
+      "textAccent": "Texto acento",
+      "padding16": "Relleno 16px",
+      "deleteRow": "Eliminar fila",
+      "deleteCol": "Eliminar columna",
+      "deleteTable": "Eliminar tabla",
+      "categories": {
+        "insert": "Insertar",
+        "cells": "Celdas",
+        "alignment": "Alineación",
+        "styling": "Estilo",
+        "actions": "Acciones"
+      }
+    },
+    "mermaid": {
+      "label": "Diagrama Mermaid",
+      "placeholder": "graph TD\n  A --> B",
+      "applyHint": "para aplicar",
+      "apply": "Aplicar",
+      "delete": "Eliminar"
+    },
+    "vega": {
+      "label": "Gráfico Vega-Lite",
+      "placeholder": "{\n  \"$schema\": \"https://vega.github.io/schema/vega-lite/v5.json\",\n  \"mark\": \"bar\",\n  \"data\": { \"values\": [{\"a\": \"A\", \"b\": 28}] },\n  \"encoding\": { \"x\": { \"field\": \"a\" }, \"y\": { \"field\": \"b\" } }\n}",
+      "applyHint": "para aplicar",
+      "apply": "Aplicar",
+      "delete": "Eliminar"
+    },
+    "markmap": {
+      "label": "Mapa mental",
+      "placeholder": "# Tema\n## Idea A\n## Idea B",
+      "applyHint": "para aplicar",
+      "apply": "Aplicar",
+      "delete": "Eliminar"
+    },
+    "pluginBlock": {
+      "applyHint": "para aplicar",
+      "apply": "Aplicar",
+      "delete": "Eliminar"
+    },
+    "draw": {
+      "label": "Dibujo",
+      "openCanvas": "Abrir lienzo",
+      "empty": "Dibujo vacío — haz clic para abrir el lienzo",
+      "settings": {
+        "title": "Lienzo",
+        "bgColor": "Color de fondo",
+        "gridType": "Cuadrícula",
+        "gridNone": "Sin cuadrícula",
+        "gridSquare": "Cuadrados",
+        "gridLines": "Líneas",
+        "gridDots": "Puntos",
+        "autoDetect": "Detectar formas automáticamente"
+      },
+      "export": {
+        "title": "Exportar dibujo",
+        "format": "Formato",
+        "scope": "Área",
+        "scopeAll": "Todo el dibujo",
+        "scopeViewport": "Área visible",
+        "scopeSelection": "Selección",
+        "transparent": "Fondo transparente",
+        "button": "Exportar",
+        "errorSelectionEmpty": "¡Nada seleccionado!",
+        "exporting": "Exportando..."
+      },
+      "props": {
+        "stroke": "Trazo",
+        "fill": "Relleno",
+        "width": "Ancho",
+        "lineStyle": "Estilo de línea",
+        "sloppiness": "Imprecisión",
+        "opacity": "Opacidad",
+        "none": "Ninguno",
+        "solid": "Sólido",
+        "dashed": "Discontinuo",
+        "dotted": "Punteado",
+        "hachure": "Rayado",
+        "fillSolid": "Sólido",
+        "crossHatch": "Rayado cruzado",
+        "architect": "Arquitecto",
+        "artist": "Artista",
+        "cartoonist": "Caricaturista",
+        "arrowShape": "Tipo de flecha",
+        "arrowStraight": "Recta",
+        "arrowElbow": "Articulada",
+        "arrowCurved": "Curva",
+        "arrowEnds": "Extremos de flecha",
+        "capStart": "Inicio",
+        "capEnd": "Fin",
+        "capArrow": "Flecha",
+        "capDot": "Punto",
+        "capNone": "Ninguno",
+        "fontFamily": "Familia tipográfica",
+        "sansSerif": "Sans-serif",
+        "serif": "Serif",
+        "monospace": "Monoespaciada",
+        "fontSize": "Tamaño de fuente"
+      },
+      "actions": {
+        "title": "Acciones",
+        "alignLeft": "Alinear izquierda",
+        "alignCenterH": "Alinear centro",
+        "alignRight": "Alinear derecha",
+        "alignTop": "Alinear arriba",
+        "alignCenterV": "Alinear medio",
+        "alignBottom": "Alinear abajo",
+        "distributeH": "Distribuir horizontal",
+        "distributeV": "Distribuir vertical",
+        "flipH": "Voltear horizontal",
+        "flipV": "Voltear vertical",
+        "group": "Agrupar",
+        "ungroup": "Desagrupar",
+        "lock": "Bloquear",
+        "unlock": "Desbloquear"
+      },
+      "templates": {
+        "title": "Componentes",
+        "open": "Biblioteca de componentes",
+        "close": "Cerrar",
+        "ui": "Elementos UI",
+        "diagram": "Diagrama de flujo",
+        "button": "Botón",
+        "input": "Campo de entrada",
+        "checkbox": "Casilla",
+        "card": "Tarjeta",
+        "browser": "Ventana del navegador",
+        "phone": "Pantalla móvil",
+        "process": "Proceso",
+        "decision": "Decisión",
+        "terminator": "Inicio / Fin",
+        "connector": "Conector",
+        "sticky": "Nota adhesiva",
+        "person": "Persona"
+      }
+    },
+    "slash": {
+      "ai": {
+        "continue": {
+          "title": "Continuar escribiendo"
+        },
+        "summarize": {
+          "title": "Resumir"
+        },
+        "ask": {
+          "title": "Preguntar a la IA"
+        }
+      }
+    },
+    "aiAsk": {
+      "title": "Preguntar a la IA",
+      "placeholder": "Describe lo que quieres…",
+      "confirm": "Generar",
+      "cancel": "Cancelar"
+    }
+  },
+  "version": "v{version} · Tauri",
+  "graph": {
+    "title": "Grafo",
+    "localGraph": "Grafo local",
+    "showLocalGraph": "Mostrar grafo local",
+    "hideLocalGraph": "Ocultar grafo local",
+    "backToEditor": "Atrás",
+    "loading": "Construyendo grafo…",
+    "noConnections": "Sin conexiones",
+    "noConnectionsHint": "Enlaza esta nota con otras usando [[nombre de la nota]]",
+    "emptyTitle": "Aún no hay notas",
+    "emptySub": "Crea notas y enlácelas con [[nombre de la nota]] — aparecerán aquí como una red.",
+    "searchPlaceholder": "Buscar nodos…",
+    "untitled": "Sin título",
+    "connections": "conexiones",
+    "nodes": "nodos",
+    "edges": "aristas",
+    "showLabels": "Etiquetas",
+    "showArrows": "Flechas",
+    "zoomIn": "Acercar",
+    "zoomOut": "Alejar",
+    "resetView": "Restablecer vista",
+    "clearFocus": "Quitar foco",
+    "kind": {
+      "link": "Enlaces",
+      "embed": "Incrustaciones",
+      "mention": "Menciones",
+      "parent": "Padre"
+    }
+  },
+  "import": {
+    "openDialogTitle": "Importar Markdown",
+    "success": "«{title}» importado",
+    "error": "Error al importar el archivo"
+  },
+  "export": {
+    "buttonTitle": "Exportar nota",
+    "modalTitle": "Exportar como",
+    "formatMarkdown": "Markdown (.md)",
+    "formatHtml": "HTML (.html)",
+    "formatDocx": "Word (.docx)",
+    "formatTypst": "Archivo Typst (.zip)",
+    "formatPdf": "PDF",
+    "saveDialogTitle": "Exportar como Markdown",
+    "saveHtmlDialogTitle": "Exportar como HTML",
+    "saveDocxDialogTitle": "Exportar como Word",
+    "saveTypstDialogTitle": "Exportar como archivo Typst",
+    "savePdfDialogTitle": "Exportar como PDF",
+    "savePdf": "Guardar PDF",
+    "pdfSavingProgress": "Página {current} / {total}",
+    "printButton": "Exportar PDF",
+    "pageSize": "Tamaño de página",
+    "orientation": "Orientación",
+    "portrait": "Vertical",
+    "landscape": "Horizontal",
+    "sections": {
+      "page": "Página",
+      "typography": "Tipografía",
+      "document": "Documento",
+      "preview": "Vista previa"
+    },
+    "fontSize": "Tamaño",
+    "fontFamily": "Tipografía",
+    "fontDefault": "Predeterminada",
+    "margins": "Márgenes",
+    "marginTop": "Superior",
+    "marginRight": "Derecho",
+    "marginBottom": "Inferior",
+    "marginLeft": "Izquierdo",
+    "paragraphSpacing": "Espaciado de párrafo",
+    "exportNoteTitle": "Título de la nota",
+    "marginPresets": {
+      "narrow": "Estrechos",
+      "normal": "Normales",
+      "wide": "Anchos"
+    },
+    "lineSpacing": "Interlineado",
+    "lineSpacings": {
+      "compact": "Compacto",
+      "normal": "Normal",
+      "relaxed": "Relajado"
+    },
+    "pageNumbers": "Números de página",
+    "headingNumbers": "Números de encabezado",
+    "tableOfContents": "Índice",
+    "titlePage": "Portada",
+    "runningHeader": "Encabezado corrido",
+    "previewZoom": "Zoom de vista previa",
+    "fitWidth": "Ajustar ancho",
+    "pdfGenerating": "Generando PDF…",
+    "pdfGenerateError": "Error al generar la vista previa del PDF.",
+    "pdfSaveError": "Error al guardar el PDF.",
+    "pdfPreviewTitle": "Vista previa del PDF",
+    "previewLoadingPage": "Cargando página…",
+    "saveDocx": "Guardar DOCX",
+    "docxPreviewTitle": "Vista previa de Word",
+    "docxGenerating": "Preparando documento Word…",
+    "docxSaveError": "Error al guardar el DOCX.",
+    "pageBreak": "Salto de página",
+    "formatDocxModalTitle": "Formato Word"
+  },
+  "media": {
+    "attachVideo": "Adjuntar vídeo",
+    "attachAudio": "Adjuntar audio",
+    "video": "Vídeo",
+    "audio": "Audio",
+    "replace": "Reemplazar",
+    "remove": "Quitar",
+    "videoFile": "Archivo de vídeo",
+    "audioFile": "Archivo de audio",
+    "play": "Reproducir",
+    "pause": "Pausar"
+  },
+  "slashMenu": {
+    "categories": {
+      "text": "Texto",
+      "lists": "Listas",
+      "code": "Código",
+      "media": "Multimedia",
+      "layout": "Disposición"
+    },
+    "items": {
+      "paragraph": "Párrafo",
+      "h1": "Encabezado 1",
+      "h2": "Encabezado 2",
+      "h3": "Encabezado 3",
+      "h4": "Encabezado 4",
+      "h5": "Encabezado 5",
+      "h6": "Encabezado 6",
+      "emoji": "Emoticono",
+      "ul": "Lista de viñetas",
+      "ol": "Lista ordenada",
+      "checklist": "Elemento de tarea",
+      "toggle": "Alternar",
+      "code": "Bloque de código",
+      "math": "Bloque matemático",
+      "math_inline": "Matemática en línea",
+      "image": "Imagen",
+      "video": "Vídeo",
+      "audio": "Audio",
+      "file": "Archivo adjunto",
+      "table": "Tabla",
+      "mermaid": "Diagrama Mermaid",
+      "draw": "Dibujo",
+      "markmap": "Mapa mental",
+      "chart": "Gráfico",
+      "database": "Base de datos",
+      "note_embed": "Incrustar nota",
+      "embed": "Incrustación",
+      "insert_template": "Insertar plantilla",
+      "quote": "Cita",
+      "callout": "Llamada",
+      "divider": "Divisor",
+      "ai_continue": "Continuar escribiendo",
+      "ai_summarize": "Resumir",
+      "ai_ask": "Preguntar a la IA"
+    }
+  },
+  "noteEmbed": {
+    "pickNote": "Elegir nota",
+    "change": "Cambiar",
+    "open": "Abrir",
+    "remove": "Quitar",
+    "noNoteSelected": "Ninguna nota seleccionada",
+    "untitled": "(sin título)",
+    "searchPlaceholder": "Buscar notas...",
+    "noNotesFound": "No se encontraron notas"
+  },
+  "embed": {
+    "pasteUrl": "Pegar URL",
+    "changeUrl": "Cambiar URL",
+    "open": "Abrir",
+    "remove": "Quitar",
+    "loading": "Cargando incrustación…",
+    "error": "Error al cargar la incrustación",
+    "unsupported": "URL no admitida"
+  },
+  "image": {
+    "menu": {
+      "caption": "Descripción",
+      "copy": "Copiar",
+      "cut": "Cortar",
+      "delete": "Eliminar",
+      "align": "Alinear",
+      "alignLeft": "Izquierda",
+      "alignCenter": "Centro",
+      "alignRight": "Derecha",
+      "width": "Ancho"
+    },
+    "size": {
+      "small": "Pequeña",
+      "medium": "Mediana",
+      "large": "Grande",
+      "full": "Ancho completo"
+    }
+  },
+  "database": {
+    "titlePlaceholder": "Base de datos sin título",
+    "view": {
+      "table": "Tabla",
+      "list": "Lista",
+      "chart": "Gráfico",
+      "cards": "Tarjetas",
+      "renamePlaceholder": "Nombre de la vista"
+    },
+    "toolbar": {
+      "addView": "Añadir vista",
+      "importCsv": "Importar CSV",
+      "deleteView": "Eliminar vista",
+      "filter": "Filtrar",
+      "sort": "Ordenar",
+      "settings": "Ajustes"
+    },
+    "table": {
+      "rowNumber": "#",
+      "addField": "Añadir campo",
+      "sum": "Suma",
+      "addRow": "Nueva fila",
+      "empty": "Sin registros"
+    },
+    "cell": {
+      "urlPlaceholder": "https://…",
+      "numberPlaceholder": "0",
+      "edit": "Editar",
+      "selectPlaceholder": "Seleccionar…",
+      "noOptions": "Sin opciones",
+      "checked": "Marcado",
+      "unchecked": "Sin marcar"
+    },
+    "field": {
+      "defaultName": "Campo",
+      "namePlaceholder": "Nombre del campo",
+      "type": "Tipo de campo",
+      "options": "Opciones",
+      "optionNamePlaceholder": "Nombre de la opción",
+      "addOption": "Añadir opción",
+      "delete": "Eliminar campo"
+    },
+    "fieldTypes": {
+      "text": "Texto",
+      "number": "Número",
+      "date": "Fecha",
+      "select": "Selección",
+      "multi_select": "Selección múltiple",
+      "checkbox": "Casilla",
+      "url": "URL"
+    },
+    "list": {
+      "untitled": "Sin título"
+    },
+    "filter": {
+      "where": "Donde",
+      "and": "y",
+      "empty": "Sin filtros",
+      "checked": "Marcado",
+      "unchecked": "Sin marcar",
+      "selectValue": "Seleccionar valor",
+      "noOptions": "Sin opciones",
+      "valuePlaceholder": "Valor",
+      "removeRule": "Quitar filtro",
+      "addRule": "Añadir filtro",
+      "clearAll": "Limpiar todo",
+      "op": {
+        "contains": "contiene",
+        "not_contains": "no contiene",
+        "is": "es",
+        "is_not": "no es",
+        "is_empty": "está vacío",
+        "is_not_empty": "no está vacío",
+        "eq": "=",
+        "neq": "≠",
+        "gt": ">",
+        "lt": "<",
+        "gte": "≥",
+        "lte": "≤",
+        "before": "antes de",
+        "after": "después de",
+        "has_any": "tiene alguno de",
+        "has_all": "tiene todos",
+        "has_none": "no tiene ninguno de"
+      }
+    },
+    "sort": {
+      "empty": "Sin ordenación",
+      "sortBy": "Ordenar por",
+      "then": "luego por",
+      "asc": "Ascendente",
+      "desc": "Descendente",
+      "removeRule": "Quitar orden",
+      "addRule": "Añadir orden",
+      "clearAll": "Limpiar todo"
+    },
+    "settings": {
+      "renameView": "Nombre de la vista",
+      "gridLines": "Líneas de cuadrícula",
+      "stripedRows": "Filas alternadas",
+      "compact": "Filas compactas",
+      "showRowNumbers": "Mostrar números de fila",
+      "rowColorScheme": "Color de fila",
+      "rowColorSchemes": {
+        "neutral": "Neutral",
+        "blue": "Azul suave",
+        "green": "Verde suave",
+        "amber": "Ámbar cálido",
+        "lavender": "Lavanda"
+      },
+      "deleteDatabase": "Eliminar base de datos"
+    },
+    "chart": {
+      "kinds": {
+        "bar": "Barras",
+        "line": "Línea",
+        "area": "Área",
+        "pie": "Sectores"
+      },
+      "xField": "Eje X",
+      "yFields": "Valores",
+      "selected": "seleccionado",
+      "addSeries": "Añadir valor",
+      "removeSeries": "Quitar valor",
+      "countHint": "Sin valores seleccionados — el gráfico muestra el recuento de registros.",
+      "yFieldCount": "Cuenta",
+      "aggregates": {
+        "sum": "Suma",
+        "count": "Cuenta",
+        "avg": "Promedio",
+        "min": "Mín",
+        "max": "Máx"
+      },
+      "emptyGroup": "(vacío)",
+      "noFields": "Añade un campo para crear un gráfico",
+      "empty": "Sin datos para mostrar",
+      "importPrompt": "Importar CSV"
+    },
+    "csv": {
+      "title": "Importar CSV",
+      "chooseFile": "Elegir archivo…",
+      "dropHint": "Selecciona un archivo .csv para importar",
+      "parseError": "No se pudo analizar este archivo",
+      "delimiter": "Separador de columnas",
+      "delimiters": {
+        "comma": "Coma ( , )",
+        "semicolon": "Punto y coma ( ; )",
+        "tab": "Tabulador",
+        "pipe": "Barra vertical ( | )"
+      },
+      "firstRowHeader": "La primera fila es el encabezado",
+      "columnMapping": "Mapeo de columnas",
+      "columnName": "Columna",
+      "preview": "Vista previa",
+      "rowsCount": "filas",
+      "mode": "Modo de importación",
+      "modeReplace": "Reemplazar datos existentes",
+      "modeAppend": "Añadir a datos existentes",
+      "cancel": "Cancelar",
+      "import": "Importar"
+    }
+  },
+  "kanban": {
+    "common": {
+      "back": "Atrás",
+      "close": "Cerrar",
+      "cancel": "Cancelar",
+      "clear": "Limpiar",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "retry": "Reintentar",
+      "delete": "Eliminar"
+    },
+    "defaultTags": {
+      "fieldName": "Etiquetas",
+      "urgent": "Urgente",
+      "feature": "En curso"
+    },
+    "view": {
+      "loading": "Cargando…",
+      "loadBoardErrorTitle": "No se pudo cargar este tablero.",
+      "loadBoardFallback": "Error al cargar el tablero.",
+      "loadCardsFallback": "Error al cargar las tarjetas.",
+      "boardNotFound": "Tablero no encontrado.",
+      "boardUnavailable": "El tablero no está disponible.",
+      "moveFailed": "Error al mover: {message}",
+      "cardCount": "{n} elementos",
+      "openAutomations": "Automatizaciones",
+      "emptyTitle": "Un tablero vacío.",
+      "emptyHint": "Añade tu primera columna y empieza a seguir el trabajo, o parte de una plantilla.",
+      "openTemplates": "Plantillas…",
+      "addColumn": "Añadir columna",
+      "renameColumn": "Renombrar columna",
+      "deleteColumn": "Eliminar columna",
+      "newColumn": "Nueva columna",
+      "columnMenu": "Menú de la columna",
+      "editingColumn": "Editando",
+      "noResultsTitle": "Sin tarjetas coincidentes.",
+      "noResultsHint": "Limpia la búsqueda o ajusta los filtros para devolver las tarjetas."
+    },
+    "board": {
+      "addCard": "Añadir tarjeta",
+      "newCard": "Nueva tarjeta",
+      "quickAdd": "Nueva",
+      "quickAddPlaceholder": "Nombre de la tarea…",
+      "wipCap": "en límite WIP",
+      "dropHere": "Soltar aquí · estado →",
+      "dropCard": "Suelta una tarjeta aquí",
+      "emptyColumn": "Suelta aquí o crea una tarjeta",
+      "dragCard": "Arrastrar tarjeta"
+    },
+    "card": {
+      "untitled": "Sin título",
+      "unknownCard": "Tarjeta desconocida",
+      "addField": "Añadir campo",
+      "addTag": "Añadir etiqueta",
+      "enableTags": "Activar etiquetas",
+      "linkCard": "Vincular tarjeta",
+      "notes": "Notas",
+      "notesPlaceholder": "Añade notas, criterios de aceptación, contexto…",
+      "linked": "Tarjetas vinculadas",
+      "linkedEmpty": "Sin tarjetas vinculadas",
+      "blocked": "Bloqueada por",
+      "blocks": "Bloquea",
+      "related": "Relacionada",
+      "searchCards": "Buscar tarjetas…",
+      "noCardsFound": "No se encontraron tarjetas",
+      "properties": "Propiedades",
+      "checked": "Marcado",
+      "unchecked": "Sin marcar",
+      "automation": "Automatización",
+      "unsavedChanges": "Tienes cambios sin guardar. ¿Descartarlos?",
+      "deleteConfirm": "¿Eliminar esta tarjeta?",
+      "dialogLabel": "Detalles de la tarjeta",
+      "titlePlaceholder": "Título de la tarjeta",
+      "fieldType": "Tipo de campo",
+      "fieldOptions": "Opciones del campo",
+      "fieldNamePlaceholder": "Nombre del campo",
+      "optionPlaceholder": "Nombre de la opción",
+      "optionDefault": "Opción",
+      "addOption": "Añadir opción",
+      "newField": "Nuevo campo",
+      "checkboxLabel": "Marcado",
+      "askAI": "Preguntar a la IA",
+      "share": "Compartir",
+      "createdAt": "Creado",
+      "updatedAt": "Última edición",
+      "saveHint": "Ctrl/Cmd + Intro para guardar",
+      "progress": "Progreso",
+      "progressTasks": "{done} / {total} tareas ({pct}%)",
+      "progressNoTasks": "Sin tareas",
+      "priority": "Prioridad",
+      "priorityLevels": {
+        "none": "Sin prioridad",
+        "low": "Baja",
+        "medium": "Media",
+        "high": "Alta",
+        "urgent": "Urgente"
+      },
+      "fieldTypes": {
+        "text": "Texto",
+        "number": "Número",
+        "date": "Fecha",
+        "checkbox": "Casilla",
+        "select": "Selección",
+        "multiSelect": "Selección múltiple"
+      }
+    },
+    "modal": {
+      "addCardTitle": "Añadir tarjeta",
+      "titlePlaceholder": "Título de la tarjeta…",
+      "column": "Columna",
+      "add": "Añadir tarjeta"
+    },
+    "toolbar": {
+      "filter": "Filtrar",
+      "sort": "Ordenar",
+      "search": "Filtrar tarjetas…",
+      "viewBoard": "Tablero",
+      "viewTable": "Tabla",
+      "viewCalendar": "Calendario",
+      "filters": "{n} filtros",
+      "sorts": "{n} ordenes",
+      "display": "Visualización",
+      "displayProperties": "Propiedades de la tarjeta",
+      "showPreview": "Mostrar vista previa",
+      "cardDensity": "Densidad de tarjetas",
+      "densityComfortable": "Cómoda",
+      "densityCompact": "Compacta",
+      "noProperties": "Sin propiedades de tarjeta",
+      "boardSettings": "Ajustes del tablero"
+    },
+    "filter": {
+      "empty": "Sin filtros. Añade una regla para filtrar tarjetas.",
+      "where": "Donde",
+      "and": "Y",
+      "addRule": "Añadir filtro",
+      "clearAll": "Limpiar todo",
+      "removeRule": "Quitar filtro",
+      "valuePlaceholder": "Valor…",
+      "selectValue": "Seleccionar…",
+      "checked": "Marcado",
+      "unchecked": "Sin marcar",
+      "noOptions": "Sin opciones",
+      "op": {
+        "contains": "contiene",
+        "not_contains": "no contiene",
+        "is": "es",
+        "is_not": "no es",
+        "is_empty": "está vacío",
+        "is_not_empty": "no está vacío",
+        "eq": "=",
+        "neq": "≠",
+        "gt": ">",
+        "lt": "<",
+        "gte": "≥",
+        "lte": "≤",
+        "before": "antes de",
+        "after": "después de",
+        "has_any": "tiene alguno de",
+        "has_all": "tiene todos",
+        "has_none": "no tiene ninguno de"
+      }
+    },
+    "sort": {
+      "empty": "Sin ordenación. Añade un campo para ordenar tarjetas.",
+      "sortBy": "Ordenar por",
+      "then": "Luego por",
+      "addRule": "Añadir orden",
+      "clearAll": "Limpiar todo",
+      "removeRule": "Quitar orden",
+      "asc": "Asc",
+      "desc": "Desc"
+    },
+    "calendar": {
+      "today": "Hoy",
+      "month": "Mes",
+      "week": "Semana",
+      "day": "Día",
+      "chooseField": "Elegir campo",
+      "pickFirstField": "Usar primer campo de fecha",
+      "noDateProp": "Ningún campo de fecha seleccionado",
+      "noDateHint": "Selecciona un campo de fecha local en las tarjetas para usar la vista Calendario.",
+      "dropReschedule": "Soltar para reprogramar",
+      "noEvents": "Sin eventos",
+      "allDay": "Todo el día"
+    },
+    "automations": {
+      "title": "Automatizaciones y plantillas",
+      "openButton": "Automatizaciones",
+      "sectionAutomations": "Automatizaciones",
+      "active": "{n} activas",
+      "newRule": "Nueva regla",
+      "noAutomations": "Sin automatizaciones",
+      "noAutomationsHint": "Las reglas se ejecutan automáticamente cuando se cumplen las condiciones.",
+      "depGraph": "Grafo de dependencias",
+      "noDeps": "Sin dependencias registradas",
+      "noDepsHint": "Vincula tarjetas como «bloquea» o «bloqueada por» en el modal para crear un grafo de dependencias.",
+      "templates": "Plantillas de tarjeta",
+      "saveAs": "Guardar la actual como…",
+      "insertTemplate": "Insertar desde plantilla",
+      "runCount": "ejecutada {n}× esta semana",
+      "triggerPrefix": "Cuando",
+      "action": {
+        "moveTo": "mover a {value}",
+        "setProgress": "fijar progreso 100%",
+        "addTag": "etiquetar #{value}",
+        "notify": "notificar al responsable"
+      },
+      "trigger": {
+        "subtasksDone": "todas las subtareas hechas",
+        "statusChange": "estado → {value}",
+        "dueDateNear": "vence en 3 días"
+      },
+      "templatesData": {
+        "engineeringTicket": {
+          "name": "Ticket de ingeniería",
+          "description": "5 campos · subtareas en 3 pasos"
+        },
+        "designReview": {
+          "name": "Revisión de diseño",
+          "description": "Cobertura + checklist de crítica"
+        },
+        "weeklyRetro": {
+          "name": "Retrospectiva semanal",
+          "description": "4 preguntas · precargadas"
+        },
+        "bugReport": {
+          "name": "Informe de error",
+          "description": "Reproducción + entorno + severidad"
+        }
+      }
+    },
+    "groups": {
+      "status": "Estado",
+      "priority": "Prioridad",
+      "tag": "Etiqueta",
+      "owner": "Responsable",
+      "date": "Fecha",
+      "chooseField": "Elegir campo",
+      "noFieldSelected": "Selecciona un campo para crear grupos.",
+      "pickFirstField": "Usar el primer campo que coincida",
+      "unassigned": "Sin asignar",
+      "untagged": "Sin etiquetar",
+      "noPriority": "Sin prioridad",
+      "noDate": "Sin fecha",
+      "today": "Hoy",
+      "thisWeek": "Esta semana",
+      "later": "Más tarde",
+      "overdue": "Vencida",
+      "allCards": "Todas las tarjetas"
+    },
+    "table": {
+      "title": "Título",
+      "status": "Estado",
+      "chooseFields": "Elegir campos",
+      "noFields": "Sin campos locales",
+      "noTitle": "Sin título",
+      "items": "{n} elementos · {g} grupos",
+      "avgProgress": "media {n}%"
+    },
+    "propertyPanel": {
+      "title": "Propiedades del tablero",
+      "columns": "Columnas (Estado)",
+      "properties": "Propiedades de la tarjeta",
+      "addColumn": "Añadir columna",
+      "addProperty": "Añadir propiedad",
+      "addOption": "Añadir opción",
+      "impactTitle": "Los cambios afectarán a las tarjetas existentes",
+      "impactColumns": "{n} tarjeta(s) en la(s) columna(s) eliminada(s) se moverán a la primera columna restante.",
+      "impactProperties": "{n} tarjeta(s) con valores en la(s) propiedad(es) eliminada(s) perderán esos valores.",
+      "validationMissingStatus": "Falta la propiedad Estado",
+      "validationNeedColumn": "Se requiere al menos una columna",
+      "newColumn": "Nueva columna",
+      "newProperty": "Nueva propiedad",
+      "option": "Opción",
+      "types": {
+        "text": "Texto",
+        "select": "Selección",
+        "multi_select": "Selección múltiple",
+        "date": "Fecha",
+        "number": "Número",
+        "checkbox": "Casilla"
+      }
+    },
+    "boardModal": {
+      "createTitle": "Nuevo tablero",
+      "createDescription": "Define un nombre y un icono para iniciar tu flujo de trabajo.",
+      "renameTitle": "Renombrar tablero",
+      "deleteTitle": "Eliminar tablero",
+      "boardName": "Nombre del tablero",
+      "boardNamePlaceholder": "Nombre del tablero",
+      "icon": "Icono",
+      "newBoard": "Nuevo tablero",
+      "untitled": "Sin título",
+      "thisBoard": "este tablero",
+      "deleteConfirm": "¿Eliminar {title}? Todas las tarjetas se eliminarán definitivamente.",
+      "create": "Crear"
+    },
+    "embedded": {
+      "cardCount": "{n} tarjetas",
+      "openFullView": "Abrir vista completa",
+      "linkedTo": "Vinculado a {title}",
+      "syncedSeconds": "sincronizado hace {n}s",
+      "syncedMinutes": "sincronizado hace {n}min",
+      "noColumns": "Sin columnas definidas",
+      "openFooter": "Abrir vista completa ↗"
+    }
+  },
+  "cloud": {
+    "signIn": {
+      "title": "Inicia sesión en Nevo",
+      "subtitle": "Inicia sesión para crear y unirte a almacenamientos compartidos con tu equipo. Tus espacios personales siguen siendo locales.",
+      "google": "Continuar con Google",
+      "github": "Continuar con GitHub",
+      "serverLabel": "URL del servidor",
+      "authenticating": "Esperando al navegador…",
+      "back": "Atrás"
+    },
+    "account": {
+      "signedInAs": "Sesión iniciada como {name}",
+      "signOut": "Cerrar sesión",
+      "signIn": "Iniciar sesión"
+    },
+    "storages": {
+      "title": "Almacenamientos compartidos",
+      "empty": "Sin almacenamientos compartidos. Crea uno para colaborar con tu equipo.",
+      "create": "Nuevo almacenamiento compartido",
+      "namePlaceholder": "Nombre del almacenamiento",
+      "createAction": "Crear",
+      "open": "Abrir",
+      "documents": "{n} documentos"
+    },
+    "roles": {
+      "owner": "Propietario",
+      "admin": "Administrador",
+      "editor": "Editor",
+      "viewer": "Lector"
+    },
+    "members": {
+      "title": "Miembros",
+      "you": "Tú",
+      "pending": "Clave pendiente",
+      "approve": "Conceder acceso",
+      "remove": "Quitar",
+      "invite": "Invitar",
+      "invitePlaceholder": "email{'@'}ejemplo.com",
+      "inviteAction": "Enviar invitación",
+      "pendingInvites": "Invitaciones pendientes",
+      "approveHint": "Este miembro está esperando la clave de cifrado. Concédele acceso para que entre."
+    },
+    "errors": {
+      "noKey": "Aún no tienes la clave de este almacenamiento — pide a un propietario o administrador que te conceda acceso.",
+      "generic": "Algo salió mal. Inténtalo de nuevo."
+    }
+  }
+}

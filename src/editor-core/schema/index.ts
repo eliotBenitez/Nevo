@@ -4,6 +4,7 @@ import { addListNodes } from 'prosemirror-schema-list'
 import { calloutNodeSpec, checklistItemNodeSpec, dividerNodeSpec, headingNodeSpec, toggleNodeSpec, toggleTitleNodeSpec } from './nodes-block'
 import { codeBlockNodeSpec, drawBlockNodeSpec, fileBlockNodeSpec, imageBlockNodeSpec, mathBlockNodeSpec, mathInlineNodeSpec, markmapBlockNodeSpec, mermaidBlockNodeSpec, vegaBlockNodeSpec } from './nodes-content'
 import { mediaBlockNodeSpec, noteEmbedNodeSpec, embedBlockNodeSpec } from './nodes-embeds'
+import { databaseNodeSpec } from './nodes-database'
 import { columnListNodeSpec, columnNodeSpec } from './nodes-columns'
 import { tableNodeSpecs } from './nodes-table'
 import {
@@ -37,6 +38,7 @@ let nodes = addListNodes(basicSchema.spec.nodes, 'paragraph block*', 'block')
   .addToEnd('note_embed', noteEmbedNodeSpec)
   .addToEnd('embed_block', embedBlockNodeSpec)
   .addToEnd('media_block', mediaBlockNodeSpec)
+  .addToEnd('database_block', databaseNodeSpec)
   .addToEnd('column_list', columnListNodeSpec)
   .addToEnd('column', columnNodeSpec)
 

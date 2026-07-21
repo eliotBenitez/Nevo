@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Folder, Plus, Search, Pin, Trash2, ArrowRight, Cloud } from 'lucide-vue-next'
 import AmbientBackdrop from '../../../ui/glass/AmbientBackdrop.vue'
+import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import NevoMark from './NevoMark.vue'
 import PrivacyBadge from './PrivacyBadge.vue'
 import { useWorkspaceStore } from '../../../stores/workspace'
@@ -11,6 +12,7 @@ import { useAuthStore } from '../../../stores/auth'
 import { useDeviceLayout } from '../../../composables/useDeviceLayout'
 import { useConfirmDialog } from '../../../ui/composables/useConfirmDialog'
 import type { RecentWorkspace } from '../../../types/workspace'
+import { systemCommands } from '../../../tauri/commands'
 
 const emit = defineEmits<{
   back: []
@@ -77,9 +79,8 @@ const filteredRecents = computed(() =>
 
 async function browseFolder() {
   try {
-    const { open } = await import('@tauri-apps/plugin-dialog')
-    const selected = await open({ directory: true })
-    if (typeof selected === 'string') {
+    const selected = await systemCommands.pickWorkspaceDirectory()
+    if (selected) {
       await workspaceStore.openWorkspace(selected)
       emit('done')
     }
@@ -235,7 +236,9 @@ async function onDrop(e: DragEvent) {
           @keydown.enter="openWorkspace(ws.id)"
           @keydown.space.prevent="openWorkspace(ws.id)"
         >
-          <div class="ws-icon" :style="{ background: ws.gradient }">{{ ws.glyph }}</div>
+          <div class="ws-icon" :style="{ background: ws.gradient }">
+            <NvNoteIcon :value="ws.glyph" :size="17" />
+          </div>
           <div class="ws-info">
             <div class="ws-name-row">
               <span class="ws-name">{{ ws.name }}</span>

@@ -19,6 +19,7 @@ export function buildWorkspaceSearchItems(
     item('workspaceType', t('settings.workspace.workspaceType.title'), t('settings.workspace.workspaceType.description'), t(`settings.options.workspaceType.${ws.workspaceType}`)),
     item('workspaceStatus', t('settings.workspace.workspaceStatus.title'), t('settings.workspace.workspaceStatus.description'), t(`settings.options.workspaceStatus.${ws.status}`)),
     item('sidebarContentMode', t('settings.workspace.sidebarContentMode.title'), t('settings.workspace.sidebarContentMode.description'), t(`settings.options.sidebarContentMode.${ws.sidebarContentMode}`)),
+    item('sidebarLayout', t('settings.workspace.sidebarLayout.title'), t('settings.workspace.sidebarLayout.description'), t(`settings.options.sidebarLayout.${ws.sidebarLayout}`)),
     item('graphLabels', t('settings.workspace.graphLabels.title'), t('settings.workspace.graphLabels.description'), booleanLabel(t, ws.showGraphLabels)),
     item('rememberExpandedFolders', t('settings.workspace.rememberExpandedFolders.title'), t('settings.workspace.rememberExpandedFolders.description'), booleanLabel(t, ws.rememberExpandedFolders)),
     item('sidebarDefaultState', t('settings.workspace.sidebarDefaultState.title'), t('settings.workspace.sidebarDefaultState.description'), t(`settings.options.sidebarDefaultState.${ws.sidebarDefaultState}`)),

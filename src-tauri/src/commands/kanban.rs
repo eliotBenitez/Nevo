@@ -65,6 +65,23 @@ fn card_path(workspace_path: &str, board_id: &str, card_id: &str) -> std::path::
     cards_dir(workspace_path, board_id).join(format!("{}.json", card_id))
 }
 
+/// Bumps a board's `updated_at` so the workspace home "recently modified"
+/// list reflects activity on its cards, not just direct board edits.
+///
+/// Failures are surfaced to the caller as `Err` but MUST be treated as
+/// non-fatal by callers: the triggering card operation has already
+/// succeeded, so a timestamp-touch failure must never fail the whole
+/// command or lose the card edit.
+pub(crate) fn touch_board_updated_at(wp: &Path, board_id: &str) -> Result<(), String> {
+    let workspace_path = wp.to_string_lossy().into_owned();
+    let path = board_path(&workspace_path, board_id);
+    let content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let mut board: KanbanBoard = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+    board.updated_at = Utc::now().to_rfc3339();
+    let new_content = serde_json::to_string_pretty(&board).map_err(|e| e.to_string())?;
+    write_atomic(&path, new_content.as_bytes()).map_err(|e| e.to_string())
+}
+
 fn empty_doc() -> Value {
     serde_json::json!({ "type": "doc", "content": [] })
 }
@@ -78,7 +95,13 @@ fn empty_links() -> Value {
 }
 
 #[tauri::command]
-pub fn kanban_list_boards(workspace_path: String) -> Result<Vec<KanbanBoard>, String> {
+pub async fn kanban_list_boards(workspace_path: String) -> Result<Vec<KanbanBoard>, String> {
+    tauri::async_runtime::spawn_blocking(move || kanban_list_boards_sync(workspace_path))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+fn kanban_list_boards_sync(workspace_path: String) -> Result<Vec<KanbanBoard>, String> {
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let dir = boards_dir(&workspace_path);
@@ -106,7 +129,20 @@ pub fn kanban_list_boards(workspace_path: String) -> Result<Vec<KanbanBoard>, St
 }
 
 #[tauri::command]
-pub fn kanban_create_board(
+pub async fn kanban_create_board(
+    workspace_path: String,
+    title: String,
+    icon: String,
+    folder_id: Option<String>,
+) -> Result<KanbanBoard, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        kanban_create_board_sync(workspace_path, title, icon, folder_id)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+fn kanban_create_board_sync(
     workspace_path: String,
     title: String,
     icon: String,
@@ -163,7 +199,31 @@ pub fn kanban_create_board(
 }
 
 #[tauri::command]
-pub fn kanban_update_board(
+pub async fn kanban_update_board(
+    workspace_path: String,
+    board_id: String,
+    title: Option<String>,
+    icon: Option<String>,
+    status_property_id: Option<String>,
+    property_definitions: Option<Value>,
+    view_settings: Option<Value>,
+) -> Result<KanbanBoard, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        kanban_update_board_sync(
+            workspace_path,
+            board_id,
+            title,
+            icon,
+            status_property_id,
+            property_definitions,
+            view_settings,
+        )
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+fn kanban_update_board_sync(
     workspace_path: String,
     board_id: String,
     title: Option<String>,
@@ -202,7 +262,13 @@ pub fn kanban_update_board(
 }
 
 #[tauri::command]
-pub fn kanban_delete_board(workspace_path: String, board_id: String) -> Result<(), String> {
+pub async fn kanban_delete_board(workspace_path: String, board_id: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || kanban_delete_board_sync(workspace_path, board_id))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+fn kanban_delete_board_sync(workspace_path: String, board_id: String) -> Result<(), String> {
     validate_id(&board_id)?;
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
@@ -218,7 +284,16 @@ pub fn kanban_delete_board(workspace_path: String, board_id: String) -> Result<(
 }
 
 #[tauri::command]
-pub fn kanban_list_cards(
+pub async fn kanban_list_cards(
+    workspace_path: String,
+    board_id: String,
+) -> Result<Vec<KanbanCard>, String> {
+    tauri::async_runtime::spawn_blocking(move || kanban_list_cards_sync(workspace_path, board_id))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+fn kanban_list_cards_sync(
     workspace_path: String,
     board_id: String,
 ) -> Result<Vec<KanbanCard>, String> {
@@ -245,12 +320,34 @@ pub fn kanban_list_cards(
             cards.push(card);
         }
     }
-    cards.sort_by(|a, b| a.column_order.cmp(&b.column_order));
+    cards.sort_by_key(|a| a.column_order);
     Ok(cards)
 }
 
 #[tauri::command]
-pub fn kanban_create_card(
+pub async fn kanban_create_card(
+    workspace_path: String,
+    board_id: String,
+    title: String,
+    column_value: String,
+    status_property_id: String,
+    column_order: i64,
+) -> Result<KanbanCard, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        kanban_create_card_sync(
+            workspace_path,
+            board_id,
+            title,
+            column_value,
+            status_property_id,
+            column_order,
+        )
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+fn kanban_create_card_sync(
     workspace_path: String,
     board_id: String,
     title: String,
@@ -289,11 +386,55 @@ pub fn kanban_create_card(
     let content = serde_json::to_string_pretty(&card).map_err(|e| e.to_string())?;
     std::fs::write(card_path(&workspace_path, &board_id, &card_id), content)
         .map_err(|e| e.to_string())?;
+
+    if let Err(e) = touch_board_updated_at(Path::new(&workspace_path), &board_id) {
+        eprintln!(
+            "kanban_create_card: failed to touch board {} updated_at: {}",
+            board_id, e
+        );
+    }
+
     Ok(card)
 }
 
 #[tauri::command]
-pub fn kanban_update_card(
+#[allow(clippy::too_many_arguments)] // Stable field-wise Tauri IPC contract.
+pub async fn kanban_update_card(
+    workspace_path: String,
+    board_id: String,
+    card_id: String,
+    title: Option<String>,
+    icon: Option<String>,
+    content: Option<Value>,
+    properties: Option<Value>,
+    fields: Option<Value>,
+    column_order: Option<i64>,
+    progress: Option<f64>,
+    priority: Option<String>,
+    links: Option<Value>,
+) -> Result<KanbanCard, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        kanban_update_card_sync(
+            workspace_path,
+            board_id,
+            card_id,
+            title,
+            icon,
+            content,
+            properties,
+            fields,
+            column_order,
+            progress,
+            priority,
+            links,
+        )
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[allow(clippy::too_many_arguments)] // Mirrors the stable field-wise Tauri IPC contract.
+fn kanban_update_card_sync(
     workspace_path: String,
     board_id: String,
     card_id: String,
@@ -346,11 +487,31 @@ pub fn kanban_update_card(
 
     let new_content = serde_json::to_string_pretty(&card).map_err(|e| e.to_string())?;
     std::fs::write(&path, new_content).map_err(|e| e.to_string())?;
+
+    if let Err(e) = touch_board_updated_at(Path::new(&workspace_path), &board_id) {
+        eprintln!(
+            "kanban_update_card: failed to touch board {} updated_at: {}",
+            board_id, e
+        );
+    }
+
     Ok(card)
 }
 
 #[tauri::command]
-pub fn kanban_delete_card(
+pub async fn kanban_delete_card(
+    workspace_path: String,
+    board_id: String,
+    card_id: String,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        kanban_delete_card_sync(workspace_path, board_id, card_id)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+fn kanban_delete_card_sync(
     workspace_path: String,
     board_id: String,
     card_id: String,
@@ -363,6 +524,14 @@ pub fn kanban_delete_card(
     if path.exists() {
         std::fs::remove_file(&path).map_err(|e| e.to_string())?;
     }
+
+    if let Err(e) = touch_board_updated_at(Path::new(&workspace_path), &board_id) {
+        eprintln!(
+            "kanban_delete_card: failed to touch board {} updated_at: {}",
+            board_id, e
+        );
+    }
+
     Ok(())
 }
 
@@ -389,12 +558,13 @@ mod tests {
         let ws = workspace.to_string_lossy().into_owned();
         let evil = "../../victim".to_string();
 
-        assert!(kanban_delete_board(ws.clone(), evil.clone()).is_err());
-        assert!(kanban_list_cards(ws.clone(), evil.clone()).is_err());
+        assert!(kanban_delete_board_sync(ws.clone(), evil.clone()).is_err());
+        assert!(kanban_list_cards_sync(ws.clone(), evil.clone()).is_err());
         assert!(
-            kanban_update_board(ws.clone(), evil.clone(), None, None, None, None, None).is_err()
+            kanban_update_board_sync(ws.clone(), evil.clone(), None, None, None, None, None)
+                .is_err()
         );
-        assert!(kanban_create_card(
+        assert!(kanban_create_card_sync(
             ws.clone(),
             evil.clone(),
             "t".into(),
@@ -403,7 +573,7 @@ mod tests {
             0
         )
         .is_err());
-        assert!(kanban_update_card(
+        assert!(kanban_update_card_sync(
             ws.clone(),
             evil.clone(),
             "c".into(),
@@ -418,14 +588,92 @@ mod tests {
             None
         )
         .is_err());
-        assert!(kanban_delete_card(ws.clone(), evil.clone(), "c".into()).is_err());
+        assert!(kanban_delete_card_sync(ws.clone(), evil.clone(), "c".into()).is_err());
 
         // A valid board id combined with a traversal card id must also fail.
-        assert!(kanban_delete_card(ws.clone(), "valid-board".into(), evil.clone()).is_err());
+        assert!(kanban_delete_card_sync(ws.clone(), "valid-board".into(), evil.clone()).is_err());
 
         assert!(
             victim.join("secret.txt").exists(),
             "victim file must remain untouched by rejected calls"
+        );
+
+        std::fs::remove_dir_all(&base).ok();
+    }
+
+    fn seed_board_updated_at(ws: &str, board_id: &str, ts: &str) {
+        let path = board_path(ws, board_id);
+        let content = std::fs::read_to_string(&path).unwrap();
+        let mut board: KanbanBoard = serde_json::from_str(&content).unwrap();
+        board.updated_at = ts.to_string();
+        std::fs::write(&path, serde_json::to_string_pretty(&board).unwrap()).unwrap();
+    }
+
+    fn read_board_updated_at(ws: &str, board_id: &str) -> chrono::DateTime<chrono::FixedOffset> {
+        let content = std::fs::read_to_string(board_path(ws, board_id)).unwrap();
+        let board: KanbanBoard = serde_json::from_str(&content).unwrap();
+        chrono::DateTime::parse_from_rfc3339(&board.updated_at).unwrap()
+    }
+
+    /// Card create/update/delete must bump the parent board's `updated_at` so
+    /// the workspace home "recently modified" list reacts to card activity,
+    /// not just direct board edits. Seed a far-past timestamp before each
+    /// operation (rather than relying on strict `>` between two calls that
+    /// could land in the same RFC3339 second) so the assertion cannot flake.
+    #[test]
+    fn card_create_update_delete_bump_board_updated_at() {
+        let base = std::env::temp_dir().join(format!("nevo-kanban-touch-{}", Uuid::new_v4()));
+        let workspace = base.join("workspace");
+        std::fs::create_dir_all(&workspace).unwrap();
+        let ws = workspace.to_string_lossy().into_owned();
+
+        let board =
+            kanban_create_board_sync(ws.clone(), "Board".into(), "🗂️".into(), None).unwrap();
+        let board_id = board.id.clone();
+        let old_ts = "2000-01-01T00:00:00+00:00";
+        let old_dt = chrono::DateTime::parse_from_rfc3339(old_ts).unwrap();
+
+        seed_board_updated_at(&ws, &board_id, old_ts);
+        let card = kanban_create_card_sync(
+            ws.clone(),
+            board_id.clone(),
+            "Card".into(),
+            "col".into(),
+            board.status_property_id.clone(),
+            0,
+        )
+        .unwrap();
+        assert!(
+            read_board_updated_at(&ws, &board_id) > old_dt,
+            "kanban_create_card must bump board.updated_at"
+        );
+
+        seed_board_updated_at(&ws, &board_id, old_ts);
+        kanban_update_card_sync(
+            ws.clone(),
+            board_id.clone(),
+            card.id.clone(),
+            Some("Renamed".into()),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+        assert!(
+            read_board_updated_at(&ws, &board_id) > old_dt,
+            "kanban_update_card must bump board.updated_at"
+        );
+
+        seed_board_updated_at(&ws, &board_id, old_ts);
+        kanban_delete_card_sync(ws.clone(), board_id.clone(), card.id.clone()).unwrap();
+        assert!(
+            read_board_updated_at(&ws, &board_id) > old_dt,
+            "kanban_delete_card must bump board.updated_at"
         );
 
         std::fs::remove_dir_all(&base).ok();

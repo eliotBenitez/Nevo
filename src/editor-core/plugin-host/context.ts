@@ -9,28 +9,9 @@ import type {
   NevoPluginCapability,
   NevoEditorRegistries,
   NevoUiCapability,
-  NevoWorkspaceCapability,
 } from '../../types/editor-plugin'
 import { makeBlockNodeView } from './blockNodeView'
-
-const WORKSPACE_COMMAND_CAPABILITIES: Record<string, NevoWorkspaceCapability> = {
-  template_list: 'template.read',
-  template_get: 'template.read',
-  template_create: 'template.write',
-  template_update: 'template.write',
-  template_delete: 'template.write',
-  template_create_note: 'template.write',
-  kanban_list_boards: 'kanban.read',
-  kanban_list_cards: 'kanban.read',
-  kanban_create_board: 'kanban.write',
-  kanban_update_board: 'kanban.write',
-  kanban_delete_board: 'kanban.write',
-  kanban_create_card: 'kanban.write',
-  kanban_update_card: 'kanban.write',
-  kanban_delete_card: 'kanban.write',
-  kanban_move_card: 'kanban.write',
-  kanban_save_board_schema: 'kanban.write',
-}
+import { assertWorkspaceCommandCapability } from './capabilities'
 
 export function buildPluginContext(
   manifest: NevoEditorPluginManifest,
@@ -58,12 +39,6 @@ export function buildPluginContext(
       throw new Error(`Plugin ${manifest.id} requires capability ${capability}`)
     }
   }
-  const ensureWorkspaceCapability = (capability: NevoWorkspaceCapability) => {
-    if (!(manifest.workspaceCapabilities ?? []).includes(capability)) {
-      throw new Error(`Plugin ${manifest.id} requires capability ${capability}`)
-    }
-  }
-
   const getStorageBucket = (): Map<string, unknown> => {
     const existing = storage.get(manifest.id)
     if (existing) return existing
@@ -196,9 +171,7 @@ export function buildPluginContext(
     },
     workspace: {
       invoke: async <T = unknown>(commandId: string, args?: Record<string, unknown>) => {
-        const requiredCapability = WORKSPACE_COMMAND_CAPABILITIES[commandId]
-        if (!requiredCapability) throw new Error(`Workspace command is not exposed to plugins: ${commandId}`)
-        ensureWorkspaceCapability(requiredCapability)
+        assertWorkspaceCommandCapability(manifest, commandId)
         if (!runtime.invoke) throw new Error('Workspace invoke runtime is not available')
         return runtime.invoke<T>(commandId, args)
       },

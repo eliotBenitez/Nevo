@@ -2,6 +2,8 @@
 import { computed, type Component } from 'vue'
 import * as LucideIcons from 'lucide-vue-next'
 import { lucideExportNameFromToken } from '../../utils/noteIcon'
+import { isGlyphToken } from '../../utils/workspaceGlyphs'
+import NvGlyph from './NvGlyph.vue'
 
 interface Props {
   value: string
@@ -13,6 +15,8 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const iconSize = computed(() => `${props.size}px`)
+
+const isGlyph = computed(() => isGlyphToken(props.value))
 
 const lucideComponent = computed<Component | null>(() => {
   const exportName = lucideExportNameFromToken(props.value)
@@ -32,7 +36,8 @@ const emojiFallback = computed(() => {
 
 <template>
   <span class="nv-note-icon" :style="{ fontSize: iconSize }">
-    <component :is="lucideComponent" v-if="lucideComponent" :size="size" />
+    <NvGlyph v-if="isGlyph" :id="value" :size="size" />
+    <component :is="lucideComponent" v-else-if="lucideComponent" :size="size" />
     <span v-else class="nv-note-icon__emoji">{{ emojiFallback }}</span>
   </span>
 </template>

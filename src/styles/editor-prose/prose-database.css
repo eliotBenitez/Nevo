@@ -1,0 +1,1784 @@
+/* Database block — document-native, with Notion/Siyuan-inspired density. */
+
+.nv-database-block {
+  margin: 0.5rem 0;
+}
+
+.nv-db-block {
+  --db-border: color-mix(in oklab, var(--line-1, var(--border-subtle)) 86%, transparent);
+  --db-surface: color-mix(in oklab, var(--glass-1, var(--surface-1)) 92%, transparent);
+  --db-subtle: color-mix(in oklab, var(--hover, var(--surface-2)) 76%, transparent);
+  --db-radius: calc(10px * var(--radius-scale, 1));
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius);
+  background: var(--db-surface);
+  box-shadow: 0 1px 1px rgb(15 23 42 / 2%), 0 10px 28px rgb(15 23 42 / 3%);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.nv-db-block:hover {
+  border-color: color-mix(in oklab, var(--line-2, var(--border-muted)) 88%, var(--accent) 12%);
+  box-shadow: 0 1px 1px rgb(15 23 42 / 3%), 0 12px 32px rgb(15 23 42 / 5%);
+}
+
+.nv-db-block:focus-within {
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--db-border));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 12%, transparent), 0 12px 32px rgb(15 23 42 / 5%);
+}
+
+.nv-db-block__title-row {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 8px 14px 2px;
+}
+
+.nv-db-block__title-row::before {
+  content: '';
+  width: 17px;
+  height: 17px;
+  flex: none;
+  margin-right: 8px;
+  border-radius: 5px;
+  opacity: .82;
+  background:
+    linear-gradient(var(--accent), var(--accent)) 3px 3px / 4px 4px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) 10px 3px / 4px 4px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) 3px 10px / 4px 4px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) 10px 10px / 4px 4px no-repeat,
+    color-mix(in oklab, var(--accent) 13%, transparent);
+}
+
+.nv-db-block__title {
+  flex: 1;
+  border: none;
+  background: none;
+  outline: none;
+  font: 640 16px/1.3 var(--font-ui);
+  letter-spacing: -.012em;
+  color: var(--text-1, var(--text-primary));
+  padding: 4px 0;
+  border-radius: 5px;
+}
+
+.nv-db-block__title::placeholder {
+  color: var(--text-4, var(--text-muted));
+  font-weight: 500;
+}
+
+.nv-db-block__body {
+  min-width: 0;
+  padding: 10px 12px 12px;
+}
+
+/* ---------- Toolbar ---------- */
+
+.nv-db-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-height: 40px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--db-border);
+  background: color-mix(in oklab, var(--db-surface) 76%, transparent);
+}
+
+.nv-db-toolbar__views {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  flex-wrap: wrap;
+}
+
+.nv-db-toolbar__view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  position: relative;
+  height: 39px;
+  padding: 0 8px;
+  border-radius: 0;
+  border: 0;
+  background: none;
+  color: var(--text-3, var(--text-secondary));
+  font-size: 11.5px;
+  font-weight: 550;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.nv-db-toolbar__view-btn:hover {
+  background: color-mix(in oklab, var(--hover, var(--surface-2)) 68%, transparent);
+  color: var(--text-1, var(--text-primary));
+}
+
+.nv-db-toolbar__view-btn--active {
+  background: transparent;
+  color: var(--accent);
+}
+
+.nv-db-toolbar__view-btn--active::after {
+  content: '';
+  position: absolute;
+  right: 8px;
+  bottom: -1px;
+  left: 8px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--accent);
+}
+
+.nv-db-toolbar__add-view {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: 2px;
+  border-radius: 6px;
+  border: none;
+  background: none;
+  color: var(--text-4, var(--text-muted));
+  cursor: pointer;
+}
+
+.nv-db-toolbar__add-view:hover {
+  background: var(--hover, var(--surface-2));
+  color: var(--text-1, var(--text-primary));
+}
+
+.nv-db-toolbar__add-view-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px;
+}
+
+.nv-db-toolbar__add-view-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: calc(6px * var(--radius-scale, 1));
+  border: none;
+  background: none;
+  color: var(--text-2, var(--text-secondary));
+  font-size: 12.5px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.nv-db-toolbar__add-view-item:hover {
+  background: var(--hover, var(--surface-2));
+  color: var(--text-1, var(--text-primary));
+}
+
+.nv-db-toolbar__spacer {
+  flex: 1;
+}
+
+.nv-db-toolbar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-3, var(--text-secondary));
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.nv-db-toolbar__btn:hover {
+  background: var(--db-subtle);
+  color: var(--text-1, var(--text-primary));
+}
+
+.nv-db-toolbar__btn--active {
+  background: color-mix(in oklab, var(--accent) 11%, transparent);
+  color: var(--accent);
+  border-color: color-mix(in oklab, var(--accent) 17%, transparent);
+}
+
+.nv-db-toolbar__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--text-inv, white);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.nv-db-view-context-menu {
+  position: fixed;
+  z-index: 10000;
+  min-width: 156px;
+  padding: 4px;
+  border: 1px solid var(--line-2, var(--border-muted));
+  border-radius: 8px;
+  background: var(--surface-1, white);
+  box-shadow: 0 12px 30px rgb(15 23 42 / 16%), 0 2px 6px rgb(15 23 42 / 8%);
+}
+
+.nv-db-view-context-menu__item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 8px;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-2, var(--text-secondary));
+  font: 500 12px var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+
+.nv-db-view-context-menu__item--danger:hover:not(:disabled) {
+  background: var(--danger-soft, color-mix(in oklab, #ef4444 10%, transparent));
+  color: var(--danger, #dc2626);
+}
+
+.nv-db-view-context-menu__item:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+/* ---------- Table view ---------- */
+
+.nv-db-table-wrap {
+  overflow: hidden;
+  border-radius: calc(7px * var(--radius-scale, 1));
+  border: 1px solid var(--db-border);
+  background: var(--glass-1, var(--surface-1));
+}
+
+.nv-db-table-scroll {
+  overflow: auto;
+  max-height: 460px;
+  overscroll-behavior: contain;
+  scrollbar-color: color-mix(in oklab, var(--text-4, var(--text-muted)) 38%, transparent) transparent;
+}
+
+.nv-db-table {
+  display: grid;
+  min-width: max-content;
+  background: var(--glass-1, var(--surface-1));
+}
+
+.nv-db-table__virtual-spacer {
+  grid-column: 1 / -1;
+  pointer-events: none;
+}
+
+.nv-db-cell-box {
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 5px 9px;
+  min-width: 0;
+  border-bottom: 1px solid var(--db-border);
+  position: relative;
+  transition: background-color 110ms ease;
+}
+
+.nv-db-table--grid-lines .nv-db-cell-box {
+  border-right: 1px solid var(--db-border);
+}
+
+.nv-db-table--compact .nv-db-cell-box {
+  min-height: 28px;
+  padding: 2px 7px;
+}
+
+.nv-db-table--striped .nv-db-cell-box:nth-of-type(odd) {
+  background: color-mix(in oklab, var(--hover, var(--surface-2)) 48%, transparent);
+}
+
+.nv-db-table--scheme-blue .nv-db-cell-box--tinted { background: color-mix(in oklab, #60a5fa 10%, var(--glass-1, var(--surface-1))); }
+.nv-db-table--scheme-green .nv-db-cell-box--tinted { background: color-mix(in oklab, #4ade80 10%, var(--glass-1, var(--surface-1))); }
+.nv-db-table--scheme-amber .nv-db-cell-box--tinted { background: color-mix(in oklab, #fbbf24 12%, var(--glass-1, var(--surface-1))); }
+.nv-db-table--scheme-lavender .nv-db-cell-box--tinted { background: color-mix(in oklab, #a78bfa 11%, var(--glass-1, var(--surface-1))); }
+
+.nv-db-cell-box:not(.nv-db-cell-box--head):hover {
+  background: color-mix(in oklab, var(--accent) 5%, var(--hover, var(--surface-2)));
+}
+
+.nv-db-cell-box--head {
+  min-height: 34px;
+  font: 600 10.5px/1 var(--font-ui);
+  letter-spacing: .025em;
+  text-transform: uppercase;
+  color: var(--text-3, var(--text-secondary));
+  background: color-mix(in oklab, var(--glass-2, var(--surface-2)) 94%, transparent);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  gap: 4px;
+}
+
+.nv-db-cell-box--rownum {
+  justify-content: center;
+  color: var(--text-4, var(--text-muted));
+  font-size: 11px;
+}
+
+.nv-db-cell-box--add-field,
+.nv-db-cell-box--actions {
+  justify-content: center;
+  padding: 0;
+}
+
+.nv-db-cell-box--foot {
+  font: 600 11px var(--font-ui);
+  color: var(--text-3, var(--text-secondary));
+  background: var(--glass-3, var(--surface-2));
+}
+
+.nv-db-table__field-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nv-db-table__field-menu-trigger {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: var(--text-4, var(--text-muted));
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: calc(4px * var(--radius-scale, 1));
+}
+
+.nv-db-table__field-menu-trigger:hover {
+  background: color-mix(in oklab, var(--accent) 10%, var(--hover, var(--surface-2)));
+  color: var(--text-1, var(--text-primary));
+}
+
+.nv-db-table__resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.nv-db-table__resize-handle:hover {
+  background: color-mix(in oklab, var(--accent) 40%, transparent);
+}
+
+.nv-db-table__add-field-btn,
+.nv-db-table__row-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: none;
+  color: var(--text-4, var(--text-muted));
+  cursor: pointer;
+  border-radius: calc(5px * var(--radius-scale, 1));
+}
+
+.nv-db-table__add-field-btn:hover,
+.nv-db-table__row-delete:hover {
+  background: var(--hover, var(--surface-2));
+  color: var(--text-1, var(--text-primary));
+}
+
+.nv-db-table__row-delete {
+  opacity: 0;
+}
+
+.nv-db-cell-box:hover .nv-db-table__row-delete {
+  opacity: 1;
+}
+
+.nv-db-table__add-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: none;
+  border-top: 1px solid var(--db-border);
+  background: none;
+  color: var(--text-4, var(--text-muted));
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.nv-db-table__add-row:hover {
+  background: color-mix(in oklab, var(--accent) 5%, var(--hover, var(--surface-2)));
+  color: var(--text-1, var(--text-primary));
+}
+
+.nv-db-table__empty {
+  padding: 10px;
+  text-align: center;
+  color: var(--text-4, var(--text-muted));
+  font-size: 12px;
+}
+
+/* ---------- Cell editors ---------- */
+
+.nv-db-cell {
+  width: 100%;
+  min-width: 0;
+}
+
+.nv-db-cell__input {
+  width: 100%;
+  border: none;
+  background: none;
+  outline: none;
+  color: var(--text-1, var(--text-primary));
+  font-size: 12.5px;
+  font-family: var(--font-ui);
+  padding: 3px 2px;
+  border-radius: calc(4px * var(--radius-scale, 1));
+}
+
+.nv-db-cell__input:focus {
+  background: color-mix(in oklab, var(--accent) 8%, var(--hover-strong, var(--surface-2)));
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 16%, transparent);
+}
+
+.nv-db-cell__input--number {
+  text-align: right;
+}
+
+.nv-db-cell__number-input {
+  width: 100%;
+}
+
+.nv-db-cell--number .nni-root {
+  width: 100%;
+  height: 27px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.nv-db-cell--number .nni-root:hover {
+  border-color: var(--db-border);
+  background: var(--db-subtle);
+}
+
+.nv-db-cell--number .nni-input {
+  width: 100%;
+  text-align: right;
+}
+
+.nv-db-cell--number .nni-step {
+  width: 20px;
+}
+
+.nv-db-cell__url {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+}
+
+.nv-db-cell__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 12.5px;
+}
+
+.nv-db-cell__link-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nv-db-cell__link:hover {
+  text-decoration: underline;
+}
+
+.nv-db-cell__url-edit {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: var(--text-4, var(--text-muted));
+  font-size: 10.5px;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.nv-db-cell-box:hover .nv-db-cell__url-edit {
+  opacity: 1;
+}
+
+.nv-db-cell__checkbox {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.nv-db-cell--checkbox {
+  display: flex;
+  justify-content: center;
+}
+
+.nv-db-cell__select-trigger,
+.nv-db-cell__multi-trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  width: 100%;
+  min-height: 24px;
+  border: none;
+  background: none;
+  padding: 2px;
+  cursor: pointer;
+  color: var(--text-4, var(--text-muted));
+  border-radius: calc(5px * var(--radius-scale, 1));
+}
+
+.nv-db-cell__select-trigger:hover,
+.nv-db-cell__multi-trigger:hover {
+  background: var(--hover, var(--surface-2));
+}
+
+.nv-db-cell__placeholder {
+  color: var(--text-4, var(--text-muted));
+  font-size: 12px;
+}
+
+.nv-db-cell__option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  min-width: 160px;
+}
+
+.nv-db-cell__option-empty {
+  padding: 8px;
+  font-size: 11.5px;
+  color: var(--text-4, var(--text-muted));
+  text-align: center;
+}
+
+.nv-db-cell__option-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 30px;
+  padding: 0 6px;
+  border: none;
+  background: none;
+  border-radius: calc(6px * var(--radius-scale, 1));
+  cursor: pointer;
+}
+
+.nv-db-cell__option-row:hover {
+  background: var(--hover, var(--surface-2));
+}
+
+.nv-db-cell__option-row--multi {
+  justify-content: flex-start;
+}
+
+.nv-db-cell__option-row--multi input {
+  accent-color: var(--accent);
+}
+
+.nv-db-cell__option-clear {
+  color: var(--text-4, var(--text-muted));
+}
+
+/* Shared chip */
+
+.nv-db-chip {
+  --chip-color: var(--text-3, var(--text-secondary));
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--chip-color);
+  background: color-mix(in oklab, var(--chip-color) 16%, transparent);
+  border: 1px solid color-mix(in oklab, var(--chip-color) 30%, transparent);
+  white-space: nowrap;
+}
+
+/* ---------- List view ---------- */
+
+.nv-db-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 460px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--db-border);
+  border-radius: 7px;
+  background: var(--glass-1, var(--surface-1));
+}
+
+.nv-db-list__spacer { flex: none; }
+
+.nv-db-list__empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-4, var(--text-muted));
+  font-size: 12.5px;
+}
+
+.nv-db-list__row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--db-border);
+  transition: background-color 110ms ease;
+}
+
+.nv-db-list__row:hover {
+  background: color-mix(in oklab, var(--accent) 5%, var(--hover, var(--surface-2)));
+}
+
+.nv-db-list__row:last-child {
+  border-bottom: none;
+}
+
+.nv-db-list__title {
+  font: 550 13px var(--font-ui);
+  color: var(--text-1, var(--text-primary));
+}
+
+.nv-db-list__meta {
+  font-size: 11.5px;
+  color: var(--text-3, var(--text-secondary));
+}
+
+/* ---------- Cards view ---------- */
+
+.nv-db-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+  max-height: 460px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.nv-db-cards__spacer { grid-column: 1 / -1; pointer-events: none; }
+
+.nv-db-cards__empty {
+  grid-column: 1 / -1;
+  padding: 16px;
+  text-align: center;
+  color: var(--text-4, var(--text-muted));
+  font-size: 12.5px;
+}
+
+.nv-db-cards__card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 92px;
+  padding: 12px;
+  border-radius: calc(8px * var(--radius-scale, 1));
+  border: 1px solid var(--db-border);
+  background: var(--glass-1, var(--surface-1));
+  box-shadow: 0 1px 1px rgb(15 23 42 / 2%);
+  transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.nv-db-cards__card:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in oklab, var(--accent) 26%, var(--db-border));
+  box-shadow: 0 7px 16px rgb(15 23 42 / 7%);
+}
+
+.nv-db-cards__title {
+  font: 550 13px var(--font-ui);
+  color: var(--text-1, var(--text-primary));
+}
+
+.nv-db-cards__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* ---------- Chart view ---------- */
+
+.nv-db-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nv-db-chart__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid var(--db-border);
+  border-radius: 7px;
+  background: var(--glass-1, var(--surface-1));
+}
+
+.nv-db-chart__series-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 164px;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--line-2, var(--border-muted));
+  border-radius: calc(6px * var(--radius-scale, 1));
+  background: var(--glass-2, var(--surface-2));
+  color: var(--text-2, var(--text-secondary));
+  cursor: pointer;
+  font: 600 11px var(--font-ui);
+}
+
+.nv-db-chart__series-trigger:hover {
+  border-color: var(--accent);
+  color: var(--text-1, var(--text-primary));
+}
+
+.nv-db-chart__series-summary {
+  color: var(--text-4, var(--text-muted));
+  font-weight: 500;
+}
+
+.nv-db-chart__series-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 7px;
+}
+
+.nv-db-chart__series-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-left: 2px;
+  color: var(--text-3, var(--text-tertiary));
+  font: 600 10px var(--font-ui);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.nv-db-chart__add-series,
+.nv-db-chart__remove-series {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.nv-db-chart__add-series {
+  gap: 4px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: calc(5px * var(--radius-scale, 1));
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+  font: 600 11px var(--font-ui);
+}
+
+.nv-db-chart__add-series:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 18%, transparent);
+}
+
+.nv-db-chart__add-series:disabled {
+  color: var(--text-4, var(--text-muted));
+  cursor: default;
+  opacity: 0.65;
+}
+
+.nv-db-chart__series-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nv-db-chart__series-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.nv-db-chart__series-index {
+  display: grid;
+  flex: 0 0 18px;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font: 700 10px var(--font-ui);
+}
+
+.nv-db-chart__series-select {
+  min-width: 0;
+  flex: 1;
+}
+
+.nv-db-chart__series-select .nv-select__trigger {
+  width: 100%;
+}
+
+.nv-db-chart__remove-series {
+  flex: 0 0 25px;
+  width: 25px;
+  height: 25px;
+  border-radius: calc(5px * var(--radius-scale, 1));
+  background: transparent;
+  color: var(--text-4, var(--text-muted));
+}
+
+.nv-db-chart__remove-series:hover {
+  background: color-mix(in oklab, var(--danger, #d64545) 12%, transparent);
+  color: var(--danger, #d64545);
+}
+
+.nv-db-chart__series-hint {
+  margin: 0;
+  color: var(--text-4, var(--text-muted));
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.nv-db-chart__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 30px 10px;
+  color: var(--text-4, var(--text-muted));
+  font-size: 12.5px;
+  text-align: center;
+}
+
+.nv-db-chart__import-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: calc(7px * var(--radius-scale, 1));
+  border: 1px solid var(--line-2, var(--border-muted));
+  background: var(--hover, var(--surface-2));
+  color: var(--text-2, var(--text-secondary));
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.nv-db-chart__import-btn:hover {
+  color: var(--text-1, var(--text-primary));
+  border-color: var(--accent);
+}
+
+.nv-db-chart__render {
+  width: 100%;
+  min-height: 260px;
+  overflow-x: auto;
+}
+
+@media (max-width: 640px) {
+  .nv-db-block__title-row { min-height: 44px; padding-inline: 10px; }
+  .nv-db-toolbar { gap: 2px; padding-inline: 8px; }
+  .nv-db-toolbar__spacer { flex-basis: 100%; height: 0; }
+  .nv-db-block__body { padding: 8px; }
+  .nv-db-toolbar__btn { padding-inline: 7px; }
+  .nv-db-toolbar__btn span:not(.nv-db-toolbar__badge) { max-width: 74px; overflow: hidden; text-overflow: ellipsis; }
+  .nv-db-cards { grid-template-columns: repeat(auto-fill, minmax(144px, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nv-db-block,
+  .nv-db-cell-box,
+  .nv-db-cards__card,
+  .nv-db-list__row { transition: none; }
+  .nv-db-cards__card:hover { transform: none; }
+}
+
+/* ---------- Filter panel ---------- */
+
+.nv-db-filter {
+  display: flex;
+  flex-direction: column;
+  max-width: 460px;
+}
+
+.nv-db-filter__empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 12px;
+  color: var(--text-4, var(--text-muted));
+  font-size: 12px;
+}
+
+.nv-db-filter__rules {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.nv-db-filter__rule {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.nv-db-filter__conj {
+  font-size: 11px;
+  color: var(--text-4, var(--text-muted));
+  min-width: 38px;
+  text-transform: lowercase;
+}
+
+.nv-db-filter__input {
+  height: 30px;
+  padding: 0 8px;
+  border-radius: calc(8px * var(--radius-scale, 1));
+  border: 1px solid var(--line-2, var(--border-subtle));
+  background: var(--hover, var(--surface-1));
+  color: var(--text-1, var(--text-primary));
+  font-size: 12.5px;
+  outline: none;
+  flex: 1;
+  min-width: 90px;
+}
+
+.nv-db-filter__input:focus {
+  border-color: var(--accent);
+}
+
+.nv-db-filter__number-input {
+  flex: 1;
+  min-width: 112px;
+}
+
+.nv-db-filter__number-input .nni-root {
+  width: 100%;
+}
+
+.nv-db-filter__field,
+.nv-db-filter__op {
+  flex-shrink: 0;
+}
+
+.nv-db-filter__value {
+  flex: 1;
+  min-width: 120px;
+}
+
+.nv-db-filter__multi {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  flex: 1;
+  min-width: 120px;
+  padding: 4px 6px;
+  border-radius: calc(6px * var(--radius-scale, 1));
+  border: 1px solid var(--line-1, var(--border-subtle));
+  background: var(--hover, var(--surface-1));
+}
+
+.nv-db-filter__multi-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--text-2, var(--text-secondary));
+  cursor: pointer;
+}
+
+.nv-db-filter__multi-opt input {
+  width: 12px;
+  height: 12px;
+  accent-color: var(--accent);
+}
+
+.nv-db-filter__multi-empty {
+  font-size: 11px;
+  color: var(--text-4, var(--text-muted));
+}
+
+.nv-db-filter__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: calc(6px * var(--radius-scale, 1));
+  border: none;
+  background: none;
+  color: var(--text-4, var(--text-muted));
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.nv-db-filter__remove:hover {
+  background: var(--hover, var(--surface-1));
+  color: var(--danger);
+}
+
+.nv-db-filter__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px;
+  border-top: 1px solid var(--line-1, var(--border-subtle));
+}
+
+.nv-db-filter__add,
+.nv-db-sort__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 9px;
+  border-radius: calc(6px * var(--radius-scale, 1));
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 11.5px;
+  font-weight: 550;
+  cursor: pointer;
+}
+
+.nv-db-filter__add:disabled,
+.nv-db-sort__add:disabled {
+  color: var(--text-4, var(--text-muted));
+  cursor: not-allowed;
+}
+
+.nv-db-filter__add:not(:disabled):hover,
+.nv-db-sort__add:not(:disabled):hover {
+  background: var(--accent-soft);
+}
+
+.nv-db-filter__clear,
+.nv-db-sort__clear {
+  height: 26px;
+  padding: 0 9px;
+  border-radius: calc(6px * var(--radius-scale, 1));
+  border: none;
+  background: none;
+  color: var(--text-3, var(--text-secondary));
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.nv-db-filter__clear:hover,
+.nv-db-sort__clear:hover {
+  background: var(--hover, var(--surface-1));
+  color: var(--text-1, var(--text-primary));
+}
+
+/* ---------- Sort panel ---------- */
+
+.nv-db-sort {
+  display: flex;
+  flex-direction: column;
+}
+
+.nv-db-sort__empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 12px;
+  color: var(--text-4, var(--text-muted));
+  font-size: 12px;
+}
+
+.nv-db-sort__rules {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.nv-db-sort__rule {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.nv-db-sort__conj {
+  font-size: 11px;
+  color: var(--text-4, var(--text-muted));
+  min-width: 46px;
+}
+
+.nv-db-sort__select {
+  flex: 1;
+}
+
+.nv-db-sort__dir {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: calc(6px * var(--radius-scale, 1));
+  border: 1px solid var(--line-1, var(--border-subtle));
+  background: var(--hover, var(--surface-1));
+  color: var(--text-2, var(--text-secondary));
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.nv-db-sort__dir:hover {
+  color: var(--text-1, var(--text-primary));
+}
+
+.nv-db-sort__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: calc(6px * var(--radius-scale, 1));
+  border: none;
+  background: none;
+  color: var(--text-4, var(--text-muted));
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.nv-db-sort__remove:hover {
+  background: var(--hover, var(--surface-1));
+  color: var(--danger);
+}
+
+.nv-db-sort__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px;
+  border-top: 1px solid var(--line-1, var(--border-subtle));
+}
+
+/* ---------- Settings panel ---------- */
+
+.nv-db-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 6px;
+  min-width: 200px;
+}
+
+.nv-db-settings__section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line-1, var(--border-subtle));
+}
+
+.nv-db-settings__section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.nv-db-settings__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-4, var(--text-muted));
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.nv-db-settings__input {
+  height: 30px;
+  padding: 0 8px;
+  border-radius: calc(7px * var(--radius-scale, 1));
+  border: 1px solid var(--line-2, var(--border-subtle));
+  background: var(--hover, var(--surface-1));
+  color: var(--text-1, var(--text-primary));
+  font-size: 12.5px;
+  outline: none;
+}
+
+.nv-db-settings__input:focus {
+  border-color: var(--accent);
+}
+
+.nv-db-settings__toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-2, var(--text-secondary));
+  cursor: pointer;
+}
+
+.nv-db-settings__scheme-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.nv-db-settings__scheme {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+  height: 29px;
+  padding: 0 6px;
+  border: 1px solid var(--line-1, var(--border-subtle));
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-2, var(--text-secondary));
+  font: 500 10.5px var(--font-ui);
+  cursor: pointer;
+  text-align: left;
+}
+
+.nv-db-settings__scheme:hover { background: var(--hover, var(--surface-2)); }
+.nv-db-settings__scheme.is-active { border-color: var(--accent); box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 20%, transparent); color: var(--text-1, var(--text-primary)); }
+.nv-db-settings__scheme-preview { display: flex; flex: none; flex-direction: column; gap: 1px; width: 20px; padding: 3px; border-radius: 3px; background: var(--glass-2, var(--surface-2)); }
+.nv-db-settings__scheme-preview i { display: block; height: 2px; border-radius: 2px; background: color-mix(in oklab, var(--text-4, var(--text-muted)) 35%, transparent); }
+.nv-db-settings__scheme--blue .nv-db-settings__scheme-preview i:nth-child(even) { background: color-mix(in oklab, #60a5fa 55%, transparent); }
+.nv-db-settings__scheme--green .nv-db-settings__scheme-preview i:nth-child(even) { background: color-mix(in oklab, #4ade80 55%, transparent); }
+.nv-db-settings__scheme--amber .nv-db-settings__scheme-preview i:nth-child(even) { background: color-mix(in oklab, #fbbf24 62%, transparent); }
+.nv-db-settings__scheme--lavender .nv-db-settings__scheme-preview i:nth-child(even) { background: color-mix(in oklab, #a78bfa 58%, transparent); }
+
+.nv-db-settings__delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: calc(7px * var(--radius-scale, 1));
+  border: 1px solid var(--danger-line, transparent);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 550;
+  cursor: pointer;
+}
+
+.nv-db-settings__import {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line-2, var(--border-subtle));
+  border-radius: calc(7px * var(--radius-scale, 1));
+  background: var(--hover, var(--surface-1));
+  color: var(--text-2, var(--text-secondary));
+  font-size: 12px;
+  font-weight: 550;
+  cursor: pointer;
+}
+
+.nv-db-settings__import:hover {
+  border-color: color-mix(in oklab, var(--accent) 42%, var(--line-2, var(--border-subtle)));
+  color: var(--accent);
+}
+
+.nv-db-settings__delete:hover {
+  background: color-mix(in oklab, var(--danger) 20%, transparent);
+}
+
+/* ---------- Field menu ---------- */
+
+.nv-db-field-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 6px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.nv-db-field-menu__section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line-1, var(--border-subtle));
+  min-width: 0;
+}
+
+.nv-db-field-menu__section:last-of-type {
+  border-bottom: none;
+}
+
+.nv-db-field-menu__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-4, var(--text-muted));
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.nv-db-field-menu__input {
+  height: 30px;
+  padding: 0 8px;
+  border-radius: calc(7px * var(--radius-scale, 1));
+  border: 1px solid var(--line-2, var(--border-subtle));
+  background: var(--hover, var(--surface-1));
+  color: var(--text-1, var(--text-primary));
+  font-size: 12.5px;
+  outline: none;
+  font-family: var(--font-ui);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.nv-db-field-menu__input:focus {
+  border-color: var(--accent);
+}
+
+.nv-db-field-menu__type-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.nv-db-field-menu__type-select .nv-select__trigger {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+}
+
+.nv-db-field-menu__options {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.nv-db-field-menu__option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.nv-db-field-menu__color {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: calc(5px * var(--radius-scale, 1));
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.nv-db-field-menu__option-name {
+  flex: 1;
+  height: 26px;
+  padding: 0 7px;
+  border-radius: calc(6px * var(--radius-scale, 1));
+  border: 1px solid var(--line-2, var(--border-subtle));
+  background: var(--hover, var(--surface-1));
+  color: var(--text-1, var(--text-primary));
+  font-size: 12px;
+  outline: none;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.nv-db-field-menu__option-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: none;
+  color: var(--text-4, var(--text-muted));
+  cursor: pointer;
+  border-radius: calc(5px * var(--radius-scale, 1));
+  flex-shrink: 0;
+}
+
+.nv-db-field-menu__option-remove:hover {
+  background: var(--hover, var(--surface-2));
+  color: var(--danger);
+}
+
+.nv-db-field-menu__add-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 8px;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 11.5px;
+  font-weight: 550;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.nv-db-field-menu__add-option:hover {
+  background: var(--accent-soft);
+  border-radius: calc(6px * var(--radius-scale, 1));
+}
+
+.nv-db-field-menu__delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: calc(7px * var(--radius-scale, 1));
+  border: 1px solid var(--danger-line, transparent);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 550;
+  cursor: pointer;
+}
+
+.nv-db-field-menu__delete:hover {
+  background: color-mix(in oklab, var(--danger) 20%, transparent);
+}
+
+/* ---------- CSV import modal ---------- */
+
+.nv-db-csv-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: oklch(0 0 0 / 0.36);
+  backdrop-filter: blur(2px);
+}
+
+.nv-db-csv-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  border-radius: calc(14px * var(--radius-scale, 1));
+  border: 1px solid var(--line-strong);
+  background: var(--glass-3, var(--surface-2));
+  backdrop-filter: blur(20px) saturate(115%);
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+}
+
+.nv-db-csv-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line-1, var(--border-subtle));
+}
+
+.nv-db-csv-modal__title {
+  font: 600 14px var(--font-ui);
+  color: var(--text-1, var(--text-primary));
+}
+
+.nv-db-csv-modal__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: none;
+  color: var(--text-3, var(--text-secondary));
+  cursor: pointer;
+  border-radius: calc(6px * var(--radius-scale, 1));
+}
+
+.nv-db-csv-modal__close:hover {
+  background: var(--hover, var(--surface-2));
+  color: var(--text-1, var(--text-primary));
+}
+
+.nv-db-csv-modal__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nv-db-csv-modal__pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: calc(9px * var(--radius-scale, 1));
+  border: 1px solid var(--line-2, var(--border-subtle));
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 550;
+  cursor: pointer;
+}
+
+.nv-db-csv-modal__pick:hover {
+  background: color-mix(in oklab, var(--accent) 24%, transparent);
+}
+
+.nv-db-csv-modal__hint {
+  color: var(--text-4, var(--text-muted));
+  font-size: 12px;
+  margin: 0;
+}
+
+.nv-db-csv-modal__error {
+  color: var(--danger);
+  font-size: 12px;
+  margin: 0;
+}
+
+.nv-db-csv-modal__file-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.nv-db-csv-modal__filename {
+  font-size: 12.5px;
+  color: var(--text-2, var(--text-secondary));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nv-db-csv-modal__change {
+  flex-shrink: 0;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: calc(6px * var(--radius-scale, 1));
+  border: 1px solid var(--line-2, var(--border-subtle));
+  background: none;
+  color: var(--text-2, var(--text-secondary));
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.nv-db-csv-modal__change:hover {
+  background: var(--hover, var(--surface-2));
+}
+
+.nv-db-csv-modal__toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-2, var(--text-secondary));
+  cursor: pointer;
+}
+
+.nv-db-csv-modal__delimiter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--text-2, var(--text-secondary));
+}
+
+.nv-db-csv-modal__delimiter-label {
+  flex: 1;
+}
+
+.nv-db-csv-modal__section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-4, var(--text-muted));
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-top: 4px;
+}
+
+.nv-db-csv-modal__columns {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.nv-db-csv-modal__column-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.nv-db-csv-modal__column-name {
+  font-size: 12.5px;
+  color: var(--text-1, var(--text-primary));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nv-db-csv-modal__preview-wrap {
+  border: 1px solid var(--line-1, var(--border-subtle));
+  border-radius: calc(8px * var(--radius-scale, 1));
+  overflow-x: auto;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.nv-db-csv-modal__preview {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 11.5px;
+}
+
+.nv-db-csv-modal__preview th,
+.nv-db-csv-modal__preview td {
+  padding: 5px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--line-1, var(--border-subtle));
+  white-space: nowrap;
+}
+
+.nv-db-csv-modal__preview th {
+  color: var(--text-3, var(--text-secondary));
+  background: var(--glass-2, var(--surface-1));
+  position: sticky;
+  top: 0;
+}
+
+.nv-db-csv-modal__preview td {
+  color: var(--text-2, var(--text-secondary));
+}
+
+.nv-db-csv-modal__rows-count {
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--text-4, var(--text-muted));
+}
+
+.nv-db-csv-modal__mode {
+  display: flex;
+  gap: 16px;
+}
+
+.nv-db-csv-modal__mode-opt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-2, var(--text-secondary));
+  cursor: pointer;
+}
+
+.nv-db-csv-modal__mode-opt input {
+  accent-color: var(--accent);
+}
+
+.nv-db-csv-modal__file-input {
+  display: none;
+}
+
+.nv-db-csv-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line-1, var(--border-subtle));
+}
+
+.nv-db-csv-modal__cancel {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: calc(8px * var(--radius-scale, 1));
+  border: 1px solid var(--line-2, var(--border-subtle));
+  background: none;
+  color: var(--text-2, var(--text-secondary));
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.nv-db-csv-modal__cancel:hover {
+  background: var(--hover, var(--surface-2));
+}
+
+.nv-db-csv-modal__confirm {
+  height: 32px;
+  padding: 0 16px;
+  border-radius: calc(8px * var(--radius-scale, 1));
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nv-db-csv-modal__confirm:hover {
+  background: var(--accent-hover);
+}
+
+.nv-db-csv-modal__confirm:disabled {
+  background: var(--hover-strong, var(--surface-2));
+  color: var(--text-4, var(--text-muted));
+  cursor: not-allowed;
+}

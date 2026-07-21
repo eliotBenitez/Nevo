@@ -1,5 +1,13 @@
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
+use std::net::IpAddr;
+use std::time::Duration;
+
+const AI_CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+const AI_REQUEST_TIMEOUT: Duration = Duration::from_secs(90);
+const MAX_AI_RESPONSE_BYTES: usize = 8 * 1024 * 1024;
+const MAX_AI_STREAM_BUFFER_BYTES: usize = 1024 * 1024;
+const MAX_AI_REDIRECTS: usize = 5;
 
 // ── Request / Event types ────────────────────────────────────────────────────
 
@@ -110,46 +118,113 @@ pub fn normalize_base_url(raw: &str) -> String {
     }
 }
 
-/// True when the URL's host is a loopback address.
-/// Simple string-based: strip scheme, take authority up to first '/', strip port.
+#[cfg(test)]
 pub fn is_loopback_host(base_url: &str) -> bool {
-    // Strip scheme (e.g. "http://")
-    let after_scheme = if let Some(pos) = base_url.find("://") {
-        &base_url[pos + 3..]
-    } else {
-        base_url
-    };
-
-    // Take authority (everything before the first '/')
-    let authority = match after_scheme.find('/') {
-        Some(pos) => &after_scheme[..pos],
-        None => after_scheme,
-    };
-
-    // Bracketed IPv6 form, e.g. "[::1]:11434" or "[::1]" — the port (if any)
-    // follows the closing bracket, and the host itself may contain ':'.
-    let host = if let Some(rest) = authority.strip_prefix('[') {
-        match rest.find(']') {
-            Some(end) => &rest[..end],
-            None => rest,
-        }
-    } else {
-        // Strip port
-        match authority.rfind(':') {
-            Some(pos) => &authority[..pos],
-            None => authority,
-        }
-    };
-
-    matches!(host, "localhost" | "127.0.0.1" | "::1")
+    validated_base_url(base_url)
+        .map(|url| url_is_loopback(&url))
+        .unwrap_or(false)
 }
 
 pub fn enforce_privacy(req: &AiCompleteRequest) -> Result<(), String> {
-    if req.privacy_mode && !is_loopback_host(&req.base_url) {
+    let url = validated_base_url(&req.base_url)?;
+    if req.privacy_mode && !url_is_loopback(&url) {
         Err("AI privacy mode blocks non-local endpoints".to_string())
     } else {
         Ok(())
     }
+}
+
+fn validated_base_url(raw: &str) -> Result<reqwest::Url, String> {
+    let normalized = normalize_base_url(raw);
+    let url =
+        reqwest::Url::parse(&normalized).map_err(|_| "Invalid AI endpoint URL".to_string())?;
+    validate_http_url(&url)?;
+    Ok(url)
+}
+
+fn validate_http_url(url: &reqwest::Url) -> Result<(), String> {
+    if !matches!(url.scheme(), "http" | "https") {
+        return Err("AI endpoint must use http or https".to_string());
+    }
+    if !url.username().is_empty() || url.password().is_some() {
+        return Err("AI endpoint must not contain user information".to_string());
+    }
+    if url.host().is_none() {
+        return Err("AI endpoint must include a host".to_string());
+    }
+    Ok(())
+}
+
+fn url_is_loopback(url: &reqwest::Url) -> bool {
+    let Some(host) = url.host_str() else {
+        return false;
+    };
+    let host = host
+        .strip_prefix('[')
+        .and_then(|value| value.strip_suffix(']'))
+        .unwrap_or(host);
+    host.eq_ignore_ascii_case("localhost")
+        || host
+            .parse::<IpAddr>()
+            .map(|address| address.is_loopback())
+            .unwrap_or(false)
+}
+
+fn endpoint_url(base_url: &str, endpoint: &str) -> Result<reqwest::Url, String> {
+    let mut base = validated_base_url(base_url)?;
+    if !base.path().ends_with('/') {
+        let path = format!("{}/", base.path());
+        base.set_path(&path);
+    }
+    base.join(endpoint)
+        .map_err(|_| "Invalid AI endpoint path".to_string())
+}
+
+fn build_ai_client(privacy_mode: bool) -> Result<reqwest::Client, String> {
+    let redirect = reqwest::redirect::Policy::custom(move |attempt| {
+        if attempt.previous().len() >= MAX_AI_REDIRECTS {
+            return attempt.error("too many AI endpoint redirects");
+        }
+        if let Err(message) = validate_http_url(attempt.url()) {
+            return attempt.error(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                message,
+            ));
+        }
+        if privacy_mode && !url_is_loopback(attempt.url()) {
+            return attempt.error("AI privacy mode blocked a redirect to a non-local endpoint");
+        }
+        attempt.follow()
+    });
+
+    reqwest::Client::builder()
+        .connect_timeout(AI_CONNECT_TIMEOUT)
+        .timeout(AI_REQUEST_TIMEOUT)
+        .redirect(redirect)
+        .build()
+        .map_err(|error| error.to_string())
+}
+
+async fn response_bytes_limited(response: reqwest::Response) -> Result<Vec<u8>, String> {
+    let response = response
+        .error_for_status()
+        .map_err(|error| error.to_string())?;
+    if response
+        .content_length()
+        .is_some_and(|len| len > MAX_AI_RESPONSE_BYTES as u64)
+    {
+        return Err("AI response exceeds the 8 MiB limit".to_string());
+    }
+    let mut bytes = Vec::new();
+    let mut stream = response.bytes_stream();
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|error| error.to_string())?;
+        if bytes.len().saturating_add(chunk.len()) > MAX_AI_RESPONSE_BYTES {
+            return Err("AI response exceeds the 8 MiB limit".to_string());
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+    Ok(bytes)
 }
 
 /// Parse one NDJSON line from the Ollama /api/generate stream.
@@ -208,19 +283,21 @@ pub async fn ai_list_models(
     base_url: String,
     provider_kind: String,
 ) -> Result<Vec<String>, String> {
-    let base = normalize_base_url(&base_url);
-    let client = reqwest::Client::new();
+    let client = build_ai_client(false)?;
 
     if provider_kind == "openai" {
-        let url = format!("{}/models", base);
-        let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;
-        let body: OpenAiModelsResponse = resp.json().await.map_err(|e| e.to_string())?;
+        let url = endpoint_url(&base_url, "models")?;
+        let resp = client.get(url).send().await.map_err(|e| e.to_string())?;
+        let bytes = response_bytes_limited(resp).await?;
+        let body: OpenAiModelsResponse =
+            serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
         Ok(body.data.into_iter().map(|m| m.id).collect())
     } else {
         // Ollama (default)
-        let url = format!("{}/api/tags", base);
-        let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;
-        let body: OllamaTagsResponse = resp.json().await.map_err(|e| e.to_string())?;
+        let url = endpoint_url(&base_url, "api/tags")?;
+        let resp = client.get(url).send().await.map_err(|e| e.to_string())?;
+        let bytes = response_bytes_limited(resp).await?;
+        let body: OllamaTagsResponse = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
         Ok(body.models.into_iter().map(|m| m.name).collect())
     }
 }
@@ -229,11 +306,10 @@ pub async fn ai_list_models(
 pub async fn ai_complete(req: AiCompleteRequest) -> Result<String, String> {
     enforce_privacy(&req)?;
 
-    let base = normalize_base_url(&req.base_url);
-    let client = reqwest::Client::new();
+    let client = build_ai_client(req.privacy_mode)?;
 
     if req.provider_kind == "openai" {
-        let url = format!("{}/chat/completions", base);
+        let url = endpoint_url(&req.base_url, "chat/completions")?;
 
         let mut messages = Vec::new();
         if let Some(system) = &req.system {
@@ -248,7 +324,7 @@ pub async fn ai_complete(req: AiCompleteRequest) -> Result<String, String> {
             "stream": false,
         });
 
-        let mut request_builder = client.post(&url).json(&body);
+        let mut request_builder = client.post(url).json(&body);
         if let Some(key) = &req.api_key {
             if !key.is_empty() {
                 request_builder =
@@ -257,7 +333,9 @@ pub async fn ai_complete(req: AiCompleteRequest) -> Result<String, String> {
         }
 
         let resp = request_builder.send().await.map_err(|e| e.to_string())?;
-        let parsed: OpenAiCompleteResponse = resp.json().await.map_err(|e| e.to_string())?;
+        let bytes = response_bytes_limited(resp).await?;
+        let parsed: OpenAiCompleteResponse =
+            serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
 
         parsed
             .choices
@@ -267,7 +345,7 @@ pub async fn ai_complete(req: AiCompleteRequest) -> Result<String, String> {
             .ok_or_else(|| "empty response from OpenAI-compatible endpoint".to_string())
     } else {
         // Ollama
-        let url = format!("{}/api/generate", base);
+        let url = endpoint_url(&req.base_url, "api/generate")?;
 
         let mut body = serde_json::json!({
             "model": req.model,
@@ -281,13 +359,15 @@ pub async fn ai_complete(req: AiCompleteRequest) -> Result<String, String> {
         }
 
         let resp = client
-            .post(&url)
+            .post(url)
             .json(&body)
             .send()
             .await
             .map_err(|e| e.to_string())?;
 
-        let parsed: OllamaCompleteResponse = resp.json().await.map_err(|e| e.to_string())?;
+        let bytes = response_bytes_limited(resp).await?;
+        let parsed: OllamaCompleteResponse =
+            serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
         Ok(parsed.response)
     }
 }
@@ -316,11 +396,10 @@ pub async fn ai_complete_stream(
         return Err(e);
     }
 
-    let base = normalize_base_url(&req.base_url);
-    let client = reqwest::Client::new();
+    let client = build_ai_client(req.privacy_mode)?;
 
     if req.provider_kind == "openai" {
-        let url = format!("{}/chat/completions", base);
+        let url = endpoint_url(&req.base_url, "chat/completions")?;
 
         let mut messages = Vec::new();
         if let Some(system) = &req.system {
@@ -335,7 +414,7 @@ pub async fn ai_complete_stream(
             "stream": true,
         });
 
-        let mut request_builder = client.post(&url).json(&body);
+        let mut request_builder = client.post(url).json(&body);
         if let Some(key) = &req.api_key {
             if !key.is_empty() {
                 request_builder =
@@ -343,7 +422,11 @@ pub async fn ai_complete_stream(
             }
         }
 
-        let resp = match request_builder.send().await {
+        let resp = match request_builder
+            .send()
+            .await
+            .and_then(reqwest::Response::error_for_status)
+        {
             Ok(r) => r,
             Err(e) => {
                 let msg = e.to_string();
@@ -356,6 +439,7 @@ pub async fn ai_complete_stream(
 
         let mut stream = resp.bytes_stream();
         let mut buf: Vec<u8> = Vec::new();
+        let mut received = 0usize;
 
         while let Some(chunk_result) = stream.next().await {
             let chunk = match chunk_result {
@@ -369,6 +453,16 @@ pub async fn ai_complete_stream(
                 }
             };
 
+            received = received.saturating_add(chunk.len());
+            if received > MAX_AI_RESPONSE_BYTES
+                || buf.len().saturating_add(chunk.len()) > MAX_AI_STREAM_BUFFER_BYTES
+            {
+                let msg = "AI stream exceeds the configured size limit".to_string();
+                let _ = on_event.send(AiStreamEvent::Error {
+                    message: msg.clone(),
+                });
+                return Err(msg);
+            }
             buf.extend_from_slice(&chunk);
 
             for line in drain_complete_lines(&mut buf) {
@@ -407,7 +501,7 @@ pub async fn ai_complete_stream(
         Ok(())
     } else {
         // Ollama
-        let url = format!("{}/api/generate", base);
+        let url = endpoint_url(&req.base_url, "api/generate")?;
 
         let mut body = serde_json::json!({
             "model": req.model,
@@ -420,7 +514,13 @@ pub async fn ai_complete_stream(
             body["system"] = serde_json::Value::String(system.clone());
         }
 
-        let resp = match client.post(&url).json(&body).send().await {
+        let resp = match client
+            .post(url)
+            .json(&body)
+            .send()
+            .await
+            .and_then(reqwest::Response::error_for_status)
+        {
             Ok(r) => r,
             Err(e) => {
                 let msg = e.to_string();
@@ -433,6 +533,7 @@ pub async fn ai_complete_stream(
 
         let mut stream = resp.bytes_stream();
         let mut buf: Vec<u8> = Vec::new();
+        let mut received = 0usize;
 
         while let Some(chunk_result) = stream.next().await {
             let chunk = match chunk_result {
@@ -446,6 +547,16 @@ pub async fn ai_complete_stream(
                 }
             };
 
+            received = received.saturating_add(chunk.len());
+            if received > MAX_AI_RESPONSE_BYTES
+                || buf.len().saturating_add(chunk.len()) > MAX_AI_STREAM_BUFFER_BYTES
+            {
+                let msg = "AI stream exceeds the configured size limit".to_string();
+                let _ = on_event.send(AiStreamEvent::Error {
+                    message: msg.clone(),
+                });
+                return Err(msg);
+            }
             buf.extend_from_slice(&chunk);
 
             // Process all complete newline-delimited lines in the buffer
@@ -563,7 +674,7 @@ mod tests {
 
     #[test]
     fn loopback_ipv6() {
-        assert!(is_loopback_host("http://::1:11434"));
+        assert!(!is_loopback_host("http://::1:11434"));
     }
 
     #[test]
@@ -577,6 +688,28 @@ mod tests {
     fn not_loopback_remote() {
         assert!(!is_loopback_host("http://example.com"));
         assert!(!is_loopback_host("http://example.com:11434"));
+        assert!(!is_loopback_host("http://localhost:password@evil.example"));
+        assert!(!is_loopback_host("ftp://localhost/model"));
+    }
+
+    #[test]
+    fn privacy_rejects_userinfo_even_when_host_is_loopback() {
+        let req = AiCompleteRequest {
+            base_url: "http://user:password@localhost:11434".to_string(),
+            model: "llama3".to_string(),
+            prompt: "hi".to_string(),
+            system: None,
+            max_tokens: 100,
+            privacy_mode: true,
+            provider_kind: "ollama".to_string(),
+            api_key: None,
+        };
+        assert!(enforce_privacy(&req).is_err());
+    }
+
+    #[test]
+    fn all_ipv4_loopback_addresses_are_local() {
+        assert!(is_loopback_host("http://127.42.0.9:11434"));
     }
 
     // normalize_base_url

@@ -33,7 +33,7 @@ import {
   encodeYDocState,
   Y_FRAGMENT_NAME,
 } from '../../../editor-core/collaboration'
-import { collabCommands } from '../../../tauri/commands'
+import { collabCommands, workspaceCommands } from '../../../tauri/commands'
 import { initAwarenessUser } from '../../../editor-core/collaboration/yAwareness'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { useAuthStore } from '../../../stores/auth'
@@ -43,7 +43,10 @@ import { appLogger } from '../../../utils/logger'
 import { runGuardedCommand } from './prosemirrorErrors'
 import { i18n } from '../../../i18n'
 import { useAiCompletion } from '../../../composables/useAiCompletion'
+import { pluginSecretKey, secureStore } from '../../../tauri/secureStore'
 import { buildAiSlashItems } from './aiSlashItems'
+import { createDatabaseRepository, type DatabaseRepository } from '../../../features/database/databaseRepository'
+import { collectRemovedDatabaseIds, collectDatabaseIds } from '../../../editor-core/databaseCleanup'
 
 function resolveEditorLanguage(): string {
   return document.documentElement.lang || 'ru'
@@ -249,9 +252,15 @@ function toEditorPluginManifest(manifest: PluginManifest): NevoEditorPluginManif
     enabled: manifest.enabled,
     entryPoint: manifest.entryPoint,
     apiVersion: manifest.apiVersion,
+    executionMode: manifest.executionMode ?? 'trusted-webview',
+    dataVersion: manifest.dataVersion,
+    kind: manifest.kind,
+    source: manifest.source,
+    capabilities: manifest.capabilities,
     editorCapabilities: manifest.editorCapabilities,
     uiCapabilities: manifest.uiCapabilities ?? [],
     workspaceCapabilities: manifest.workspaceCapabilities ?? [],
+    network: manifest.network,
     nevoVersionRange: manifest.nevoVersionRange,
     priority: manifest.priority,
   }
@@ -308,13 +317,38 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
 
   let pendingContentDoc: Node | null = null
   let contentSerializeTimer: ReturnType<typeof setTimeout> | null = null
+  // v2 database stores whose block was removed from the doc, pending a real
+  // delete. Deletion is deferred to `flushDatabaseCleanup` (run on disk save)
+  // and cancelled whenever the id reappears in the live doc — so undo or a
+  // cut/paste that restores the block never wipes its records.
+  const pendingDatabaseDeletions = new Set<string>()
+  let activeDatabaseRepository: DatabaseRepository | null = null
+
+  function flushDatabaseCleanup() {
+    const repository = activeDatabaseRepository
+    if (pendingDatabaseDeletions.size === 0 || !repository) return
+    const liveIds = core.editorView ? collectDatabaseIds(core.editorView.state.doc) : new Set<string>()
+    for (const databaseId of [...pendingDatabaseDeletions]) {
+      pendingDatabaseDeletions.delete(databaseId)
+      if (liveIds.has(databaseId)) continue
+      void repository.deleteDatabase(databaseId).catch(error => {
+        void appLogger.warn({
+          source: 'frontend.editor',
+          event: 'database_cleanup_failed',
+          message: `Failed to remove database records for ${databaseId}`,
+          workspacePath: core.workspacePath,
+          error,
+        })
+      })
+    }
+  }
 
   // Debounced persistence of the editor-owned (disk-backed) Y.Doc. Hoisted to
   // composable scope so it can be torn down on note switch / editor destroy —
   // otherwise the pending timer leaks past `ydoc.destroy()` and the last edit
   // within the debounce window is never written.
   let yjsSaveTimer: ReturnType<typeof setTimeout> | null = null
-  let flushYjsPersistence: (() => void) | null = null
+  let flushYjsPersistence: (() => Promise<void>) | null = null
   let yjsUpdateTarget: Y.Doc | null = null
   let yjsUpdateHandler: (() => void) | null = null
 
@@ -326,13 +360,21 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     }
     // Only flush when a debounced save was actually pending, so a plain note
     // switch with no unsaved Yjs changes doesn't trigger a redundant write.
-    if (hadPendingSave) flushYjsPersistence?.()
+    if (hadPendingSave) void flushYjsPersistence?.().catch(() => {})
     flushYjsPersistence = null
     if (yjsUpdateTarget && yjsUpdateHandler) {
       yjsUpdateTarget.off('update', yjsUpdateHandler)
     }
     yjsUpdateTarget = null
     yjsUpdateHandler = null
+  }
+
+  async function flushYjsPersistenceNow(): Promise<void> {
+    if (yjsSaveTimer) {
+      clearTimeout(yjsSaveTimer)
+      yjsSaveTimer = null
+    }
+    await flushYjsPersistence?.()
   }
 
   function clearContentSerializeTimer() {
@@ -521,10 +563,11 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
       vega: pluginManifests.find(plugin => plugin.id === 'nevo.vega')?.enabled === true,
       markmap: pluginManifests.find(plugin => plugin.id === 'nevo.markmap')?.enabled === true,
     }
-    if (core.pluginHost) {
-      await core.pluginHost.deactivateAll()
-      await core.pluginHost.dispose()
-      core.pluginHost = null
+    const previousPluginHost = core.pluginHost
+    core.pluginHost = null
+    if (previousPluginHost) {
+      await previousPluginHost.deactivateAll()
+      await previousPluginHost.dispose()
     }
     core.toolbarPluginActions = []
     setActivePluginSerialization(null)
@@ -544,6 +587,113 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
         t: (key, params) => String(i18n.global.t(key, params ?? {})),
         getPluginSetting: (pluginId, key) => workspaceStore.getPluginSetting(pluginId, key),
         setPluginSetting: (pluginId, key, value) => { void workspaceStore.setPluginSetting(pluginId, key, value) },
+        locale: () => String(i18n.global.locale.value),
+        timeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        ...(typeof workspaceCommands.createPluginCodeSession === 'function'
+          ? {
+              createPluginCodeSession: (pluginId: string, entryPoint: string) =>
+                workspaceCommands.createPluginCodeSession(workspacePath, pluginId, entryPoint),
+            }
+          : {}),
+        ...(typeof workspaceCommands.revokePluginCodeSession === 'function'
+          ? {
+              revokePluginCodeSession: (token: string) =>
+                workspaceCommands.revokePluginCodeSession(token),
+            }
+          : {}),
+        ...(typeof workspaceCommands.pluginStorageGet === 'function'
+          ? {
+              pluginStorageGet: (pluginId: string, scope: 'workspace' | 'local', key: string) =>
+                workspaceCommands.pluginStorageGet(workspacePath, pluginId, scope, key),
+            }
+          : {}),
+        ...(typeof workspaceCommands.pluginStorageSet === 'function'
+          ? {
+              pluginStorageSet: (
+                pluginId: string,
+                scope: 'workspace' | 'local',
+                key: string,
+                value: unknown,
+              ) => workspaceCommands.pluginStorageSet(workspacePath, pluginId, scope, key, value),
+            }
+          : {}),
+        ...(typeof workspaceCommands.pluginStorageDelete === 'function'
+          ? {
+              pluginStorageDelete: (pluginId: string, scope: 'workspace' | 'local', key: string) =>
+                workspaceCommands.pluginStorageDelete(workspacePath, pluginId, scope, key),
+            }
+          : {}),
+        getPluginSecret: (pluginId, key) => secureStore.get(pluginSecretKey(pluginId, key)),
+        ...(typeof workspaceCommands.pluginAssetWrite === 'function'
+          ? {
+              pluginAssetWrite: (pluginId: string, dataBase64: string) =>
+                workspaceCommands.pluginAssetWrite(workspacePath, pluginId, dataBase64),
+            }
+          : {}),
+        ...(typeof workspaceCommands.pluginAssetRead === 'function'
+          ? {
+              pluginAssetRead: (pluginId: string, assetId: string) =>
+                workspaceCommands.pluginAssetRead(workspacePath, pluginId, assetId),
+            }
+          : {}),
+        ...(typeof workspaceCommands.pluginAssetDelete === 'function'
+          ? {
+              pluginAssetDelete: (pluginId: string, assetId: string) =>
+                workspaceCommands.pluginAssetDelete(workspacePath, pluginId, assetId),
+            }
+          : {}),
+        ...(typeof workspaceCommands.pluginAssetBeginUpload === 'function'
+          ? {
+              pluginAssetBeginUpload: (pluginId: string) =>
+                workspaceCommands.pluginAssetBeginUpload(workspacePath, pluginId),
+            }
+          : {}),
+        ...(typeof workspaceCommands.pluginAssetAppendChunk === 'function'
+          ? {
+              pluginAssetAppendChunk: (pluginId: string, uploadId: string, chunkBase64: string) =>
+                workspaceCommands.pluginAssetAppendChunk(workspacePath, pluginId, uploadId, chunkBase64),
+            }
+          : {}),
+        ...(typeof workspaceCommands.pluginAssetFinishUpload === 'function'
+          ? {
+              pluginAssetFinishUpload: (pluginId: string, uploadId: string) =>
+                workspaceCommands.pluginAssetFinishUpload(workspacePath, pluginId, uploadId),
+            }
+          : {}),
+        ...(typeof workspaceCommands.pluginAssetAbortUpload === 'function'
+          ? {
+              pluginAssetAbortUpload: (pluginId: string, uploadId: string) =>
+                workspaceCommands.pluginAssetAbortUpload(workspacePath, pluginId, uploadId),
+            }
+          : {}),
+        ...(typeof workspaceCommands.pluginAssetUrl === 'function'
+          ? {
+              pluginAssetUrl: (pluginId: string, assetId: string) =>
+                workspaceCommands.pluginAssetUrl(workspacePath, pluginId, assetId),
+            }
+          : {}),
+        ...(typeof workspaceCommands.pluginNetworkFetch === 'function'
+          ? {
+              pluginNetworkFetch: (pluginId: string, request: Record<string, unknown>) =>
+                workspaceCommands.pluginNetworkFetch(workspacePath, pluginId, {
+                  url: String(request.url ?? ''),
+                  method: String(request.method ?? 'GET'),
+                  headers: request.headers && typeof request.headers === 'object'
+                    ? request.headers as Record<string, string>
+                    : undefined,
+                  bodyBase64: typeof request.bodyBase64 === 'string' ? request.bodyBase64 : undefined,
+                }),
+            }
+          : {}),
+        ...(typeof workspaceCommands.pluginRegistryLoad === 'function'
+          ? { loadPluginRegistry: () => workspaceCommands.pluginRegistryLoad(workspacePath) }
+          : {}),
+        ...(typeof workspaceCommands.pluginRegistrySave === 'function'
+          ? {
+              savePluginRegistry: (registry: Parameters<typeof workspaceCommands.pluginRegistrySave>[1]) =>
+                workspaceCommands.pluginRegistrySave(workspacePath, registry),
+            }
+          : {}),
       },
     })
     host.setNodeEditRequestHandler((_view, position, nodeName, anchorRect) =>
@@ -668,6 +818,8 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
       enableTemplates?: boolean
     } = {},
   ) {
+    const databaseRepository = createDatabaseRepository(core.workspacePath)
+    activeDatabaseRepository = databaseRepository
     const aiSlashItems = (settings.ai.enabled && settings.ai.slashCommands && settings.editor.slashCommands)
       ? buildAiSlashItems({
           ai,
@@ -700,6 +852,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
       yFragment: options.yFragment,
       awareness: options.yFragment ? core.awareness ?? undefined : undefined,
       nodeViewOptions: {
+        databaseRepository,
         onRequestCalloutIconPick: ({ position, node, anchorRect }) => {
           callbacks.onCalloutIconPickRequest(position, anchorRect, typeof node.attrs.icon === 'string' ? node.attrs.icon : '💡')
         },
@@ -774,6 +927,14 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
             if (callbacks.onAssetSrcsRemoved) {
               const removed = collectRemovedAssetSrcs(prevState.doc, transaction)
               if (removed.length > 0) callbacks.onAssetSrcsRemoved(removed)
+            }
+            const removedDatabaseIds = collectRemovedDatabaseIds(prevState.doc, transaction)
+            for (const databaseId of removedDatabaseIds) pendingDatabaseDeletions.add(databaseId)
+            // Reconcile against the live doc so an undo/paste that restored a
+            // database node in this (or a later) transaction cancels its
+            // pending deletion before `flushDatabaseCleanup` runs.
+            if (pendingDatabaseDeletions.size > 0) {
+              for (const liveId of collectDatabaseIds(nextState.doc)) pendingDatabaseDeletions.delete(liveId)
             }
             scheduleContentUpdate(nextState.doc)
           }
@@ -950,21 +1111,21 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
         core.ownsYdoc = true
         yFragment = ydoc.getXmlFragment(Y_FRAGMENT_NAME)
 
-        const persistYjsState = () => {
+        const persistYjsState = async () => {
           if (core.ydoc !== ydoc) return
           const state = encodeYDocState(ydoc)
           // `state` is a Uint8Array; the command wrapper forwards it as a raw
           // IPC body, so no Array.from conversion (which would JSON-inflate it).
-          void collabCommands.saveYjsState(workspacePath, noteId, state).catch(() => {
-            /* non-critical */
-          })
+          await collabCommands.saveYjsState(workspacePath, noteId, state)
         }
         flushYjsPersistence = persistYjsState
         const handleUpdate = () => {
           if (yjsSaveTimer) clearTimeout(yjsSaveTimer)
           yjsSaveTimer = setTimeout(() => {
             yjsSaveTimer = null
-            persistYjsState()
+            void persistYjsState().catch(() => {
+              /* non-critical */
+            })
           }, 2000)
         }
         yjsUpdateTarget = ydoc
@@ -989,6 +1150,8 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     setupEditorForDocument,
     setupEditorForNote,
     flushPendingContentUpdate,
+    flushYjsPersistenceNow,
+    flushDatabaseCleanup,
     insertContentAtSelection(content: NoteDocument['content']): boolean {
       if (!core.editorView) return false
       const doc = parseNoteContentToDoc(core.schema, content)

@@ -3,10 +3,10 @@ import { computed, markRaw, onMounted, ref } from 'vue'
 import type { Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
-import { openPath, openUrl } from '@tauri-apps/plugin-opener'
+import { confirm } from '@tauri-apps/plugin-dialog'
 import { AlertTriangle, BarChart3, Download, ExternalLink, FolderOpen, Github, Kanban, LayoutTemplate, Network, PackageCheck, RefreshCw, Settings, Trash2 } from 'lucide-vue-next'
 import { useWorkspaceStore } from '../../../stores/workspace'
-import { workspaceCommands } from '../../../tauri/commands'
+import { systemCommands, workspaceCommands } from '../../../tauri/commands'
 import type { MarketplaceCatalogItem, MarketplacePluginStatus, PluginManifest } from '../../../types/workspace'
 import { getEnabledPluginCount, getTotalPluginCount } from '../../../utils/plugin-counts'
 import { isSystemPluginId, SYSTEM_PLUGIN_SHORT_IDS, sortPluginsByKind } from '../../../utils/system-plugins'
@@ -61,6 +61,9 @@ function pluginIcon(plugin: PluginManifest): Component | null {
 }
 
 function capabilityList(plugin: PluginManifest): string[] {
+  if (plugin.executionMode === 'sandboxed-worker') {
+    return (plugin.capabilities ?? []).slice(0, 6)
+  }
   return [
     ...plugin.editorCapabilities,
     ...(plugin.uiCapabilities ?? []),
@@ -76,6 +79,42 @@ function catalogCapabilities(item: MarketplaceCatalogItem): string[] {
   const manifest = catalogManifest(item)
   if (!manifest) return []
   return capabilityList(manifest)
+}
+
+function catalogDomains(item: MarketplaceCatalogItem): string[] {
+  return item.manifest?.network?.hosts ?? []
+}
+
+function permissionSet(plugin: PluginManifest): Set<string> {
+  const capabilities = plugin.executionMode === 'sandboxed-worker'
+    ? plugin.capabilities ?? []
+    : [
+        ...plugin.editorCapabilities,
+        ...(plugin.uiCapabilities ?? []),
+        ...(plugin.workspaceCapabilities ?? []),
+      ]
+  return new Set([
+    ...capabilities.map(value => `capability:${value}`),
+    ...(plugin.network?.hosts ?? []).map(value => `host:${value}`),
+    ...(plugin.network?.methods ?? []).map(value => `method:${value}`),
+  ])
+}
+
+function expandsPermissions(next: PluginManifest): boolean {
+  const installed = plugins.value.find(plugin => plugin.id === next.id)
+  if (!installed) return true
+  const current = permissionSet(installed)
+  return [...permissionSet(next)].some(permission => !current.has(permission))
+}
+
+function permissionReviewText(item: MarketplaceCatalogItem): string {
+  const capabilities = catalogCapabilities(item)
+  const domains = catalogDomains(item)
+  return t('settings.plugins.permissionReview', {
+    plugin: catalogTitle(item),
+    capabilities: capabilities.length ? capabilities.join(', ') : t('settings.plugins.noPermissions'),
+    domains: domains.length ? domains.join(', ') : t('settings.plugins.noDomains'),
+  })
 }
 
 function catalogTitle(item: MarketplaceCatalogItem): string {
@@ -155,10 +194,44 @@ async function togglePlugin(plugin: PluginManifest, enabled: boolean) {
 
 async function runMarketplaceAction(item: MarketplaceCatalogItem, action: MarketplaceAction) {
   if (!canRunMarketplaceAction(item, action)) return
+  const manifest = item.manifest
+  if (action === 'install' && manifest?.executionMode !== 'sandboxed-worker') {
+    const accepted = await confirm(t('settings.plugins.trustWarning', { plugin: catalogTitle(item) }), {
+      title: t('settings.plugins.trustWarningTitle'),
+      kind: 'warning',
+      okLabel: t('settings.plugins.install'),
+      cancelLabel: t('common.cancel'),
+    })
+    if (!accepted) return
+  }
+  if (
+    (action === 'install' || action === 'update')
+    && manifest?.executionMode === 'sandboxed-worker'
+    && (action === 'install' || expandsPermissions(manifest))
+  ) {
+    const accepted = await confirm(permissionReviewText(item), {
+      title: t('settings.plugins.permissionReviewTitle'),
+      kind: 'warning',
+      okLabel: t(`settings.plugins.${action}`),
+      cancelLabel: t('common.cancel'),
+    })
+    if (!accepted) return
+  }
   loadingPluginId.value = item.pluginId
   try {
-    if (action === 'install') await workspaceStore.installMarketplacePlugin(item.pluginId, item.manifest?.version)
-    if (action === 'update') await workspaceStore.updateMarketplacePlugin(item.pluginId)
+    if ((action === 'install' || action === 'update') && !item.permissionFingerprint) {
+      throw new Error('Marketplace permission fingerprint is missing')
+    }
+    if (action === 'install') {
+      await workspaceStore.installMarketplacePlugin(
+        item.pluginId,
+        item.permissionFingerprint ?? '',
+        item.manifest?.version,
+      )
+    }
+    if (action === 'update') {
+      await workspaceStore.updateMarketplacePlugin(item.pluginId, item.permissionFingerprint ?? '')
+    }
     if (action === 'remove') await workspaceStore.removeMarketplacePlugin(item.pluginId)
     await validatePlugins()
   } catch (error) {
@@ -182,11 +255,11 @@ function toggleSettingsExpanded(pluginId: string) {
 
 async function openPluginFolder(pluginId: string) {
   if (!activePath.value) return
-  await openPath(`${activePath.value}/.nevo/plugins/${pluginId}`)
+  await systemCommands.openWorkspaceLocation(activePath.value, 'plugins', { pluginId })
 }
 
 async function openExternalSource(url: string) {
-  await openUrl(url)
+  await systemCommands.openExternalUrl(url)
 }
 
 onMounted(async () => {
@@ -257,7 +330,7 @@ onMounted(async () => {
             :class="{ 'plugin-card--issue': pluginValidation[plugin.id] === 'invalid' }"
           >
             <div class="plugin-card__icon" :class="{ 'plugin-card__icon--system': plugin.kind === 'system' }">
-              <component v-if="pluginIcon(plugin)" :is="pluginIcon(plugin)" :size="16" />
+              <component :is="pluginIcon(plugin)" v-if="pluginIcon(plugin)" :size="16" />
               <span v-else>{{ plugin.name.charAt(0).toUpperCase() }}</span>
             </div>
             <div class="plugin-card__body">
@@ -267,7 +340,10 @@ onMounted(async () => {
                     {{ pluginTitle(plugin) }}
                     <span class="plugin-card__version">{{ plugin.kind === 'system' ? t('settings.plugins.builtIn') : `v${plugin.version}` }}</span>
                   </div>
-                  <div class="plugin-card__author">{{ plugin.id }} · {{ plugin.source ?? 'folder' }}</div>
+                  <div class="plugin-card__author">
+                    {{ plugin.id }} · {{ plugin.source ?? 'folder' }} ·
+                    {{ t(`settings.plugins.execution.${plugin.executionMode === 'sandboxed-worker' ? 'sandboxed' : 'trusted'}`) }}
+                  </div>
                 </div>
                 <NvToggle
                   :model-value="plugin.enabled"
@@ -303,7 +379,7 @@ onMounted(async () => {
                   size="xs"
                   :disabled="loadingPluginId === plugin.id"
                   :loading="loadingPluginId === plugin.id"
-                  @click="runMarketplaceAction({ pluginId: plugin.id, pluginPath: `plugins/${plugin.id}`, treeSha: '', status: 'installed', manifest: plugin, manifestError: null, installedVersion: plugin.version, sourceUrl: `https://github.com/eliotBenitez/nevo-marketplace/tree/main/plugins/${plugin.id}`, files: [] }, 'remove')"
+                  @click="runMarketplaceAction({ pluginId: plugin.id, pluginPath: `plugins/${plugin.id}`, treeSha: '', status: 'installed', manifest: plugin, manifestError: null, installedVersion: plugin.version, sourceUrl: `https://github.com/eliotBenitez/nevo-marketplace/tree/main/plugins/${plugin.id}`, files: [], permissionFingerprint: null }, 'remove')"
                 >
                   <Trash2 :size="13" />
                   {{ t('settings.plugins.remove') }}
@@ -390,6 +466,7 @@ onMounted(async () => {
               <div class="capability-row">
                 <span v-if="!catalogCapabilities(item).length" class="capability-chip">{{ t('settings.plugins.noPermissions') }}</span>
                 <span v-for="capability in catalogCapabilities(item)" :key="capability" class="capability-chip">{{ capability }}</span>
+                <span v-for="host in catalogDomains(item)" :key="`network:${host}`" class="capability-chip">HTTPS {{ host }}</span>
               </div>
 
               <div class="plugin-card__footer">

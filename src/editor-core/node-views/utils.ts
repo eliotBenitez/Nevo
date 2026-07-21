@@ -5,6 +5,7 @@ import { NodeSelection } from 'prosemirror-state'
 import type { EditorView } from 'prosemirror-view'
 import NvPopupMenu from '../../ui/primitives/NvPopupMenu.vue'
 import type { NvMenuItemDef } from '../../ui/primitives/menu-types'
+import type { DatabaseRepository } from '../../features/database/databaseRepository'
 
 export type NodeViewPosition = (() => number | undefined) | boolean
 
@@ -14,6 +15,7 @@ export interface CodeHighlightResult {
 }
 
 export interface CoreNodeViewOptions {
+  databaseRepository?: DatabaseRepository
   onRequestCalloutIconPick?: (ctx: {
     view: EditorView
     position: number

@@ -29,6 +29,7 @@ import {
   Music,
   FileText,
   Palette,
+  Database,
 } from 'lucide-vue-next'
 
 defineProps<{
@@ -64,6 +65,7 @@ const nodeTypeIconMap: Record<string, Component> = {
   note_embed: FileText,
   embed_block: Globe,
   draw_block: Palette,
+  database_block: Database,
 }
 
 function getNodeIcon(typeName: string | null, attrs: { level?: number; kind?: string } | null): Component {

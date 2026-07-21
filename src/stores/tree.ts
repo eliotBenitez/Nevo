@@ -67,6 +67,7 @@ export const useTreeStore = defineStore('tree', () => {
       workspaceStore.manifest.tree.push(folder)
       workspaceStore.manifest.rootOrder.push(folder.id)
     }
+    return folder
   }
 
   async function renameFolder(folderId: string, title: string) {
@@ -128,11 +129,9 @@ export const useTreeStore = defineStore('tree', () => {
   function syncNoteMeta(noteId: string, updates: Partial<Pick<NoteMeta, 'title' | 'icon'>>, updatedAt?: string) {
     const manifest = workspaceStore.manifest
     if (!manifest) return
-    const root = manifest.rootNotes.find(n => n.id === noteId)
-    if (root) {
-      if (typeof updates.title === 'string') root.title = updates.title
-      if (typeof updates.icon === 'string') root.icon = updates.icon
-      if (updatedAt) root.updatedAt = updatedAt
+    const rootIndex = manifest.rootNotes.findIndex(n => n.id === noteId)
+    if (rootIndex !== -1) {
+      manifest.rootNotes[rootIndex] = _mergeNoteMeta(manifest.rootNotes[rootIndex], updates, updatedAt)
       return
     }
     _updateNoteInTree(manifest.tree, noteId, updates, updatedAt)
@@ -384,14 +383,25 @@ function _updateNoteInTree(
   updatedAt?: string,
 ): boolean {
   for (const node of tree) {
-    const note = node.notes.find(n => n.id === noteId)
-    if (note) {
-      if (typeof updates.title === 'string') note.title = updates.title
-      if (typeof updates.icon === 'string') note.icon = updates.icon
-      if (updatedAt) note.updatedAt = updatedAt
+    const noteIndex = node.notes.findIndex(n => n.id === noteId)
+    if (noteIndex !== -1) {
+      node.notes[noteIndex] = _mergeNoteMeta(node.notes[noteIndex], updates, updatedAt)
       return true
     }
     if (_updateNoteInTree(node.children, noteId, updates, updatedAt)) return true
   }
   return false
+}
+
+function _mergeNoteMeta(
+  note: NoteMeta,
+  updates: Partial<Pick<NoteMeta, 'title' | 'icon'>>,
+  updatedAt?: string,
+): NoteMeta {
+  return {
+    ...note,
+    ...(typeof updates.title === 'string' ? { title: updates.title } : {}),
+    ...(typeof updates.icon === 'string' ? { icon: updates.icon } : {}),
+    ...(updatedAt ? { updatedAt } : {}),
+  }
 }

@@ -161,7 +161,7 @@ fn parse_range(headers: &str, total: u64) -> Option<(u64, u64)> {
     let line = headers
         .lines()
         .find(|l| l.to_ascii_lowercase().starts_with("range:"))?;
-    let spec = line.splitn(2, ':').nth(1)?.trim();
+    let spec = line.split_once(':')?.1.trim();
     let spec = spec.strip_prefix("bytes=")?;
     let (start_s, end_s) = spec.split_once('-')?;
     if start_s.is_empty() {
@@ -336,14 +336,9 @@ async fn handle(mut stream: TcpStream, token: String) {
 }
 
 async fn run(listener: TcpListener, token: String) {
-    loop {
-        match listener.accept().await {
-            Ok((stream, _)) => {
-                let token = token.clone();
-                tokio::spawn(handle(stream, token));
-            }
-            Err(_) => break,
-        }
+    while let Ok((stream, _)) = listener.accept().await {
+        let token = token.clone();
+        tokio::spawn(handle(stream, token));
     }
 }
 

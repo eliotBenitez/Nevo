@@ -13,6 +13,7 @@ import { createVegaNodeView } from './vega'
 import { createNoteEmbedNodeView } from './note-embed'
 import { createEmbedNodeView } from './embed'
 import { createMediaNodeView } from './media'
+import { createDatabaseNodeView } from './database'
 import { createColumnListNodeView, createColumnNodeView } from './columns'
 import { createToggleNodeView, createToggleTitleNodeView } from './toggle'
 import type { CoreNodeViewOptions } from './utils'
@@ -48,6 +49,8 @@ export function createCoreNodeViews(schema: Schema, options?: CoreNodeViewOption
   }
   if (schema.nodes.mermaid_block) {
     nodeViews.mermaid_block = (node, view, getPos) => createMermaidNodeView(node, view, getPos, options)
+  }
+  if (schema.nodes.draw_block) {
     nodeViews.draw_block = (node, view, getPos) => createDrawNodeView(node, view, getPos, options)
   }
   if (schema.nodes.markmap_block) {
@@ -64,6 +67,9 @@ export function createCoreNodeViews(schema: Schema, options?: CoreNodeViewOption
   }
   if (schema.nodes.media_block) {
     nodeViews.media_block = (node, view, getPos) => createMediaNodeView(node, view, getPos, options)
+  }
+  if (schema.nodes.database_block) {
+    nodeViews.database_block = (node, view, getPos) => createDatabaseNodeView(node, view, getPos, options)
   }
   if (schema.nodes.column_list) {
     nodeViews.column_list = (node, view, getPos) => createColumnListNodeView(node, view, getPos)

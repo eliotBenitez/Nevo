@@ -1,7 +1,7 @@
 import type { NoteDocument } from '../../types/note'
 import type { TypstAsset } from '../../tauri/commands'
 import { DEFAULT_PDF_OPTIONS, type PdfExportOptions } from './pdfOptions'
-import { serializeNoteToTypst } from './typstSerializer'
+import { serializeNoteToTypstAsync } from './typstSerializer'
 import { renderMermaidToSvgForPdf } from './mermaidToSvg'
 import { renderMarkmapToExportSvg } from './markmapToSvg'
 import { renderVegaToSvg } from './vegaToSvg'
@@ -54,7 +54,7 @@ export async function buildTypstExport(
   options: PdfExportOptions = DEFAULT_PDF_OPTIONS,
   buildOptions: BuildTypstExportOptions = {},
 ): Promise<TypstExportPayload> {
-  const { source, images, mermaid, markmap, vega, draw } = serializeNoteToTypst(note, options, {
+  const { source, images, mermaid, markmap, vega, draw } = await serializeNoteToTypstAsync(note, options, {
     assetPathPrefix: buildOptions.assetPathPrefix,
   })
 

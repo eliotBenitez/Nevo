@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, type Component } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import * as LucideIcons from 'lucide-vue-next'
 import { humanizeLucideName, lucideTokenFromExportName } from '../../utils/noteIcon'
@@ -10,6 +10,7 @@ type PickerTab = 'emoji' | 'icons'
 interface Props {
   value: string
   tabs?: PickerTab[]
+  autofocus?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -24,6 +25,7 @@ const { t } = useI18n()
 const visibleTabs = computed<PickerTab[]>(() => props.tabs.length > 0 ? props.tabs : ['emoji', 'icons'])
 const activeTab = ref<PickerTab>(visibleTabs.value[0] ?? 'emoji')
 const query = ref('')
+const searchInputRef = ref<HTMLInputElement | null>(null)
 
 const activeEmojiCategories = ref(emojiCategories)
 
@@ -96,6 +98,10 @@ function onDocumentKeyDown(event: KeyboardEvent) {
 
 onMounted(async () => {
   document.addEventListener('keydown', onDocumentKeyDown)
+  if (props.autofocus) {
+    await nextTick()
+    searchInputRef.value?.focus()
+  }
   activeEmojiCategories.value = await filterUnsupportedEmojisAsync(emojiCategories)
 })
 
@@ -128,6 +134,7 @@ onBeforeUnmount(() => {
     </div>
 
     <input
+      ref="searchInputRef"
       v-model="query"
       class="nv-icon-picker__search"
       type="text"

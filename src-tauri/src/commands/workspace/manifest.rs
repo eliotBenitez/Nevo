@@ -8,7 +8,9 @@ use super::paths::{
 use super::plugins::ensure_bundled_system_plugins;
 use super::settings::{is_extended_diagnostics_enabled, read_workspace_settings};
 use super::types::{WorkspaceManifest, WorkspaceSettings};
-use crate::commands::path_utils::{normalize_workspace_path, write_atomic};
+use crate::commands::path_utils::{
+    activate_workspace_root, normalize_workspace_path, write_atomic,
+};
 use crate::logging::{LogContext, LogError};
 
 #[tauri::command]
@@ -19,7 +21,7 @@ pub fn create_workspace(
     gradient: String,
 ) -> Result<WorkspaceManifest, String> {
     let logger = crate::logging::logger();
-    let path = normalize_workspace_path(&path).map_err(|message| {
+    let path = normalize_workspace_path(&path).inspect_err(|message| {
         let _ = logger.error(
             "tauri.workspace",
             "create_workspace",
@@ -32,7 +34,6 @@ pub fn create_workspace(
                 })
                 .with_payload(serde_json::json!({ "path": path })),
         );
-        message
     })?;
     let base = Path::new(&path);
     let workspace_path = path.to_string_lossy().into_owned();
@@ -46,14 +47,13 @@ pub fn create_workspace(
         );
         message
     })?;
-    ensure_bundled_system_plugins(&workspace_path).map_err(|message| {
+    ensure_bundled_system_plugins(&workspace_path).inspect_err(|message| {
         let _ = logger.error(
             "tauri.workspace",
             "create_workspace",
             "Failed to install bundled plugins",
             workspace_error_context(&workspace_path, "io", message.clone()),
         );
-        message
     })?;
     std::fs::create_dir_all(base.join("notes")).map_err(|error| {
         let message = error.to_string();
@@ -145,13 +145,14 @@ pub fn create_workspace(
             })),
     );
 
+    activate_workspace_root(base)?;
     Ok(manifest)
 }
 
 #[tauri::command]
 pub fn open_workspace(path: String) -> Result<WorkspaceManifest, String> {
     let logger = crate::logging::logger();
-    let path = normalize_workspace_path(&path).map_err(|message| {
+    let path = normalize_workspace_path(&path).inspect_err(|message| {
         let _ = logger.error(
             "tauri.workspace",
             "open_workspace",
@@ -164,17 +165,15 @@ pub fn open_workspace(path: String) -> Result<WorkspaceManifest, String> {
                 })
                 .with_payload(serde_json::json!({ "path": path })),
         );
-        message
     })?;
     let workspace_path = path.to_string_lossy().into_owned();
-    ensure_bundled_system_plugins(&workspace_path).map_err(|message| {
+    ensure_bundled_system_plugins(&workspace_path).inspect_err(|message| {
         let _ = logger.error(
             "tauri.workspace",
             "open_workspace",
             "Failed to install bundled plugins",
             workspace_error_context(&workspace_path, "io", message.clone()),
         );
-        message
     })?;
     let manifest_path = Path::new(&path).join(".nevo/workspace.json");
     let content = std::fs::read_to_string(&manifest_path).map_err(|error| {
@@ -253,13 +252,14 @@ pub fn open_workspace(path: String) -> Result<WorkspaceManifest, String> {
         diagnostics_enabled,
         workspace_context(&workspace_path),
     );
+    activate_workspace_root(&path)?;
     Ok(manifest)
 }
 
 #[tauri::command]
 pub fn save_workspace_manifest(path: String, manifest: WorkspaceManifest) -> Result<(), String> {
     let logger = crate::logging::logger();
-    let path = normalize_workspace_path(&path).map_err(|message| {
+    let path = normalize_workspace_path(&path).inspect_err(|message| {
         let _ = logger.error(
             "tauri.workspace",
             "save_workspace_manifest",
@@ -272,7 +272,6 @@ pub fn save_workspace_manifest(path: String, manifest: WorkspaceManifest) -> Res
                 })
                 .with_payload(serde_json::json!({ "path": path })),
         );
-        message
     })?;
     let workspace_path = path.to_string_lossy().into_owned();
     let diagnostics_enabled = is_extended_diagnostics_enabled(&workspace_path);

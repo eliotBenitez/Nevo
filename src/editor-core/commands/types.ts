@@ -2,6 +2,7 @@ import type { Command, EditorState } from 'prosemirror-state'
 import type { NoteEmbedAttrs } from './note-embed'
 import type { MediaBlockAttrs } from './media'
 import type { EmbedBlockAttrs } from './embed'
+import type { DatabaseBlockData } from '../../types/database-block'
 export type CoreCommandId =
   | 'core.undo'
   | 'core.redo'
@@ -60,6 +61,9 @@ export type CoreCommandId =
   | 'core.mermaid.update'
   | 'core.markmap.insert'
   | 'core.markmap.update'
+  | 'core.draw.insert'
+  | 'core.draw.updateById'
+  | 'core.draw.remove'
   | 'core.vega.insert'
   | 'core.noteEmbed.insert'
   | 'core.media.audio.insert'
@@ -67,6 +71,7 @@ export type CoreCommandId =
   | 'core.toggle.insert'
   | 'core.toggle.collapse'
   | 'core.embed.insert'
+  | 'core.database.insert'
 
 export interface NevoLinkRange {
   from: number
@@ -150,4 +155,5 @@ export interface NevoCoreCommands {
   setNoteEmbedAttrsAtSelection: (attrs: Partial<NoteEmbedAttrs>) => Command
   setMediaBlockAttrsAtSelection: (attrs: Partial<MediaBlockAttrs>) => Command
   setEmbedAttrsAtSelection: (attrs: Partial<EmbedBlockAttrs>) => Command
+  setDatabaseDataAtSelection: (data: DatabaseBlockData) => Command
 }

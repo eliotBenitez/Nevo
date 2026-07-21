@@ -17,7 +17,9 @@ export default defineConfig(async () => ({
   },
 
   build: {
-    chunkSizeWarningLimit: 900,
+    // MathJax's lazy SVG output module has a separate 1.3 MiB budget; all
+    // other chunks are checked against 1.1 MiB by build-tools/check-bundle-size.mjs.
+    chunkSizeWarningLimit: 1300,
     rollupOptions: {
       output: {
         manualChunks(id) {

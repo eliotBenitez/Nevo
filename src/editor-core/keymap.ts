@@ -14,6 +14,7 @@ const PARAGRAPH_AFTER_SELECTED_BLOCK_TYPES = new Set([
   'embed_block',
   'note_embed',
   'mermaid_block',
+  'draw_block',
   'markmap_block',
   'vega_block',
   'table',
@@ -32,21 +33,23 @@ function createInsertParagraphAfterSelectedBlockCommand(schema: Schema): Command
   return (state, dispatch) => {
     if (!paragraph) return false
 
-    let insertPos: number | null = null
-    if (state.selection instanceof NodeSelection) {
-      const node = state.selection.node
-      const hasBlockGroup = typeof node.type.spec.group === 'string' && node.type.spec.group.split(/\s+/).includes('block')
-      if ((!node.isBlock && !hasBlockGroup) || !supportedTypes.has(node.type)) return false
-      insertPos = state.selection.to
-    } else if (state.selection instanceof CellSelection) {
-      const table = findTable(state.selection.$anchorCell)
-      if (!table || !supportedTypes.has(table.node.type)) return false
-      const rect = selectedRect(state)
-      if (rect.top !== 0 || rect.left !== 0 || rect.bottom !== rect.map.height || rect.right !== rect.map.width) return false
-      insertPos = table.pos + table.node.nodeSize
-    } else {
-      return false
-    }
+    const insertPos = (() => {
+      if (state.selection instanceof NodeSelection) {
+        const node = state.selection.node
+        const hasBlockGroup = typeof node.type.spec.group === 'string' && node.type.spec.group.split(/\s+/).includes('block')
+        if ((!node.isBlock && !hasBlockGroup) || !supportedTypes.has(node.type)) return null
+        return state.selection.to
+      }
+      if (state.selection instanceof CellSelection) {
+        const table = findTable(state.selection.$anchorCell)
+        if (!table || !supportedTypes.has(table.node.type)) return null
+        const rect = selectedRect(state)
+        if (rect.top !== 0 || rect.left !== 0 || rect.bottom !== rect.map.height || rect.right !== rect.map.width) return null
+        return table.pos + table.node.nodeSize
+      }
+      return null
+    })()
+    if (insertPos === null) return false
 
     const paragraphNode = paragraph.createAndFill()
     if (!paragraphNode) return false
@@ -188,24 +191,14 @@ function createInsertListItemHardBreakCommand(schema: Schema): Command {
   }
 }
 
-function createInsertBlockquoteHardBreakCommand(schema: Schema): Command {
+function createInsertHardBreakCommand(schema: Schema): Command {
   const hardBreak = schema.nodes.hard_break
-  const blockquoteType = schema.nodes.blockquote
 
   return (state, dispatch) => {
-    if (!hardBreak || !blockquoteType) return false
+    if (!hardBreak) return false
     if (!(state.selection instanceof TextSelection) || !state.selection.$cursor) return false
 
     const $cursor = state.selection.$cursor
-    let isInsideBlockquote = false
-    for (let depth = $cursor.depth; depth >= 1; depth -= 1) {
-      if ($cursor.node(depth).type === blockquoteType) {
-        isInsideBlockquote = true
-        break
-      }
-    }
-
-    if (!isInsideBlockquote) return false
     if (!$cursor.parent.canReplaceWith($cursor.index(), $cursor.index(), hardBreak)) return false
     if (!dispatch) return true
 
@@ -223,7 +216,7 @@ export function createCoreKeymap(schema: Schema, commands: Map<string, Command>,
   const exitToggleOnDoubleEnter = createExitToggleOnDoubleEnterCommand(schema)
   const exitEmptyListItem = createExitEmptyListItemCommand(schema)
   const insertListItemHardBreak = createInsertListItemHardBreakCommand(schema)
-  const insertBlockquoteHardBreak = createInsertBlockquoteHardBreakCommand(schema)
+  const insertHardBreak = createInsertHardBreakCommand(schema)
 
   const bindings: Record<string, Command> = {
     'Mod-z': undo,
@@ -246,7 +239,7 @@ export function createCoreKeymap(schema: Schema, commands: Map<string, Command>,
     'Mod-Shift-8': commands.get('core.bulletList') ?? (() => false),
     'Mod-Shift-9': commands.get('core.blockquote') ?? (() => false),
     Enter: chainCommands(insertParagraphAfterSelectedBlock, newlineInCode, exitContainerOnDoubleEnter, exitToggleOnDoubleEnter, exitEmptyListItem, listItem ? splitListItem(listItem) : () => false, splitBlock),
-    'Shift-Enter': insertBlockquoteHardBreak,
+    'Shift-Enter': chainCommands(newlineInCode, insertHardBreak),
     'Mod-Enter': chainCommands(insertParagraphAfterSelectedBlock, exitContainer, exitToggle, insertListItemHardBreak),
     'Ctrl-Enter': chainCommands(insertParagraphAfterSelectedBlock, exitContainer, exitToggle, insertListItemHardBreak),
   }

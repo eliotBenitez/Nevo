@@ -33,6 +33,8 @@ import {
 import { appLogger } from '../utils/logger'
 import { applyWorkspaceStyle } from '../utils/apply-workspace-style'
 import { expandHomePath } from '../utils/workspacePath'
+import { runMarketplacePluginTransaction } from '../core/plugins/marketplaceMigration'
+import { pauseMarketplaceRuntime } from '../core/plugins/marketplaceRuntime'
 
 export function getRestoreCandidates(recents: RecentWorkspace[]): RecentWorkspace[] {
   return [...recents]
@@ -649,16 +651,53 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     }
   }
 
-  async function installMarketplacePlugin(pluginId: string, version?: string) {
+  async function installMarketplacePlugin(pluginId: string, permissionFingerprint: string, version?: string) {
     if (!backend.value) return
-    await backend.value.marketplaceInstallPlugin(pluginId, version)
+    if (activePath.value && manifest.value) {
+      const resumeRuntime = await pauseMarketplaceRuntime()
+      try {
+        await runMarketplacePluginTransaction({
+          workspacePath: activePath.value,
+          pluginId,
+          permissionFingerprint,
+          version,
+          update: false,
+          workspace: manifest.value,
+        })
+        await reloadPlugins()
+        await loadMarketplacePlugins(true)
+      } finally {
+        await resumeRuntime()
+      }
+      return
+    } else {
+      await backend.value.marketplaceInstallPlugin(pluginId, permissionFingerprint, version)
+    }
     await reloadPlugins()
     await loadMarketplacePlugins(true)
   }
 
-  async function updateMarketplacePlugin(pluginId: string) {
+  async function updateMarketplacePlugin(pluginId: string, permissionFingerprint: string) {
     if (!backend.value) return
-    await backend.value.marketplaceUpdatePlugin(pluginId)
+    if (activePath.value && manifest.value) {
+      const resumeRuntime = await pauseMarketplaceRuntime()
+      try {
+        await runMarketplacePluginTransaction({
+          workspacePath: activePath.value,
+          pluginId,
+          permissionFingerprint,
+          update: true,
+          workspace: manifest.value,
+        })
+        await reloadPlugins()
+        await loadMarketplacePlugins(true)
+      } finally {
+        await resumeRuntime()
+      }
+      return
+    } else {
+      await backend.value.marketplaceUpdatePlugin(pluginId, permissionFingerprint)
+    }
     await reloadPlugins()
     await loadMarketplacePlugins(true)
   }

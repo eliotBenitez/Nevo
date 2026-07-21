@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import type { NoteDocument, NoteSnapshotMeta } from '../types/note'
+import type { NoteDocument, NoteMeta, NoteSnapshotMeta } from '../types/note'
+import type { WorkspaceManifest } from '../types/workspace'
 import { noteCommands } from '../tauri/commands'
 import { useNoteStore } from './note'
 import { useWorkspaceStore } from './workspace'
@@ -70,6 +71,20 @@ function createNote(id: string, text: string): NoteDocument {
         },
       ],
     },
+  }
+}
+
+function buildManifestWithNote(meta: NoteMeta): WorkspaceManifest {
+  return {
+    id: 'ws',
+    name: 'WS',
+    glyph: 'N',
+    gradient: '',
+    schemaVersion: 1,
+    createdAt: '2026-05-14T10:00:00.000Z',
+    rootOrder: [meta.id],
+    tree: [],
+    rootNotes: [meta],
   }
 }
 
@@ -262,5 +277,65 @@ describe('useNoteStore', () => {
     expect(noteStore.activeNote?.properties?.type).toBe('task')
     expect(noteStore.isDirty).toBe(true)
     expect(noteStore.saveStatus).toBe('unsaved')
+  })
+
+  it('syncs the in-memory manifest note entry with the fresh updatedAt after a successful save', async () => {
+    const mockedNoteCommands = vi.mocked(noteCommands)
+    mockedNoteCommands.saveNote.mockResolvedValue(undefined)
+
+    const workspaceStore = useWorkspaceStore()
+    const originalMeta: NoteMeta = {
+      id: 'note-1',
+      title: 'Note note-1',
+      icon: '📄',
+      folderId: null,
+      updatedAt: '2026-05-14T10:00:00.000Z',
+    }
+    workspaceStore.manifest = buildManifestWithNote(originalMeta)
+
+    const noteStore = useNoteStore()
+    noteStore.activeNote = createNote('note-1', 'Initial')
+    noteStore.isDirty = true
+    noteStore.saveStatus = 'unsaved'
+
+    await noteStore.saveNote()
+
+    const syncedMeta = workspaceStore.manifest?.rootNotes[0]
+    expect(syncedMeta?.updatedAt).not.toBe(originalMeta.updatedAt)
+    expect(syncedMeta?.updatedAt).toBe(noteStore.activeNote?.updatedAt)
+    expect(syncedMeta?.title).toBe(noteStore.activeNote?.title)
+    expect(syncedMeta?.icon).toBe(noteStore.activeNote?.icon)
+  })
+
+  it('leaves the manifest note entry untouched when the save is aborted by a stale session', async () => {
+    const saveDone = deferred<void>()
+    const mockedNoteCommands = vi.mocked(noteCommands)
+    mockedNoteCommands.saveNote.mockImplementation(() => saveDone.promise)
+
+    const workspaceStore = useWorkspaceStore()
+    const originalMeta: NoteMeta = {
+      id: 'note-1',
+      title: 'Note note-1',
+      icon: '📄',
+      folderId: null,
+      updatedAt: '2026-05-14T10:00:00.000Z',
+    }
+    workspaceStore.manifest = buildManifestWithNote(originalMeta)
+
+    const noteStore = useNoteStore()
+    noteStore.activeNote = createNote('note-1', 'Initial')
+    noteStore.isDirty = true
+    noteStore.saveStatus = 'unsaved'
+
+    const saveRequest = noteStore.saveNote()
+    // Simulate the note being switched away from mid-save: this bumps the
+    // internal session token, so the in-flight save's drift guard must
+    // discard its result once it resolves.
+    noteStore.clearNote()
+
+    saveDone.resolve()
+    await saveRequest
+
+    expect(workspaceStore.manifest?.rootNotes[0]).toEqual(originalMeta)
   })
 })

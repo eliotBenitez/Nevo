@@ -11,6 +11,7 @@ const SKIPPED_BLOCK_TYPES = new Set([
   'file',
   'draw_block',
   'mermaid_block',
+  'markmap_block',
   'vega_block',
   'math_display',
 ])

@@ -36,16 +36,11 @@
 
 <table align="center">
   <tr>
-    <td><img src="settings/Screen Shot 2026-05-15 at 00.33.36.png" width="400"></td>
-    <td><img src="settings/Screen Shot 2026-05-15 at 00.33.38.png" width="400"></td>
+    <td colspan="2" align="center"><img src="readme/screens/welcome.png" width="820" alt="Welcome screen"><br><sub>Welcome — create or open a local workspace</sub></td>
   </tr>
   <tr>
-    <td><img src="settings/Screen Shot 2026-05-15 at 00.33.45.png" width="400"></td>
-    <td><img src="settings/Screen Shot 2026-05-15 at 00.33.49.png" width="400"></td>
-  </tr>
-  <tr>
-    <td><img src="settings/Screen Shot 2026-05-15 at 00.33.54.png" width="400"></td>
-    <td><img src="settings/Screen Shot 2026-05-15 at 00.34.02.png" width="400"></td>
+    <td align="center"><img src="readme/screens/main.png" width="400" alt="Workspace home"><br><sub>Workspace home</sub></td>
+    <td align="center"><img src="readme/screens/settings.png" width="400" alt="Note editor"><br><sub>Note editor</sub></td>
   </tr>
 </table>
 

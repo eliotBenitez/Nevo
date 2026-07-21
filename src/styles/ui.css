@@ -206,6 +206,70 @@
   }
 }
 
+/* src/ui/primitives/NvGlyphPicker.vue */
+.nv-glyph-picker {
+  width: min(360px, calc(100vw - 24px));
+  border: 1px solid var(--line-2);
+  border-radius: calc(12px * var(--radius-scale, 1));
+  background: var(--glass-3);
+  box-shadow: var(--shadow-pop);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nv-glyph-picker__title {
+  margin: 0;
+  color: var(--text-4);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.nv-glyph-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.nv-glyph-picker__item {
+  height: 36px;
+  border-radius: calc(8px * var(--radius-scale, 1));
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.nv-glyph-picker__item:hover {
+  background: var(--hover);
+  color: var(--text-1);
+}
+
+.nv-glyph-picker__item.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text-1);
+}
+
+@media (max-width: 900px) {
+  .nv-glyph-picker {
+    width: calc(100vw - 24px);
+  }
+
+  .nv-glyph-picker__grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
 /* src/ui/primitives/NvNoteIcon.vue */
 .nv-note-icon {
   display: inline-flex;

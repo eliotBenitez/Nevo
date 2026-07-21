@@ -1,6 +1,7 @@
 import type { Node as PMNode } from 'prosemirror-model'
 import type { EditorView, NodeView } from 'prosemirror-view'
 import { resolveNodePosition, getStringAttr, selectNodeAt, type CoreNodeViewOptions, type NodeViewPosition } from './utils'
+import { sanitizeSvg } from '../../utils/sanitizeSvg'
 
 function buildHeader(): HTMLElement {
   const header = document.createElement('div')
@@ -53,7 +54,7 @@ export function createDrawNodeView(node: PMNode, view: EditorView, getPos: NodeV
   let lastRenderedPreview = ''
 
   const sync = () => {
-    const svgPreview = getStringAttr(currentNode, 'svgPreview')
+    const svgPreview = sanitizeSvg(getStringAttr(currentNode, 'svgPreview'))
     const title = getStringAttr(currentNode, 'title')
     const isEmpty = svgPreview.trim().length === 0
 

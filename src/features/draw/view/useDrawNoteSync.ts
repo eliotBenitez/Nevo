@@ -1,6 +1,8 @@
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { useNoteStore } from '../../../stores/note'
-import { collabCommands } from '../../../tauri/commands'
+import { useTreeStore } from '../../../stores/tree'
+import { collabCommands, noteCommands } from '../../../tauri/commands'
+import { sanitizeSvg } from '../../../utils/sanitizeSvg'
 import {
   restoreYDocFromBinary,
   encodeYDocState,
@@ -54,8 +56,10 @@ export function useDrawNoteSync(options: DrawNoteSyncOptions) {
         if (!bytes.length) return
         const ydoc = restoreYDocFromBinary(bytes)
         try {
-          if (updateDrawBlockAttrsInYDoc(ydoc, options.drawId, { src, svgPreview })) {
+          if (updateDrawBlockAttrsInYDoc(ydoc, options.drawId, { src, svgPreview: sanitizeSvg(svgPreview) })) {
             await collabCommands.saveYjsState(workspacePath, noteId, encodeYDocState(ydoc))
+            const updatedAt = await noteCommands.touchNoteUpdatedAt(workspacePath, noteId)
+            useTreeStore().syncNoteMeta(noteId, {}, updatedAt)
           }
         } finally {
           ydoc.destroy()

@@ -1,18 +1,16 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
-import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener'
 import { Archive, Database, FileText, Folder, FolderOpen, HardDrive, Image, Plug, Trash2 } from 'lucide-vue-next'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvNumberInput from '../../../ui/primitives/NvNumberInput.vue'
 import { useWorkspaceStore } from '../../../stores/workspace'
-import { useDeviceLayout } from '../../../composables/useDeviceLayout'
 import { appLogger } from '../../../utils/logger'
 import { computed } from 'vue'
+import { systemCommands, type WorkspaceLocation } from '../../../tauri/commands'
 
 const { t } = useI18n()
-const { runtime } = useDeviceLayout()
 const workspaceStore = useWorkspaceStore()
 const { settings, diagnostics, activePath } = storeToRefs(workspaceStore)
 
@@ -31,23 +29,12 @@ function formatBytes(bytes: number | undefined): string {
   return `${(v / 1024 ** 3).toFixed(1)} GB`
 }
 
-async function revealPath(path: string | undefined) {
-  if (!path) return
+async function openWorkspaceLocation(location: WorkspaceLocation, reveal = false) {
+  if (!activePath.value) return
   try {
-    if (!runtime.value.supportsRevealInFileManager) { await openPath(path); return }
-    await revealItemInDir(path)
+    await systemCommands.openWorkspaceLocation(activePath.value, location, { reveal })
   } catch (error) {
-    await appLogger.warn({ source: 'frontend.settings', event: 'reveal_path', message: 'Failed to reveal path', workspacePath: activePath.value, error, payload: { path } })
-  }
-}
-
-async function openFolder(path: string | undefined) {
-  if (!path) return
-  try {
-    await openPath(path)
-  } catch (error) {
-    try { await revealItemInDir(path); return } catch { /* fall through to logging */ }
-    await appLogger.warn({ source: 'frontend.settings', event: 'open_folder', message: 'Failed to open folder', workspacePath: activePath.value, error, payload: { path } })
+    await appLogger.warn({ source: 'frontend.settings', event: 'open_workspace_location', message: 'Failed to open workspace location', workspacePath: activePath.value, error, payload: { location, reveal } })
   }
 }
 
@@ -91,19 +78,19 @@ async function setSnapshotRetentionCount(value: number) {
               <div class="row-sub">{{ t('settings.files.paths.description') }}</div>
             </div>
             <div class="path-grid">
-              <NvButton variant="ghost" class="path-button" @click="revealPath(activePath ?? undefined)">
+              <NvButton variant="ghost" class="path-button" @click="openWorkspaceLocation('root', true)">
                 <FolderOpen :size="14" />
                 {{ t('settings.files.paths.revealWorkspace') }}
               </NvButton>
-              <NvButton variant="ghost" class="path-button" @click="openFolder(diagnostics?.notesFolderPath)">
+              <NvButton variant="ghost" class="path-button" @click="openWorkspaceLocation('notes')">
                 <FileText :size="14" />
                 {{ t('settings.files.paths.openNotes') }}
               </NvButton>
-              <NvButton variant="ghost" class="path-button" @click="openFolder(diagnostics?.assetsFolderPath)">
+              <NvButton variant="ghost" class="path-button" @click="openWorkspaceLocation('assets')">
                 <Image :size="14" />
                 {{ t('settings.files.paths.openAssets') }}
               </NvButton>
-              <NvButton variant="ghost" class="path-button" @click="openFolder(diagnostics?.nevoFolderPath)">
+              <NvButton variant="ghost" class="path-button" @click="openWorkspaceLocation('metadata')">
                 <Database :size="14" />
                 {{ t('settings.files.paths.openNevo') }}
               </NvButton>

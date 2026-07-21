@@ -7,6 +7,10 @@ import { useWorkspaceStore } from './stores/workspace'
 import { useAuthStore } from './stores/auth'
 import { initGlobalShortcuts } from './composables/useGlobalShortcuts'
 import { i18n } from './i18n'
+import '@fontsource-variable/geist'
+import '@fontsource-variable/geist-mono'
+import '@fontsource/instrument-serif'
+import '@fontsource/instrument-serif/400-italic.css'
 import './styles/tokens.css'
 import './styles/base.css'
 import './styles/primitives.css'
@@ -18,6 +22,10 @@ import './styles/graph.css'
 import './styles/ui.css'
 import './styles/features/kanban-modal.css'
 import './features/draw/draw.css'
+import '@vue-flow/core/dist/style.css'
+import '@vue-flow/core/dist/theme-default.css'
+import '@vue-flow/controls/dist/style.css'
+import '@vue-flow/minimap/dist/style.css'
 import 'highlight.js/styles/github-dark.css'
 
 const pinia = createPinia()
@@ -30,6 +38,7 @@ async function bootstrap() {
 
   const workspaceStore = useWorkspaceStore()
   await workspaceStore.init()
+  document.documentElement.dataset.platform = workspaceStore.appMetadata?.platform ?? 'web'
   await useThemeStore().init()
   initGlobalShortcuts()
 

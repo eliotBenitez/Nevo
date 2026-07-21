@@ -16,7 +16,7 @@ import { createCoreCommands, type NevoCoreCommands } from './commands'
 import { createCoreKeymap } from './keymap'
 import { createCoreNodeViews, type CoreNodeViewOptions } from './node-views'
 import { parseNoteContentToDoc } from './serialization'
-import { createSlashCommandPlugin } from './slash'
+import { createSlashCommandPlugin, prepareListItemForBlockSlash } from './slash'
 import { createLinkPickerPlugin } from './link-picker'
 import { createMarkdownInputRules } from './input-rules'
 import { EditorPluginHost } from './plugin-host'
@@ -93,36 +93,58 @@ export function createCoreSlashItems(commands: Map<string, Command>): NevoSlashI
     commands.get(id)?.(state, dispatch)
   }
 
+  const listBlockCommand = (id: string): Pick<NevoSlashItem, 'run' | 'runInList'> => {
+    const run = command(id)
+    return {
+      run,
+      runInList: ({ view, state, dispatch, list }) => {
+        const preparation = prepareListItemForBlockSlash(state, list)
+        if (!preparation) {
+          run({ view, state, dispatch })
+          return
+        }
+
+        dispatch(preparation)
+        run({
+          view,
+          state: view.state,
+          dispatch: view.dispatch.bind(view),
+        })
+      },
+    }
+  }
+
   return [
     { id: 'paragraph', title: 'Paragraph', category: 'text', keywords: ['text', 'p'], run: command('core.paragraph') },
-    { id: 'h1', title: 'Heading 1', category: 'text', keywords: ['heading1', 'title'], run: command('core.heading.1') },
-    { id: 'h2', title: 'Heading 2', category: 'text', keywords: ['heading2'], run: command('core.heading.2') },
-    { id: 'h3', title: 'Heading 3', category: 'text', keywords: ['heading3'], run: command('core.heading.3') },
-    { id: 'h4', title: 'Heading 4', category: 'text', keywords: ['heading4'], run: command('core.heading.4') },
-    { id: 'h5', title: 'Heading 5', category: 'text', keywords: ['heading5'], run: command('core.heading.5') },
-    { id: 'h6', title: 'Heading 6', category: 'text', keywords: ['heading6'], run: command('core.heading.6') },
+    { id: 'h1', title: 'Heading 1', category: 'text', keywords: ['heading1', 'title'], ...listBlockCommand('core.heading.1') },
+    { id: 'h2', title: 'Heading 2', category: 'text', keywords: ['heading2'], ...listBlockCommand('core.heading.2') },
+    { id: 'h3', title: 'Heading 3', category: 'text', keywords: ['heading3'], ...listBlockCommand('core.heading.3') },
+    { id: 'h4', title: 'Heading 4', category: 'text', keywords: ['heading4'], ...listBlockCommand('core.heading.4') },
+    { id: 'h5', title: 'Heading 5', category: 'text', keywords: ['heading5'], ...listBlockCommand('core.heading.5') },
+    { id: 'h6', title: 'Heading 6', category: 'text', keywords: ['heading6'], ...listBlockCommand('core.heading.6') },
     { id: 'emoji', title: 'Emoji', category: 'text', keywords: ['smile', 'icon', 'symbol'], run: () => {} },
-    { id: 'ul', title: 'Bullet List', category: 'lists', keywords: ['list', 'unordered'], run: command('core.bulletList') },
-    { id: 'ol', title: 'Ordered List', category: 'lists', keywords: ['numbered'], run: command('core.orderedList') },
-    { id: 'checklist', title: 'Checklist Item', category: 'lists', keywords: ['todo', 'task', 'checkbox'], run: command('core.checklistItem') },
-    { id: 'code', title: 'Code Block', category: 'code', keywords: ['codeblock', 'snippet'], run: command('core.codeBlock') },
-    { id: 'math', title: 'Math Block', category: 'code', keywords: ['latex', 'formula', 'equation'], run: command('core.math.block.insert') },
+    { id: 'ul', title: 'Bullet List', category: 'lists', keywords: ['list', 'unordered'], ...listBlockCommand('core.bulletList') },
+    { id: 'ol', title: 'Ordered List', category: 'lists', keywords: ['numbered'], ...listBlockCommand('core.orderedList') },
+    { id: 'checklist', title: 'Checklist Item', category: 'lists', keywords: ['todo', 'task', 'checkbox'], ...listBlockCommand('core.checklistItem') },
+    { id: 'code', title: 'Code Block', category: 'code', keywords: ['codeblock', 'snippet'], ...listBlockCommand('core.codeBlock') },
+    { id: 'math', title: 'Math Block', category: 'code', keywords: ['latex', 'formula', 'equation'], ...listBlockCommand('core.math.block.insert') },
     { id: 'math-inline', title: 'Inline Math', category: 'code', keywords: ['latex', 'formula'], run: command('core.math.inline.insert') },
-    { id: 'image', title: 'Image', category: 'media', keywords: ['photo', 'asset', 'picture'], run: command('core.image.insert') },
-    { id: 'file', title: 'File Attachment', category: 'media', keywords: ['attach', 'upload', 'pdf', 'zip', 'document'], run: command('core.file.insert') },
-    { id: 'table', title: 'Table', category: 'media', keywords: ['grid', 'cells'], run: command('core.table.insert') },
-    { id: 'mermaid', title: 'Mermaid Diagram', category: 'media', keywords: ['diagram', 'flowchart', 'chart', 'graph', 'sequence'], run: command('core.mermaid.insert') },
-    { id: 'draw', title: 'Drawing', category: 'media', keywords: ['sketch', 'draw', 'excalidraw', 'canvas', 'hand', 'paint', 'whiteboard'], run: command('core.draw.insert') },
-    { id: 'markmap', title: 'Mind Map', category: 'media', keywords: ['mindmap', 'markmap', 'map', 'outline', 'tree', 'brainstorm'], run: command('core.markmap.insert') },
-    { id: 'chart', title: 'Chart', category: 'media', keywords: ['vega', 'vega-lite', 'chart', 'graph', 'visualization', 'plot', 'bar', 'line', 'pie'], run: command('core.vega.insert') },
-    { id: 'note-embed', title: 'Note Embed', category: 'media', keywords: ['embed', 'reference', 'card', 'page'], run: command('core.noteEmbed.insert') },
-    { id: 'embed', title: 'Embed', category: 'media', keywords: ['embed', 'youtube', 'video', 'figma', 'iframe', 'website', 'link'], run: command('core.embed.insert') },
-    { id: 'audio', title: 'Audio', category: 'media', keywords: ['sound', 'music', 'mp3', 'ogg'], run: command('core.media.audio.insert') },
-    { id: 'video', title: 'Video', category: 'media', keywords: ['film', 'mp4', 'movie', 'clip'], run: command('core.media.video.insert') },
-    { id: 'quote', title: 'Quote', category: 'layout', keywords: ['blockquote'], run: command('core.blockquote') },
-    { id: 'callout', title: 'Callout', category: 'layout', keywords: ['info', 'note'], run: command('core.callout') },
-    { id: 'toggle', title: 'Toggle', category: 'layout', keywords: ['toggle', 'collapsible', 'fold', 'collapse', 'details', 'spoiler'], run: command('core.toggle.insert') },
-    { id: 'divider', title: 'Divider', category: 'layout', keywords: ['separator', 'line', 'hr'], run: command('core.divider') },
+    { id: 'image', title: 'Image', category: 'media', keywords: ['photo', 'asset', 'picture'], ...listBlockCommand('core.image.insert') },
+    { id: 'file', title: 'File Attachment', category: 'media', keywords: ['attach', 'upload', 'pdf', 'zip', 'document'], ...listBlockCommand('core.file.insert') },
+    { id: 'table', title: 'Table', category: 'media', keywords: ['grid', 'cells'], ...listBlockCommand('core.table.insert') },
+    { id: 'database', title: 'Database', category: 'media', keywords: ['database', 'db', 'table', 'grid', 'chart', 'cards', 'list', 'csv', 'база', 'таблица'], ...listBlockCommand('core.database.insert') },
+    { id: 'mermaid', title: 'Mermaid Diagram', category: 'media', keywords: ['diagram', 'flowchart', 'chart', 'graph', 'sequence'], ...listBlockCommand('core.mermaid.insert') },
+    { id: 'draw', title: 'Drawing', category: 'media', keywords: ['sketch', 'draw', 'excalidraw', 'canvas', 'hand', 'paint', 'whiteboard'], ...listBlockCommand('core.draw.insert') },
+    { id: 'markmap', title: 'Mind Map', category: 'media', keywords: ['mindmap', 'markmap', 'map', 'outline', 'tree', 'brainstorm'], ...listBlockCommand('core.markmap.insert') },
+    { id: 'chart', title: 'Chart', category: 'media', keywords: ['vega', 'vega-lite', 'chart', 'graph', 'visualization', 'plot', 'bar', 'line', 'pie'], ...listBlockCommand('core.vega.insert') },
+    { id: 'note-embed', title: 'Note Embed', category: 'media', keywords: ['embed', 'reference', 'card', 'page'], ...listBlockCommand('core.noteEmbed.insert') },
+    { id: 'embed', title: 'Embed', category: 'media', keywords: ['embed', 'youtube', 'video', 'figma', 'iframe', 'website', 'link'], ...listBlockCommand('core.embed.insert') },
+    { id: 'audio', title: 'Audio', category: 'media', keywords: ['sound', 'music', 'mp3', 'ogg'], ...listBlockCommand('core.media.audio.insert') },
+    { id: 'video', title: 'Video', category: 'media', keywords: ['film', 'mp4', 'movie', 'clip'], ...listBlockCommand('core.media.video.insert') },
+    { id: 'quote', title: 'Quote', category: 'layout', keywords: ['blockquote'], ...listBlockCommand('core.blockquote') },
+    { id: 'callout', title: 'Callout', category: 'layout', keywords: ['info', 'note'], ...listBlockCommand('core.callout') },
+    { id: 'toggle', title: 'Toggle', category: 'layout', keywords: ['toggle', 'collapsible', 'fold', 'collapse', 'details', 'spoiler'], ...listBlockCommand('core.toggle.insert') },
+    { id: 'divider', title: 'Divider', category: 'layout', keywords: ['separator', 'line', 'hr'], ...listBlockCommand('core.divider') },
   ]
 }
 

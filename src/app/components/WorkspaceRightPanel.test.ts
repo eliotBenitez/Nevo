@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import { createPinia, setActivePinia } from 'pinia'
@@ -7,10 +7,6 @@ import WorkspaceRightPanel from './WorkspaceRightPanel.vue'
 import en from '../../locales/en.json'
 import type { NoteDocument } from '../../types/note'
 import { useNoteStore } from '../../stores/note'
-
-vi.mock('@tauri-apps/plugin-opener', () => ({
-  openUrl: vi.fn(),
-}))
 
 const SelectStub = defineComponent({
   name: 'NvSelect',

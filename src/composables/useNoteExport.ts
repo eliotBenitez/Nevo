@@ -1,23 +1,14 @@
 import { reactive, toRaw } from 'vue'
-import { useI18n } from 'vue-i18n'
 import type { NoteDocument } from '../types/note'
 import { noteCommands } from '../tauri/commands'
-import { serializeNoteToMarkdown } from '../utils/noteExport/markdownSerializer'
-import { serializeNoteToHtml } from '../utils/noteExport/htmlSerializer'
-import { buildTypstExport } from '../utils/noteExport/buildTypstExport'
 import { loadHyperformula } from '../editor-core/tableFormula'
 import type { DocxExportOptions } from '../utils/noteExport/docxOptions'
+import { normalizeDatabaseData, type DatabaseBlockDataV1 } from '../types/database-block'
+import { createDatabaseRepository } from '../features/database/databaseRepository'
 
 function sanitizeFilename(title: string, fallback: string): string {
   const safe = title.replace(/[/\\?%*:|"<>]/g, '-').trim()
   return safe || fallback
-}
-
-function exportStem(exportPath: string, fallback: string): string {
-  const filename = exportPath.split(/[\\/]/).pop() ?? ''
-  const dot = filename.lastIndexOf('.')
-  const stem = dot > 0 ? filename.slice(0, dot) : filename
-  return stem || fallback
 }
 
 function cloneNote(note: NoteDocument): NoteDocument {
@@ -30,9 +21,33 @@ function cloneNote(note: NoteDocument): NoteDocument {
   return JSON.parse(JSON.stringify(raw)) as NoteDocument
 }
 
-export function useNoteExport() {
-  const { t } = useI18n()
+/** Export serializers are synchronous, so hydrate v2 database references into
+ * a disposable v1-shaped clone before passing the note to them. */
+async function hydrateDatabasesForExport(note: NoteDocument, workspacePath: string): Promise<NoteDocument> {
+  const hydrated = cloneNote(note)
+  const repository = createDatabaseRepository(workspacePath)
+  const visit = async (node: NoteDocument['content']): Promise<void> => {
+    if (node.type === 'database_block') {
+      const data = normalizeDatabaseData(node.attrs?.data)
+      if (data.version === 2) {
+        const legacy: DatabaseBlockDataV1 = {
+          version: 1,
+          title: data.title,
+          fields: data.fields,
+          records: await repository.readAllRecords(data.databaseId),
+          activeView: data.activeView,
+          views: data.views,
+        }
+        node.attrs = { ...node.attrs, data: legacy }
+      }
+    }
+    for (const child of node.content ?? []) await visit(child)
+  }
+  await visit(hydrated.content)
+  return hydrated
+}
 
+export function useNoteExport() {
   const pdfPreview = reactive({
     open: false,
     note: null as NoteDocument | null,
@@ -46,29 +61,24 @@ export function useNoteExport() {
   })
 
   async function exportAsMarkdown(note: NoteDocument, workspacePath: string): Promise<void> {
+    const exportNote = await hydrateDatabasesForExport(note, workspacePath)
     const safeName = sanitizeFilename(note.title, `note-${note.id}`)
     const assetsSubfolderName = `${safeName}_assets`
     await loadHyperformula()
-    const { markdown, assetSrcs } = serializeNoteToMarkdown(note, assetsSubfolderName)
+    const { serializeNoteToMarkdownAsync } = await import('../utils/noteExport/markdownSerializer')
+    const { markdown, assetSrcs } = await serializeNoteToMarkdownAsync(exportNote, assetsSubfolderName)
 
-    let savePath: string | null | undefined
-    try {
-      const { save } = await import('@tauri-apps/plugin-dialog')
-      savePath = await save({
-        title: t('export.saveDialogTitle'),
-        defaultPath: `${safeName}.md`,
-        filters: [{ name: 'Markdown', extensions: ['md'] }],
-      })
-    } catch {
-      return
-    }
-    if (!savePath) return
-
-    await noteCommands.exportNoteMarkdown(workspacePath, savePath, markdown, assetSrcs)
+    await noteCommands.exportNoteMarkdown(
+      workspacePath,
+      `${safeName}.md`,
+      markdown,
+      assetSrcs,
+      assetsSubfolderName,
+    )
   }
 
-  function exportAsDocx(note: NoteDocument, workspacePath: string): void {
-    docxPreview.note = cloneNote(note)
+  async function exportAsDocx(note: NoteDocument, workspacePath: string): Promise<void> {
+    docxPreview.note = await hydrateDatabasesForExport(note, workspacePath)
     docxPreview.workspacePath = workspacePath
     docxPreview.open = true
   }
@@ -81,19 +91,6 @@ export function useNoteExport() {
   async function saveDocxWithOptions(note: NoteDocument, workspacePath: string, options: DocxExportOptions): Promise<void> {
     const safeName = sanitizeFilename(note.title, `note-${note.id}`)
 
-    let savePath: string | null | undefined
-    try {
-      const { save } = await import('@tauri-apps/plugin-dialog')
-      savePath = await save({
-        title: t('export.saveDocxDialogTitle'),
-        defaultPath: `${safeName}.docx`,
-        filters: [{ name: 'Word', extensions: ['docx'] }],
-      })
-    } catch {
-      return
-    }
-    if (!savePath) return
-
     await loadHyperformula()
     const [{ serializeNoteToDocx }, { createDocxExportHelpers }, { Packer }] = await Promise.all([
       import('../utils/noteExport/docxSerializer'),
@@ -104,57 +101,46 @@ export function useNoteExport() {
     const doc = await serializeNoteToDocx(note, helpers, options)
     const blob = await Packer.toBlob(doc)
     const bytes = Array.from(new Uint8Array(await blob.arrayBuffer()))
-    await noteCommands.exportNoteDocx(savePath, bytes)
+    await noteCommands.exportNoteDocx(`${safeName}.docx`, bytes)
   }
 
   async function exportAsHtml(note: NoteDocument, workspacePath: string): Promise<void> {
+    const exportNote = await hydrateDatabasesForExport(note, workspacePath)
     const safeName = sanitizeFilename(note.title, `note-${note.id}`)
 
-    let savePath: string | null | undefined
-    try {
-      const { save } = await import('@tauri-apps/plugin-dialog')
-      savePath = await save({
-        title: t('export.saveHtmlDialogTitle'),
-        defaultPath: `${safeName}.html`,
-        filters: [{ name: 'HTML', extensions: ['html'] }],
-      })
-    } catch {
-      return
-    }
-    if (!savePath) return
-
-    const assetsSubfolderName = `${exportStem(savePath, safeName)}_assets`
+    const assetsSubfolderName = `${safeName}_assets`
     await loadHyperformula()
-    const { html, assetSrcs } = await serializeNoteToHtml(note, assetsSubfolderName)
-    await noteCommands.exportNoteHtml(workspacePath, savePath, html, assetSrcs)
+    const { serializeNoteToHtml } = await import('../utils/noteExport/htmlSerializer')
+    const { html, assetSrcs } = await serializeNoteToHtml(exportNote, assetsSubfolderName)
+    await noteCommands.exportNoteHtml(
+      workspacePath,
+      `${safeName}.html`,
+      html,
+      assetSrcs,
+      assetsSubfolderName,
+    )
   }
 
   async function exportAsTypst(note: NoteDocument, workspacePath: string): Promise<void> {
+    const exportNote = await hydrateDatabasesForExport(note, workspacePath)
     const safeName = sanitizeFilename(note.title, `note-${note.id}`)
 
-    let savePath: string | null | undefined
-    try {
-      const { save } = await import('@tauri-apps/plugin-dialog')
-      savePath = await save({
-        title: t('export.saveTypstDialogTitle'),
-        defaultPath: `${safeName}-typst.zip`,
-        filters: [{ name: 'Typst archive', extensions: ['zip'] }],
-      })
-    } catch {
-      return
-    }
-    if (!savePath) return
-
-    const stem = exportStem(savePath, `${safeName}-typst`)
+    const stem = `${safeName}-typst`
     await loadHyperformula()
-    const { source, assets } = await buildTypstExport(note, undefined, {
+    const { buildTypstExport } = await import('../utils/noteExport/buildTypstExport')
+    const { source, assets } = await buildTypstExport(exportNote, undefined, {
       assetPathPrefix: `${stem}_assets/`,
     })
-    await noteCommands.exportNoteTypstArchive(workspacePath, savePath, source, assets)
+    await noteCommands.exportNoteTypstArchive(
+      workspacePath,
+      `${safeName}-typst.zip`,
+      source,
+      assets,
+    )
   }
 
-  function exportAsPdf(note: NoteDocument, workspacePath: string): void {
-    pdfPreview.note = cloneNote(note)
+  async function exportAsPdf(note: NoteDocument, workspacePath: string): Promise<void> {
+    pdfPreview.note = await hydrateDatabasesForExport(note, workspacePath)
     pdfPreview.workspacePath = workspacePath
     pdfPreview.open = true
   }

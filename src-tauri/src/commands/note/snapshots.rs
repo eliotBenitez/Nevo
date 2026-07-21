@@ -4,9 +4,9 @@ use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 use super::{
-    note_error_context, note_path, update_note_meta_in_tree, NoteDocument, NoteSnapshotMeta,
+    note_error_context, note_path, update_note_meta_in_manifest, NoteDocument, NoteSnapshotMeta,
 };
-use crate::commands::folder::{load_manifest, save_manifest};
+use crate::commands::folder::{load_manifest, manifest_lock, save_manifest};
 use crate::commands::path_utils::normalize_workspace_path;
 use crate::commands::workspace;
 use crate::logging::{LogContext, LogError};
@@ -250,7 +250,7 @@ pub fn restore_note_snapshot(
     snapshot_id: String,
 ) -> Result<NoteDocument, String> {
     let logger = crate::logging::logger();
-    let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
+    let workspace_path = normalize_workspace_path(&workspace_path).inspect_err(|message| {
         let _ = logger.error(
             "tauri.note",
             "restore_note_snapshot",
@@ -261,7 +261,6 @@ pub fn restore_note_snapshot(
                 details: None,
             }),
         );
-        message
     })?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let diagnostics_enabled = workspace::is_extended_diagnostics_enabled(&workspace_path);
@@ -311,50 +310,40 @@ pub fn restore_note_snapshot(
         );
         message
     })?;
-    write_note_snapshot(&workspace_path, &note).map_err(|message| {
+    write_note_snapshot(&workspace_path, &note).inspect_err(|message| {
         let _ = logger.error(
             "tauri.note",
             "restore_note_snapshot",
             "Failed to snapshot restored note",
             note_error_context(&workspace_path, "io", message.clone()),
         );
-        message
     })?;
 
-    let mut manifest = load_manifest(&workspace_path).map_err(|message| {
+    let manifest_lock = manifest_lock(&workspace_path);
+    let _manifest_guard = manifest_lock.lock().map_err(|error| error.to_string())?;
+    let mut manifest = load_manifest(&workspace_path).inspect_err(|message| {
         let _ = logger.error(
             "tauri.note",
             "restore_note_snapshot",
             "Failed to load workspace manifest",
             note_error_context(&workspace_path, "io", message.clone()),
         );
-        message
     })?;
-    if note.folder_id.is_none() {
-        for rn in manifest.root_notes.iter_mut() {
-            if rn.id == note.id {
-                rn.title = note.title.clone();
-                rn.icon = note.icon.clone();
-                rn.updated_at = note.updated_at.clone();
-            }
-        }
-    } else {
-        update_note_meta_in_tree(
-            &mut manifest.tree,
-            &note.id,
-            &note.title,
-            &note.icon,
-            &note.updated_at,
-        );
-    }
-    save_manifest(&workspace_path, &manifest).map_err(|message| {
+    update_note_meta_in_manifest(
+        &mut manifest.root_notes,
+        &mut manifest.tree,
+        &note.id,
+        &note.title,
+        &note.icon,
+        &note.updated_at,
+    );
+    save_manifest(&workspace_path, &manifest).inspect_err(|message| {
         let _ = logger.error(
             "tauri.note",
             "restore_note_snapshot",
             "Failed to save workspace manifest",
             note_error_context(&workspace_path, "io", message.clone()),
         );
-        message
     })?;
 
     let _ = logger.info(

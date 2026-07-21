@@ -5,6 +5,7 @@ import NvButton from '../../ui/primitives/NvButton.vue'
 import { useAppUpdater } from '../../composables/useAppUpdater'
 import { useFocusTrap } from '../../ui/composables/useFocusTrap'
 import { renderReleaseNotesHtml } from '../../utils/releaseNotesMarkdown'
+import { systemCommands } from '../../tauri/commands'
 
 const { t } = useI18n()
 const {
@@ -48,6 +49,13 @@ function onKeyDown(event: KeyboardEvent) {
   if (isDownloading.value) return
   event.preventDefault()
   dismiss()
+}
+
+function onNotesClick(event: MouseEvent) {
+  const anchor = (event.target as Element | null)?.closest('a[href]') as HTMLAnchorElement | null
+  if (!anchor) return
+  event.preventDefault()
+  void systemCommands.openExternalUrl(anchor.href)
 }
 
 const dialogRef = ref<HTMLElement | null>(null)
@@ -128,7 +136,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeyDown))
             <p class="updater-modal__body">{{ errorMessage || t('updater.errorBody') }}</p>
             <div class="updater-modal__actions">
               <NvButton @click="dismiss">{{ t('updater.close') }}</NvButton>
-              <NvButton variant="primary" @click="downloadAndInstall" v-if="availableVersion">
+              <NvButton v-if="availableVersion" variant="primary" @click="downloadAndInstall">
                 {{ t('updater.retry') }}
               </NvButton>
             </div>
@@ -149,7 +157,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeyDown))
               <div class="updater-modal__notes-label">{{ t('updater.whatsNew') }}</div>
               <div class="updater-modal__notes-scroll">
                 <!-- notesHtml is escaped + restricted to our own generated markup -->
-                <div class="updater-modal__notes" v-html="notesHtml" />
+                <div class="updater-modal__notes" @click="onNotesClick" v-html="notesHtml" />
               </div>
             </div>
 

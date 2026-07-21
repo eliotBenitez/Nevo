@@ -1343,6 +1343,8 @@
 }
 
 .settings-workspace-panel .sidebar-mode-card__preview {
+  position: relative;
+  overflow: hidden;
   height: 62px;
   border-radius: calc(7px * var(--radius-scale, 1));
   border: 1px solid var(--line-1);
@@ -1392,6 +1394,32 @@
 .settings-workspace-panel .sidebar-mode-card__preview--tag-preview .sidebar-mode-card__body span {
   height: 14px;
   border-radius: calc(5px * var(--radius-scale, 1));
+}
+
+.settings-workspace-panel .sidebar-mode-card__preview--docked .sidebar-mode-card__rail {
+  margin: -6px 0 -6px -6px;
+  padding: 8px 6px;
+  background: color-mix(in oklab, var(--canvas-2) 78%, transparent);
+  border-right: 1px solid var(--line-2);
+  justify-content: flex-start;
+}
+
+.settings-workspace-panel .sidebar-mode-card__preview--floating .sidebar-mode-card__body {
+  grid-column: 1 / -1;
+}
+
+.settings-workspace-panel .sidebar-mode-card__preview--floating .sidebar-mode-card__rail {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  bottom: 6px;
+  width: 26px;
+  padding: 7px 5px;
+  background: color-mix(in oklab, var(--canvas-2) 94%, var(--canvas-0));
+  border: 1px solid var(--line-2);
+  border-radius: calc(6px * var(--radius-scale, 1));
+  box-shadow: var(--shadow-pop);
+  z-index: 2;
 }
 
 .settings-workspace-panel .sidebar-mode-card__copy {

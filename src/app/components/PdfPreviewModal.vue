@@ -47,7 +47,13 @@ const loading = ref(false)
 const saving = ref(false)
 const error = ref<string | null>(null)
 const previewReady = ref(false)
-const previewPages = ref<string[]>([])
+const totalPages = ref(0)
+const previewToken = ref<number | null>(null)
+const pageUrls = ref<(string | null)[]>([])
+const pendingBatches = new Set<number>()
+const BATCH_SIZE = 6
+const previewSurfaceRef = ref<HTMLElement | null>(null)
+let pageObserver: IntersectionObserver | null = null
 let generationId = 0
 
 const documentToggles = [
@@ -74,19 +80,80 @@ const options = computed<PdfExportOptions>(() => ({
 
 const pageStyle = computed(() => (fitWidth.value ? { width: '100%' } : { width: `${zoom.value}%` }))
 
+// Real Typst page dimensions (mm) drive the placeholder's aspect ratio so the
+// scroll height stays correct before a page has actually been rendered.
+const pageAspect = computed(() => {
+  const isA4 = paperFormat.value === 'A4'
+  let width = isA4 ? 210 : 216
+  let height = isA4 ? 297 : 279
+  if (orientation.value === 'landscape') [width, height] = [height, width]
+  return `${width} / ${height}`
+})
+
+const slotStyle = computed(() => ({ ...pageStyle.value, aspectRatio: pageAspect.value }))
+
+function reobserveSlots() {
+  pageObserver?.disconnect()
+  pageObserver = null
+  const surface = previewSurfaceRef.value
+  if (!surface || typeof IntersectionObserver === 'undefined') return
+  pageObserver = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue
+      const index = Number((entry.target as HTMLElement).dataset.index)
+      if (Number.isNaN(index)) continue
+      void loadBatch(Math.floor(index / BATCH_SIZE) * BATCH_SIZE)
+    }
+  }, { root: surface, rootMargin: '600px 0px' })
+  surface.querySelectorAll<HTMLElement>('.pdf-preview__page-slot').forEach((slot) => {
+    pageObserver?.observe(slot)
+  })
+}
+
+async function loadBatch(start: number) {
+  if (previewToken.value == null) return
+  if (start < 0 || start >= totalPages.value) return
+  if (pendingBatches.has(start) || pageUrls.value[start] != null) return
+  pendingBatches.add(start)
+  const token = previewToken.value
+  const gen = generationId
+  try {
+    const pages = await noteCommands.renderNotePdfPreviewPages(token, start, BATCH_SIZE)
+    if (gen !== generationId || token !== previewToken.value) return
+    pages.forEach((b64, i) => {
+      pageUrls.value.splice(start + i, 1, `data:image/png;base64,${b64}`)
+    })
+  } catch (err) {
+    console.error(err)
+  } finally {
+    pendingBatches.delete(start)
+  }
+}
+
 async function regeneratePreview() {
   const currentGeneration = ++generationId
   loading.value = true
   error.value = null
   previewReady.value = false
-  previewPages.value = []
+  previewToken.value = null
+  totalPages.value = 0
+  pageUrls.value = []
+  pendingBatches.clear()
   try {
     const { source, assets } = await buildTypstExport(props.note, options.value)
-    const pages = await noteCommands.renderNotePdfPreview(props.workspacePath, source, assets)
+    const info = await noteCommands.prepareNotePdfPreview(props.workspacePath, source, assets)
     if (currentGeneration !== generationId) return
-    previewPages.value = pages.map(b64 => `data:image/png;base64,${b64}`)
+    previewToken.value = info.token
+    totalPages.value = info.totalPages
+    pageUrls.value = Array(info.totalPages).fill(null)
+    pendingBatches.clear()
     previewReady.value = true
-  } catch {
+    loading.value = false
+    await nextTick()
+    void loadBatch(0)
+    reobserveSlots()
+  } catch (err) {
+    console.error(err)
     if (currentGeneration === generationId) {
       error.value = t('export.pdfGenerateError')
       previewReady.value = false
@@ -102,17 +169,16 @@ async function savePdf() {
   saving.value = true
   try {
     const safeName = (props.note.title || 'note').replace(/[/\\?%*:|"<>]/g, '-').trim() || 'note'
-    const { save } = await import('@tauri-apps/plugin-dialog')
-    const savePath = await save({
-      title: t('export.saveDialogTitle'),
-      defaultPath: `${safeName}.pdf`,
-      filters: [{ name: 'PDF', extensions: ['pdf'] }],
-    })
-    if (!savePath) return
     const { source, assets } = await buildTypstExport(props.note, options.value)
-    await noteCommands.exportNotePdf(props.workspacePath, savePath, source, assets)
-    emit('close')
-  } catch {
+    const saved = await noteCommands.exportNotePdf(
+      props.workspacePath,
+      `${safeName}.pdf`,
+      source,
+      assets,
+    )
+    if (saved) emit('close')
+  } catch (err) {
+    console.error(err)
     error.value = t('export.pdfSaveError')
   } finally {
     saving.value = false
@@ -148,7 +214,11 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onWindowKeydown, true)
   generationId += 1
   previewReady.value = false
-  previewPages.value = []
+  previewToken.value = null
+  totalPages.value = 0
+  pageUrls.value = []
+  pendingBatches.clear()
+  pageObserver?.disconnect()
   open.value = false
 })
 </script>
@@ -321,18 +391,28 @@ onBeforeUnmount(() => {
             <div v-else-if="error" class="pdf-state pdf-state--error">{{ error }}</div>
             <div
               v-else-if="previewReady"
+              ref="previewSurfaceRef"
               class="pdf-preview__surface"
               role="document"
               :aria-label="t('export.pdfPreviewTitle')"
             >
-              <img
-                v-for="(page, index) in previewPages"
-                :key="index"
-                class="pdf-preview__page"
-                :src="page"
-                :style="pageStyle"
-                :alt="`${t('export.pdfPreviewTitle')} ${index + 1}`"
-              />
+              <div
+                v-for="i in totalPages"
+                :key="i"
+                class="pdf-preview__page-slot"
+                :style="slotStyle"
+                :data-index="i - 1"
+              >
+                <img
+                  v-if="pageUrls[i - 1]"
+                  class="pdf-preview__page"
+                  :src="pageUrls[i - 1]!"
+                  :alt="`${t('export.pdfPreviewTitle')} ${i}`"
+                />
+                <div v-else class="pdf-preview__page-placeholder">
+                  {{ t('export.previewLoadingPage') }}
+                </div>
+              </div>
             </div>
           </main>
         </div>

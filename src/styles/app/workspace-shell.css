@@ -28,6 +28,25 @@
 .workspace-sidebar-shell { flex: 0 0 var(--app-sidebar-width, 272px); width: var(--app-sidebar-width, 272px); overflow: hidden; transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), flex-basis 0.22s cubic-bezier(0.4, 0, 0.2, 1); contain: layout paint; }
 .workspace-sidebar-shell--tag-preview { --app-sidebar-width: clamp(420px, 28vw, 480px); }
 .workspace-sidebar-shell--hidden { flex-basis: 0; width: 0; }
+.workspace-sidebar-shell--floating {
+  position: absolute; left: 0; top: 0; bottom: 0; height: 100%;
+  z-index: 20; flex: none;
+  width: var(--app-sidebar-width, 272px);
+  transform: translateX(calc(-100% - 64px));
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 8px;
+  overflow: visible;
+  contain: none;
+}
+.workspace-sidebar-shell--floating.workspace-sidebar-shell--revealed { transform: translateX(0); }
+.workspace-sidebar-shell--floating .sidebar {
+  border-radius: calc(14px * var(--radius-scale, 1));
+  border: 1px solid var(--line-2);
+  box-shadow: var(--shadow-pop), 0 0 0 1px color-mix(in oklab, var(--canvas-0) 60%, transparent);
+  height: 100%;
+}
+.workspace-sidebar-edge-trigger { position: absolute; left: 0; top: 0; bottom: 0; width: 14px; z-index: 15; }
+.workspace-editor-pane-shell { flex: 1; display: flex; min-width: 0; min-height: 0; overflow: hidden; }
 .workspace-right-panel-shell { flex: 0 0 280px; width: 280px; overflow: hidden; transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), flex-basis 0.22s cubic-bezier(0.4, 0, 0.2, 1); contain: layout paint; }
 .workspace-right-panel-shell--hidden { flex-basis: 0; width: 0; }
 .workspace-sidebar-toggle { min-width: 28px; padding: 0 8px; opacity: 0.7; transition: opacity 0.15s; }

@@ -218,7 +218,7 @@ pub(crate) fn search_workspace_blocks_sync(
     query: String,
 ) -> Result<Vec<WorkspaceBlockSearchResult>, String> {
     let logger = crate::logging::logger();
-    let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
+    let workspace_path = normalize_workspace_path(&workspace_path).inspect_err(|message| {
         let _ = logger.error(
             "tauri.note",
             "search_workspace_blocks",
@@ -229,7 +229,6 @@ pub(crate) fn search_workspace_blocks_sync(
                 details: None,
             }),
         );
-        message
     })?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let normalized_query = normalize_search_text(&query);

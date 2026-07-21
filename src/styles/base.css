@@ -70,35 +70,17 @@ body {
   --transition-speed: 1.6;
 }
 
-/* ── Theme transitions ─────────────────────────────── */
-.theme-transitioning,
-.theme-transitioning *,
-.theme-transitioning *::before,
-.theme-transitioning *::after {
-  transition-property:
-    background-color,
-    color,
-    border-color,
-    box-shadow,
-    fill,
-    stroke,
-    caret-color,
-    outline-color;
-  transition-duration: 420ms;
-  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+/* ── Theme transitions (GPU crossfade via View Transitions API) ── */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 260ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-
-.theme-transitioning .nv-canvas {
-  transition-property:
-    background,
-    background-color,
-    color,
-    border-color,
-    box-shadow,
-    fill,
-    stroke,
-    caret-color,
-    outline-color;
+/* Reduced-motion: псевдодерево перехода живёт вне обычного DOM, поэтому правило
+   [data-motion="reduce"] * его не покрывает — гасим анимацию явно. */
+:root[data-motion="reduce"]::view-transition-old(root),
+:root[data-motion="reduce"]::view-transition-new(root) {
+  animation-duration: 0.01ms;
 }
 
 /* ── Scrollbars ──────────────────────────────────────── */
@@ -123,6 +105,12 @@ body {
 
 /* ── Interface zoom ──────────────────────────────────── */
 .nv-app { zoom: var(--ui-scale, 1); }
+/* WebView2 scales the visual `zoom` box but keeps its pre-scaled layout
+   dimensions. WebKitGTK does not, so this compensation must stay Windows-only. */
+:root[data-platform="windows"] .nv-app {
+  width: calc(100% / var(--ui-scale, 1));
+  height: calc(100dvh / var(--ui-scale, 1));
+}
 
 /* ── Reduce transparency ─────────────────────────────── */
 /* When transparency is reduced, override the glass-* color tokens at the root

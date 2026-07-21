@@ -56,8 +56,8 @@ export interface WorkspaceBackend {
   listPlugins(): Promise<PluginManifest[]>
   setPluginEnabled(pluginId: string, enabled: boolean): Promise<void>
   marketplaceListPlugins(forceRefresh?: boolean): Promise<MarketplaceCatalog>
-  marketplaceInstallPlugin(pluginId: string, version?: string): Promise<PluginManifest>
-  marketplaceUpdatePlugin(pluginId: string): Promise<PluginManifest>
+  marketplaceInstallPlugin(pluginId: string, permissionFingerprint: string, version?: string): Promise<PluginManifest>
+  marketplaceUpdatePlugin(pluginId: string, permissionFingerprint: string): Promise<PluginManifest>
   marketplaceRemovePlugin(pluginId: string): Promise<void>
   marketplaceRefreshCache(): Promise<MarketplaceCatalog>
   getDiagnostics(): Promise<WorkspaceDiagnostics>
@@ -86,7 +86,6 @@ export interface WorkspaceBackend {
 
   // --- assets (images / files) ---
   importImageAsset(fileName: string, bytes: number[]): Promise<ImportedImageAsset>
-  importAssetByPath(sourcePath: string, fileName: string): Promise<ImportedImageAsset>
   /** Download a remote image URL and import it into the workspace assets. */
   importImageFromUrl(url: string): Promise<ImportedImageAsset>
   deleteUnreferencedAsset(assetSrc: string): Promise<boolean>

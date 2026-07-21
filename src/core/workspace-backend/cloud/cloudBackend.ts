@@ -314,11 +314,6 @@ export class CloudBackend implements WorkspaceBackend {
     return { src, hash: id, deduplicated: false, bytes: raw.length }
   }
 
-  importAssetByPath(): Promise<ImportedImageAsset> {
-    // Path-based import needs Tauri filesystem access; unsupported for cloud v1.
-    return Promise.reject(new Error('Importing assets by path is not supported for cloud storages'))
-  }
-
   async importImageFromUrl(url: string): Promise<ImportedImageAsset> {
     // No Rust downloader for cloud; fetch in the webview (subject to CORS) and
     // upload the encrypted bytes like any other pasted image.

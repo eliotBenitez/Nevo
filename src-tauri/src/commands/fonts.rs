@@ -1,47 +1,47 @@
+use fontdb::Database;
+
 #[tauri::command]
-pub fn list_system_fonts() -> Vec<String> {
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
-    {
-        use std::process::Command;
-        match Command::new("fc-list").args([":", "family"]).output() {
-            Ok(out) => {
-                let stdout = String::from_utf8_lossy(&out.stdout);
-                let mut families: Vec<String> = stdout
-                    .lines()
-                    .flat_map(|line| line.split(','))
-                    .map(|s| s.trim().to_string())
-                    .filter(|s| !s.is_empty())
-                    .collect();
-                families.sort_unstable();
-                families.dedup();
-                families
-            }
-            Err(_) => vec![],
-        }
-    }
-    #[cfg(target_os = "windows")]
-    {
-        use std::process::Command;
-        match Command::new("powershell")
-            .args([
-                "-NoProfile",
-                "-Command",
-                "(New-Object System.Drawing.Text.InstalledFontCollection).Families.Name",
-            ])
-            .output()
-        {
-            Ok(out) => {
-                let stdout = String::from_utf8_lossy(&out.stdout);
-                let mut families: Vec<String> = stdout
-                    .lines()
-                    .map(|s| s.trim().to_string())
-                    .filter(|s| !s.is_empty())
-                    .collect();
-                families.sort_unstable();
-                families.dedup();
-                families
-            }
-            Err(_) => vec![],
-        }
+pub async fn list_system_fonts() -> Vec<String> {
+    tauri::async_runtime::spawn_blocking(system_font_families)
+        .await
+        .unwrap_or_default()
+}
+
+fn system_font_families() -> Vec<String> {
+    let mut database = Database::new();
+    database.load_system_fonts();
+
+    normalize_font_families(
+        database
+            .faces()
+            .flat_map(|face| face.families.iter().map(|(family, _)| family.clone())),
+    )
+}
+
+fn normalize_font_families(families: impl IntoIterator<Item = String>) -> Vec<String> {
+    let mut families = families
+        .into_iter()
+        .map(|family| family.trim().to_owned())
+        .filter(|family| !family.is_empty())
+        .collect::<Vec<_>>();
+    families.sort_unstable();
+    families.dedup();
+    families
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_font_families;
+
+    #[test]
+    fn normalizes_system_font_families() {
+        let families = normalize_font_families([
+            "  Inter  ".to_string(),
+            String::new(),
+            "Arial".to_string(),
+            "Inter".to_string(),
+        ]);
+
+        assert_eq!(families, ["Arial", "Inter"]);
     }
 }

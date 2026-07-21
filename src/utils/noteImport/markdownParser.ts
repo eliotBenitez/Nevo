@@ -5,6 +5,7 @@ import remarkMath from 'remark-math'
 import type { Root, Content, PhrasingContent, ListItem } from 'mdast'
 import type { BlockNode } from '../../types/note'
 import { getPluginNodeImporter } from '../../editor-core/plugin-host/active-serialization'
+import { normalizeDisplayMath } from './markdownMath'
 
 export interface ParsedMarkdown {
   title: string
@@ -129,7 +130,11 @@ function cellParagraph(cells: PhrasingContent[], resolver?: WikiLinkResolver): B
   return content.length ? { type: 'paragraph', content } : { type: 'paragraph' }
 }
 
-function listItemToNode(item: ListItem, resolver?: WikiLinkResolver): BlockNode {
+function listItemToNode(
+  item: ListItem,
+  resolver?: WikiLinkResolver,
+  asyncImports?: WeakMap<object, BlockNode | null>,
+): BlockNode {
   // Checklist item: content is inline*
   if (typeof item.checked === 'boolean') {
     const content: BlockNode[] = []
@@ -139,11 +144,15 @@ function listItemToNode(item: ListItem, resolver?: WikiLinkResolver): BlockNode 
     return { type: 'checklist_item', attrs: { checked: item.checked }, content }
   }
   // Regular list item: content is paragraph block*
-  const content = item.children.flatMap((child) => blockToNodes(child, resolver))
+  const content = item.children.flatMap((child) => blockToNodes(child, resolver, asyncImports))
   return { type: 'list_item', content: content.length ? content : [{ type: 'paragraph' }] }
 }
 
-function blockToNodes(node: Content, resolver?: WikiLinkResolver): BlockNode[] {
+function blockToNodes(
+  node: Content,
+  resolver?: WikiLinkResolver,
+  asyncImports?: WeakMap<object, BlockNode | null>,
+): BlockNode[] {
   switch (node.type) {
     case 'paragraph': {
       // Standalone image → image_block
@@ -162,25 +171,32 @@ function blockToNodes(node: Content, resolver?: WikiLinkResolver): BlockNode[] {
       if (node.lang === 'mermaid') {
         return [{ type: 'mermaid_block', attrs: { code: node.value } }]
       }
+      if (asyncImports?.has(node)) {
+        const imported = asyncImports.get(node)
+        if (imported) return [imported]
+      }
       if (node.lang) {
         const importer = getPluginNodeImporter(node.lang)
         const imported = importer?.fromFenced(node.value)
-        if (imported) return [imported as BlockNode]
+        if (imported && !(imported instanceof Promise)) return [imported as BlockNode]
       }
       const content = node.value ? [{ type: 'text', text: node.value }] : []
       return [{ type: 'code_block', attrs: { language: node.lang ?? null }, content }]
     }
     case 'blockquote': {
-      const content = node.children.flatMap((child) => blockToNodes(child, resolver))
+      const content = node.children.flatMap((child) => blockToNodes(child, resolver, asyncImports))
       return [{ type: 'blockquote', content: content.length ? content : [{ type: 'paragraph' }] }]
     }
     case 'list': {
       const isChecklist = node.children.some(item => typeof item.checked === 'boolean')
       if (isChecklist) {
-        return node.children.map((item) => listItemToNode(item, resolver))
+        return node.children.map((item) => listItemToNode(item, resolver, asyncImports))
       }
       const listType = node.ordered ? 'ordered_list' : 'bullet_list'
-      return [{ type: listType, content: node.children.map((item) => listItemToNode(item, resolver)) }]
+      return [{
+        type: listType,
+        content: node.children.map((item) => listItemToNode(item, resolver, asyncImports)),
+      }]
     }
     case 'table': {
       const rows = node.children.map((row, rowIndex) => ({
@@ -205,15 +221,29 @@ function blockToNodes(node: Content, resolver?: WikiLinkResolver): BlockNode[] {
   }
 }
 
-export function parseMarkdownToBlockNode(markdown: string, fallbackTitle: string, resolver?: WikiLinkResolver): ParsedMarkdown {
-  const tree = processor.parse(markdown) as Root
+export interface ParseMarkdownOptions {
+  /** When false, the first H1 is left in `content` as a regular heading node
+   *  and `title` is always `fallbackTitle`. Used by importers (e.g. Obsidian)
+   *  where the note title comes from the filename and the body H1 must be
+   *  preserved verbatim. Defaults to true (existing H1-as-title behavior). */
+  extractTitle?: boolean
+}
+
+export function parseMarkdownToBlockNode(
+  markdown: string,
+  fallbackTitle: string,
+  resolver?: WikiLinkResolver,
+  options?: ParseMarkdownOptions,
+): ParsedMarkdown {
+  const extractTitle = options?.extractTitle ?? true
+  const tree = processor.parse(normalizeDisplayMath(markdown)) as Root
   let title = fallbackTitle
   let titleExtracted = false
   const blocks: BlockNode[] = []
 
   for (const node of tree.children) {
     // Extract first H1 as note title
-    if (!titleExtracted && node.type === 'heading' && node.depth === 1) {
+    if (extractTitle && !titleExtracted && node.type === 'heading' && node.depth === 1) {
       title = inlineToContent(node.children as PhrasingContent[], [], resolver)
         .filter(n => n.type === 'text')
         .map(n => n.text ?? '')
@@ -228,4 +258,48 @@ export function parseMarkdownToBlockNode(markdown: string, fallbackTitle: string
     title,
     content: { type: 'doc', content: blocks },
   }
+}
+
+async function collectAsyncImports(
+  node: unknown,
+  imports: WeakMap<object, BlockNode | null>,
+): Promise<void> {
+  if (!node || typeof node !== 'object') return
+  const record = node as { type?: string; lang?: string | null; value?: string; children?: unknown[] }
+  if (record.type === 'code' && record.lang) {
+    const importer = getPluginNodeImporter(record.lang)
+    if (importer) {
+      const imported = await importer.fromFenced(record.value ?? '')
+      imports.set(node, imported as BlockNode | null)
+    }
+  }
+  await Promise.all((record.children ?? []).map(child => collectAsyncImports(child, imports)))
+}
+
+/** Worker-aware Markdown import used by file import flows. */
+export async function parseMarkdownToBlockNodeAsync(
+  markdown: string,
+  fallbackTitle: string,
+  resolver?: WikiLinkResolver,
+  options?: ParseMarkdownOptions,
+): Promise<ParsedMarkdown> {
+  const extractTitle = options?.extractTitle ?? true
+  const tree = processor.parse(normalizeDisplayMath(markdown)) as Root
+  const imports = new WeakMap<object, BlockNode | null>()
+  await collectAsyncImports(tree, imports)
+  let title = fallbackTitle
+  let titleExtracted = false
+  const blocks: BlockNode[] = []
+  for (const node of tree.children) {
+    if (extractTitle && !titleExtracted && node.type === 'heading' && node.depth === 1) {
+      title = inlineToContent(node.children as PhrasingContent[], [], resolver)
+        .filter(value => value.type === 'text')
+        .map(value => value.text ?? '')
+        .join('')
+      titleExtracted = true
+      continue
+    }
+    blocks.push(...blockToNodes(node, resolver, imports))
+  }
+  return { title, content: { type: 'doc', content: blocks } }
 }

@@ -32,6 +32,8 @@ import { createFileAttrsCommand, createInsertFileCommand, createRemoveFileComman
 import { createInsertNoteEmbedCommand, createNoteEmbedAttrsCommand } from './note-embed'
 import { createInsertEmbedCommand, createEmbedAttrsCommand } from './embed'
 import { createInsertMediaBlockCommand, createMediaBlockAttrsCommand } from './media'
+import { createInsertDatabaseCommand, createDatabaseDataCommand } from './database'
+import type { DatabaseBlockData } from '../../types/database-block'
 import { createInsertBlockCommand, createCodeLanguageCommand, createSetNodeAttrsCommand } from './utils'
 import { createInsertToggleCommand, createToggleCollapseCommand } from './toggle'
 
@@ -114,6 +116,7 @@ export function createCoreCommands(schema: Schema) {
   const noteEmbed = schema.nodes.note_embed
   const embedBlock = schema.nodes.embed_block
   const mediaBlock = schema.nodes.media_block
+  const databaseBlock = schema.nodes.database_block
   const toggle = schema.nodes.toggle
   const toggleTitle = schema.nodes.toggle_title
 
@@ -250,6 +253,7 @@ export function createCoreCommands(schema: Schema) {
     commands.set('core.media.audio.insert', createInsertMediaBlockCommand(mediaBlock, 'audio'))
     commands.set('core.media.video.insert', createInsertMediaBlockCommand(mediaBlock, 'video'))
   }
+  if (databaseBlock) commands.set('core.database.insert', createInsertDatabaseCommand(databaseBlock))
   if (toggle && toggleTitle && paragraph) commands.set('core.toggle.insert', createInsertToggleCommand(toggle, toggleTitle, paragraph))
   if (toggle) commands.set('core.toggle.collapse', createToggleCollapseCommand(toggle))
 
@@ -258,6 +262,7 @@ export function createCoreCommands(schema: Schema) {
   const setNoteEmbedAttrsAtSelection = noteEmbed ? (attrs: Partial<NoteEmbedAttrs>) => createNoteEmbedAttrsCommand(noteEmbed, attrs) : () => () => false
   const setMediaBlockAttrsAtSelection = mediaBlock ? (attrs: Partial<MediaBlockAttrs>) => createMediaBlockAttrsCommand(mediaBlock, attrs) : () => () => false
   const setEmbedAttrsAtSelection = embedBlock ? (attrs: Partial<EmbedBlockAttrs>) => createEmbedAttrsCommand(embedBlock, attrs) : () => () => false
+  const setDatabaseDataAtSelection = databaseBlock ? (data: DatabaseBlockData) => createDatabaseDataCommand(databaseBlock, data) : () => () => false
   const setCalloutIcon = callout ? (icon: string) => createSetNodeAttrsCommand(callout, (node) => ({ ...node.attrs, icon })) : () => () => false
   const setCalloutVariant = callout ? (variant: string) => createSetNodeAttrsCommand(callout, (node) => ({ ...node.attrs, variant })) : () => () => false
 
@@ -349,5 +354,6 @@ export function createCoreCommands(schema: Schema) {
     setNoteEmbedAttrsAtSelection,
     setMediaBlockAttrsAtSelection,
     setEmbedAttrsAtSelection,
+    setDatabaseDataAtSelection,
   }
 }

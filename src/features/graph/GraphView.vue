@@ -63,7 +63,9 @@ onMounted(() => {
     if (getActivePinia()) {
       showLabels.value = useWorkspaceStore().settings.workspace.showGraphLabels
     }
-  } catch {}
+  } catch {
+    // The workspace store is unavailable in isolated graph renders.
+  }
   if (props.workspacePath && props.manifest) loadGraph()
 })
 
@@ -107,7 +109,9 @@ watch(snapshot, (snap) => {
       if (workspaceStore.settings.workspace.graphEntryMode === 'from-current-note') {
         focus.focusedNodeId.value = props.activeNoteId
       }
-    } catch {}
+    } catch {
+      // The workspace store is unavailable in isolated graph renders.
+    }
   }
 }, { immediate: true })
 

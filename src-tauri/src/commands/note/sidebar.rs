@@ -34,7 +34,7 @@ pub(crate) fn list_sidebar_note_previews_impl(
     workspace_path: String,
 ) -> Result<Vec<SidebarNotePreview>, String> {
     let logger = crate::logging::logger();
-    let workspace_path = normalize_workspace_path(&workspace_path).map_err(|message| {
+    let workspace_path = normalize_workspace_path(&workspace_path).inspect_err(|message| {
         let _ = logger.error(
             "tauri.note",
             "list_sidebar_note_previews",
@@ -45,17 +45,15 @@ pub(crate) fn list_sidebar_note_previews_impl(
                 details: None,
             }),
         );
-        message
     })?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
-    let manifest = load_manifest(&workspace_path).map_err(|message| {
+    let manifest = load_manifest(&workspace_path).inspect_err(|message| {
         let _ = logger.error(
             "tauri.note",
             "list_sidebar_note_previews",
             "Failed to load workspace manifest",
             note_error_context(&workspace_path, "io", message.clone()),
         );
-        message
     })?;
 
     let mut entries: Vec<(NoteMeta, String)> = manifest

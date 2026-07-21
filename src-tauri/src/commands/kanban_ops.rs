@@ -4,7 +4,7 @@ use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
-use super::kanban::{KanbanBoard, KanbanCard};
+use super::kanban::{touch_board_updated_at, KanbanBoard, KanbanCard};
 use super::path_utils::{normalize_workspace_path, validate_id, write_atomic};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
@@ -84,7 +84,27 @@ fn parse_defs(v: &Value) -> Vec<PropDef> {
 // ── kanban_move_card ─────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn kanban_move_card(
+pub async fn kanban_move_card(
+    workspace_path: String,
+    board_id: String,
+    card_id: String,
+    to_column_option_id: String,
+    target_index: i64,
+) -> Result<Vec<KanbanCard>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        kanban_move_card_sync(
+            workspace_path,
+            board_id,
+            card_id,
+            to_column_option_id,
+            target_index,
+        )
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+fn kanban_move_card_sync(
     workspace_path: String,
     board_id: String,
     card_id: String,
@@ -153,6 +173,13 @@ pub fn kanban_move_card(
         save_card(&wp, &board_id, c)?;
     }
 
+    if let Err(e) = touch_board_updated_at(Path::new(&wp), &board_id) {
+        eprintln!(
+            "kanban_move_card: failed to touch board {} updated_at: {}",
+            board_id, e
+        );
+    }
+
     let changed: HashSet<&str> = to_write.iter().map(|c| c.id.as_str()).collect();
     let mut result: Vec<KanbanCard> = all
         .into_iter()
@@ -166,7 +193,20 @@ pub fn kanban_move_card(
 // ── kanban_save_board_schema ─────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn kanban_save_board_schema(
+pub async fn kanban_save_board_schema(
+    workspace_path: String,
+    board_id: String,
+    property_definitions: Value,
+    column_remap: Option<Value>,
+) -> Result<KanbanBoard, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        kanban_save_board_schema_sync(workspace_path, board_id, property_definitions, column_remap)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+fn kanban_save_board_schema_sync(
     workspace_path: String,
     board_id: String,
     property_definitions: Value,
@@ -192,7 +232,7 @@ pub fn kanban_save_board_schema(
     if new_status.type_ != "select" {
         return Err("Status property must remain 'select'".into());
     }
-    if new_status.options.as_ref().map_or(true, |o| o.is_empty()) {
+    if new_status.options.as_ref().is_none_or(|o| o.is_empty()) {
         return Err("Status property must have at least one option".into());
     }
     let mut seen = HashSet::new();
@@ -219,7 +259,7 @@ pub fn kanban_save_board_schema(
         .filter(|p| {
             new_map
                 .get(p.id.as_str())
-                .map_or(false, |n| n.type_ != p.type_)
+                .is_some_and(|n| n.type_ != p.type_)
         })
         .map(|p| p.id.as_str())
         .collect();
@@ -322,7 +362,7 @@ pub fn kanban_save_board_schema(
                         if let Some(arr) = props.get(*pid).and_then(|v| v.as_array()).cloned() {
                             let filtered: Vec<Value> = arr
                                 .into_iter()
-                                .filter(|v| v.as_str().map_or(true, |s| !del.contains(s)))
+                                .filter(|v| v.as_str().is_none_or(|s| !del.contains(s)))
                                 .collect();
                             props.insert(pid.to_string(), Value::Array(filtered));
                             changed = true;
@@ -369,8 +409,10 @@ mod tests {
         let ws = workspace.to_string_lossy().into_owned();
         let evil = "../../victim".to_string();
 
-        assert!(kanban_move_card(ws.clone(), evil.clone(), "c".into(), "col".into(), 0).is_err());
-        assert!(kanban_move_card(
+        assert!(
+            kanban_move_card_sync(ws.clone(), evil.clone(), "c".into(), "col".into(), 0).is_err()
+        );
+        assert!(kanban_move_card_sync(
             ws.clone(),
             "valid-board".into(),
             evil.clone(),
@@ -378,13 +420,108 @@ mod tests {
             0
         )
         .is_err());
-        assert!(
-            kanban_save_board_schema(ws.clone(), evil.clone(), Value::Array(vec![]), None).is_err()
-        );
+        assert!(kanban_save_board_schema_sync(
+            ws.clone(),
+            evil.clone(),
+            Value::Array(vec![]),
+            None
+        )
+        .is_err());
 
         assert!(
             victim.join("secret.txt").exists(),
             "victim file must remain untouched by rejected calls"
+        );
+
+        std::fs::remove_dir_all(&base).ok();
+    }
+
+    /// `kanban_move_card` must bump the parent board's `updated_at` so the
+    /// workspace home "recently modified" list reacts to card moves, not
+    /// just direct board edits. Seed a far-past timestamp before the move
+    /// (rather than relying on strict `>` between two calls that could land
+    /// in the same RFC3339 second) so the assertion cannot flake.
+    #[test]
+    fn move_card_bumps_board_updated_at() {
+        let base =
+            std::env::temp_dir().join(format!("nevo-kanban-ops-touch-{}", uuid::Uuid::new_v4()));
+        let workspace = base.join("workspace");
+        std::fs::create_dir_all(&workspace).unwrap();
+        let ws = workspace.to_string_lossy().into_owned();
+
+        let board_id = "board1".to_string();
+        let card_id = "card1".to_string();
+        let status_id = "status".to_string();
+        let old_ts = "2000-01-01T00:00:00+00:00".to_string();
+
+        let board = KanbanBoard {
+            id: board_id.clone(),
+            title: "Board".into(),
+            icon: "🗂️".into(),
+            folder_id: None,
+            status_property_id: status_id.clone(),
+            property_definitions: serde_json::json!([{
+                "id": status_id,
+                "name": "Status",
+                "type": "select",
+                "options": [
+                    { "id": "col-a", "name": "A", "color": "#000" },
+                    { "id": "col-b", "name": "B", "color": "#000" }
+                ],
+                "order": 0
+            }]),
+            wip: None,
+            automations: None,
+            templates: None,
+            view_settings: None,
+            created_at: old_ts.clone(),
+            updated_at: old_ts.clone(),
+        };
+        std::fs::create_dir_all(boards_dir(&ws)).unwrap();
+        std::fs::write(
+            board_file(&ws, &board_id),
+            serde_json::to_string_pretty(&board).unwrap(),
+        )
+        .unwrap();
+
+        let mut props = serde_json::Map::new();
+        props.insert(status_id.clone(), Value::String("col-a".into()));
+        let card = KanbanCard {
+            id: card_id.clone(),
+            board_id: board_id.clone(),
+            title: "Card".into(),
+            icon: None,
+            content: serde_json::json!({ "type": "doc", "content": [] }),
+            properties: Value::Object(props),
+            fields: Value::Array(vec![]),
+            column_order: 0,
+            progress: None,
+            priority: None,
+            links: Value::Array(vec![]),
+            created_at: old_ts.clone(),
+            updated_at: old_ts.clone(),
+        };
+        std::fs::create_dir_all(cards_dir(&ws, &board_id)).unwrap();
+        save_card(&ws, &board_id, &card).unwrap();
+
+        let old_dt = chrono::DateTime::parse_from_rfc3339(&old_ts).unwrap();
+
+        kanban_move_card_sync(
+            ws.clone(),
+            board_id.clone(),
+            card_id.clone(),
+            "col-b".into(),
+            0,
+        )
+        .unwrap();
+
+        let updated_board: KanbanBoard =
+            serde_json::from_str(&std::fs::read_to_string(board_file(&ws, &board_id)).unwrap())
+                .unwrap();
+        let new_dt = chrono::DateTime::parse_from_rfc3339(&updated_board.updated_at).unwrap();
+        assert!(
+            new_dt > old_dt,
+            "kanban_move_card must bump board.updated_at"
         );
 
         std::fs::remove_dir_all(&base).ok();

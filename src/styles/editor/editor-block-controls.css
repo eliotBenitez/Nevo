@@ -6,6 +6,15 @@
   align-items: flex-start;
   gap: 0;
   transform: translateX(-100%);
+  /* Let the handle own touch gestures (drag to reorder) instead of the page scrolling. */
+  touch-action: none;
+}
+
+/* Touch layouts have no wide left gutter, so the -100% shift would push the
+   tap-revealed handle off-screen. Drop it and let the handle sit in the left
+   margin (its left is already clamped on-screen by resolveBlockHandlePosition). */
+@media (pointer: coarse) {
+  .block-handle { transform: none; }
 }
 
 .block-handle__btn {

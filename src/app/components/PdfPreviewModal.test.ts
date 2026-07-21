@@ -10,17 +10,15 @@ import { buildTypstExport } from '../../utils/noteExport/buildTypstExport'
 
 vi.mock('../../tauri/commands', () => ({
   noteCommands: {
-    renderNotePdfPreview: vi.fn(async () => ['cGFnZTE=', 'cGFnZTI=']),
-    exportNotePdf: vi.fn(async () => {}),
+    prepareNotePdfPreview: vi.fn(async () => ({ token: 1, totalPages: 2 })),
+    renderNotePdfPreviewPages: vi.fn(async () => ['cGFnZTE=', 'cGFnZTI=']),
+    exportNotePdf: vi.fn(async () => true),
   },
 }))
 
 vi.mock('../../utils/noteExport/buildTypstExport', () => ({
   buildTypstExport: vi.fn(async () => ({ source: '#set page()', assets: [] })),
 }))
-
-const saveMock = vi.fn(async (..._args: unknown[]) => '/out/note.pdf')
-vi.mock('@tauri-apps/plugin-dialog', () => ({ save: (...args: unknown[]) => saveMock(...args) }))
 
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
@@ -54,11 +52,18 @@ function mountModal() {
 }
 
 describe('PdfPreviewModal', () => {
+  let previewTokenCounter = 0
+
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(noteCommands.renderNotePdfPreview).mockResolvedValue(['cGFnZTE=', 'cGFnZTI='])
+    previewTokenCounter = 0
+    vi.mocked(noteCommands.prepareNotePdfPreview).mockImplementation(async () => ({
+      token: ++previewTokenCounter,
+      totalPages: 2,
+    }))
+    vi.mocked(noteCommands.renderNotePdfPreviewPages).mockResolvedValue(['cGFnZTE=', 'cGFnZTI='])
+    vi.mocked(noteCommands.exportNotePdf).mockResolvedValue(true)
     vi.mocked(buildTypstExport).mockResolvedValue({ source: '#set page()', assets: [] })
-    saveMock.mockResolvedValue('/out/note.pdf')
   })
 
   afterEach(() => {
@@ -70,17 +75,17 @@ describe('PdfPreviewModal', () => {
     await flushPdfModal()
 
     expect(noteCommands.exportNotePdf).not.toHaveBeenCalled()
-    expect(noteCommands.renderNotePdfPreview).toHaveBeenCalledTimes(1)
+    expect(noteCommands.prepareNotePdfPreview).toHaveBeenCalledTimes(1)
     expect(wrapper.findAll('.pdf-preview__page')).toHaveLength(2)
 
     await wrapper.findAll('.pdf-stepper__btn')[1]!.trigger('click')
     await flushPdfModal()
 
-    expect(noteCommands.renderNotePdfPreview).toHaveBeenCalledTimes(2)
+    expect(noteCommands.prepareNotePdfPreview).toHaveBeenCalledTimes(2)
     expect(vi.mocked(buildTypstExport).mock.calls[1]?.[1]?.fontSize).toBe(12)
   })
 
-  it('exports the PDF via save dialog when saving', async () => {
+  it('asks the backend to export the PDF when saving', async () => {
     const wrapper = mountModal()
     await flushPdfModal()
 
@@ -89,25 +94,25 @@ describe('PdfPreviewModal', () => {
     await saveButton.trigger('click')
     await flushPdfModal()
 
-    expect(saveMock).toHaveBeenCalledOnce()
     expect(noteCommands.exportNotePdf).toHaveBeenCalledWith(
       '/workspace',
-      '/out/note.pdf',
+      'PDF Note.pdf',
       '#set page()',
       [],
     )
     expect(wrapper.emitted('close')).toBeTruthy()
   })
 
-  it('does not export when the save dialog is cancelled', async () => {
-    saveMock.mockResolvedValueOnce(null as never)
+  it('stays open when the backend save dialog is cancelled', async () => {
+    vi.mocked(noteCommands.exportNotePdf).mockResolvedValueOnce(false)
     const wrapper = mountModal()
     await flushPdfModal()
 
     await wrapper.find('.nv-btn--primary').trigger('click')
     await flushPdfModal()
 
-    expect(noteCommands.exportNotePdf).not.toHaveBeenCalled()
+    expect(noteCommands.exportNotePdf).toHaveBeenCalledOnce()
+    expect(wrapper.emitted('close')).toBeFalsy()
   })
 
   it('shows an error when export fails', async () => {
@@ -122,7 +127,7 @@ describe('PdfPreviewModal', () => {
   })
 
   it('shows generation errors and closes on Escape', async () => {
-    vi.mocked(noteCommands.renderNotePdfPreview).mockRejectedValueOnce(new Error('render failed'))
+    vi.mocked(noteCommands.prepareNotePdfPreview).mockRejectedValueOnce(new Error('render failed'))
     const wrapper = mountModal()
     await flushPdfModal()
 

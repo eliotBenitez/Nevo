@@ -8,6 +8,7 @@ import {
   type CoreNodeViewOptions,
   type NodeViewPosition,
 } from './utils'
+import { sanitizeSvg } from '../../utils/sanitizeSvg'
 
 let renderCounter = 0
 
@@ -115,7 +116,7 @@ export function createMermaidNodeView(node: PMNode, view: EditorView, getPos: No
       const mermaid = await ensureMermaid()
       const id = `nv-mermaid-${++renderCounter}`
       const { svg } = await mermaid.render(id, code)
-      rendered.innerHTML = svg
+      rendered.innerHTML = sanitizeSvg(svg)
       dom.dataset.error = 'false'
       lastRenderedCode = code
     } catch {

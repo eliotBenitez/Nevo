@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import { Check, ArrowRight, ArrowLeft, Folder } from 'lucide-vue-next'
 import AmbientBackdrop from '../../../ui/glass/AmbientBackdrop.vue'
@@ -11,12 +12,15 @@ import { useSharedStorageStore } from '../../../stores/sharedStorage'
 import { useServerConfigStore } from '../../../stores/serverConfig'
 import type { WorkspaceConfig } from '../../../types/workspace'
 import { appLogger } from '../../../utils/logger'
+import { resolveRuntimeCapabilities } from '../../../utils/runtime'
 import { WORKSPACE_GRADIENTS } from '../../../utils/workspaceGradients'
+import { systemCommands } from '../../../tauri/commands'
 
 const emit = defineEmits<{ back: []; done: [] }>()
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
+const { appMetadata } = storeToRefs(workspaceStore)
 
 const GRADIENTS = WORKSPACE_GRADIENTS
 const GLYPHS = ['N', '◐', '✦', '◇', '◑', '⌘']
@@ -49,11 +53,28 @@ const steps = computed(() => [
   { key: 'template', done: hasInteractedWithTemplates.value },
 ])
 
+// Mobile sandboxes block raw file I/O to shared storage (~/Documents), so the
+// default workspace location must live inside the app's writable data dir.
+onMounted(async () => {
+  if (!resolveRuntimeCapabilities(appMetadata.value).isMobileRuntime) return
+  try {
+    const { appLocalDataDir, join } = await import('@tauri-apps/api/path')
+    const base = await appLocalDataDir()
+    location.value = await join(base, 'Nevo')
+  } catch (error) {
+    await appLogger.error({
+      source: 'frontend.onboarding',
+      event: 'resolve_mobile_location',
+      message: 'Failed to resolve mobile default workspace location',
+      error,
+    })
+  }
+})
+
 async function browsePath() {
   try {
-    const { open } = await import('@tauri-apps/plugin-dialog')
-    const selected = await open({ directory: true, title: t('onboarding.create.locationLabel') })
-    if (typeof selected === 'string') location.value = selected
+    const selected = await systemCommands.pickWorkspaceDirectory()
+    if (selected) location.value = selected
   } catch {
     // dev/web fallback — no-op
   }

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { X } from 'lucide-vue-next'
 import { DRAW_TEMPLATES, type DrawTemplate, type DrawTemplateCategory } from '../../utils/draw/drawTemplates'
 import { renderDrawToSvgString, DEFAULT_DRAW_DATA, type DrawStroke } from '../../utils/draw/drawEngine'
+import { sanitizeSvg } from '../../utils/sanitizeSvg'
 
 const emit = defineEmits<{
   insert: [strokes: DrawStroke[]]
@@ -28,7 +29,7 @@ onMounted(async () => {
   for (const tpl of DRAW_TEMPLATES) {
     try {
       const svg = await renderDrawToSvgString({ ...DEFAULT_DRAW_DATA, strokes: tpl.build() }, 8)
-      previews.value = { ...previews.value, [tpl.id]: svg }
+      previews.value = { ...previews.value, [tpl.id]: sanitizeSvg(svg) }
     } catch {
       // Превью не критично — кнопка останется без миниатюры.
     }

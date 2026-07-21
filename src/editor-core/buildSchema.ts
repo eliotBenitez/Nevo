@@ -5,6 +5,16 @@ import { nevoBaseSchema } from './schema'
 export function createSchemaWithPluginExtensions(pluginHost?: EditorPluginHost): Schema {
   if (!pluginHost) return nevoBaseSchema
 
+  return createSchemaWithPluginSpecs(
+    pluginHost.registries.nodes,
+    pluginHost.registries.marks,
+  )
+}
+
+export function createSchemaWithPluginSpecs(
+  pluginNodes: ReadonlyMap<string, NodeSpec>,
+  pluginMarks: ReadonlyMap<string, MarkSpec>,
+): Schema {
   const nodeSpecs: Record<string, NodeSpec> = {}
   nevoBaseSchema.spec.nodes.forEach((name, spec) => {
     nodeSpecs[name] = spec
@@ -15,13 +25,13 @@ export function createSchemaWithPluginExtensions(pluginHost?: EditorPluginHost):
     markSpecs[name] = spec
   })
 
-  for (const [name, spec] of pluginHost.registries.nodes.entries()) {
+  for (const [name, spec] of pluginNodes) {
     if (!(name in nodeSpecs)) {
       nodeSpecs[name] = spec
     }
   }
 
-  for (const [name, spec] of pluginHost.registries.marks.entries()) {
+  for (const [name, spec] of pluginMarks) {
     if (!(name in markSpecs)) {
       markSpecs[name] = spec
     }

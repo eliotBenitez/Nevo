@@ -35,26 +35,16 @@ export function useDrawExport(options: UseDrawExportOptions) {
       return
     }
 
-    const isTauri = typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__ !== undefined
+    const isTauri = typeof window !== 'undefined'
+      && (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ !== undefined
 
     if (isTauri) {
       try {
-        const { save } = await import('@tauri-apps/plugin-dialog')
-        const ext = format.value
-        const savePath = await save({
-          title: 'Save drawing',
-          defaultPath: filename,
-          filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
-        })
-        if (!savePath) {
-          return
-        }
-
         const arrayBuffer = await blob.arrayBuffer()
         const bytes = Array.from(new Uint8Array(arrayBuffer))
 
         const { noteCommands } = await import('../../../tauri/commands')
-        await noteCommands.exportDrawFile(savePath, bytes)
+        await noteCommands.exportDrawFile(filename, bytes)
         return
       } catch (err) {
         console.error('[DrawExport] Tauri native save failed, falling back to browser download', err)

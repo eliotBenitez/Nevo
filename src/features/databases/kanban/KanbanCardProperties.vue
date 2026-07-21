@@ -30,7 +30,7 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{ 'update:statusValue': [value: string | null] }>()
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 
 const {
   localFields,
@@ -222,10 +222,10 @@ function createNewTag() {
 
 function enableTagsField() {
   const type = 'multi_select'
-  const name = locale.value === 'ru' ? 'Теги' : 'Tags'
+  const name = t('kanban.defaultTags.fieldName')
   const options = [
-    { id: createKanbanId(), name: locale.value === 'ru' ? 'Срочно' : 'Urgent', color: '#ef4444' },
-    { id: createKanbanId(), name: locale.value === 'ru' ? 'В работе' : 'Feature', color: '#3b82f6' },
+    { id: createKanbanId(), name: t('kanban.defaultTags.urgent'), color: '#ef4444' },
+    { id: createKanbanId(), name: t('kanban.defaultTags.feature'), color: '#3b82f6' },
   ]
   const field: KanbanCardField = {
     id: createKanbanId(),

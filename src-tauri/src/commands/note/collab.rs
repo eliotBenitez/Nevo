@@ -38,7 +38,7 @@ pub fn save_yjs_state(request: Request) -> Result<(), String> {
         .map_err(|e| e.to_string())?
         .to_string_lossy()
         .into_owned();
-    let path = yjs_state_path(&workspace_path, &note_id)?;
+    let path = yjs_state_path(&workspace_path, note_id)?;
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
@@ -87,10 +87,7 @@ const MAX_TEXT_IMPORT_BYTES: u64 = 25 * 1024 * 1024;
 /// workspace. To limit the blast radius of a hostile caller (e.g. via XSS) we
 /// only read regular text files of a bounded size and reject everything else
 /// (no `~/.ssh/id_rsa`, no multi-GB reads, no special files).
-#[tauri::command]
-pub fn read_text_file(path: String) -> Result<String, String> {
-    let p = Path::new(&path);
-
+fn read_text_file_path(p: &Path) -> Result<String, String> {
     let allowed_ext = p
         .extension()
         .and_then(|e| e.to_str())
@@ -115,4 +112,49 @@ pub fn read_text_file(path: String) -> Result<String, String> {
     }
 
     std::fs::read_to_string(p).map_err(|e| e.to_string())
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PickedTextFile {
+    content: String,
+    file_name: String,
+}
+
+#[tauri::command]
+pub async fn pick_and_read_text_file(
+    app: tauri::AppHandle,
+) -> Result<Option<PickedTextFile>, String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let (sender, receiver) = tokio::sync::oneshot::channel();
+    app.dialog()
+        .file()
+        .add_filter(
+            "Markdown or text",
+            &["md", "markdown", "mdown", "mkd", "txt", "text"],
+        )
+        .pick_file(move |file| {
+            let _ = sender.send(file);
+        });
+    let Some(file) = receiver
+        .await
+        .map_err(|_| "File picker closed unexpectedly".to_string())?
+    else {
+        return Ok(None);
+    };
+    let path = file
+        .into_path()
+        .map_err(|_| "Selected file is not accessible as a local path".to_string())?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let content = read_text_file_path(&path)?;
+        let file_name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("Untitled.md")
+            .to_string();
+        Ok(Some(PickedTextFile { content, file_name }))
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }

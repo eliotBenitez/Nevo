@@ -1,5 +1,5 @@
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import type { Ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import type { CSSProperties, Ref } from 'vue'
 import { computeScrollbarMetrics, mapThumbDragToScrollTop, mapTrackClickToScrollTop } from '../../components/editor/scrollbarMetrics'
 
 interface ScrollbarRefs {
@@ -7,7 +7,12 @@ interface ScrollbarRefs {
   scrollbarTrackEl: Ref<HTMLDivElement | null>
   editorWrapEl: Ref<HTMLDivElement | null>
   supportsHover: Ref<boolean>
+  getCover: () => string | null | undefined
 }
+
+// Pushes scrollbar below the cover image when it's visible in the viewport.
+// Cover occupies doc-body padding-top (20px) + cover height (200px) = 220px from scroll origin.
+const COVER_BOTTOM_IN_DOC = 220
 
 export function useEditorScrollbar(refs: ScrollbarRefs) {
   const scrollbarVisible = ref(false)
@@ -119,8 +124,23 @@ export function useEditorScrollbar(refs: ScrollbarRefs) {
     clearScrollbarHideTimer()
   })
 
+  const scrollbarStyle = computed<CSSProperties>(() => ({
+    height: `${thumbHeight.value}px`,
+    transform: `translateY(${thumbOffset.value}px)`,
+  }))
+  const scrollbarInteractivityStyle = computed<CSSProperties>(() => ({
+    pointerEvents: scrollbarVisible.value || scrollbarDragging.value ? 'auto' : 'none',
+  }))
+  const scrollbarPositionStyle = computed<CSSProperties>(() => {
+    if (!refs.getCover()) return {}
+    const coverBottomInViewport = COVER_BOTTOM_IN_DOC - editorScrollTop.value
+    if (coverBottomInViewport <= 8) return {}
+    return { top: `${coverBottomInViewport}px` }
+  })
+
   return {
     scrollbarVisible, scrollbarScrollable, scrollbarDragging, thumbHeight, thumbOffset, editorScrollTop,
+    scrollbarStyle, scrollbarInteractivityStyle, scrollbarPositionStyle,
     updateScrollbarMetrics, refreshScrollbarMetrics,
     onEditorMouseEnter, onEditorMouseLeave, onEditorScroll,
     onScrollbarTrackMouseDown, onScrollbarThumbMouseDown,
