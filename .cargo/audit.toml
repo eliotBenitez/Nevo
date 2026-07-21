@@ -1,0 +1,9 @@
+# RUSTSEC-2026-0194 and RUSTSEC-2026-0195 require quick-xml >= 0.41.
+# The latest compatible Typst chain still resolves citationberg -> quick-xml
+# 0.38, while the Linux clipboard chain resolves wayland-scanner -> quick-xml
+# 0.39. Remove these exceptions as soon as either upstream chain upgrades.
+[advisories]
+ignore = [
+  "RUSTSEC-2026-0194",
+  "RUSTSEC-2026-0195",
+]
