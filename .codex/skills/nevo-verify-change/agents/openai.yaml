@@ -1,0 +1,4 @@
+interface:
+  display_name: "Nevo Change Verification"
+  short_description: "Select and run Nevo checks by changed paths"
+  default_prompt: "Use $nevo-verify-change to verify the current Nevo changes with the appropriate checks."

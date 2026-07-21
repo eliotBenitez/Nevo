@@ -50,8 +50,11 @@ scripts
 .agents
 .codex
 .zcode
+!.codex/
+.codex/*
+!.codex/skills/
+.codex/skills/*
+!.codex/skills/nevo-verify-change/
+!.codex/skills/nevo-verify-change/**
 
 graphify-out
-build-tools
-
-Nevo.html
