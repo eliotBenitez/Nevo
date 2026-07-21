@@ -36,10 +36,11 @@ futures-util = "0.3"
 dashmap = "5"
 fontdb = "0.23"
 base64 = "0.22"
-typst = "0.14"
-typst-pdf = "0.14"
-typst-render = "0.14"
-typst-as-lib = { version = "0.15", features = ["typst-kit-fonts", "typst-kit-embed-fonts"] }
+typst = "0.15.1"
+typst-layout = "0.15.1"
+typst-pdf = "0.15.1"
+typst-render = "0.15.1"
+typst-as-lib = { version = "0.16.0", features = ["typst-kit-fonts", "typst-kit-embed-fonts"] }
 zip = { version = "0.6", default-features = false, features = ["deflate"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
 rusqlite = { version = "0.32", features = ["bundled"] }

@@ -2,12 +2,16 @@ use std::env;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+#[cfg(windows)]
+use std::sync::Mutex;
 use std::sync::{LazyLock, RwLock};
 use uuid::Uuid;
 
 const MAX_WORKSPACE_ASSET_BYTES: u64 = 100 * 1024 * 1024;
 static ACTIVE_WORKSPACE_ROOT: LazyLock<RwLock<Option<PathBuf>>> =
     LazyLock::new(|| RwLock::new(None));
+#[cfg(windows)]
+static WINDOWS_REPLACE_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
 /// Write `contents` to `path` atomically: write a temp file in the same
 /// directory, then rename it over the target. Rename is atomic on the same
@@ -62,6 +66,12 @@ fn replace_file(source: &Path, target: &Path) -> std::io::Result<()> {
 
     let source_wide: Vec<u16> = source.as_os_str().encode_wide().chain(Some(0)).collect();
     let target_wide: Vec<u16> = target.as_os_str().encode_wide().chain(Some(0)).collect();
+    // Concurrent MoveFileExW replacements of the same target can fail with
+    // ERROR_ACCESS_DENIED. Temp-file writes remain concurrent; only the final
+    // replacement is serialized within this process.
+    let _replace_guard = WINDOWS_REPLACE_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     // SAFETY: both pointers reference NUL-terminated UTF-16 buffers that live
     // for the duration of the call. The flags request same-volume replacement.
     let replaced = unsafe {

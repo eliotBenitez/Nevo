@@ -6,9 +6,10 @@ use std::io::{Seek, Write};
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-use typst::layout::PagedDocument;
 use typst_as_lib::typst_kit_options::TypstKitFontOptions;
 use typst_as_lib::TypstEngine;
+use typst_layout::PagedDocument;
+use typst_render::RenderOptions;
 use zip::write::FileOptions;
 use zip::CompressionMethod;
 use zip::ZipWriter;
@@ -207,7 +208,8 @@ a #link("nevo://note/abc-123")[note reference] here
 "##;
         match compile_document(source.to_string(), Vec::new()) {
             Ok(doc) => {
-                let png = typst_render::render(&doc.pages[0], 2.0).encode_png();
+                let png =
+                    typst_render::render(&doc.pages()[0], &RenderOptions::default()).encode_png();
                 assert!(png.is_ok(), "render failed: {:?}", png.err());
             }
             Err(err) => panic!("compile failed: {err}"),
@@ -229,7 +231,7 @@ a #link("nevo://note/abc-123")[note reference] here
         let assets = vec![("diagram.svg".to_string(), svg.as_bytes().to_vec())];
 
         let doc = compile_document(source, assets).expect("compile svg image");
-        let pixmap = typst_render::render(&doc.pages[0], 2.0);
+        let pixmap = typst_render::render(&doc.pages()[0], &RenderOptions::default());
 
         // Count clearly dark pixels (the glyph strokes). White background and the
         // antialiased page yield none; rendered black text yields hundreds.
@@ -256,7 +258,7 @@ a #link("nevo://note/abc-123")[note reference] here
             let source = "#image(\"d.svg\", width: 100%)".to_string();
             let assets = vec![("d.svg".to_string(), svg.as_bytes().to_vec())];
             let doc = compile_document(source, assets).expect("compile svg");
-            typst_render::render(&doc.pages[0], 2.0)
+            typst_render::render(&doc.pages()[0], &RenderOptions::default())
                 .data()
                 .chunks_exact(4)
                 .filter(|px| px[3] > 128 && px[0] < 100 && px[1] < 100 && px[2] < 100)
@@ -444,7 +446,7 @@ fn run_prepare(
     let document = compile_document(typst_source, resolved).map_err(on_err)?;
 
     let token = NEXT_TOKEN.fetch_add(1, Ordering::Relaxed);
-    let total_pages = document.pages.len();
+    let total_pages = document.pages().len();
 
     let mut guard = cache
         .0
@@ -479,7 +481,7 @@ fn run_render_pages(
         _ => return Err(on_err("stale preview token".to_string())),
     };
 
-    let pages = &cached.document.pages;
+    let pages = cached.document.pages();
     let end = (start + count).min(pages.len());
     if start >= end {
         return Ok(Vec::new());
@@ -487,8 +489,9 @@ fn run_render_pages(
 
     // 2x device pixels keeps the on-screen preview crisp without large payloads.
     let mut rendered = Vec::with_capacity(end - start);
+    let render_options = RenderOptions::default();
     for page in &pages[start..end] {
-        let pixmap = typst_render::render(page, 2.0);
+        let pixmap = typst_render::render(page, &render_options);
         let png = pixmap
             .encode_png()
             .map_err(|err| on_err(format!("preview render failed: {err}")))?;
