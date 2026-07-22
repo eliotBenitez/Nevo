@@ -5,12 +5,19 @@ import { storeToRefs } from 'pinia'
 import { matchHotkeyCommand } from '../utils/hotkeys'
 
 const AUTOSAVE_DELAY_MS = 2_000
+// Coarse safety net so a dirty note is never left unsaved indefinitely. In the
+// `window-idle` policy `scheduleSave` only arms on blur/visibility change, so a
+// long focused session would otherwise keep `note.json` stale (widening the
+// note.json ↔ Y.Doc drift). This periodic flush bounds that window regardless
+// of policy; it is a no-op when nothing is dirty.
+const SAFETY_NET_INTERVAL_MS = 3 * 60_000
 
 export function useNotePersistence() {
   const noteStore = useNoteStore()
   const workspaceStore = useWorkspaceStore()
   const { settings } = storeToRefs(workspaceStore)
   let saveTimer: ReturnType<typeof setTimeout> | null = null
+  let safetyNetTimer: ReturnType<typeof setInterval> | null = null
   let idleSavePending = false
 
   function scheduleSave() {
@@ -63,12 +70,19 @@ export function useNotePersistence() {
     window.addEventListener('beforeunload', onBeforeUnload)
     window.addEventListener('blur', onWindowIdle)
     document.addEventListener('visibilitychange', onVisibilityChange)
+    safetyNetTimer = setInterval(() => {
+      if (noteStore.isDirty) void noteStore.saveNote()
+    }, SAFETY_NET_INTERVAL_MS)
   })
   onUnmounted(() => {
     document.removeEventListener('keydown', onKeydown)
     window.removeEventListener('beforeunload', onBeforeUnload)
     window.removeEventListener('blur', onWindowIdle)
     document.removeEventListener('visibilitychange', onVisibilityChange)
+    if (safetyNetTimer) {
+      clearInterval(safetyNetTimer)
+      safetyNetTimer = null
+    }
     void flushSave()
   })
 

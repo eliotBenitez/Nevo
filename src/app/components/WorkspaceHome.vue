@@ -6,6 +6,7 @@ import {
   FilePlus2,
   FileUp,
   FolderInput,
+  ArchiveRestore,
   FolderPlus,
   Import,
   Kanban,
@@ -25,6 +26,7 @@ interface Props {
   recentItems: WorkspaceHomeItem[]
   kanbanEnabled: boolean
   isWorkspaceEmpty: boolean
+  backendKind?: 'local' | 'cloud' | null
 }
 
 const props = defineProps<Props>()
@@ -34,6 +36,7 @@ const emit = defineEmits<{
   'create-folder': []
   'import-md': []
   'import-obsidian': []
+  'import-notion': []
   'create-board': []
   'open-item': [item: WorkspaceHomeItem]
   'manage-favorites': []
@@ -52,6 +55,12 @@ const importItems = computed<NvMenuItemDef[]>(() => [
     label: t('workspace.importObsidian'),
     icon: markRaw(FolderInput),
     action: () => emit('import-obsidian'),
+  },
+  {
+    label: props.backendKind === 'cloud' ? t('workspace.notionImport.localOnlyShort') : t('workspace.importNotion'),
+    icon: markRaw(ArchiveRestore),
+    disabled: props.backendKind !== 'local',
+    action: () => emit('import-notion'),
   },
 ])
 

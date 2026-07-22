@@ -89,11 +89,47 @@ fn get_local_ip() -> String {
         .unwrap_or_else(|| "127.0.0.1".to_string())
 }
 
-fn request_token(request: &Request) -> Option<&str> {
+/// Marker subprotocol offered by the client alongside the session token, and
+/// echoed back on success so browsers accept the handshake. Must match
+/// `COLLAB_SUBPROTOCOL` in `src/editor-core/collaboration/yWebSocket.ts`.
+const COLLAB_SUBPROTOCOL: &str = "nevo-collab-v1";
+
+/// Extract the session token. Preferred transport is the
+/// `Sec-WebSocket-Protocol` header (keeps the token out of the URL); the legacy
+/// `?token=` query parameter is still accepted as a fallback.
+fn request_token(request: &Request) -> Option<String> {
+    if let Some(protocols) = request
+        .headers()
+        .get("sec-websocket-protocol")
+        .and_then(|value| value.to_str().ok())
+    {
+        if let Some(token) = protocols
+            .split(',')
+            .map(|entry| entry.trim())
+            .find(|entry| !entry.is_empty() && *entry != COLLAB_SUBPROTOCOL)
+        {
+            return Some(token.to_string());
+        }
+    }
     request.uri().query()?.split('&').find_map(|pair| {
         let (key, value) = pair.split_once('=')?;
-        (key == "token").then_some(value)
+        (key == "token").then_some(value.to_string())
     })
+}
+
+/// Whether the client offered the marker subprotocol, meaning the server must
+/// echo it in the response for the browser to accept the connection.
+fn offered_collab_subprotocol(request: &Request) -> bool {
+    request
+        .headers()
+        .get("sec-websocket-protocol")
+        .and_then(|value| value.to_str().ok())
+        .map(|protocols| {
+            protocols
+                .split(',')
+                .any(|entry| entry.trim() == COLLAB_SUBPROTOCOL)
+        })
+        .unwrap_or(false)
 }
 
 fn allowed_origin(request: &Request) -> bool {
@@ -168,8 +204,8 @@ async fn handle_client(
 
     let ws_result = tokio_tungstenite::accept_hdr_async_with_config(
         stream,
-        |req: &Request, resp: Response| {
-            if request_token(req) != Some(token_for_handshake.as_str()) {
+        |req: &Request, mut resp: Response| {
+            if request_token(req).as_deref() != Some(token_for_handshake.as_str()) {
                 return Err(rejection(401, "invalid collaboration token"));
             }
             if !allowed_origin(req) {
@@ -178,6 +214,14 @@ async fn handle_client(
             room_name = req.uri().path().trim_start_matches('/').to_string();
             if !valid_room_name(&room_name) {
                 return Err(rejection(400, "invalid collaboration room"));
+            }
+            if offered_collab_subprotocol(req) {
+                resp.headers_mut().insert(
+                    tokio_tungstenite::tungstenite::http::header::SEC_WEBSOCKET_PROTOCOL,
+                    tokio_tungstenite::tungstenite::http::HeaderValue::from_static(
+                        COLLAB_SUBPROTOCOL,
+                    ),
+                );
             }
             Ok(resp)
         },
@@ -307,8 +351,7 @@ pub async fn start_collab_server(
     state: tauri::State<'_, CollabAppState>,
 ) -> Result<CollabServerInfo, String> {
     let mut handle = state.handle.lock().await;
-    if handle.is_some() {
-        let existing = handle.as_ref().unwrap();
+    if let Some(existing) = handle.as_ref() {
         return Ok(CollabServerInfo {
             url: format!("ws://{}:{}", existing.local_ip, existing.port),
             local_ip: existing.local_ip.clone(),
@@ -519,5 +562,68 @@ mod tests {
                 .insert("origin", "http://tauri.localhost".parse().unwrap());
             assert!(tokio_tungstenite::connect_async(request).await.is_err());
         }
+    }
+
+    #[test]
+    fn request_token_prefers_subprotocol_over_query() {
+        let request = tokio_tungstenite::tungstenite::http::Request::builder()
+            .uri("ws://127.0.0.1/test-room?token=query-token")
+            .header("sec-websocket-protocol", "nevo-collab-v1, header-token")
+            .body(())
+            .unwrap();
+        assert_eq!(request_token(&request).as_deref(), Some("header-token"));
+        assert!(offered_collab_subprotocol(&request));
+    }
+
+    #[test]
+    fn request_token_falls_back_to_query_without_subprotocol() {
+        let request = tokio_tungstenite::tungstenite::http::Request::builder()
+            .uri("ws://127.0.0.1/test-room?token=query-token")
+            .body(())
+            .unwrap();
+        assert_eq!(request_token(&request).as_deref(), Some("query-token"));
+        assert!(!offered_collab_subprotocol(&request));
+    }
+
+    /// The token can travel in `Sec-WebSocket-Protocol` (keeping it out of the
+    /// URL); the server must accept it and echo the marker subprotocol so the
+    /// browser completes the handshake.
+    #[tokio::test]
+    async fn server_accepts_token_via_subprotocol_and_echoes_it() {
+        let port = free_port();
+        let rooms: Arc<DashMap<String, Room>> = Arc::new(DashMap::new());
+        let (_shutdown_tx, shutdown_rx) = oneshot::channel();
+        let (bind_tx, bind_rx) = oneshot::channel();
+        tokio::spawn(run_server(
+            port,
+            rooms,
+            Arc::new("expected-token".to_string()),
+            Arc::new(AtomicUsize::new(0)),
+            shutdown_rx,
+            bind_tx,
+        ));
+        bind_rx.await.unwrap().unwrap();
+
+        let mut request = format!("ws://127.0.0.1:{port}/test-room")
+            .into_client_request()
+            .unwrap();
+        request
+            .headers_mut()
+            .insert("origin", "http://tauri.localhost".parse().unwrap());
+        request.headers_mut().insert(
+            "sec-websocket-protocol",
+            "nevo-collab-v1, expected-token".parse().unwrap(),
+        );
+        let (_stream, response) = tokio_tungstenite::connect_async(request)
+            .await
+            .expect("client should connect using a subprotocol token");
+        assert_eq!(
+            response
+                .headers()
+                .get("sec-websocket-protocol")
+                .and_then(|value| value.to_str().ok()),
+            Some("nevo-collab-v1"),
+            "server must echo the marker subprotocol"
+        );
     }
 }

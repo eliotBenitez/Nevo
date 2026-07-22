@@ -22,6 +22,14 @@ type Mark = { type: string; attrs?: Record<string, unknown> }
 // (or null when no matching note exists). Used by parseMarkdownToBlockNode.
 export type WikiLinkResolver = (title: string) => string | null
 
+export interface MarkdownLinkTarget {
+  noteId: string
+  title: string
+  anchor?: string | null
+}
+
+export type MarkdownLinkResolver = (href: string) => MarkdownLinkTarget | null
+
 // Matches Obsidian-style wiki links: [[Note]], [[Note#Anchor]], [[Note|Alias]],
 // [[Note#Anchor|Alias]]. Group 1 = note title, 2 = optional anchor, 3 = alias.
 const WIKI_LINK_RE = /\[\[([^\]|#]+)(?:#([^\]|]+))?(?:\|([^\]]+))?\]\]/g
@@ -78,7 +86,12 @@ function textWithWikiLinks(value: string, marks: Mark[], resolver?: WikiLinkReso
   return result.length ? result : [{ type: 'text', text: value, ...(marks.length ? { marks } : {}) }]
 }
 
-function inlineToContent(nodes: PhrasingContent[], marks: Mark[] = [], resolver?: WikiLinkResolver): BlockNode[] {
+function inlineToContent(
+  nodes: PhrasingContent[],
+  marks: Mark[] = [],
+  resolver?: WikiLinkResolver,
+  markdownLinkResolver?: MarkdownLinkResolver,
+): BlockNode[] {
   const result: BlockNode[] = []
   for (const node of nodes) {
     switch (node.type) {
@@ -89,26 +102,31 @@ function inlineToContent(nodes: PhrasingContent[], marks: Mark[] = [], resolver?
         break
       }
       case 'strong':
-        result.push(...inlineToContent(node.children as PhrasingContent[], [...marks, { type: 'strong' }], resolver))
+        result.push(...inlineToContent(node.children as PhrasingContent[], [...marks, { type: 'strong' }], resolver, markdownLinkResolver))
         break
       case 'emphasis':
-        result.push(...inlineToContent(node.children as PhrasingContent[], [...marks, { type: 'em' }], resolver))
+        result.push(...inlineToContent(node.children as PhrasingContent[], [...marks, { type: 'em' }], resolver, markdownLinkResolver))
         break
       case 'delete':
-        result.push(...inlineToContent((node as { children: PhrasingContent[] }).children, [...marks, { type: 'strike' }], resolver))
+        result.push(...inlineToContent((node as { children: PhrasingContent[] }).children, [...marks, { type: 'strike' }], resolver, markdownLinkResolver))
         break
       case 'inlineCode':
         if (node.value) {
           result.push({ type: 'text', text: node.value, marks: [...marks, { type: 'code' }] })
         }
         break
-      case 'link':
+      case 'link': {
+        const internal = markdownLinkResolver?.(node.url) ?? null
         result.push(...inlineToContent(
           node.children as PhrasingContent[],
-          [...marks, { type: 'link', attrs: { href: node.url } }],
+          [...marks, internal
+            ? { type: 'internal_link', attrs: { noteId: internal.noteId, title: internal.title, anchor: internal.anchor ?? null, alias: null } }
+            : { type: 'link', attrs: { href: node.url } }],
           resolver,
+          markdownLinkResolver,
         ))
         break
+      }
       case 'image':
         result.push({
           type: 'image_block',
@@ -125,8 +143,8 @@ function inlineToContent(nodes: PhrasingContent[], marks: Mark[] = [], resolver?
   return result
 }
 
-function cellParagraph(cells: PhrasingContent[], resolver?: WikiLinkResolver): BlockNode {
-  const content = inlineToContent(cells, [], resolver)
+function cellParagraph(cells: PhrasingContent[], resolver?: WikiLinkResolver, markdownLinkResolver?: MarkdownLinkResolver): BlockNode {
+  const content = inlineToContent(cells, [], resolver, markdownLinkResolver)
   return content.length ? { type: 'paragraph', content } : { type: 'paragraph' }
 }
 
@@ -134,17 +152,18 @@ function listItemToNode(
   item: ListItem,
   resolver?: WikiLinkResolver,
   asyncImports?: WeakMap<object, BlockNode | null>,
+  markdownLinkResolver?: MarkdownLinkResolver,
 ): BlockNode {
   // Checklist item: content is inline*
   if (typeof item.checked === 'boolean') {
     const content: BlockNode[] = []
     for (const child of item.children) {
-      if (child.type === 'paragraph') content.push(...inlineToContent(child.children as PhrasingContent[], [], resolver))
+      if (child.type === 'paragraph') content.push(...inlineToContent(child.children as PhrasingContent[], [], resolver, markdownLinkResolver))
     }
     return { type: 'checklist_item', attrs: { checked: item.checked }, content }
   }
   // Regular list item: content is paragraph block*
-  const content = item.children.flatMap((child) => blockToNodes(child, resolver, asyncImports))
+  const content = item.children.flatMap((child) => blockToNodes(child, resolver, asyncImports, markdownLinkResolver))
   return { type: 'list_item', content: content.length ? content : [{ type: 'paragraph' }] }
 }
 
@@ -152,6 +171,7 @@ function blockToNodes(
   node: Content,
   resolver?: WikiLinkResolver,
   asyncImports?: WeakMap<object, BlockNode | null>,
+  markdownLinkResolver?: MarkdownLinkResolver,
 ): BlockNode[] {
   switch (node.type) {
     case 'paragraph': {
@@ -160,11 +180,11 @@ function blockToNodes(
         const img = node.children[0]
         return [{ type: 'image_block', attrs: { src: img.url, alt: img.alt || null, caption: null, sizePreset: 'full', width: null } }]
       }
-      const content = inlineToContent(node.children as PhrasingContent[], [], resolver)
+      const content = inlineToContent(node.children as PhrasingContent[], [], resolver, markdownLinkResolver)
       return [{ type: 'paragraph', content }]
     }
     case 'heading': {
-      const content = inlineToContent(node.children as PhrasingContent[], [], resolver)
+      const content = inlineToContent(node.children as PhrasingContent[], [], resolver, markdownLinkResolver)
       return [{ type: 'heading', attrs: { level: node.depth }, content }]
     }
     case 'code': {
@@ -184,18 +204,18 @@ function blockToNodes(
       return [{ type: 'code_block', attrs: { language: node.lang ?? null }, content }]
     }
     case 'blockquote': {
-      const content = node.children.flatMap((child) => blockToNodes(child, resolver, asyncImports))
+      const content = node.children.flatMap((child) => blockToNodes(child, resolver, asyncImports, markdownLinkResolver))
       return [{ type: 'blockquote', content: content.length ? content : [{ type: 'paragraph' }] }]
     }
     case 'list': {
       const isChecklist = node.children.some(item => typeof item.checked === 'boolean')
       if (isChecklist) {
-        return node.children.map((item) => listItemToNode(item, resolver, asyncImports))
+        return node.children.map((item) => listItemToNode(item, resolver, asyncImports, markdownLinkResolver))
       }
       const listType = node.ordered ? 'ordered_list' : 'bullet_list'
       return [{
         type: listType,
-        content: node.children.map((item) => listItemToNode(item, resolver, asyncImports)),
+        content: node.children.map((item) => listItemToNode(item, resolver, asyncImports, markdownLinkResolver)),
       }]
     }
     case 'table': {
@@ -204,7 +224,7 @@ function blockToNodes(
         content: row.children.map(cell => ({
           type: rowIndex === 0 ? 'table_header' : 'table_cell',
           attrs: { colspan: 1, rowspan: 1, colwidth: null },
-          content: [cellParagraph(cell.children as PhrasingContent[], resolver)],
+          content: [cellParagraph(cell.children as PhrasingContent[], resolver, markdownLinkResolver)],
         })),
       }))
       return [{ type: 'table', content: rows }]
@@ -227,6 +247,8 @@ export interface ParseMarkdownOptions {
    *  where the note title comes from the filename and the body H1 must be
    *  preserved verbatim. Defaults to true (existing H1-as-title behavior). */
   extractTitle?: boolean
+  /** Resolves regular Markdown links to notes created by an archive importer. */
+  markdownLinkResolver?: MarkdownLinkResolver
 }
 
 export function parseMarkdownToBlockNode(
@@ -244,14 +266,14 @@ export function parseMarkdownToBlockNode(
   for (const node of tree.children) {
     // Extract first H1 as note title
     if (extractTitle && !titleExtracted && node.type === 'heading' && node.depth === 1) {
-      title = inlineToContent(node.children as PhrasingContent[], [], resolver)
+      title = inlineToContent(node.children as PhrasingContent[], [], resolver, options?.markdownLinkResolver)
         .filter(n => n.type === 'text')
         .map(n => n.text ?? '')
         .join('')
       titleExtracted = true
       continue
     }
-    blocks.push(...blockToNodes(node, resolver))
+    blocks.push(...blockToNodes(node, resolver, undefined, options?.markdownLinkResolver))
   }
 
   return {
@@ -292,14 +314,14 @@ export async function parseMarkdownToBlockNodeAsync(
   const blocks: BlockNode[] = []
   for (const node of tree.children) {
     if (extractTitle && !titleExtracted && node.type === 'heading' && node.depth === 1) {
-      title = inlineToContent(node.children as PhrasingContent[], [], resolver)
+      title = inlineToContent(node.children as PhrasingContent[], [], resolver, options?.markdownLinkResolver)
         .filter(value => value.type === 'text')
         .map(value => value.text ?? '')
         .join('')
       titleExtracted = true
       continue
     }
-    blocks.push(...blockToNodes(node, resolver, imports))
+    blocks.push(...blockToNodes(node, resolver, imports, options?.markdownLinkResolver))
   }
   return { title, content: { type: 'doc', content: blocks } }
 }

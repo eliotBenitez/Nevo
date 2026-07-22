@@ -3,7 +3,7 @@ import { computed, markRaw, ref } from 'vue'
 import type { Component } from 'vue'
 import {
   ArrowDownAZ, ArrowDownUp, ArrowDownZA, ChevronDown, ChevronsDownUp, ChevronsUpDown,
-  Clock, FileText, FileUp, FolderInput, FolderPlus, Kanban, List, Plus, Upload,
+  ArchiveRestore, Clock, FileText, FileUp, FolderInput, FolderPlus, Kanban, List, Plus, Upload,
 } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import NvPopupMenu from '../../ui/primitives/NvPopupMenu.vue'
@@ -17,6 +17,7 @@ interface Props {
   kanbanEnabled?: boolean
   collapseState: 'collapsed' | 'expanded'
   sortMode: SortMode
+  backendKind?: 'local' | 'cloud' | null
 }
 
 const props = defineProps<Props>()
@@ -26,6 +27,7 @@ const emit = defineEmits<{
   'create-board': []
   'import-md': []
   'import-obsidian': []
+  'import-notion': []
   'toggle-collapse-all': []
   'update:sortMode': [mode: SortMode]
 }>()
@@ -61,6 +63,12 @@ const newMenuItems = computed<NvMenuItemDef[]>(() => {
     items: [
       { label: t('workspace.importMd'), icon: markRaw(FileUp), action: () => emit('import-md') },
       { label: t('workspace.importObsidian'), icon: markRaw(FolderInput), action: () => emit('import-obsidian') },
+      {
+        label: props.backendKind === 'cloud' ? t('workspace.notionImport.localOnlyShort') : t('workspace.importNotion'),
+        icon: markRaw(ArchiveRestore),
+        disabled: props.backendKind !== 'local',
+        action: () => emit('import-notion'),
+      },
     ],
   })
   return items

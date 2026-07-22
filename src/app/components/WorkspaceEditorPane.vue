@@ -607,7 +607,7 @@ pluginRuntime = useEditorPluginRuntime({
 })
 const { dispatchPluginUiEvent } = pluginRuntime
 
-defineExpose({ editorRoot, flushPendingContent, updateDrawBlock, dispatchPluginUiEvent })
+defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup.flushYjsPersistenceNow, updateDrawBlock, dispatchPluginUiEvent })
 </script>
 
 <template>

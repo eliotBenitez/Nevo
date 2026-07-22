@@ -5,10 +5,33 @@ mod media_server;
 
 use commands::{
     ai, auth, config, database, folder, fonts, github_sync, graph, kanban, kanban_ops, note,
-    system, templates, typst_export, workspace,
+    notion_import, system, templates, typst_export, workspace,
 };
-#[cfg(target_os = "linux")]
-use tauri::Manager;
+use std::sync::atomic::{AtomicBool, Ordering};
+use tauri::{Emitter, Manager, WindowEvent};
+
+/// Emitted to the frontend when the OS/user requests a window close. The default
+/// close is prevented until the frontend flushes pending writes and calls
+/// `allow_app_close`, so quitting can never drop the last edits sitting in an
+/// autosave / Y.Doc debounce window.
+const CLOSE_REQUESTED_EVENT: &str = "nevo://close-requested";
+
+/// Gate that lets the app distinguish a user-initiated close (must flush first)
+/// from the programmatic re-close issued by `allow_app_close` after the flush.
+struct CloseGuard {
+    allowed: AtomicBool,
+}
+
+/// Marks the pending close as safe and closes the window. The subsequent
+/// `CloseRequested` sees `allowed = true` and is not intercepted again.
+#[tauri::command]
+async fn allow_app_close(
+    window: tauri::WebviewWindow,
+    guard: tauri::State<'_, CloseGuard>,
+) -> Result<(), String> {
+    guard.allowed.store(true, Ordering::SeqCst);
+    window.close().map_err(|error| error.to_string())
+}
 
 #[cfg(target_os = "linux")]
 fn enable_native_spellcheck(app: &tauri::App) {
@@ -141,6 +164,19 @@ pub fn run() {
         .manage(collab::server::CollabAppState::new())
         .manage(github_sync::GithubSyncState::default())
         .manage(typst_export::PdfPreviewCache::default())
+        .manage(notion_import::NotionImportState::default())
+        .manage(CloseGuard {
+            allowed: AtomicBool::new(false),
+        })
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                if window.state::<CloseGuard>().allowed.load(Ordering::SeqCst) {
+                    return;
+                }
+                api.prevent_close();
+                let _ = window.emit(CLOSE_REQUESTED_EVENT, ());
+            }
+        })
         .setup(|app| {
             let logger = logging::AppLogger::new(logging::resolve_logs_dir(app.handle())?)?;
             logging::install_global_logger(logger)?;
@@ -194,6 +230,7 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
+            allow_app_close,
             logging::log_frontend_event,
             ai::ai_list_models,
             ai::ai_complete,
@@ -280,6 +317,9 @@ pub fn run() {
             note::import_asset_from_url,
             note::read_obsidian_vault,
             note::import_vault_asset,
+            notion_import::pick_and_scan_notion_export,
+            notion_import::import_notion_assets,
+            notion_import::release_notion_import,
             note::delete_unreferenced_asset,
             note::save_draw_asset,
             note::read_draw_asset,

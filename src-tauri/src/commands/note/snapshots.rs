@@ -146,7 +146,8 @@ fn write_note_snapshot(workspace_path: &str, note: &NoteDocument) -> Result<(), 
     let snapshot_id = create_snapshot_id();
     let snapshot_path = snapshot_file_path(workspace_path, &note.id, &snapshot_id)?;
     let content = serde_json::to_string(note).map_err(|e| e.to_string())?;
-    std::fs::write(snapshot_path, content).map_err(|e| e.to_string())?;
+    crate::commands::path_utils::write_atomic(&snapshot_path, content.as_bytes())
+        .map_err(|e| e.to_string())?;
     prune_note_snapshots_internal(workspace_path, &note.id, 50)
 }
 

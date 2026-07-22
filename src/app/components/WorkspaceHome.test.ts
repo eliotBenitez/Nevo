@@ -37,6 +37,7 @@ function mountHome(overrides: Record<string, unknown> = {}) {
       recentItems: [],
       kanbanEnabled: true,
       isWorkspaceEmpty: false,
+      backendKind: 'local',
       ...overrides,
     },
   })
@@ -57,7 +58,7 @@ describe('WorkspaceHome', () => {
     expect(wrapper.emitted('create-board')).toEqual([[]])
   })
 
-  it('offers file and Obsidian-vault import from one keyboard-operable quick action', async () => {
+  it('offers Markdown, Obsidian, and Notion import from one keyboard-operable quick action', async () => {
     const wrapper = mountHome()
     const trigger = wrapper.get('.workspace-home__import .workspace-home__action')
 
@@ -67,7 +68,7 @@ describe('WorkspaceHome', () => {
     await nextTick()
 
     let items = Array.from(document.querySelectorAll<HTMLButtonElement>('.nv-popup-menu__panel .nv-menu-item'))
-    expect(items.map(item => item.textContent?.trim())).toEqual(['Import .md', 'Import Obsidian vault'])
+    expect(items.map(item => item.textContent?.trim())).toEqual(['Import .md', 'Import Obsidian vault', 'Import Notion ZIP'])
     expect(document.activeElement).toBe(items[0])
 
     items[0].click()
@@ -77,9 +78,16 @@ describe('WorkspaceHome', () => {
     await nextTick()
     items = Array.from(document.querySelectorAll<HTMLButtonElement>('.nv-popup-menu__panel .nv-menu-item'))
     items[1].click()
+    await nextTick()
+    await trigger.trigger('click')
+    await nextTick()
+    await nextTick()
+    items = Array.from(document.querySelectorAll<HTMLButtonElement>('.nv-popup-menu__panel .nv-menu-item'))
+    items[2].click()
 
     expect(wrapper.emitted('import-md')).toEqual([[]])
     expect(wrapper.emitted('import-obsidian')).toEqual([[]])
+    expect(wrapper.emitted('import-notion')).toEqual([[]])
   })
 
   it('renders favorites, a unified recent feed, and emits the selected item', async () => {

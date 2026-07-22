@@ -1,14 +1,15 @@
 import { readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const assetsDir = new globalThis.URL('../dist/assets/', import.meta.url)
+const assetsDir = fileURLToPath(new globalThis.URL('../dist/assets/', import.meta.url))
 const defaultBudget = 1100 * 1024
 const lazyMathJaxSvgBudget = 1300 * 1024
 const failures = []
 
 for (const fileName of await readdir(assetsDir)) {
   if (!fileName.endsWith('.js')) continue
-  const bytes = (await stat(join(assetsDir.pathname, fileName))).size
+  const bytes = (await stat(join(assetsDir, fileName))).size
   const budget = fileName.startsWith('svg-') ? lazyMathJaxSvgBudget : defaultBudget
   if (bytes > budget) failures.push({ fileName, bytes, budget })
 }

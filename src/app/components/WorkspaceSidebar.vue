@@ -59,6 +59,7 @@ const emit = defineEmits<{
   'create-folder': []
   'import-md': []
   'import-obsidian': []
+  'import-notion': []
   'import-into-folder': [folderId: string]
   'import-into-note': [noteId: string]
   'open-note': [noteId: string]
@@ -509,11 +510,13 @@ function toggleGenericHome() {
       :kanban-enabled="kanbanEnabled"
       :collapse-state="collapseState"
       :sort-mode="sortMode"
+      :backend-kind="backendKind"
       @create-note="emit('create-note')"
       @create-folder="emit('create-folder')"
       @create-board="emit('create-board')"
       @import-md="emit('import-md')"
       @import-obsidian="emit('import-obsidian')"
+      @import-notion="emit('import-notion')"
       @toggle-collapse-all="toggleCollapseAll"
       @update:sort-mode="onSortModeChange"
     />

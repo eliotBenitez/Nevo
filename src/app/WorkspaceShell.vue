@@ -17,6 +17,7 @@ const PdfPreviewModal = defineAsyncComponent(() => import('./components/PdfPrevi
 const DocxPreviewModal = defineAsyncComponent(() => import('./components/DocxPreviewModal.vue'))
 const WorkspaceSettingsModal = defineAsyncComponent(() => import('./components/WorkspaceSettingsModal.vue'))
 const ObsidianImportModal = defineAsyncComponent(() => import('./components/ObsidianImportModal.vue'))
+const NotionImportModal = defineAsyncComponent(() => import('./components/NotionImportModal.vue'))
 import WorkspaceRenameModal from './components/WorkspaceRenameModal.vue'
 import UpdateDialog from './components/UpdateDialog.vue'
 const TemplatePickerModal = defineAsyncComponent(() => import('./components/templates/TemplatePickerModal.vue'))
@@ -99,6 +100,7 @@ const { tabs, activeTabId } = storeToRefs(tabsStore)
 const editorPaneRef = ref<{
   editorRoot: HTMLDivElement | null
   flushPendingContent?: () => void
+  flushYjsPersistence?: () => Promise<void>
   updateDrawBlock?: (payload: { drawId: string; svgPreview: string; src: string; title?: string }) => void
   dispatchPluginUiEvent?: (
     pluginId: string,
@@ -107,6 +109,7 @@ const editorPaneRef = ref<{
   ) => Promise<unknown>
 } | null>(null)
 noteStore.setPendingContentFlush(() => editorPaneRef.value?.flushPendingContent?.())
+noteStore.setPendingYjsFlush(() => editorPaneRef.value?.flushYjsPersistence?.())
 const editorRootEl = computed(() => editorPaneRef.value?.editorRoot ?? null)
 const { flushSave } = useNotePersistence()
 const renameInputRef = ref<HTMLInputElement | null>(null)
@@ -135,6 +138,7 @@ const templateCreateFolderId = ref<string | null>(null)
 const createFolderModalOpen = ref(false)
 const obsidianImportOpen = ref(false)
 const obsidianImportFolderId = ref<string | null>(null)
+const notionImportOpen = ref(false)
 const createFolderTitle = ref('')
 const createFolderError = ref('')
 const { runtime, useDrawerNavigation, useCompactHeader, useFullscreenDialogs, shellStyle } = useDeviceLayout()
@@ -497,6 +501,10 @@ function openObsidianImport() {
   obsidianImportFolderId.value = resolveNotePlacementFolder()
   obsidianImportOpen.value = true
 }
+function openNotionImport() {
+  mobileSidebarOpen.value = false
+  if (workspaceStore.backendKind === 'local') notionImportOpen.value = true
+}
 async function importMdToFolder(folderId: string) {
   mobileSidebarOpen.value = false
   await openImportedNote(await importMarkdownFile(folderId))
@@ -721,6 +729,7 @@ onBeforeUnmount(() => {
           @create-folder="createFolder"
           @import-md="importMd"
           @import-obsidian="openObsidianImport"
+          @import-notion="openNotionImport"
           @import-into-folder="importMdToFolder"
           @import-into-note="importMdIntoNote"
           @open-note="openNote"
@@ -748,11 +757,13 @@ onBeforeUnmount(() => {
         :recent-items="workspaceHome.recentItems.value"
         :kanban-enabled="kanbanEnabled"
         :is-workspace-empty="workspaceHome.isWorkspaceEmpty.value"
+        :backend-kind="workspaceStore.backendKind"
         @search="runWorkspaceSearch"
         @create-note="createNote"
         @create-folder="createFolder"
         @import-md="importMd"
         @import-obsidian="openObsidianImport"
+        @import-notion="openNotionImport"
         @create-board="createBoard"
         @open-item="openHomeItem"
         @manage-favorites="homeFavoritesManagerOpen = true"
@@ -854,6 +865,7 @@ onBeforeUnmount(() => {
           @create-folder="createFolder"
           @import-md="importMd"
           @import-obsidian="openObsidianImport"
+          @import-notion="openNotionImport"
           @import-into-folder="importMdToFolder"
           @import-into-note="importMdIntoNote"
           @open-note="openNote"
@@ -968,6 +980,12 @@ onBeforeUnmount(() => {
     :open="obsidianImportOpen"
     :target-folder-id="obsidianImportFolderId"
     @close="obsidianImportOpen = false"
+  />
+
+  <NotionImportModal
+    v-if="notionImportOpen"
+    :open="notionImportOpen"
+    @close="notionImportOpen = false"
   />
 
   <Teleport to="body">

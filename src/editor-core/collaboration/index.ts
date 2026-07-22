@@ -14,6 +14,38 @@ export function restoreYDocFromBinary(binary: Uint8Array): Y.Doc {
   return ydoc
 }
 
+/**
+ * Resolve the Y.Doc for a note from its persisted bytes, with corruption
+ * recovery. Extracted from the editor setup path so the fallback logic is
+ * unit-testable and cannot silently lose a note:
+ *  - non-empty `bytes` → restore; if restoration throws, or the restored doc's
+ *    prosemirror fragment is unreadable, fall back to seeding from `content` so
+ *    a corrupt `.yjs` never blocks opening the note;
+ *  - empty `bytes` → seed a fresh Y.Doc from `content`;
+ *  - if even seeding throws (e.g. malformed content), return `null` so the
+ *    caller can degrade to non-Yjs mode instead of crashing.
+ */
+export function loadOrCreateYDoc(schema: Schema, content: unknown, bytes: Uint8Array): Y.Doc | null {
+  if (bytes.length > 0) {
+    try {
+      const ydoc = restoreYDocFromBinary(bytes)
+      try {
+        ydoc.getXmlFragment(Y_FRAGMENT_NAME)
+        return ydoc
+      } catch {
+        ydoc.destroy()
+      }
+    } catch {
+      /* Unreadable update payload — fall through to seeding from content. */
+    }
+  }
+  try {
+    return createYDocFromContent(schema, content)
+  } catch {
+    return null
+  }
+}
+
 export function encodeYDocState(ydoc: Y.Doc): Uint8Array {
   return Y.encodeStateAsUpdate(ydoc)
 }

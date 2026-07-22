@@ -16,6 +16,7 @@ import type { WorkspaceBlockSearchItem } from '../types/search'
 import type { BacklinkRef, GraphEdge, ExtractedEdge } from '../types/graph'
 import type { KanbanBoard, KanbanCard } from '../types/kanban'
 import type { TemplateDocument, TemplateFieldValues } from '../types/template'
+import type { NotionAssetImportResult, NotionExportManifest } from '../types/notion-import'
 import { i18n } from '../i18n'
 import { appLogger } from '../utils/logger'
 
@@ -93,6 +94,22 @@ export const systemCommands = {
 
   pickWorkspaceDirectory: () =>
     invokeCommand<string | null>('pick_workspace_directory'),
+}
+
+export function pickAndScanNotionExport() {
+  return invokeCommand<NotionExportManifest | null>('pick_and_scan_notion_export')
+}
+
+export function importNotionAssets(workspacePath: string, sessionToken: string, paths: string[]) {
+  return invokeCommand<NotionAssetImportResult[]>('import_notion_assets', {
+    workspacePath,
+    sessionToken,
+    paths,
+  })
+}
+
+export function releaseNotionImport(sessionToken: string) {
+  return invokeCommand<boolean>('release_notion_import', { sessionToken })
 }
 
 export const workspaceCommands = {

@@ -5,14 +5,13 @@ import NvSelect from '../../../../ui/primitives/NvSelect.vue'
 import { parseCsv, inferColumnType, detectDelimiter, CSV_DELIMITERS } from '../../../../utils/csv/parseCsv'
 import { parseCsvInWorker } from '../../../../features/database/databaseWorkerClient'
 import {
-  createDbId,
   type DbCellValue,
   type DbField,
-  type DbFieldOption,
   type DbFieldType,
   type DbRecord,
 } from '../../../../types/database-block'
 import { nextOptionColor } from './dbColorPalette'
+import { buildCsvFieldsAndRecords } from '../../../../utils/noteImport/notion/csvDatabase'
 
 const props = defineProps<{
   t: (key: string) => string
@@ -113,68 +112,8 @@ async function onFileChange(event: Event) {
   }
 }
 
-function cellFor(raw: string, type: DbFieldType, optionMap: Map<string, DbFieldOption>): DbCellValue {
-  const trimmed = raw.trim()
-  switch (type) {
-    case 'number': {
-      if (trimmed === '') return null
-      const num = Number(trimmed)
-      return Number.isNaN(num) ? null : num
-    }
-    case 'checkbox':
-      return /^(true|yes)$/i.test(trimmed)
-    case 'select': {
-      if (trimmed === '') return null
-      let option = Array.from(optionMap.values()).find(item => item.name === trimmed)
-      if (!option) {
-        option = { id: createDbId('opt'), name: trimmed, color: nextOptionColor(optionMap.size) }
-        optionMap.set(option.id, option)
-      }
-      return option.id
-    }
-    case 'multi_select': {
-      if (trimmed === '') return []
-      const parts = trimmed.split(',').map(part => part.trim()).filter(Boolean)
-      return parts.map(part => {
-        let option = Array.from(optionMap.values()).find(item => item.name === part)
-        if (!option) {
-          option = { id: createDbId('opt'), name: part, color: nextOptionColor(optionMap.size) }
-          optionMap.set(option.id, option)
-        }
-        return option.id
-      })
-    }
-    case 'date':
-      return trimmed === '' ? null : trimmed
-    default:
-      return trimmed
-  }
-}
-
-function buildFieldsAndRecords(): { fields: DbField[]; records: DbRecord[] } {
-  const newFieldIds = columns.value.map(() => createDbId('f'))
-  const optionMaps: Map<string, DbFieldOption>[] = columns.value.map(() => new Map())
-
-  const records: DbRecord[] = dataRows.value.map(row => {
-    const cells: Record<string, DbCellValue> = {}
-    columns.value.forEach((_, colIndex) => {
-      cells[newFieldIds[colIndex]] = cellFor(row[colIndex] ?? '', columnTypes.value[colIndex], optionMaps[colIndex])
-    })
-    return { id: createDbId('r'), cells }
-  })
-
-  const fields: DbField[] = columns.value.map((name, i) => {
-    const type = columnTypes.value[i]
-    const field: DbField = { id: newFieldIds[i], name, type, width: 180 }
-    if (type === 'select' || type === 'multi_select') field.options = Array.from(optionMaps[i].values())
-    return field
-  })
-
-  return { fields, records }
-}
-
 function confirmImport() {
-  const built = buildFieldsAndRecords()
+  const built = buildCsvFieldsAndRecords(columns.value, dataRows.value, columnTypes.value, nextOptionColor)
 
   if (mode.value === 'replace') {
     emit('import', { ...built, mode: 'replace' })

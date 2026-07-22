@@ -222,6 +222,25 @@ describe('useNoteStore', () => {
     noteStore.setPendingContentFlush(null)
   })
 
+  it('flushes the Y.Doc on save even when the note is not dirty', async () => {
+    const mockedNoteCommands = vi.mocked(noteCommands)
+    mockedNoteCommands.saveNote.mockResolvedValue(undefined)
+
+    const noteStore = useNoteStore()
+    noteStore.activeNote = createNote('note-1', 'Initial')
+    noteStore.isDirty = false
+    const yjsFlush = vi.fn(async () => {})
+    noteStore.setPendingYjsFlush(yjsFlush)
+
+    await noteStore.saveNote()
+
+    // The Y.Doc is authoritative and saved on its own debounce, so it must be
+    // flushed on every save trigger, independent of the note-store dirty flag.
+    expect(yjsFlush).toHaveBeenCalledTimes(1)
+    expect(mockedNoteCommands.saveNote).not.toHaveBeenCalled()
+    noteStore.setPendingYjsFlush(null)
+  })
+
   it('marks note dirty when properties are patched', () => {
     const noteStore = useNoteStore()
     noteStore.activeNote = createNote('note-1', 'Initial')

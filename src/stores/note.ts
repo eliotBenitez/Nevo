@@ -78,6 +78,12 @@ export const useNoteStore = defineStore('note', () => {
   const dirtyRevision = ref(0)
   let noteSessionToken = 0
   let pendingContentFlush: (() => void | Promise<void>) | null = null
+  // Persists the editor-owned (disk-backed) Y.Doc immediately. The Y.Doc is the
+  // authoritative content on reload, but it saves on its own 2 s debounce, so a
+  // plain `saveNote` (which only writes note.json) could leave the last edits
+  // unpersisted in the .yjs file on quit. Flushing it here ties the two writers
+  // to the same save points (autosave, navigation, app close).
+  let pendingYjsFlush: (() => void | Promise<void>) | null = null
 
   function resetNoteState() {
     activeNote.value = null
@@ -177,6 +183,11 @@ export const useNoteStore = defineStore('note', () => {
     const backend = workspaceStore.backend
     const flushResult = backend ? pendingContentFlush?.() : undefined
     if (flushResult instanceof Promise) await flushResult
+    // Runs before the dirty check below so the authoritative Y.Doc is persisted
+    // on every save trigger — including navigation/close flushes where the note
+    // store may already be clean but the Y.Doc debounce is still pending.
+    const yjsFlushResult = backend ? pendingYjsFlush?.() : undefined
+    if (yjsFlushResult instanceof Promise) await yjsFlushResult
     const currentNote = activeNote.value
     if (!backend || !currentNote || !isDirty.value) return
     const sessionToken = noteSessionToken
@@ -289,6 +300,10 @@ export const useNoteStore = defineStore('note', () => {
     pendingContentFlush = flush
   }
 
+  function setPendingYjsFlush(flush: (() => void | Promise<void>) | null) {
+    pendingYjsFlush = flush
+  }
+
   async function restoreSnapshot(snapshotId: string) {
     const workspaceStore = useWorkspaceStore()
     const backend = workspaceStore.backend
@@ -340,6 +355,7 @@ export const useNoteStore = defineStore('note', () => {
     setPropertiesPatch,
     clearNote,
     setPendingContentFlush,
+    setPendingYjsFlush,
     restoreSnapshot,
   }
 })

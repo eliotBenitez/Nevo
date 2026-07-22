@@ -2,7 +2,6 @@ import { EditorView } from 'prosemirror-view'
 import { AllSelection, NodeSelection, TextSelection, type Command, type EditorState, type Transaction } from 'prosemirror-state'
 import { Slice, type Node } from 'prosemirror-model'
 import { cellAround, CellSelection } from 'prosemirror-tables'
-import { invoke } from '@tauri-apps/api/core'
 import * as Y from 'yjs'
 import { Awareness } from 'y-protocols/awareness'
 import type { NevoCoreCommands } from '../../../editor-core/commands'
@@ -28,25 +27,24 @@ import {
   setActivePluginSerialization,
 } from '../../../editor-core'
 import {
-  createYDocFromContent,
-  restoreYDocFromBinary,
-  encodeYDocState,
+  loadOrCreateYDoc,
   Y_FRAGMENT_NAME,
 } from '../../../editor-core/collaboration'
-import { collabCommands, workspaceCommands } from '../../../tauri/commands'
+import { createYjsPersistence } from './useYjsPersistence'
+import { collabCommands } from '../../../tauri/commands'
 import { initAwarenessUser } from '../../../editor-core/collaboration/yAwareness'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { useAuthStore } from '../../../stores/auth'
 import type { CloudBackend } from '../../../core/workspace-backend'
-import { looksLikeMarkdown, parseMarkdownToSlice } from './markdownPaste'
+import { createPasteHandler } from './usePasteHandling'
+import { buildPluginRuntime } from './pluginRuntime'
 import { appLogger } from '../../../utils/logger'
 import { runGuardedCommand } from './prosemirrorErrors'
 import { i18n } from '../../../i18n'
 import { useAiCompletion } from '../../../composables/useAiCompletion'
-import { pluginSecretKey, secureStore } from '../../../tauri/secureStore'
 import { buildAiSlashItems } from './aiSlashItems'
-import { createDatabaseRepository, type DatabaseRepository } from '../../../features/database/databaseRepository'
-import { collectRemovedDatabaseIds, collectDatabaseIds } from '../../../editor-core/databaseCleanup'
+import { createDatabaseRepository } from '../../../features/database/databaseRepository'
+import { createDatabaseCleanup, collectRemovedAssetSrcs } from './documentCleanup'
 
 function resolveEditorLanguage(): string {
   return document.documentElement.lang || 'ru'
@@ -141,51 +139,6 @@ export interface EditorCoreCallbacks {
   onAfterTransaction?: (view: EditorView) => void
   onAssetSrcsRemoved?: (srcs: string[]) => void
   onAiAskRequest?: (onSubmit: (instruction: string) => void) => void
-}
-
-const ASSET_SRC_PREFIX = '.nevo/assets/'
-
-function assetSrcOf(node: Node): string | null {
-  const src = node.attrs?.src
-  return typeof src === 'string' && src.startsWith(ASSET_SRC_PREFIX) ? src : null
-}
-
-function collectAssetSrcs(doc: Node): Set<string> {
-  const srcs = new Set<string>()
-  doc.descendants((node) => {
-    const src = assetSrcOf(node)
-    if (src) srcs.add(src)
-  })
-  return srcs
-}
-
-/**
- * Asset srcs that disappeared in this transaction. Instead of walking the whole
- * document twice (before + after), we scan only the ranges the transaction
- * actually touched in the previous doc to gather candidate srcs; the full
- * after-doc scan runs only when at least one asset node was in a changed range.
- * For ordinary text edits there are no candidates, so neither walk happens.
- */
-function collectRemovedAssetSrcs(prevDoc: Node, transaction: Transaction): string[] {
-  const candidates = new Set<string>()
-  let doc = prevDoc
-  for (const step of transaction.steps) {
-    const map = step.getMap()
-    map.forEach((oldStart, oldEnd) => {
-      if (oldEnd <= oldStart) return
-      doc.nodesBetween(oldStart, oldEnd, (node) => {
-        const src = assetSrcOf(node)
-        if (src) candidates.add(src)
-      })
-    })
-    const result = step.apply(doc)
-    if (result.doc) doc = result.doc
-  }
-  if (candidates.size === 0) return []
-  // The same asset may still be referenced elsewhere or have been re-inserted,
-  // so confirm against the resulting document before reporting it as removed.
-  const stillPresent = collectAssetSrcs(transaction.doc)
-  return [...candidates].filter((src) => !stillPresent.has(src))
 }
 
 export function createEditorCore(): EditorCore {
@@ -317,65 +270,22 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
 
   let pendingContentDoc: Node | null = null
   let contentSerializeTimer: ReturnType<typeof setTimeout> | null = null
-  // v2 database stores whose block was removed from the doc, pending a real
-  // delete. Deletion is deferred to `flushDatabaseCleanup` (run on disk save)
-  // and cancelled whenever the id reappears in the live doc — so undo or a
-  // cut/paste that restores the block never wipes its records.
-  const pendingDatabaseDeletions = new Set<string>()
-  let activeDatabaseRepository: DatabaseRepository | null = null
+  // v2 database blocks removed from the doc are queued here for a deferred
+  // delete (run on disk save), cancelled whenever the id reappears in the live
+  // doc — so undo or a cut/paste that restores the block never wipes its records.
+  const databaseCleanup = createDatabaseCleanup()
 
   function flushDatabaseCleanup() {
-    const repository = activeDatabaseRepository
-    if (pendingDatabaseDeletions.size === 0 || !repository) return
-    const liveIds = core.editorView ? collectDatabaseIds(core.editorView.state.doc) : new Set<string>()
-    for (const databaseId of [...pendingDatabaseDeletions]) {
-      pendingDatabaseDeletions.delete(databaseId)
-      if (liveIds.has(databaseId)) continue
-      void repository.deleteDatabase(databaseId).catch(error => {
-        void appLogger.warn({
-          source: 'frontend.editor',
-          event: 'database_cleanup_failed',
-          message: `Failed to remove database records for ${databaseId}`,
-          workspacePath: core.workspacePath,
-          error,
-        })
-      })
-    }
+    databaseCleanup.flush(core.editorView ? core.editorView.state.doc : null, core.workspacePath)
   }
 
-  // Debounced persistence of the editor-owned (disk-backed) Y.Doc. Hoisted to
-  // composable scope so it can be torn down on note switch / editor destroy —
-  // otherwise the pending timer leaks past `ydoc.destroy()` and the last edit
-  // within the debounce window is never written.
-  let yjsSaveTimer: ReturnType<typeof setTimeout> | null = null
-  let flushYjsPersistence: (() => Promise<void>) | null = null
-  let yjsUpdateTarget: Y.Doc | null = null
-  let yjsUpdateHandler: (() => void) | null = null
-
-  function teardownYjsPersistence() {
-    const hadPendingSave = yjsSaveTimer !== null
-    if (yjsSaveTimer) {
-      clearTimeout(yjsSaveTimer)
-      yjsSaveTimer = null
-    }
-    // Only flush when a debounced save was actually pending, so a plain note
-    // switch with no unsaved Yjs changes doesn't trigger a redundant write.
-    if (hadPendingSave) void flushYjsPersistence?.().catch(() => {})
-    flushYjsPersistence = null
-    if (yjsUpdateTarget && yjsUpdateHandler) {
-      yjsUpdateTarget.off('update', yjsUpdateHandler)
-    }
-    yjsUpdateTarget = null
-    yjsUpdateHandler = null
-  }
-
-  async function flushYjsPersistenceNow(): Promise<void> {
-    if (yjsSaveTimer) {
-      clearTimeout(yjsSaveTimer)
-      yjsSaveTimer = null
-    }
-    await flushYjsPersistence?.()
-  }
+  // Debounced persistence of the editor-owned (disk-backed) Y.Doc. Owned by a
+  // dedicated helper so the timer/handler are torn down on note switch / editor
+  // destroy — otherwise the pending timer leaks past `ydoc.destroy()` and the
+  // last edit within the debounce window is never written.
+  const yjsPersistence = createYjsPersistence()
+  const teardownYjsPersistence = () => yjsPersistence.teardown()
+  const flushYjsPersistenceNow = () => yjsPersistence.flushNow()
 
   function clearContentSerializeTimer() {
     if (contentSerializeTimer) {
@@ -582,119 +492,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
       workspacePath,
       manifests,
       nevoVersion: '1.0.0',
-      runtime: {
-        invoke: (commandId, args = {}) => invoke(commandId, { workspacePath, ...args }),
-        t: (key, params) => String(i18n.global.t(key, params ?? {})),
-        getPluginSetting: (pluginId, key) => workspaceStore.getPluginSetting(pluginId, key),
-        setPluginSetting: (pluginId, key, value) => { void workspaceStore.setPluginSetting(pluginId, key, value) },
-        locale: () => String(i18n.global.locale.value),
-        timeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-        ...(typeof workspaceCommands.createPluginCodeSession === 'function'
-          ? {
-              createPluginCodeSession: (pluginId: string, entryPoint: string) =>
-                workspaceCommands.createPluginCodeSession(workspacePath, pluginId, entryPoint),
-            }
-          : {}),
-        ...(typeof workspaceCommands.revokePluginCodeSession === 'function'
-          ? {
-              revokePluginCodeSession: (token: string) =>
-                workspaceCommands.revokePluginCodeSession(token),
-            }
-          : {}),
-        ...(typeof workspaceCommands.pluginStorageGet === 'function'
-          ? {
-              pluginStorageGet: (pluginId: string, scope: 'workspace' | 'local', key: string) =>
-                workspaceCommands.pluginStorageGet(workspacePath, pluginId, scope, key),
-            }
-          : {}),
-        ...(typeof workspaceCommands.pluginStorageSet === 'function'
-          ? {
-              pluginStorageSet: (
-                pluginId: string,
-                scope: 'workspace' | 'local',
-                key: string,
-                value: unknown,
-              ) => workspaceCommands.pluginStorageSet(workspacePath, pluginId, scope, key, value),
-            }
-          : {}),
-        ...(typeof workspaceCommands.pluginStorageDelete === 'function'
-          ? {
-              pluginStorageDelete: (pluginId: string, scope: 'workspace' | 'local', key: string) =>
-                workspaceCommands.pluginStorageDelete(workspacePath, pluginId, scope, key),
-            }
-          : {}),
-        getPluginSecret: (pluginId, key) => secureStore.get(pluginSecretKey(pluginId, key)),
-        ...(typeof workspaceCommands.pluginAssetWrite === 'function'
-          ? {
-              pluginAssetWrite: (pluginId: string, dataBase64: string) =>
-                workspaceCommands.pluginAssetWrite(workspacePath, pluginId, dataBase64),
-            }
-          : {}),
-        ...(typeof workspaceCommands.pluginAssetRead === 'function'
-          ? {
-              pluginAssetRead: (pluginId: string, assetId: string) =>
-                workspaceCommands.pluginAssetRead(workspacePath, pluginId, assetId),
-            }
-          : {}),
-        ...(typeof workspaceCommands.pluginAssetDelete === 'function'
-          ? {
-              pluginAssetDelete: (pluginId: string, assetId: string) =>
-                workspaceCommands.pluginAssetDelete(workspacePath, pluginId, assetId),
-            }
-          : {}),
-        ...(typeof workspaceCommands.pluginAssetBeginUpload === 'function'
-          ? {
-              pluginAssetBeginUpload: (pluginId: string) =>
-                workspaceCommands.pluginAssetBeginUpload(workspacePath, pluginId),
-            }
-          : {}),
-        ...(typeof workspaceCommands.pluginAssetAppendChunk === 'function'
-          ? {
-              pluginAssetAppendChunk: (pluginId: string, uploadId: string, chunkBase64: string) =>
-                workspaceCommands.pluginAssetAppendChunk(workspacePath, pluginId, uploadId, chunkBase64),
-            }
-          : {}),
-        ...(typeof workspaceCommands.pluginAssetFinishUpload === 'function'
-          ? {
-              pluginAssetFinishUpload: (pluginId: string, uploadId: string) =>
-                workspaceCommands.pluginAssetFinishUpload(workspacePath, pluginId, uploadId),
-            }
-          : {}),
-        ...(typeof workspaceCommands.pluginAssetAbortUpload === 'function'
-          ? {
-              pluginAssetAbortUpload: (pluginId: string, uploadId: string) =>
-                workspaceCommands.pluginAssetAbortUpload(workspacePath, pluginId, uploadId),
-            }
-          : {}),
-        ...(typeof workspaceCommands.pluginAssetUrl === 'function'
-          ? {
-              pluginAssetUrl: (pluginId: string, assetId: string) =>
-                workspaceCommands.pluginAssetUrl(workspacePath, pluginId, assetId),
-            }
-          : {}),
-        ...(typeof workspaceCommands.pluginNetworkFetch === 'function'
-          ? {
-              pluginNetworkFetch: (pluginId: string, request: Record<string, unknown>) =>
-                workspaceCommands.pluginNetworkFetch(workspacePath, pluginId, {
-                  url: String(request.url ?? ''),
-                  method: String(request.method ?? 'GET'),
-                  headers: request.headers && typeof request.headers === 'object'
-                    ? request.headers as Record<string, string>
-                    : undefined,
-                  bodyBase64: typeof request.bodyBase64 === 'string' ? request.bodyBase64 : undefined,
-                }),
-            }
-          : {}),
-        ...(typeof workspaceCommands.pluginRegistryLoad === 'function'
-          ? { loadPluginRegistry: () => workspaceCommands.pluginRegistryLoad(workspacePath) }
-          : {}),
-        ...(typeof workspaceCommands.pluginRegistrySave === 'function'
-          ? {
-              savePluginRegistry: (registry: Parameters<typeof workspaceCommands.pluginRegistrySave>[1]) =>
-                workspaceCommands.pluginRegistrySave(workspacePath, registry),
-            }
-          : {}),
-      },
+      runtime: buildPluginRuntime(workspacePath, workspaceStore),
     })
     host.setNodeEditRequestHandler((_view, position, nodeName, anchorRect) =>
       callbacks.onPluginNodeEditRequest(position, nodeName, anchorRect),
@@ -819,7 +617,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     } = {},
   ) {
     const databaseRepository = createDatabaseRepository(core.workspacePath)
-    activeDatabaseRepository = databaseRepository
+    databaseCleanup.setRepository(databaseRepository)
     const aiSlashItems = (settings.ai.enabled && settings.ai.slashCommands && settings.editor.slashCommands)
       ? buildAiSlashItems({
           ai,
@@ -928,14 +726,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
               const removed = collectRemovedAssetSrcs(prevState.doc, transaction)
               if (removed.length > 0) callbacks.onAssetSrcsRemoved(removed)
             }
-            const removedDatabaseIds = collectRemovedDatabaseIds(prevState.doc, transaction)
-            for (const databaseId of removedDatabaseIds) pendingDatabaseDeletions.add(databaseId)
-            // Reconcile against the live doc so an undo/paste that restored a
-            // database node in this (or a later) transaction cancels its
-            // pending deletion before `flushDatabaseCleanup` runs.
-            if (pendingDatabaseDeletions.size > 0) {
-              for (const liveId of collectDatabaseIds(nextState.doc)) pendingDatabaseDeletions.delete(liveId)
-            }
+            databaseCleanup.recordRemoved(prevState.doc, transaction, nextState.doc)
             scheduleContentUpdate(nextState.doc)
           }
           callbacks.onAfterTransaction?.(view)
@@ -979,49 +770,11 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
             return handleTableContextMenu(view, event)
           },
         },
-        handlePaste(_view, event) {
-          if (callbacks.onImagePaste?.(event)) return true
-          if (settings.editor.pasteBehavior !== 'plain-text') {
-            const html = event.clipboardData?.getData('text/html')
-            if (html) return false
-            const mdText = event.clipboardData?.getData('text/plain')
-            if (mdText && looksLikeMarkdown(mdText)) {
-              const slice = parseMarkdownToSlice(mdText, _view.state.schema, callbacks.resolveWikiLink)
-              if (slice) {
-                event.preventDefault()
-                _view.dispatch(_view.state.tr.replaceSelection(slice).scrollIntoView())
-                return true
-              }
-            }
-            return false
-          }
-          const text = event.clipboardData?.getData('text/plain')
-          if (!text) return false
-          event.preventDefault()
-          const { state, dispatch } = _view
-          const { schema } = state
-          const paragraphType = schema.nodes.paragraph
-          if (!paragraphType) {
-            dispatch(state.tr.insertText(text).scrollIntoView())
-            return true
-          }
-          const lines = text.split('\n')
-          let tr = state.tr.deleteSelection()
-          let pos = tr.selection.from
-          for (let i = 0; i < lines.length; i++) {
-            const line = lines[i] ?? ''
-            if (i === 0) {
-              if (line) { tr = tr.insertText(line, pos); pos += line.length }
-            } else {
-              const para = line
-                ? paragraphType.createAndFill(null, schema.text(line))
-                : paragraphType.createAndFill()
-              if (para) { tr = tr.insert(pos, para); pos += para.nodeSize }
-            }
-          }
-          dispatch(tr.scrollIntoView())
-          return true
-        },
+        handlePaste: createPasteHandler({
+          getPasteBehavior: () => settings.editor.pasteBehavior,
+          onImagePaste: callbacks.onImagePaste,
+          resolveWikiLink: callbacks.resolveWikiLink,
+        }),
       })
       applyCaretAnimation(core.editorView.dom as HTMLElement, settings.editor.caretAnimation)
       callbacks.onOverlaysUpdate()
@@ -1059,6 +812,18 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     await setupEditorForContent(content, documentId, editorRoot, settings, { enableTemplates: false })
   }
 
+  // Content authority invariant:
+  //  - The disk-backed Y.Doc (`.nevo/collab/<id>.yjs`) is the source of truth for
+  //    a note's body once it exists. `note.content` (in `note.json`) is a derived
+  //    cache used by search/preview/export; it only *seeds* a brand-new Y.Doc.
+  //  - Reconciliation is automatic: when a disk-loaded Y.Doc differs from the
+  //    `note.content` seed, `ySyncPlugin` overwrites the freshly-created view with
+  //    the Y.Doc content, producing a `docChanged` transaction. On a fresh view
+  //    `isApplyingExternalState` is false, so `scheduleContentUpdate` runs and
+  //    rewrites `note.content` to match — healing the drift on open.
+  //  - Both writers are flushed at the same points (autosave, navigation, app
+  //    close via `setPendingYjsFlush`), so they cannot diverge across a save.
+  // Keep this coupling intact when changing the setup/persistence paths.
   async function setupEditorForNote(note: NoteDocument, editorRoot: HTMLDivElement, settings: WorkspaceSettings) {
     let yFragment: import('yjs').XmlFragment | undefined
 
@@ -1088,21 +853,11 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
 
       try {
         const bytes = await collabCommands.loadYjsState(workspacePath, noteId)
-        if (bytes.length > 0) {
-          ydoc = restoreYDocFromBinary(bytes)
-          try {
-            ydoc.getXmlFragment(Y_FRAGMENT_NAME)
-          } catch {
-            ydoc.destroy()
-            ydoc = createYDocFromContent(core.schema, note.content)
-          }
-        } else {
-          ydoc = createYDocFromContent(core.schema, note.content)
-        }
+        ydoc = loadOrCreateYDoc(core.schema, note.content, bytes)
       } catch {
-        try {
-          ydoc = createYDocFromContent(core.schema, note.content)
-        } catch { /* fall through — use non-Yjs mode */ }
+        // The persisted state could not be read (IO error): seed a fresh Y.Doc
+        // from note.content rather than dropping into non-Yjs mode.
+        ydoc = loadOrCreateYDoc(core.schema, note.content, new Uint8Array())
       }
 
       if (ydoc) {
@@ -1111,26 +866,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
         core.ownsYdoc = true
         yFragment = ydoc.getXmlFragment(Y_FRAGMENT_NAME)
 
-        const persistYjsState = async () => {
-          if (core.ydoc !== ydoc) return
-          const state = encodeYDocState(ydoc)
-          // `state` is a Uint8Array; the command wrapper forwards it as a raw
-          // IPC body, so no Array.from conversion (which would JSON-inflate it).
-          await collabCommands.saveYjsState(workspacePath, noteId, state)
-        }
-        flushYjsPersistence = persistYjsState
-        const handleUpdate = () => {
-          if (yjsSaveTimer) clearTimeout(yjsSaveTimer)
-          yjsSaveTimer = setTimeout(() => {
-            yjsSaveTimer = null
-            void persistYjsState().catch(() => {
-              /* non-critical */
-            })
-          }, 2000)
-        }
-        yjsUpdateTarget = ydoc
-        yjsUpdateHandler = handleUpdate
-        ydoc.on('update', handleUpdate)
+        yjsPersistence.attach(ydoc, workspacePath, noteId, () => core.ydoc === ydoc)
       }
     }
 
