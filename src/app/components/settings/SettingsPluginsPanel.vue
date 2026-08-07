@@ -6,6 +6,7 @@ import { storeToRefs } from 'pinia'
 import { confirm } from '@tauri-apps/plugin-dialog'
 import { AlertTriangle, BarChart3, Download, ExternalLink, FolderOpen, Github, Kanban, LayoutTemplate, Network, PackageCheck, RefreshCw, Settings, Trash2 } from 'lucide-vue-next'
 import { useWorkspaceStore } from '../../../stores/workspace'
+import { CloudBackend } from '../../../core/workspace-backend'
 import { systemCommands, workspaceCommands } from '../../../tauri/commands'
 import type { MarketplaceCatalogItem, MarketplacePluginStatus, PluginManifest } from '../../../types/workspace'
 import { getEnabledPluginCount, getTotalPluginCount } from '../../../utils/plugin-counts'
@@ -23,6 +24,12 @@ type MarketplaceAction = 'install' | 'update' | 'remove'
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
 const { plugins, activePath, marketplaceCatalog } = storeToRefs(workspaceStore)
+// Plugins of a cloud workspace live in a device-local directory rather than in
+// the workspace, so the path these commands take is not always activePath.
+const pluginPath = computed(() => {
+  const backend = workspaceStore.backend
+  return activePath.value ?? (backend instanceof CloudBackend ? backend.pluginWorkspacePath() : null)
+})
 
 const activeTab = ref<PanelTab>('installed')
 const pluginValidation = ref<Record<string, 'valid' | 'invalid'>>({})
@@ -149,11 +156,12 @@ function canRunMarketplaceAction(item: MarketplaceCatalogItem, action: Marketpla
 }
 
 async function validatePlugins() {
-  if (!activePath.value) return
+  const path = pluginPath.value
+  if (!path) return
   const next: Record<string, 'valid' | 'invalid'> = {}
   for (const plugin of plugins.value) {
     try {
-      await workspaceCommands.validatePluginManifest(activePath.value, plugin.id)
+      await workspaceCommands.validatePluginManifest(path, plugin.id)
       next[plugin.id] = 'valid'
     } catch {
       next[plugin.id] = 'invalid'
@@ -254,8 +262,9 @@ function toggleSettingsExpanded(pluginId: string) {
 }
 
 async function openPluginFolder(pluginId: string) {
-  if (!activePath.value) return
-  await systemCommands.openWorkspaceLocation(activePath.value, 'plugins', { pluginId })
+  const path = pluginPath.value
+  if (!path) return
+  await systemCommands.openWorkspaceLocation(path, 'plugins', { pluginId })
 }
 
 async function openExternalSource(url: string) {

@@ -1,11 +1,12 @@
 mod collab;
 mod commands;
 mod logging;
+mod mcp_bridge;
 mod media_server;
 
 use commands::{
-    ai, auth, config, database, folder, fonts, github_sync, graph, kanban, kanban_ops, note,
-    notion_import, system, templates, typst_export, workspace,
+    ai, auth, config, database, folder, fonts, github_sync, graph, kanban, kanban_ops, mcp, note,
+    note_index, notion_import, system, templates, typst_export, workspace, workspace_transfer,
 };
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{Emitter, Manager, WindowEvent};
@@ -162,6 +163,8 @@ pub fn run() {
             workspace::plugin_asset_response(&request.uri().to_string())
         })
         .manage(collab::server::CollabAppState::new())
+        .manage(mcp_bridge::McpBridgeState::new())
+        .manage(mcp_bridge::WebviewChannel::new())
         .manage(github_sync::GithubSyncState::default())
         .manage(typst_export::PdfPreviewCache::default())
         .manage(notion_import::NotionImportState::default())
@@ -235,10 +238,10 @@ pub fn run() {
             ai::ai_list_models,
             ai::ai_complete,
             ai::ai_complete_stream,
-            auth::start_oauth_loopback,
-            auth::secure_store_set,
-            auth::secure_store_get,
-            auth::secure_store_delete,
+            auth::oauth::start_oauth_loopback,
+            auth::secure_store::secure_store_set,
+            auth::secure_store::secure_store_get,
+            auth::secure_store::secure_store_delete,
             config::load_app_config,
             config::save_app_config,
             config::get_app_metadata,
@@ -251,12 +254,14 @@ pub fn run() {
             database::database_delete,
             workspace::create_workspace,
             workspace::open_workspace,
+            workspace::load_workspace_manifest,
             workspace::save_workspace_manifest,
             workspace::load_workspace_settings,
             workspace::save_workspace_settings,
             workspace::load_custom_css,
             workspace::save_custom_css,
             workspace::list_plugins,
+            workspace::cloud_plugin_root,
             workspace::validate_plugin_manifest,
             workspace::set_plugin_enabled,
             workspace::plugin_create_code_session,
@@ -294,6 +299,7 @@ pub fn run() {
             templates::template_update,
             templates::template_delete,
             templates::template_create_note,
+            templates::template_resolve_content,
             folder::create_folder,
             folder::rename_folder,
             folder::delete_folder,
@@ -344,9 +350,15 @@ pub fn run() {
             note::load_yjs_state,
             note::delete_yjs_state,
             note::touch_note_updated_at,
+            note_index::query_notes,
+            note_index::reindex_notes,
             collab::server::start_collab_server,
             collab::server::stop_collab_server,
             collab::server::get_collab_server_info,
+            mcp::apply_mcp_mode,
+            mcp::get_mcp_bridge_info,
+            mcp::stop_mcp_bridge,
+            mcp::mcp_respond,
             graph::graph_update_note_edges,
             graph::graph_get_backlinks,
             graph::graph_get_outlinks,
@@ -368,6 +380,11 @@ pub fn run() {
             github_sync::github_sync_get_status,
             github_sync::github_sync_start_auto,
             github_sync::github_sync_stop_auto,
+            workspace_transfer::export_workspace_archive,
+            workspace_transfer::import_workspace_archive_as_new,
+            workspace_transfer::extract_workspace_archive_to_temp,
+            workspace_transfer::release_workspace_archive_temp,
+            workspace_transfer::merge_workspace_archive,
         ]);
     app.run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -209,6 +209,12 @@ export function useDrawSelectionChrome(options: DrawSelectionChromeOptions) {
     marquee.value = null
   }
 
+  function cancelGesture() {
+    selectMode.value = null
+    activeHandle.value = null
+    marquee.value = null
+  }
+
   function onPointerMoveChrome(event: PointerEvent) {
     if (selectMode.value === 'bend') { options.bendArrowTo(options.eventToWorld(event)); return }
     if (selectMode.value === 'resize') { options.resizeSelectionTo(options.eventToWorld(event), event.shiftKey); return }
@@ -257,6 +263,7 @@ export function useDrawSelectionChrome(options: DrawSelectionChromeOptions) {
     screenPoint,
     onSelectPointerDown,
     endSelectGesture,
+    cancelGesture,
     onPointerMoveChrome,
     cursorClass,
     HANDLE_HIT,

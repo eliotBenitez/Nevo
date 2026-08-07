@@ -30,6 +30,8 @@ import {
   FileText,
   Palette,
   Database,
+  ListFilter,
+  Link2,
 } from 'lucide-vue-next'
 
 defineProps<{
@@ -45,6 +47,10 @@ const emit = defineEmits<{
   mouseenter: []
   mouseleave: []
 }>()
+
+function onTypeIconClick() {
+  emit('typeIconClick')
+}
 
 const nodeTypeIconMap: Record<string, Component> = {
   paragraph: Pilcrow,
@@ -66,6 +72,8 @@ const nodeTypeIconMap: Record<string, Component> = {
   embed_block: Globe,
   draw_block: Palette,
   database_block: Database,
+  query_block: ListFilter,
+  block_embed: Link2,
 }
 
 function getNodeIcon(typeName: string | null, attrs: { level?: number; kind?: string } | null): Component {
@@ -97,6 +105,7 @@ const { t } = useI18n()
     @mouseleave="emit('mouseleave')"
   >
     <button
+      type="button"
       class="block-handle__btn block-handle__drag"
       :aria-label="t('editor.blockHandle.drag')"
       :title="t('editor.blockHandle.drag')"
@@ -105,10 +114,12 @@ const { t } = useI18n()
       <GripVertical :size="14" />
     </button>
     <button
+      type="button"
       class="block-handle__btn block-handle__type"
       :aria-label="t('editor.blockHandle.options')"
       :title="t('editor.blockHandle.options')"
-      @mousedown.prevent="emit('typeIconClick')"
+      @mousedown.prevent.stop
+      @click.prevent.stop="onTypeIconClick"
     >
       <component :is="getNodeIcon(hoveredBlockTypeName, hoveredBlockIconAttrs)" :size="13" />
     </button>

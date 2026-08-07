@@ -53,6 +53,7 @@ export interface DrawStrokeInput {
   beginStroke(event: PointerEvent): void
   moveStroke(event: PointerEvent): void
   endStroke(event: PointerEvent): void
+  cancelGesture(): void
   eraseAt(point: DrawPoint): void
   tryBeginMove(event: PointerEvent): boolean
   moveStrokeAt(event: PointerEvent): void
@@ -318,6 +319,15 @@ export function createDrawStrokeInput(ctx: {
     scheduleSave()
   }
 
+  function cancelGesture() {
+    const moving = movingStroke.value
+    if (moving) strokes.value = moving.snapshot
+    movingStroke.value = null
+    activeStroke.value = null
+    isDrawing.value = false
+    bindCandidateId.value = null
+  }
+
   function insertImageStroke(input: InsertImageInput): string | null {
     const { assetSrc, naturalWidth, naturalHeight } = input
     if (!assetSrc || !(naturalWidth > 0) || !(naturalHeight > 0)) return null
@@ -400,6 +410,7 @@ export function createDrawStrokeInput(ctx: {
     beginStroke,
     moveStroke,
     endStroke,
+    cancelGesture,
     eraseAt,
     tryBeginMove,
     moveStrokeAt,

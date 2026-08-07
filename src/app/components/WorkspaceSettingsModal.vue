@@ -3,7 +3,11 @@ import { computed, defineAsyncComponent, markRaw, nextTick, onBeforeUnmount, ref
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import {
+  Archive,
+  ArrowLeft,
   ArrowRight,
+  Bot,
+  ChevronRight,
   Code,
   Database,
   Eye,
@@ -28,6 +32,7 @@ import { buildWorkspaceSettingsSearchItems } from '../search/settings'
 import { useSettingsHotkeys } from '../composables/useSettingsHotkeys'
 import { useThemeStore } from '../../stores/theme'
 import { getTotalPluginCount } from '../../utils/plugin-counts'
+import { useMobileBackButton } from '../../composables/useMobileBackButton'
 // Panels are loaded on demand: only the active section is mounted at a time
 // (see the v-else-if chain in the template), so deferring their import keeps the
 // settings modal's first paint cheap and avoids loading 10 panels up front.
@@ -35,11 +40,13 @@ const SettingsAppearancePanel = defineAsyncComponent(() => import('./settings/Se
 const SettingsEditorPanel = defineAsyncComponent(() => import('./settings/SettingsEditorPanel.vue'))
 const SettingsAiPanel = defineAsyncComponent(() => import('./settings/SettingsAiPanel.vue'))
 const SettingsPluginsPanel = defineAsyncComponent(() => import('./settings/SettingsPluginsPanel.vue'))
+const SettingsMcpPanel = defineAsyncComponent(() => import('./settings/SettingsMcpPanel.vue'))
 const SettingsHotkeysPanel = defineAsyncComponent(() => import('./settings/SettingsHotkeysPanel.vue'))
 const SettingsAboutPanel = defineAsyncComponent(() => import('./settings/SettingsAboutPanel.vue'))
 const SettingsGeneralPanel = defineAsyncComponent(() => import('./settings/SettingsGeneralPanel.vue'))
 const SettingsWorkspacePanel = defineAsyncComponent(() => import('./settings/SettingsWorkspacePanel.vue'))
 const SettingsFilesPanel = defineAsyncComponent(() => import('./settings/SettingsFilesPanel.vue'))
+const SettingsBackupPanel = defineAsyncComponent(() => import('./settings/SettingsBackupPanel.vue'))
 const SettingsAdvancedPanel = defineAsyncComponent(() => import('./settings/SettingsAdvancedPanel.vue'))
 
 interface Props {
@@ -57,7 +64,7 @@ interface SectionMeta {
 const props = defineProps<Props>()
 const emit = defineEmits<{ close: [] }>()
 const { t } = useI18n()
-const { useFullscreenDialogs } = useDeviceLayout()
+const { isPhone, useFullscreenDialogs } = useDeviceLayout()
 
 const workspaceStore = useWorkspaceStore()
 const themeStore = useThemeStore()
@@ -68,22 +75,77 @@ const { activate, deactivate } = useFocusTrap(dialogRef, computed(() => props.op
 watch(() => props.open, (open) => { if (open) nextTick(activate); else deactivate() })
 
 const activeSection = ref<SettingsSectionId>('general')
+const mobilePage = ref<'root' | 'detail'>('root')
 const settingsSearch = ref('')
 const { capturingBindingId } = useSettingsHotkeys()
 const pluginSectionCount = computed(() => getTotalPluginCount(plugins.value))
 
-const sections = computed<SectionMeta[]>(() => [
-  { id: 'general', label: t('settings.sections.general'), icon: markRaw(Settings) },
-  { id: 'appearance', label: t('settings.sections.appearance'), icon: markRaw(Eye) },
-  { id: 'editor', label: t('settings.sections.editor'), icon: markRaw(SlidersHorizontal) },
-  { id: 'workspace', label: t('settings.sections.workspace'), icon: markRaw(Folder) },
-  { id: 'ai', label: t('settings.sections.ai'), icon: markRaw(Sparkles) },
-  { id: 'plugins', label: t('settings.sections.plugins'), icon: markRaw(Plug), count: pluginSectionCount.value },
-  { id: 'hotkeys', label: t('settings.sections.hotkeys'), icon: markRaw(Code) },
-  { id: 'files', label: t('settings.sections.files'), icon: markRaw(Database) },
-  { id: 'advanced', label: t('settings.sections.advanced'), icon: markRaw(Layers) },
-  { id: 'about', label: t('settings.sections.about'), icon: markRaw(Info) },
-])
+const sections = computed<SectionMeta[]>(() => {
+  const items: SectionMeta[] = [
+    { id: 'general', label: t('settings.sections.general'), icon: markRaw(Settings) },
+    { id: 'appearance', label: t('settings.sections.appearance'), icon: markRaw(Eye) },
+    { id: 'editor', label: t('settings.sections.editor'), icon: markRaw(SlidersHorizontal) },
+    { id: 'workspace', label: t('settings.sections.workspace'), icon: markRaw(Folder) },
+    { id: 'ai', label: t('settings.sections.ai'), icon: markRaw(Sparkles) },
+    { id: 'plugins', label: t('settings.sections.plugins'), icon: markRaw(Plug), count: pluginSectionCount.value },
+    { id: 'mcp', label: t('settings.sections.mcp'), icon: markRaw(Bot) },
+    { id: 'hotkeys', label: t('settings.sections.hotkeys'), icon: markRaw(Code) },
+    { id: 'files', label: t('settings.sections.files'), icon: markRaw(Database) },
+    { id: 'backup', label: t('settings.sections.backup'), icon: markRaw(Archive) },
+    { id: 'advanced', label: t('settings.sections.advanced'), icon: markRaw(Layers) },
+    { id: 'about', label: t('settings.sections.about'), icon: markRaw(Info) },
+  ]
+  return isPhone.value
+    ? items.filter(section => section.id !== 'mcp' && section.id !== 'hotkeys')
+    : items
+})
+
+const mobileSectionGroups = computed(() => [
+  {
+    label: t('settings.mobile.groups.primary'),
+    items: [
+      { id: 'appearance' as const, description: t('settings.mobile.descriptions.appearance') },
+      { id: 'editor' as const, description: t('settings.mobile.descriptions.editor') },
+      { id: 'workspace' as const, description: t('settings.mobile.descriptions.workspace') },
+      { id: 'ai' as const, description: t('settings.mobile.descriptions.ai') },
+    ],
+  },
+  {
+    label: t('settings.mobile.groups.system'),
+    items: [
+      { id: 'files' as const, description: t('settings.mobile.descriptions.files') },
+      { id: 'backup' as const, description: t('settings.mobile.descriptions.backup') },
+      { id: 'plugins' as const, description: t('settings.mobile.descriptions.plugins') },
+      { id: 'about' as const, description: t('settings.mobile.descriptions.about') },
+    ],
+  },
+].map(group => ({
+  ...group,
+  items: group.items.map(item => ({
+    ...item,
+    section: sections.value.find(section => section.id === item.id)!,
+  })),
+})))
+
+const panelComponents: Record<SettingsSectionId, unknown> = {
+  general: SettingsGeneralPanel,
+  appearance: SettingsAppearancePanel,
+  editor: SettingsEditorPanel,
+  workspace: SettingsWorkspacePanel,
+  ai: SettingsAiPanel,
+  plugins: SettingsPluginsPanel,
+  mcp: SettingsMcpPanel,
+  hotkeys: SettingsHotkeysPanel,
+  files: SettingsFilesPanel,
+  backup: SettingsBackupPanel,
+  advanced: SettingsAdvancedPanel,
+  about: SettingsAboutPanel,
+}
+
+const activePanelComponent = computed(() => panelComponents[activeSection.value])
+const activeSectionLabel = computed(() =>
+  sections.value.find(section => section.id === activeSection.value)?.label ?? t('settings.title'),
+)
 
 const searchCatalog = computed(() => buildWorkspaceSettingsSearchItems({
   t,
@@ -98,7 +160,10 @@ const searchCatalog = computed(() => buildWorkspaceSettingsSearchItems({
 
 const searchResults = computed<WorkspaceSettingSearchItem[]>(() =>
   rankTitleBarResults(settingsSearch.value, searchCatalog.value)
-    .filter((item): item is WorkspaceSettingSearchItem => item.type === 'setting'),
+    .filter((item): item is WorkspaceSettingSearchItem =>
+      item.type === 'setting'
+      && (!isPhone.value || (item.section !== 'mcp' && item.section !== 'hotkeys')),
+    ),
 )
 
 watch(
@@ -107,7 +172,11 @@ watch(
     toggleEscapeListener(open)
     if (!open) return
     settingsSearch.value = ''
-    activeSection.value = props.initialSection ?? 'general'
+    const requestedSection = props.initialSection ?? 'general'
+    activeSection.value = sections.value.some(section => section.id === requestedSection)
+      ? requestedSection
+      : 'general'
+    mobilePage.value = props.initialSection ? 'detail' : 'root'
     await workspaceStore.loadDiagnostics()
     await workspaceStore.reloadPlugins()
   },
@@ -118,7 +187,10 @@ watch(
   () => props.initialSection,
   (nextSection) => {
     if (!props.open || !nextSection) return
-    activeSection.value = nextSection
+    activeSection.value = sections.value.some(section => section.id === nextSection)
+      ? nextSection
+      : 'general'
+    if (isPhone.value) mobilePage.value = 'detail'
   },
 )
 
@@ -127,6 +199,19 @@ onBeforeUnmount(() => { toggleEscapeListener(false) })
 function activateSection(sectionId: SettingsSectionId) {
   activeSection.value = sectionId
   settingsSearch.value = ''
+  if (isPhone.value) mobilePage.value = 'detail'
+}
+
+function mobileBack() {
+  if (settingsSearch.value) {
+    settingsSearch.value = ''
+    return
+  }
+  if (mobilePage.value === 'detail') {
+    mobilePage.value = 'root'
+    return
+  }
+  close()
 }
 
 function close() {
@@ -152,6 +237,11 @@ function toggleEscapeListener(enabled: boolean) {
   window.removeEventListener('keydown', onWindowKeydown, true)
   if (enabled) window.addEventListener('keydown', onWindowKeydown, true)
 }
+
+useMobileBackButton(
+  mobileBack,
+  computed(() => props.open && isPhone.value),
+)
 </script>
 
 <template>
@@ -165,14 +255,105 @@ function toggleEscapeListener(enabled: boolean) {
         aria-modal="true"
         :aria-label="t('settings.title')"
       >
-        <div class="settings-window__titlebar">
+        <div v-if="!isPhone" class="settings-window__titlebar">
           <span>{{ t('settings.title') }}</span>
           <button type="button" class="settings-window__close" :aria-label="t('workspace.context.cancel')" @click="close">
             <X :size="15" />
           </button>
         </div>
 
-        <div class="settings-shell">
+        <div v-if="isPhone" class="mobile-settings">
+          <header class="mobile-settings__topbar">
+            <button
+              type="button"
+              class="mobile-settings__back"
+              :aria-label="mobilePage === 'root' ? t('workspace.context.cancel') : t('workspace.back')"
+              @click="mobileBack"
+            >
+              <ArrowLeft :size="20" />
+            </button>
+            <h1>{{ mobilePage === 'root' ? t('settings.title') : activeSectionLabel }}</h1>
+            <span class="mobile-settings__topbar-spacer" aria-hidden="true" />
+          </header>
+
+          <main v-if="mobilePage === 'root'" class="mobile-settings__home">
+            <label class="mobile-settings__search">
+              <Search :size="18" aria-hidden="true" />
+              <input
+                v-model="settingsSearch"
+                type="search"
+                :placeholder="t('settings.search.placeholder')"
+                :aria-label="t('settings.search.label')"
+                autocomplete="off"
+              >
+            </label>
+
+            <section v-if="settingsSearch" class="mobile-settings__group">
+              <div class="mobile-settings__group-label">
+                {{ t('settings.search.resultsCount', { count: searchResults.length }) }}
+              </div>
+              <div class="mobile-settings__list">
+                <button
+                  v-for="result in searchResults"
+                  :key="result.id"
+                  type="button"
+                  class="mobile-settings__row"
+                  @click="activateSection(result.section)"
+                >
+                  <span class="mobile-settings__row-copy">
+                    <strong>{{ result.title }}</strong>
+                    <small>{{ result.sectionLabel }} · {{ result.description }}</small>
+                  </span>
+                  <ChevronRight :size="18" aria-hidden="true" />
+                </button>
+                <div v-if="searchResults.length === 0" class="mobile-settings__empty">
+                  <SearchX :size="24" aria-hidden="true" />
+                  <strong>{{ t('settings.search.emptyTitle') }}</strong>
+                  <span>{{ t('settings.search.emptyDescription') }}</span>
+                </div>
+              </div>
+            </section>
+
+            <template v-else>
+              <section
+                v-for="group in mobileSectionGroups"
+                :key="group.label"
+                class="mobile-settings__group"
+              >
+                <div class="mobile-settings__group-label">{{ group.label }}</div>
+                <div class="mobile-settings__list">
+                  <button
+                    v-for="item in group.items"
+                    :key="item.id"
+                    type="button"
+                    class="mobile-settings__row"
+                    @click="activateSection(item.id)"
+                  >
+                    <span class="mobile-settings__icon">
+                      <component :is="item.section.icon" :size="19" />
+                    </span>
+                    <span class="mobile-settings__row-copy">
+                      <strong>{{ item.section.label }}</strong>
+                      <small>{{ item.description }}</small>
+                    </span>
+                    <span v-if="item.section.count" class="mobile-settings__count">{{ item.section.count }}</span>
+                    <ChevronRight :size="18" aria-hidden="true" />
+                  </button>
+                </div>
+              </section>
+            </template>
+
+            <div class="mobile-settings__version">
+              Nevo · v{{ appMetadata?.version ?? '0.1.0' }}
+            </div>
+          </main>
+
+          <main v-else class="settings-main mobile-settings__detail">
+            <component :is="activePanelComponent" />
+          </main>
+        </div>
+
+        <div v-else class="settings-shell">
           <div class="settings-content">
             <aside class="settings-sidebar">
               <div class="settings-sidebar__head">
@@ -262,16 +443,7 @@ function toggleEscapeListener(enabled: boolean) {
                 </section>
               </template>
 
-            <SettingsAppearancePanel v-else-if="activeSection === 'appearance'" />
-            <SettingsEditorPanel v-else-if="activeSection === 'editor'" />
-            <SettingsAiPanel v-else-if="activeSection === 'ai'" />
-            <SettingsPluginsPanel v-else-if="activeSection === 'plugins'" />
-            <SettingsHotkeysPanel v-else-if="activeSection === 'hotkeys'" />
-            <SettingsAboutPanel v-else-if="activeSection === 'about'" />
-            <SettingsGeneralPanel v-else-if="activeSection === 'general'" />
-            <SettingsWorkspacePanel v-else-if="activeSection === 'workspace'" />
-            <SettingsFilesPanel v-else-if="activeSection === 'files'" />
-            <SettingsAdvancedPanel v-else-if="activeSection === 'advanced'" />
+              <component :is="activePanelComponent" v-else />
             </main>
           </div>
         </div>

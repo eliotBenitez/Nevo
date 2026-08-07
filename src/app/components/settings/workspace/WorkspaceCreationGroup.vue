@@ -3,7 +3,6 @@ import { onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useWorkspaceStore } from '../../../../stores/workspace'
-import { templateCommands } from '../../../../tauri/commands'
 import { createDefaultWorkspaceSettings } from '../../../../utils/workspace-settings'
 import NvButton from '../../../../ui/primitives/NvButton.vue'
 import NvToggle from '../../../../ui/primitives/NvToggle.vue'
@@ -14,7 +13,7 @@ import NvPopupMenu from '../../../../ui/primitives/NvPopupMenu.vue'
 
 const { t, locale } = useI18n()
 const workspaceStore = useWorkspaceStore()
-const { activePath, settings } = storeToRefs(workspaceStore)
+const { settings } = storeToRefs(workspaceStore)
 
 const noteIconPickerOpen = ref(false)
 const folderIconPickerOpen = ref(false)
@@ -62,9 +61,10 @@ const titlePatternOptions = ['untitled', 'date', 'date-time'].map(v => ({
 }))
 
 async function loadTemplateOptions() {
-  if (!activePath.value) return
+  const backend = workspaceStore.backend
+  if (!backend) return
   try {
-    const templates = await templateCommands.listTemplates(activePath.value)
+    const templates = await backend.listTemplates()
     templateOptions.value = templates.map(template => ({
       value: template.id,
       label: `${template.icon} ${template.name}`,
@@ -80,7 +80,7 @@ const starterStructureOptions = ['off', 'light', 'structured'].map(v => ({
 }))
 
 onMounted(loadTemplateOptions)
-watch([activePath, locale], loadTemplateOptions)
+watch([() => workspaceStore.backend, locale], loadTemplateOptions)
 </script>
 
 <template>

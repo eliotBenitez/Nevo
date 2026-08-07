@@ -4,6 +4,8 @@ import { computeBlockTableValues, type FormulaCellResult } from '../../editor-co
 import type { NevoSerializableNode } from '../../types/editor-plugin'
 import { normalizeDatabaseData, type DatabaseBlockData, type DbCellValue, type DbField } from '../../types/database-block'
 import { visibleRecords } from '../../editor-core/databaseFilterSort'
+import { normalizeQueryBlockData } from '../../features/query/queryBlockData'
+import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSummary'
 
 export interface MarkdownSerializeResult {
   markdown: string
@@ -240,6 +242,12 @@ function nodeToMd(node: BlockNode, ctx: SerializeCtx): string {
       const spec = String(node.attrs?.spec ?? '')
       return `\`\`\`vega-lite\n${spec}\n\`\`\``
     }
+    case 'query_block': {
+      // Query results are dynamic (live cross-note search) and are never
+      // materialized into export output — only a static summary of the filters.
+      const data = normalizeQueryBlockData(node.attrs?.data)
+      return `> **Query:** ${summarizeQueryBlockFilters(data)}`
+    }
     case 'draw_block': {
       const svg = String(node.attrs?.svgPreview ?? '')
       const title = String(node.attrs?.title ?? '')
@@ -260,6 +268,11 @@ function nodeToMd(node: BlockNode, ctx: SerializeCtx): string {
       const previewText = String(node.attrs?.previewText ?? '')
       const head = `> **${title}**`
       return previewText.trim() ? `${head}\n>\n> ${previewText}` : head
+    }
+    case 'block_embed': {
+      // Static placeholder only — the referenced block is never resolved
+      // during export (mirrors query_block above), matching v1 scope.
+      return '> ↪ Embedded block'
     }
     case 'embed_block': {
       const url = String(node.attrs?.url ?? '')

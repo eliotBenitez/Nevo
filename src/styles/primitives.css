@@ -26,6 +26,7 @@
   font: 500 12.5px var(--font-ui);
   letter-spacing: 0;
   cursor: pointer;
+  touch-action: manipulation;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
   white-space: nowrap;
 }
@@ -53,6 +54,16 @@
 .nv-btn--icon.nv-btn--md { width: 32px; }
 .nv-btn--active { background: var(--hover-strong); color: var(--text-1); }
 .nv-btn--loading { opacity: 0.7; cursor: wait; pointer-events: none; }
+
+@media (pointer: coarse) {
+  .nv-btn {
+    min-height: 44px;
+  }
+
+  .nv-btn--icon {
+    min-width: 44px;
+  }
+}
 @keyframes nv-btn-spin { to { transform: rotate(360deg); } }
 .nv-btn__spinner {
   flex-shrink: 0;

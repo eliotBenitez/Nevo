@@ -1,30 +1,15 @@
-// Desktop-side helpers for OAuth login and secret persistence.
+// One-shot loopback listener for the OAuth redirect.
 //
-// `start_oauth_loopback` spins up a one-shot localhost HTTP listener that the
-// relay redirects the browser to after a successful OAuth exchange; the tokens
+// `start_oauth_loopback` spins up a localhost HTTP listener that the relay
+// redirects the browser to after a successful OAuth exchange; the tokens
 // arrive as query params and are emitted to the frontend via an event.
-//
-// `secure_store_*` persist secrets (the user's private key, refresh token) in a
-// JSON file under the app config dir. NOTE: a future hardening step should move
-// these into the OS keychain; the file is the v1 baseline.
 
 use std::collections::HashMap;
-use std::fs;
-use std::path::PathBuf;
-use std::sync::Mutex;
 
-use crate::commands::path_utils::write_atomic;
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
-
-// Serializes read-modify-write access to the secrets file so concurrent
-// `secure_store_set`/`secure_store_delete` calls can't interleave and corrupt
-// it (a lost update, since each call reads the whole map, mutates it, and
-// writes it back). `write_atomic` alone only guarantees a single write can't
-// leave a half-written file; it doesn't prevent two writers from racing.
-static SECRETS_LOCK: Mutex<()> = Mutex::new(());
 
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -126,53 +111,4 @@ fn urldecode(s: &str) -> String {
         i += 1;
     }
     String::from_utf8_lossy(&out).into_owned()
-}
-
-fn secure_store_path(app: &AppHandle) -> Result<PathBuf, String> {
-    let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
-    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    Ok(dir.join("secrets.json"))
-}
-
-fn read_secrets(app: &AppHandle) -> Result<HashMap<String, String>, String> {
-    let path = secure_store_path(app)?;
-    if !path.exists() {
-        return Ok(HashMap::new());
-    }
-    let raw = fs::read_to_string(&path).map_err(|e| e.to_string())?;
-    serde_json::from_str(&raw).map_err(|e| e.to_string())
-}
-
-fn write_secrets(app: &AppHandle, map: &HashMap<String, String>) -> Result<(), String> {
-    let path = secure_store_path(app)?;
-    let raw = serde_json::to_string(map).map_err(|e| e.to_string())?;
-    write_atomic(&path, raw.as_bytes()).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub fn secure_store_set(app: AppHandle, key: String, value: String) -> Result<(), String> {
-    let _guard = SECRETS_LOCK
-        .lock()
-        .map_err(|_| "secrets lock poisoned".to_string())?;
-    let mut map = read_secrets(&app)?;
-    map.insert(key, value);
-    write_secrets(&app, &map)
-}
-
-#[tauri::command]
-pub fn secure_store_get(app: AppHandle, key: String) -> Result<Option<String>, String> {
-    let _guard = SECRETS_LOCK
-        .lock()
-        .map_err(|_| "secrets lock poisoned".to_string())?;
-    Ok(read_secrets(&app)?.get(&key).cloned())
-}
-
-#[tauri::command]
-pub fn secure_store_delete(app: AppHandle, key: String) -> Result<(), String> {
-    let _guard = SECRETS_LOCK
-        .lock()
-        .map_err(|_| "secrets lock poisoned".to_string())?;
-    let mut map = read_secrets(&app)?;
-    map.remove(&key);
-    write_secrets(&app, &map)
 }

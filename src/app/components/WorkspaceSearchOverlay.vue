@@ -4,6 +4,8 @@ import { Search, X } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { useWorkspaceSearch } from '../composables/useWorkspaceSearch'
 import { useFocusTrap } from '../../ui/composables/useFocusTrap'
+import { useDeviceLayout } from '../../composables/useDeviceLayout'
+import { useMobileBackButton } from '../../composables/useMobileBackButton'
 import type { SearchResultGroup } from '../search'
 import type {
   TitleBarSearchResult,
@@ -26,6 +28,11 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const { isPhone, runtime } = useDeviceLayout()
+useMobileBackButton(
+  () => { emit('close') },
+  computed(() => props.open && isPhone.value && runtime.value.isMobileRuntime),
+)
 
 const dialogRef = ref<HTMLElement | null>(null)
 const inputRef = ref<HTMLInputElement | null>(null)
@@ -425,6 +432,9 @@ watch(() => props.open, (open) => {
 @media (max-width: 719px) {
   .search-overlay-backdrop {
     padding: 0;
+    background: var(--canvas-1);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   .search-overlay {
@@ -433,6 +443,46 @@ watch(() => props.open, (open) => {
     max-height: 100dvh;
     border: 0;
     border-radius: 0;
+    background: var(--canvas-1);
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .search-overlay__field {
+    min-height: calc(64px + max(var(--safe-area-top), 0px));
+    padding:
+      max(var(--safe-area-top), 0px)
+      calc(8px + max(var(--safe-area-right), 0px))
+      0
+      calc(16px + max(var(--safe-area-left), 0px));
+    gap: 12px;
+    background: color-mix(in oklab, var(--glass-1) 96%, var(--canvas-1));
+  }
+
+  .search-overlay__input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .search-overlay__close {
+    width: 44px;
+    height: 44px;
+    color: var(--text-2);
+  }
+
+  .search-overlay__results {
+    flex: 1;
+    padding:
+      12px
+      calc(12px + max(var(--safe-area-right), 0px))
+      calc(16px + max(var(--safe-area-bottom), 0px))
+      calc(12px + max(var(--safe-area-left), 0px));
+  }
+
+  .search-overlay__result {
+    min-height: 56px;
+    padding: 12px;
   }
 }
 </style>

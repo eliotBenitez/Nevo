@@ -7,6 +7,9 @@
 @import './editor-prose/prose-media.css';
 @import './editor-prose/prose-code.css';
 @import './editor-prose/prose-links-embeds.css';
+@import './editor-prose/prose-block-embed.css';
 @import './editor-prose/prose-blocks.css';
 @import './editor-prose/prose-ai.css';
 @import './editor-prose/prose-database.css';
+@import './editor-prose/prose-query.css';
+@import './editor-prose/prose-performance.css';

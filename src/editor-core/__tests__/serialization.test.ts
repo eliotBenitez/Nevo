@@ -76,6 +76,10 @@ describe('serialization compatibility', () => {
           attrs: { language: 'typescript' },
           content: [{ type: 'text', text: 'const value = 42' }],
         },
+        {
+          type: 'block_embed',
+          attrs: { noteId: 'note-123', blockId: 'block-abc' },
+        },
       ],
     }
 

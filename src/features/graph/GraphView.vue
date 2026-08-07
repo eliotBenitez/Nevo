@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
-import { ArrowLeft, Search } from 'lucide-vue-next'
+import { ArrowLeft, Search, SlidersHorizontal } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { useWorkspaceStore } from '../../stores/workspace'
 import { getActivePinia } from 'pinia'
@@ -14,6 +14,8 @@ import { useGraphSimulation } from './composables/useGraphSimulation'
 import { useGraphCamera } from './composables/useGraphCamera'
 import { useGraphInteraction } from './composables/useGraphInteraction'
 import { useGraphFocus } from './composables/useGraphFocus'
+import { usePinchZoom } from '../../composables/usePinchZoom'
+import { useDeviceLayout } from '../../composables/useDeviceLayout'
 import type { SimNode } from './composables/useGraphSimulation'
 
 interface Props {
@@ -29,6 +31,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const { isPhone } = useDeviceLayout()
 const experimentalEnabled = computed(() => {
   if (!getActivePinia()) return false
   try {
@@ -44,6 +47,7 @@ const canvasCompRef = ref<{ canvasRef: HTMLCanvasElement | null } | null>(null)
 const showLabels = ref(false)
 const filters = ref<Set<EdgeKind>>(new Set(['link', 'embed', 'mention', 'parent']))
 const searchQuery = ref('')
+const mobileFiltersOpen = ref(false)
 
 const containerWidth = ref(800)
 const containerHeight = ref(600)
@@ -66,23 +70,23 @@ onMounted(() => {
   } catch {
     // The workspace store is unavailable in isolated graph renders.
   }
-  if (props.workspacePath && props.manifest) loadGraph()
+  if (props.manifest) loadGraph()
 })
 
 onUnmounted(() => ro.disconnect())
 
-watch(() => [props.workspacePath, props.manifest], ([path, manifest]) => {
-  if (path && manifest) loadGraph()
+watch(() => props.manifest, (manifest) => {
+  if (manifest) loadGraph()
 })
 
 const snapshot = shallowRef<GraphSnapshot | null>(null)
 const loading = ref(false)
 
 async function loadGraph() {
-  if (!props.workspacePath || !props.manifest) return
+  if (!props.manifest) return
   loading.value = true
   try {
-    const data = useGraphData(props.workspacePath, props.manifest)
+    const data = useGraphData(props.manifest)
     await data.load()
     snapshot.value = data.snapshot.value
   } finally {
@@ -128,6 +132,15 @@ const interaction = useGraphInteraction(
   (dx, dy) => { camera.tx.value += dx; camera.ty.value += dy },
 )
 
+usePinchZoom({
+  target: canvasRef,
+  onUpdate: ({ center, panDelta, scaleFactor }) => {
+    camera.tx.value += panDelta.x
+    camera.ty.value += panDelta.y
+    camera.applyZoom(camera.scale.value * scaleFactor, center.x, center.y)
+  },
+})
+
 const filteredEdges = computed(() => {
   const snap = snapshot.value
   if (!snap) return []
@@ -171,6 +184,17 @@ watch(simNodes, (nodes) => {
         <span class="graph-meta-pill">{{ simNodes.length }} {{ t('graph.nodes') }}</span>
         <span class="graph-meta-pill">{{ filteredEdges.length }} {{ t('graph.edges') }}</span>
       </div>
+
+      <button
+        type="button"
+        class="graph-header__filter"
+        :class="{ 'is-active': mobileFiltersOpen }"
+        :aria-label="t('graph.filters')"
+        :aria-pressed="mobileFiltersOpen"
+        @click="mobileFiltersOpen = !mobileFiltersOpen"
+      >
+        <SlidersHorizontal :size="18" aria-hidden="true" />
+      </button>
     </header>
 
     <div ref="containerRef" class="graph-body">
@@ -229,6 +253,7 @@ watch(simNodes, (nodes) => {
         :focused-node-title="focus.focusedNode.value?.title ?? null"
         :experimental-enabled="experimentalEnabled"
         :show-arrows="showArrows"
+        :mobile-filters-open="isPhone && mobileFiltersOpen"
         @zoom-in="camera.zoomIn"
         @zoom-out="camera.zoomOut"
         @reset="camera.reset"

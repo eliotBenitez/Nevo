@@ -4,6 +4,8 @@ import type { EditorState, Transaction } from 'prosemirror-state'
 import type { Node as PMNode } from 'prosemirror-model'
 import type { EditorCore } from './useEditorCore'
 import { runGuardedCommand } from './prosemirrorErrors'
+import { ensureBlockId } from '../../../editor-core/commands/blockId'
+import { encodeBlockRef } from '../../../core/blockRef/resolveBlockRef'
 import {
   buildGeomCache,
   resolveDropTarget,
@@ -46,6 +48,10 @@ interface UseBlockHandleOptions {
   getHandleBoundaryEl?: () => HTMLElement | null
   getTypeMenuBoundaryEl?: () => HTMLElement | null
   getTypeMenuEl?: () => HTMLElement | null
+  /** Active note id, needed to encode a `nevo://block/<noteId>/<blockId>`
+   *  reference token for `copyBlockRef`. Absent (e.g. an unsaved/no-app-context
+   *  preview) makes copyBlockRef a no-op rather than emitting a broken token. */
+  getCurrentNoteId?: () => string | null
 }
 
 const TYPE_MENU_MARGIN = 12
@@ -720,13 +726,24 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     blockHandle.visible = false
   }
 
+  /**
+   * "Copy block reference" (block-handle action). Assigns/reads a stable
+   * block id via `ensureBlockId` (idempotent — a second copy of the same
+   * block reuses its id) and writes a `nevo://block/<noteId>/<blockId>`
+   * token to the clipboard, meant to be pasted elsewhere to create a
+   * `block_embed` transclusion (see `usePasteHandling.ts`). No-op when the
+   * block's node type never declared an `id` attr (non-referenceable, e.g.
+   * `note_embed`/`image_block`) or the active note id is unavailable.
+   */
   function copyBlockRef() {
     const view = core.editorView
     const pos = blockHandle.hoveredBlockPos
     if (!view || pos === null) return
-    const node = view.state.doc.nodeAt(pos)
-    if (!node) return
-    navigator.clipboard.writeText(node.textContent).catch(() => {})
+    const noteId = options.getCurrentNoteId?.()
+    if (!noteId) return
+    const blockId = ensureBlockId(view, pos)
+    if (!blockId) return
+    navigator.clipboard.writeText(encodeBlockRef({ noteId, blockId })).catch(() => {})
     blockHandle.typeMenuOpen = false
   }
 

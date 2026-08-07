@@ -17,7 +17,6 @@ describe('normalizeWorkspaceSettings', () => {
     })
 
     expect(settings.general.defaultStartupView).toBe('graph')
-    expect(settings.workspace.defaultLandingView).toBe('graph')
     expect(settings.appearance.editorFontSize).toBe(19)
     expect(settings.appearance.editorLineWidth).toBe('wide')
     expect(settings.editor.spellCheck).toBe(true)

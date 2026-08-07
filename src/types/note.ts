@@ -1,3 +1,5 @@
+import type { CanvasSnapshotV1 } from '../core/canvas'
+
 export interface BlockNode {
   type: string
   attrs?: Record<string, unknown>
@@ -27,6 +29,9 @@ export interface NoteDocument {
   updatedAt: string
   properties?: NoteProperties
   content: BlockNode
+  /** JSON mirror for local snapshots/import/recovery. The live canvas state is
+   *  stored in Yjs shared types inside the note's authoritative Y.Doc. */
+  canvas?: CanvasSnapshotV1
 }
 
 export interface NoteMeta {

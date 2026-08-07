@@ -65,8 +65,10 @@ export type SettingsSectionId =
   | 'workspace'
   | 'ai'
   | 'plugins'
+  | 'mcp'
   | 'hotkeys'
   | 'files'
+  | 'backup'
   | 'advanced'
   | 'about'
 
@@ -174,7 +176,6 @@ export interface EditorSettings {
 }
 
 export interface WorkspaceBehaviorSettings {
-  defaultLandingView: WorkspaceView
   showBacklinksByDefault: boolean
   showGraphLabels: boolean
   folderCreateBehavior: 'current-folder'
@@ -239,6 +240,14 @@ export interface FeaturesSettings {
   draw?: boolean
 }
 
+/** Access granted to the local MCP bridge used by external coding agents. */
+export type McpMode = 'off' | 'read-only' | 'ask' | 'auto'
+
+export interface McpSettings {
+  mode: McpMode
+  autoSnapshot: boolean
+}
+
 export interface HotkeyBinding {
   commandId: string
   label: string
@@ -272,6 +281,7 @@ export interface WorkspaceSettings {
   plugins: PluginsSettings
   pluginSettings: Record<string, Record<string, unknown>>
   features: FeaturesSettings
+  mcp: McpSettings
   hotkeys: HotkeysSettings
   files: FilesSettings
   advanced: AdvancedSettings

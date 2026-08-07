@@ -2,25 +2,34 @@
 // This is a thin pass-through — behavior is identical to calling the commands
 // directly with workspaceStore.activePath.
 
-import { workspaceCommands, noteCommands, folderCommands, templateCommands, kanbanCommands, graphCommands } from '../../tauri/commands'
+import { workspaceCommands, noteCommands, folderCommands, templateCommands, kanbanCommands, graphCommands, noteQueryCommands } from '../../tauri/commands'
 import type { KanbanBoard, KanbanCard, KanbanPropertyDef } from '../../types/kanban'
 import type { WorkspaceBlockSearchItem } from '../../types/search'
 import type { BacklinkRef, GraphEdge, ExtractedEdge } from '../../types/graph'
+import type { NoteQueryRequest, NoteRow } from '../../types/note-query'
 import type { KanbanBoardUpdate, KanbanCardUpdate } from './types'
 import type {
   WorkspaceManifest, WorkspaceSettings, WorkspaceDiagnostics, WorkspaceCleanupReport, PluginManifest, MarketplaceCatalog,
 } from '../../types/workspace'
 import type { FolderMeta, NoteDocument, NoteSnapshotMeta, ImportedImageAsset, SidebarNotePreview } from '../../types/note'
-import type { TemplateFieldValues } from '../../types/template'
+import type { TemplateDocument, TemplateFieldValues } from '../../types/template'
+import type { DatabaseRepository } from '../../features/database/databaseRepository'
+import { TauriDatabaseRepository } from '../../features/database/databaseRepository'
 import type { WorkspaceBackend, WorkspaceHandle } from './types'
 
 export class LocalBackend implements WorkspaceBackend {
   readonly handle: WorkspaceHandle
   private readonly path: string
+  private readonly databases: DatabaseRepository
 
   constructor(path: string) {
     this.path = path
     this.handle = { kind: 'local', path }
+    this.databases = new TauriDatabaseRepository(path)
+  }
+
+  databaseRepository(): DatabaseRepository {
+    return this.databases
   }
 
   open(): Promise<WorkspaceManifest> {
@@ -90,7 +99,27 @@ export class LocalBackend implements WorkspaceBackend {
   ): Promise<NoteDocument> {
     return templateCommands.createNote(this.path, templateId, folderId, title, icon, fieldValues)
   }
+
+  listTemplates(): Promise<TemplateDocument[]> {
+    return templateCommands.listTemplates(this.path)
+  }
+  getTemplate(templateId: string): Promise<TemplateDocument> {
+    return templateCommands.getTemplate(this.path, templateId)
+  }
+  createTemplate(template: TemplateDocument): Promise<TemplateDocument> {
+    return templateCommands.createTemplate(this.path, template)
+  }
+  updateTemplate(templateId: string, template: TemplateDocument): Promise<TemplateDocument> {
+    return templateCommands.updateTemplate(this.path, templateId, template)
+  }
+  deleteTemplate(templateId: string): Promise<void> {
+    return templateCommands.deleteTemplate(this.path, templateId)
+  }
   loadNote(noteId: string): Promise<NoteDocument> {
+    return noteCommands.loadNote(this.path, noteId)
+  }
+  /** A local note is stored whole, so this is just loadNote. */
+  loadNoteWithContent(noteId: string): Promise<NoteDocument> {
     return noteCommands.loadNote(this.path, noteId)
   }
   saveNote(note: NoteDocument): Promise<void> {
@@ -125,6 +154,12 @@ export class LocalBackend implements WorkspaceBackend {
     return noteCommands.readLatestDrawAsset(this.path, drawId)
   }
 
+  listAllNoteSnapshots(): Promise<Array<{ noteId: string; snapshots: NoteSnapshotMeta[] }>> {
+    return noteCommands.listAllNoteSnapshots(this.path)
+  }
+  loadNoteSnapshot(noteId: string, snapshotId: string): Promise<NoteDocument> {
+    return noteCommands.loadNoteSnapshot(this.path, noteId, snapshotId)
+  }
   listNoteSnapshots(noteId: string): Promise<NoteSnapshotMeta[]> {
     return noteCommands.listNoteSnapshots(this.path, noteId)
   }
@@ -191,5 +226,9 @@ export class LocalBackend implements WorkspaceBackend {
   }
   graphGetAllEdges(): Promise<GraphEdge[]> {
     return graphCommands.getAllEdges(this.path)
+  }
+
+  queryNotes(request: NoteQueryRequest): Promise<NoteRow[]> {
+    return noteQueryCommands.queryNotes(this.path, request)
   }
 }

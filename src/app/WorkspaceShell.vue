@@ -9,6 +9,12 @@ import WorkspaceRightPanel from './components/WorkspaceRightPanel.vue'
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
 import WorkspaceHome from './components/WorkspaceHome.vue'
 import WorkspaceHomeFavoritesManager from './components/WorkspaceHomeFavoritesManager.vue'
+import MobileBoardsView from './components/mobile/MobileBoardsView.vue'
+import MobileBottomNav, { type MobileWorkspaceTab } from './components/mobile/MobileBottomNav.vue'
+import MobileEditorHeader from './components/mobile/MobileEditorHeader.vue'
+import MobileLibraryView from './components/mobile/MobileLibraryView.vue'
+import MobileMoreView from './components/mobile/MobileMoreView.vue'
+import MobileNoteDetailsView from './components/mobile/MobileNoteDetailsView.vue'
 import SandboxPluginFrame from './components/plugins/SandboxPluginFrame.vue'
 const WorkspaceEditorPane = defineAsyncComponent(() => import('./components/WorkspaceEditorPane.vue'))
 const WorkspaceHistoryModal = defineAsyncComponent(() => import('./components/WorkspaceHistoryModal.vue'))
@@ -50,15 +56,24 @@ import type {
 import type { TitleBarSearchResult, WorkspaceBlockNavigationTarget } from '../types/search'
 import { ACCENT_PRESETS, resolveBindingChord } from '../utils/workspace-settings'
 import { isPluginEnabled } from '../utils/system-plugins'
+import { resolveStartupTarget } from '../utils/workspace-startup'
 import { buildWorkspaceSettingsSearchItems } from './search/settings'
 import { useNoteExport } from '../composables/useNoteExport'
 import { useMarkdownImport } from '../composables/useMarkdownImport'
 import { useDeviceLayout } from '../composables/useDeviceLayout'
+import { useMobileBackButton } from '../composables/useMobileBackButton'
 import { useFloatingSidebar } from './composables/useFloatingSidebar'
 import { useWorkspaceHome, type WorkspaceHomeItem } from './composables/useWorkspaceHome'
 import { useAppUpdater } from '../composables/useAppUpdater'
-import { templateCommands } from '../tauri/commands'
+import { useMcpBridge } from './composables/useMcpBridge'
+import { useMcpBridgeHost } from './composables/useMcpBridgeHost'
+import { createEditorLayoutScrollStabilizer } from './composables/editor/editorLayoutScrollStabilizer'
 import { workspaceHomeFavoriteKey } from '../utils/workspace-settings'
+import {
+  readRememberedNoteView,
+  rememberNoteView,
+  type NoteViewMode,
+} from '../features/canvas/canvasPreferences'
 
 const router = useRouter()
 const route = useRoute()
@@ -83,6 +98,11 @@ const {
   saveDocxWithOptions,
 } = useNoteExport()
 const { importMarkdownFile, importMarkdownIntoNote } = useMarkdownImport()
+
+// Starts or stops the local MCP bridge to match the workspace's access mode,
+// and serves the requests it can only answer from the webview.
+useMcpBridge()
+useMcpBridgeHost()
 
 const appUpdater = useAppUpdater()
 
@@ -116,6 +136,7 @@ const renameInputRef = ref<HTMLInputElement | null>(null)
 const searchOverlayOpen = ref(false)
 const searchSeed = ref('')
 const mobileSidebarOpen = ref(false)
+const mobileNoteDetailsOpen = ref(false)
 const settingsModalOpen = ref(false)
 const settingsModalSection = ref<SettingsSectionId | null>(null)
 const historyModalOpen = ref(false)
@@ -141,7 +162,7 @@ const obsidianImportFolderId = ref<string | null>(null)
 const notionImportOpen = ref(false)
 const createFolderTitle = ref('')
 const createFolderError = ref('')
-const { runtime, useDrawerNavigation, useCompactHeader, useFullscreenDialogs, shellStyle } = useDeviceLayout()
+const { runtime, isPhone, useDrawerNavigation, useCompactHeader, useFullscreenDialogs, shellStyle } = useDeviceLayout()
 
 const activeFolderId = computed(() => route.params.folderId ? String(route.params.folderId) : null)
 const activeNoteId = computed(() => route.params.noteId ? String(route.params.noteId) : null)
@@ -149,8 +170,144 @@ const routeBoardId = computed(() => route.params.boardId ? String(route.params.b
 const routeDrawId = computed(() => route.params.drawId ? String(route.params.drawId) : null)
 const isGraphView = computed(() => route.path === '/workspace/graph')
 const isWorkspaceHome = computed(() => route.path === '/workspace')
+const isMobileLibraryView = computed(() => route.path === '/workspace/notes')
+const isMobileBoardsView = computed(() => route.path === '/workspace/boards')
+const isMobileMoreView = computed(() => route.path === '/workspace/more')
+const isMobilePrimaryView = computed(() =>
+  isWorkspaceHome.value
+  || isMobileLibraryView.value
+  || isMobileBoardsView.value
+  || isMobileMoreView.value,
+)
+
+const workspaceBackEnabled = computed(() =>
+  runtime.value.isMobileRuntime
+  && isPhone.value
+  && !searchOverlayOpen.value
+  && !settingsModalOpen.value
+  && (
+    mobileSidebarOpen.value
+    || mobileNoteDetailsOpen.value
+    || historyModalOpen.value
+    || trashModalOpen.value
+    || homeFavoritesManagerOpen.value
+    || boardModal.open
+    || templateCreatePickerOpen.value
+    || createFolderModalOpen.value
+    || obsidianImportOpen.value
+    || notionImportOpen.value
+    || route.path !== '/workspace'
+  ),
+)
+
+async function handleMobileBack() {
+  if (mobileNoteDetailsOpen.value) {
+    mobileNoteDetailsOpen.value = false
+    return
+  }
+  if (mobileSidebarOpen.value) {
+    mobileSidebarOpen.value = false
+    return
+  }
+  if (historyModalOpen.value) {
+    historyModalOpen.value = false
+    return
+  }
+  if (trashModalOpen.value) {
+    trashModalOpen.value = false
+    return
+  }
+  if (homeFavoritesManagerOpen.value) {
+    homeFavoritesManagerOpen.value = false
+    return
+  }
+  if (boardModal.open) {
+    boardModal.open = false
+    return
+  }
+  if (templateCreatePickerOpen.value) {
+    templateCreatePickerOpen.value = false
+    return
+  }
+  if (createFolderModalOpen.value) {
+    createFolderModalOpen.value = false
+    return
+  }
+  if (obsidianImportOpen.value) {
+    obsidianImportOpen.value = false
+    return
+  }
+  if (notionImportOpen.value) {
+    notionImportOpen.value = false
+    return
+  }
+  if (isDrawView.value && activeNoteId.value) {
+    await router.push(routeForNote(activeNoteId.value))
+    return
+  }
+  if (isCanvasView.value && activeNoteId.value) {
+    await router.push(`/workspace/note/${activeNoteId.value}`)
+    return
+  }
+  if (activeNoteId.value || activeFolderId.value) {
+    await router.push('/workspace/notes')
+    return
+  }
+  if (routeBoardId.value) {
+    await router.push('/workspace/boards')
+    return
+  }
+  if (isMobileLibraryView.value || isMobileBoardsView.value || isMobileMoreView.value) {
+    await router.push('/workspace')
+    return
+  }
+  await router.push('/workspace')
+}
+
+useMobileBackButton(handleMobileBack, workspaceBackEnabled)
+const mobileActiveTab = computed<Exclude<MobileWorkspaceTab, 'search'>>(() => {
+  if (isMobileLibraryView.value) return 'notes'
+  if (isMobileBoardsView.value) return 'boards'
+  if (isMobileMoreView.value) return 'more'
+  return 'home'
+})
 const isKanbanView = computed(() => !!routeBoardId.value)
 const isDrawView = computed(() => !!routeDrawId.value)
+const isCanvasView = computed(() => /^\/workspace\/note\/[^/]+\/canvas$/.test(route.path))
+const noteViewMode = computed<NoteViewMode>(() => isCanvasView.value ? 'canvas' : 'document')
+const showMobileBottomNav = computed(() => isPhone.value && isMobilePrimaryView.value)
+const showMobileEditorHeader = computed(() =>
+  isPhone.value
+  && Boolean(activeNoteId.value)
+  && !isDrawView.value
+  && !mobileNoteDetailsOpen.value,
+)
+const hideWorkspaceTitlebar = computed(() =>
+  isPhone.value
+  && (
+    isMobilePrimaryView.value
+    || Boolean(activeNoteId.value)
+    || isGraphView.value
+    || isKanbanView.value
+    || mobileNoteDetailsOpen.value
+  ),
+)
+const mobileNoteFolderPath = computed(() => {
+  const note = activeNote.value
+  const workspace = manifest.value
+  if (!workspace) return ''
+  if (!note?.folderId) return workspace.name
+
+  const labels: string[] = []
+  let folderId: string | null = note.folderId
+  while (folderId) {
+    const folder = folderById.value.get(folderId)
+    if (!folder) break
+    labels.unshift(folder.title)
+    folderId = folder.parentId
+  }
+  return labels.length ? labels.join(' / ') : workspace.name
+})
 const routePluginId = computed(() => route.params.pluginId ? String(route.params.pluginId) : null)
 const routePluginViewId = computed(() => route.params.viewId ? String(route.params.viewId) : null)
 const isSandboxPluginRoute = computed(() => routePluginId.value !== null)
@@ -204,6 +361,8 @@ const workspaceRootStyle = computed(() => {
 const workspaceRootClasses = computed(() => ({
   'workspace-root--compact': appConfig.value.interfaceDensity === 'compact',
   'workspace-root--drawer': useDrawerNavigation.value,
+  'workspace-root--phone': isPhone.value,
+  'workspace-root--mobile-primary': showMobileBottomNav.value,
   'workspace-root--fullscreen-dialogs': useFullscreenDialogs.value,
   'workspace-root--reduced-motion': appConfig.value.reducedMotion === 'reduce',
 }))
@@ -212,6 +371,22 @@ const workspaceSearchShortcut = computed(() => { const b = settings.value.hotkey
 const sidebarTree = computed(() => settings.value.workspace.rootNotesVisible ? tree.value : tree.value.filter(node => node.kind !== 'note'))
 const sidebarContentMode = computed(() => settings.value.workspace.sidebarContentMode)
 const sidebarLayout = computed(() => settings.value.workspace.sidebarLayout)
+const editorLayoutScrollStabilizer = createEditorLayoutScrollStabilizer({
+  getEditorRoot: () => editorRootEl.value,
+})
+const editorWidthLayoutKey = computed(() => [
+  useDrawerNavigation.value ? 'drawer' : 'desktop',
+  sidebarLayout.value,
+  sidebarLayout.value === 'docked' && sidebarOpen.value ? 'sidebar-open' : 'sidebar-closed',
+  rightPanelOpen.value ? 'right-open' : 'right-closed',
+].join(':'))
+watch(editorWidthLayoutKey, () => {
+  if (isWorkspaceHome.value) return
+  editorLayoutScrollStabilizer.preserve()
+}, { flush: 'pre' })
+onBeforeUnmount(() => {
+  editorLayoutScrollStabilizer.destroy()
+})
 const floatingPinned = ref(false)
 const { revealed: floatingRevealed, onEdgeEnter, onSidebarEnter, onSidebarLeave } = useFloatingSidebar(
   computed(() => sidebarLayout.value === 'floating'),
@@ -265,6 +440,10 @@ async function runWorkspaceSearch(seed = '') { searchSeed.value = seed; searchOv
 function openSettings(section: SettingsSectionId | null = null) { mobileSidebarOpen.value = false; settingsModalSection.value = section; settingsModalOpen.value = true }
 function openTrash() { mobileSidebarOpen.value = false; trashModalOpen.value = true }
 function openHistory(noteId: string | null = null) { mobileSidebarOpen.value = false; historyModalPreselectedNoteId.value = noteId; historyModalOpen.value = true }
+function toggleSearch() { if (searchOverlayOpen.value) { searchOverlayOpen.value = false } else { void runWorkspaceSearch() } }
+function toggleSettings() { if (settingsModalOpen.value) { settingsModalOpen.value = false } else { openSettings() } }
+function toggleTrash() { if (trashModalOpen.value) { trashModalOpen.value = false } else { openTrash() } }
+function toggleHistory() { if (historyModalOpen.value) { historyModalOpen.value = false } else { openHistory() } }
 function scrollToAnchorInEditor(anchor: string) {
   const root = editorRootEl.value
   if (!root) return
@@ -275,6 +454,14 @@ function scrollToAnchorInEditor(anchor: string) {
   const target = headings.find(h => h.textContent?.trim() === normalized)
     ?? headings.find(h => (h.textContent?.trim().toLowerCase() ?? '') === normalized.toLowerCase())
   target?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+}
+
+function routeForNote(noteId: string, mode?: NoteViewMode): string {
+  const workspaceId = manifest.value?.id
+  const resolved = mode ?? (workspaceId ? readRememberedNoteView(workspaceId, noteId) : 'document')
+  return resolved === 'canvas'
+    ? `/workspace/note/${noteId}/canvas`
+    : `/workspace/note/${noteId}`
 }
 
 function openNote(noteId: string, anchor?: string | null) {
@@ -293,21 +480,78 @@ function openNote(noteId: string, anchor?: string | null) {
     return
   }
   flushSave()
-  router.push(`/workspace/note/${noteId}`)
+  router.push(routeForNote(noteId, anchor ? 'document' : undefined))
   if (anchor) {
     // Give the new note time to render before scrolling to the heading.
     nextTick(() => { setTimeout(() => scrollToAnchorInEditor(anchor), 60) })
   }
 }
+function changeNoteView(mode: NoteViewMode) {
+  const noteId = activeNoteId.value
+  const workspaceId = manifest.value?.id
+  if (!noteId || !workspaceId || noteViewMode.value === mode) return
+  rememberNoteView(workspaceId, noteId, mode)
+  void router.push(routeForNote(noteId, mode))
+}
 function closeTab(tabId: string) {
+  // Only the active tab owns the route. `closeTab` also returns null when a
+  // background tab is closed, so navigating on a null result used to throw the
+  // user out of the note they were editing — unloading it and reloading it on
+  // the way back, which is expensive on large documents.
+  const wasActive = tabsStore.activeTabId === tabId
   const nextNoteId = tabsStore.closeTab(tabId)
-  if (nextNoteId) router.push(`/workspace/note/${nextNoteId}`)
+  if (!wasActive) return
+  if (nextNoteId) router.push(routeForNote(nextNoteId))
   else router.push('/workspace')
+}
+function closeNoteTab(noteId: string) {
+  const tab = tabsStore.tabByNoteId(noteId)
+  return tab ? tabsStore.closeTab(tab.id) : null
 }
 function openFolder(folderId: string) { mobileSidebarOpen.value = false; if (activeFolderId.value === folderId) return; flushSave(); router.push(`/workspace/folder/${folderId}`) }
 function openWorkspaceHome() { mobileSidebarOpen.value = false; flushSave(); router.push('/workspace') }
 function openGraph() { mobileSidebarOpen.value = false; if (isGraphView.value) return; flushSave(); router.push('/workspace/graph') }
 function openBoard(boardId: string) { mobileSidebarOpen.value = false; flushSave(); router.push(`/workspace/plugin/nevo.kanban/${boardId}`) }
+function navigateMobile(tab: MobileWorkspaceTab) {
+  if (tab === 'search') {
+    void runWorkspaceSearch()
+    return
+  }
+  const routeByTab: Record<Exclude<MobileWorkspaceTab, 'search'>, string> = {
+    home: '/workspace',
+    notes: '/workspace/notes',
+    boards: '/workspace/boards',
+    more: '/workspace/more',
+  }
+  flushSave()
+  void router.push(routeByTab[tab])
+}
+function backFromMobileEditor() {
+  if (isCanvasView.value && activeNoteId.value) {
+    changeNoteView('document')
+    return
+  }
+  flushSave()
+  void router.push('/workspace/notes')
+}
+function openMobileNoteDetails() {
+  if (!activeNote.value) return
+  mobileNoteDetailsOpen.value = true
+}
+function exportMobileNote() {
+  handleRequestExport('markdown')
+}
+function openMobileOutline() {
+  mobileNoteDetailsOpen.value = false
+  void nextTick(() => {
+    editorRootEl.value?.querySelector<HTMLElement>('h1, h2, h3, h4, h5, h6')
+      ?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  })
+}
+function openGraphFromMobileDetails() {
+  mobileNoteDetailsOpen.value = false
+  openGraph()
+}
 function openPluginItem(item: NevoSandboxSidebarItem) {
   mobileSidebarOpen.value = false
   flushSave()
@@ -437,14 +681,15 @@ async function createTemplatedNote(folderId: string | null, templateId: string, 
 
 async function createNoteWithWorkspaceDefault(folderId: string | null) {
   mobileSidebarOpen.value = false
-  if (!templatesEnabled.value || !workspaceStore.activePath) {
+  const backend = workspaceStore.backend
+  if (!templatesEnabled.value || !backend) {
     await createPlainNote(folderId)
     return
   }
 
   const templateId = settings.value.workspace.newNoteTemplate || 'blank'
   try {
-    const template = await templateCommands.getTemplate(workspaceStore.activePath, templateId)
+    const template = await backend.getTemplate(templateId)
     if (template.fields.length === 0) {
       await createTemplatedNote(folderId, template.id)
       return
@@ -531,11 +776,11 @@ async function importMdIntoNote(noteId: string) {
 }
 
 const { renameModal, onTreeAction, handleRequestExport, submitRename, closeRenameModal } = useTreeContextMenu(
-  { settings, manifest, activeNoteId, activeFolderId, activeNote, workspacePath: computed(() => workspaceStore.activePath), treeOps: { deleteNote: treeStore.deleteNote, deleteFolder: treeStore.deleteFolder, renameFolder: treeStore.renameFolder, renameNote: treeStore.renameNote, syncNoteMeta: treeStore.syncNoteMeta }, clearNote: noteStore.clearNote, setTitle: noteStore.setTitle, flushSave, t, renameInputRef },
-  { openHistory, runSearch: async (seed) => { await runWorkspaceSearch(seed) }, navigateToWorkspaceRoot: async () => { await router.push('/workspace') }, exportAsMarkdown, exportAsHtml, exportAsDocx: async (note, path) => { exportAsDocx(note, path) }, exportAsTypst, exportAsPdf },
+  { settings, manifest, activeNoteId, activeFolderId, activeNote, workspacePath: computed(() => workspaceStore.activePath), getBackend: () => workspaceStore.backend, treeOps: { deleteNote: treeStore.deleteNote, deleteFolder: treeStore.deleteFolder, renameFolder: treeStore.renameFolder, renameNote: treeStore.renameNote, syncNoteMeta: treeStore.syncNoteMeta }, clearNote: noteStore.clearNote, closeNoteTab, setTitle: noteStore.setTitle, flushSave, t, renameInputRef },
+  { openHistory, runSearch: async (seed) => { await runWorkspaceSearch(seed) }, navigateToNote: async (noteId) => { await router.push(`/workspace/note/${noteId}`) }, navigateToWorkspaceRoot: async () => { await router.push('/workspace') }, exportAsMarkdown, exportAsHtml, exportAsDocx: async (note, path) => { exportAsDocx(note, path) }, exportAsTypst, exportAsPdf },
 )
 
-useWorkspaceKeymap(settings, { createNote, createFolder, saveNote: flushSave, runSearch: () => runWorkspaceSearch(), toggleSidebar: () => toggleSidebarOrPin(), toggleRightPanel: () => uiStore.toggleRightPanel(), openGraph: () => openGraph(), openHistory: () => openHistory(), openTrash: () => openTrash(), openSettings: () => openSettings() })
+useWorkspaceKeymap(settings, { createNote, createFolder, saveNote: flushSave, runSearch: () => toggleSearch(), toggleSidebar: () => toggleSidebarOrPin(), toggleRightPanel: () => uiStore.toggleRightPanel(), openGraph: () => openGraph(), openHistory: () => toggleHistory(), openTrash: () => toggleTrash(), openSettings: () => toggleSettings() })
 
 watch(manifest, (workspace) => {
   if (!workspace) { router.replace('/onboarding'); return }
@@ -546,7 +791,26 @@ watch(kanbanEnabled, (enabled) => {
 })
 watch(() => workspaceStore.activePath, () => { restoredRouteForWorkspace.value = null; tabsStore.clear() })
 watch(() => useDrawerNavigation.value, (drawerMode) => { if (!drawerMode) mobileSidebarOpen.value = false }, { immediate: true })
-watch(() => route.fullPath, () => { mobileSidebarOpen.value = false })
+watch(
+  () => [isPhone.value, route.path] as const,
+  ([phone, path]) => {
+    if (!phone && ['/workspace/notes', '/workspace/boards', '/workspace/more'].includes(path)) {
+      void router.replace('/workspace')
+    }
+  },
+  { immediate: true },
+)
+watch(() => route.fullPath, () => {
+  mobileSidebarOpen.value = false
+  mobileNoteDetailsOpen.value = false
+})
+watch(
+  () => [manifest.value?.id, activeNoteId.value, noteViewMode.value] as const,
+  ([workspaceId, noteId, mode]) => {
+    if (workspaceId && noteId && !isDrawView.value) rememberNoteView(workspaceId, noteId, mode)
+  },
+  { immediate: true },
+)
 watch(routeBoardId, (boardId, previousBoardId) => {
   if (boardId) {
     if (boardId !== previousBoardId) kanbanStore.closeCard()
@@ -570,36 +834,25 @@ watch(
     if (!workspacePath || currentRoute !== '/workspace' || restoredRouteForWorkspace.value === workspacePath) return
     restoredRouteForWorkspace.value = workspacePath
 
-    const shouldRestore = restoreLastContext || defaultStartupView === 'last-note'
-    if (shouldRestore) {
-      if (noteId) {
-        const meta = treeStore.noteById.get(noteId)
-        tabsStore.openTab(noteId, meta?.title ?? t('workspace.untitledNote'), meta?.icon ?? '📄')
-        await router.replace(`/workspace/note/${noteId}`)
-        return
-      }
-      if (folderId) {
-        await router.replace(`/workspace/folder/${folderId}`)
-        return
-      }
-    }
+    const target = resolveStartupTarget({
+      defaultStartupView,
+      startupNoteId,
+      restoreLastContext,
+      lastNoteId: noteId,
+      lastFolderId: folderId,
+      firstBoardId: boardsMeta.value?.[0]?.id ?? null,
+    })
 
-    if (defaultStartupView === 'specific-note') {
-      if (startupNoteId) {
-        const meta = treeStore.noteById.get(startupNoteId)
-        tabsStore.openTab(startupNoteId, meta?.title ?? t('workspace.untitledNote'), meta?.icon ?? '📄')
-        await router.replace(`/workspace/note/${startupNoteId}`)
-        return
-      }
-    } else if (defaultStartupView === 'graph') {
+    if (target.kind === 'note') {
+      const meta = treeStore.noteById.get(target.noteId)
+      tabsStore.openTab(target.noteId, meta?.title ?? t('workspace.untitledNote'), meta?.icon ?? '📄')
+      await router.replace(`/workspace/note/${target.noteId}`)
+    } else if (target.kind === 'folder') {
+      await router.replace(`/workspace/folder/${target.folderId}`)
+    } else if (target.kind === 'graph') {
       await router.replace('/workspace/graph')
-    } else if (defaultStartupView === 'kanban') {
-      const firstBoard = boardsMeta.value?.[0]
-      if (firstBoard) {
-        await router.replace(`/workspace/plugin/nevo.kanban/${firstBoard.id}`)
-      } else {
-        await router.replace('/workspace')
-      }
+    } else if (target.kind === 'board') {
+      await router.replace(`/workspace/plugin/nevo.kanban/${target.boardId}`)
     }
   },
   { immediate: true },
@@ -641,6 +894,7 @@ function updateTitle(value: string) { noteStore.setTitle(value); if (activeNoteI
 function updateIcon(value: string) { noteStore.setIcon(value); if (activeNoteId.value) treeStore.syncNoteMeta(activeNoteId.value, { icon: value }) }
 function updateCover(value: string | null) { noteStore.setCover(value) }
 function updateContent(content: NoteDocument['content']) { noteStore.setContent(content) }
+function updateCanvas(canvas: NonNullable<NoteDocument['canvas']>) { noteStore.setCanvas(canvas) }
 function markContentDirty() { noteStore.markContentDirty() }
 async function handleHistoryRestored(restoredNote: NoteDocument) {
   treeStore.syncNoteMeta(restoredNote.id, { title: restoredNote.title, icon: restoredNote.icon }, restoredNote.updatedAt)
@@ -680,7 +934,7 @@ onBeforeUnmount(() => {
   <div class="nv-app workspace-root" :class="workspaceRootClasses" :style="workspaceRootStyle">
     <div class="nv-canvas" />
 
-    <header class="workspace-titlebar" :class="{ 'workspace-titlebar--compact-layout': useCompactHeader, 'workspace-titlebar--drag': runtime.supportsWindowDragRegions }">
+    <header v-if="!hideWorkspaceTitlebar" class="workspace-titlebar" :class="{ 'workspace-titlebar--compact-layout': useCompactHeader, 'workspace-titlebar--drag': runtime.supportsWindowDragRegions }">
       <div class="titlebar-leading">
         <button v-if="useDrawerNavigation" type="button" class="nv-btn workspace-drawer-toggle" :aria-label="t('workspace.openDrawer')" @click="mobileSidebarOpen = true"><Menu :size="15" /></button>
         <button v-if="!useDrawerNavigation" type="button" class="nv-btn workspace-sidebar-toggle" :aria-label="t('workspace.toggleSidebar')" :class="{ 'workspace-sidebar-toggle--collapsed': sidebarLayout === 'floating' ? !floatingPinned : !sidebarOpen }" @click="toggleSidebarOrPin()"><PanelLeft :size="15" /></button>
@@ -696,6 +950,17 @@ onBeforeUnmount(() => {
       </div>
       <WindowControls v-if="runtime.supportsWindowControls" />
     </header>
+
+    <MobileEditorHeader
+      v-if="showMobileEditorHeader && activeNote"
+      :mode="noteViewMode"
+      :context="mobileNoteFolderPath"
+      :title="activeNote.title || t('workspace.untitledNote')"
+      @back="backFromMobileEditor"
+      @export="exportMobileNote"
+      @details="openMobileNoteDetails"
+      @change-mode="changeNoteView"
+    />
 
     <div class="workspace-body" :class="{ 'workspace-body--drawer': useDrawerNavigation }">
       <div
@@ -749,8 +1014,48 @@ onBeforeUnmount(() => {
         />
       </div>
       <div v-if="!useDrawerNavigation && sidebarLayout === 'floating'" class="workspace-sidebar-edge-trigger" @mouseenter="onEdgeEnter" @mouseleave="onSidebarLeave" />
+      <MobileNoteDetailsView
+        v-if="mobileNoteDetailsOpen && activeNote"
+        :note="activeNote"
+        :folder-path="mobileNoteFolderPath"
+        @close="mobileNoteDetailsOpen = false"
+        @export="exportMobileNote"
+        @open-outline="openMobileOutline"
+        @open-graph="openGraphFromMobileDetails"
+      />
+      <MobileLibraryView
+        v-else-if="isMobileLibraryView"
+        :workspace-name="manifest?.name ?? t('workspace.noWorkspace')"
+        :root-notes="manifest?.rootNotes ?? []"
+        :folders="manifest?.tree ?? []"
+        :previews="workspaceStore.sidebarNotePreviews"
+        @create-note="createNote"
+        @open-note="openNote"
+        @open-folder="openFolder"
+        @open-search="runWorkspaceSearch()"
+      />
+      <MobileBoardsView
+        v-else-if="isMobileBoardsView"
+        :workspace-name="manifest?.name ?? t('workspace.noWorkspace')"
+        :boards="boardsMeta"
+        :enabled="kanbanEnabled"
+        @create="createBoard"
+        @open="openBoard"
+      />
+      <MobileMoreView
+        v-else-if="isMobileMoreView"
+        :workspace-name="manifest?.name ?? t('workspace.noWorkspace')"
+        :workspace-glyph="manifest?.glyph ?? 'N'"
+        :backend-kind="workspaceStore.backendKind"
+        @graph="openGraph"
+        @history="openHistory()"
+        @trash="openTrash"
+        @settings="openSettings()"
+        @import="importMd"
+        @leave="backToOnboarding"
+      />
       <WorkspaceHome
-        v-if="isWorkspaceHome"
+        v-else-if="isWorkspaceHome"
         :workspace-name="manifest?.name ?? t('workspace.noWorkspace')"
         :search-shortcut="workspaceSearchShortcut"
         :favorite-items="workspaceHome.favoriteItems.value"
@@ -768,7 +1073,7 @@ onBeforeUnmount(() => {
         @open-item="openHomeItem"
         @manage-favorites="homeFavoritesManagerOpen = true"
       />
-      <GraphView v-else-if="isGraphView" :workspace-path="workspaceStore.activePath" :manifest="manifest" :active-note-id="activeNoteId" @open-note="openNote" @back="() => router.push('/workspace')" />
+      <GraphView v-else-if="isGraphView" :workspace-path="workspaceStore.activePath" :manifest="manifest" :active-note-id="activeNoteId" @open-note="openNote" @back="() => router.push(isPhone ? '/workspace/more' : '/workspace')" />
       <KanbanView v-else-if="kanbanEnabled && isKanbanView && routeBoardId" :board-id="routeBoardId" @back="() => router.push('/workspace')" />
       <DrawView v-else-if="isDrawView && routeDrawId && activeNoteId" :workspace-path="workspaceStore.activePath" :note-id="activeNoteId" :draw-id="routeDrawId ? routeDrawId : ''" :is-dark="isDarkMode" @open-note="openNote" @update-draw="onUpdateDraw" @back="() => activeNoteId && openNote(activeNoteId)" />
       <section
@@ -791,8 +1096,8 @@ onBeforeUnmount(() => {
         </div>
       </section>
       <div
-        v-if="isSandboxPluginRoute || (!isGraphView && !isKanbanView && !isDrawView)"
-        v-show="!isSandboxPluginRoute && !isWorkspaceHome"
+        v-if="isSandboxPluginRoute || (!isGraphView && !isKanbanView && !isDrawView && !isMobilePrimaryView)"
+        v-show="!isSandboxPluginRoute && !isMobilePrimaryView && !mobileNoteDetailsOpen"
         class="workspace-editor-pane-shell"
       >
         <WorkspaceEditorPane
@@ -808,10 +1113,14 @@ onBeforeUnmount(() => {
           :container-items="containerOverview.items"
           :pending-block-target="pendingBlockTarget"
           :pending-draw-update="pendingDrawUpdate"
+          :workspace-id="manifest?.id ?? ''"
+          :view-mode="noteViewMode"
           @update:title="updateTitle"
           @update:icon="updateIcon"
           @update:cover="updateCover"
           @update:content="updateContent"
+          @update:canvas="updateCanvas"
+          @change-view="changeNoteView"
           @content-dirty="markContentDirty"
           @create-note="createNote"
           @consumed-pending-target="consumePendingBlockTarget"
@@ -824,9 +1133,9 @@ onBeforeUnmount(() => {
           @plugin-contributions="updatePluginContributions"
         />
       </div>
-      <div class="workspace-right-panel-shell" :class="{ 'workspace-right-panel-shell--hidden': !rightPanelOpen || isWorkspaceHome }">
+      <div class="workspace-right-panel-shell" :class="{ 'workspace-right-panel-shell--hidden': !rightPanelOpen || isMobilePrimaryView || isPhone }">
         <WorkspaceRightPanel
-          v-if="rightPanelOpen && !isWorkspaceHome"
+          v-if="rightPanelOpen && !isMobilePrimaryView && !isPhone"
           :note="activeNote"
           :editor-root-el="editorRootEl"
           @close="uiStore.toggleRightPanel()"
@@ -834,6 +1143,11 @@ onBeforeUnmount(() => {
         />
       </div>
     </div>
+    <MobileBottomNav
+      v-if="showMobileBottomNav"
+      :active="mobileActiveTab"
+      @navigate="navigateMobile"
+    />
   </div>
 
   <Teleport to="body">
@@ -887,7 +1201,7 @@ onBeforeUnmount(() => {
     </div>
   </Teleport>
 
-  <WorkspaceHistoryModal v-if="historyModalOpen" :open="historyModalOpen" :workspace-path="workspaceStore.activePath" :manifest="manifest" :active-note-id="activeNoteId" :active-note="activeNote" :preselected-note-id="historyModalPreselectedNoteId" @close="historyModalOpen = false" @restored="handleHistoryRestored" />
+  <WorkspaceHistoryModal v-if="historyModalOpen" :open="historyModalOpen" :manifest="manifest" :active-note-id="activeNoteId" :active-note="activeNote" :preselected-note-id="historyModalPreselectedNoteId" @close="historyModalOpen = false" @restored="handleHistoryRestored" />
   <WorkspaceSearchOverlay
     :open="searchOverlayOpen"
     :seed="searchSeed"
@@ -924,7 +1238,7 @@ onBeforeUnmount(() => {
     @remove="workspaceHome.removeFavorite($event.favorite)"
     @move="workspaceHome.moveFavorite"
   />
-  <PdfPreviewModal v-if="pdfPreview.open && pdfPreview.note" :note="pdfPreview.note" :workspace-path="pdfPreview.workspacePath" @close="closePdfPreview" />
+  <PdfPreviewModal v-if="pdfPreview.open && pdfPreview.note" :note="pdfPreview.note" :workspace-path="pdfPreview.workspacePath" :asset-bytes="pdfPreview.assetBytes" @close="closePdfPreview" />
   <DocxPreviewModal v-if="docxPreview.open && docxPreview.note" :note="docxPreview.note" :workspace-path="docxPreview.workspacePath" @close="closeDocxPreview" @save="(opts) => { void saveDocxWithOptions(docxPreview.note!, docxPreview.workspacePath, opts); closeDocxPreview() }" />
   <TemplatePickerModal
     v-if="templateCreatePickerOpen"

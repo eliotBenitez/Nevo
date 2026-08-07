@@ -1,4 +1,6 @@
 import type { NodeSpec } from 'prosemirror-model'
+import { normalizeQueryBlockData, readQueryBlockDataAttr, serializeQueryBlockData } from '../../features/query/queryBlockData'
+import { readBlockIdAttr, withBlockIdAttr } from './blockIdAttr'
 
 export const mathInlineNodeSpec: NodeSpec = {
   group: 'inline',
@@ -40,6 +42,7 @@ export const mathBlockNodeSpec: NodeSpec = {
   attrs: {
     latex: { default: '' },
     displayMode: { default: true },
+    id: { default: null },
   },
   parseDOM: [
     {
@@ -49,6 +52,7 @@ export const mathBlockNodeSpec: NodeSpec = {
         return {
           latex: dom.dataset.latex ?? dom.textContent ?? '',
           displayMode: dom.dataset.displayMode !== 'false',
+          id: readBlockIdAttr(dom),
         }
       },
     },
@@ -56,11 +60,8 @@ export const mathBlockNodeSpec: NodeSpec = {
   toDOM(node) {
     const latex = typeof node.attrs.latex === 'string' ? node.attrs.latex : ''
     const displayMode = node.attrs.displayMode !== false
-    return [
-      'div',
-      { 'data-nevo-math-block': 'true', 'data-latex': latex, 'data-display-mode': displayMode ? 'true' : 'false' },
-      latex,
-    ]
+    const attrs = withBlockIdAttr({ 'data-nevo-math-block': 'true', 'data-latex': latex, 'data-display-mode': displayMode ? 'true' : 'false' }, node.attrs.id)
+    return ['div', attrs, latex]
   },
 }
 
@@ -76,6 +77,7 @@ export const imageBlockNodeSpec: NodeSpec = {
     sizePreset: { default: 'medium' },
     width: { default: null },
     align: { default: 'center' },
+    id: { default: null },
   },
   parseDOM: [
     {
@@ -91,6 +93,7 @@ export const imageBlockNodeSpec: NodeSpec = {
           sizePreset: dom.dataset.sizePreset ?? 'medium',
           width: dom.dataset.width ?? null,
           align: dom.dataset.align ?? 'center',
+          id: readBlockIdAttr(dom),
         }
       },
     },
@@ -102,8 +105,7 @@ export const imageBlockNodeSpec: NodeSpec = {
     const sizePreset = typeof node.attrs.sizePreset === 'string' ? node.attrs.sizePreset : 'medium'
     const width = typeof node.attrs.width === 'number' || typeof node.attrs.width === 'string' ? String(node.attrs.width) : ''
     const align = typeof node.attrs.align === 'string' ? node.attrs.align : 'center'
-    return [
-      'figure',
+    const attrs = withBlockIdAttr(
       {
         'data-nevo-image-block': 'true',
         'data-src': src,
@@ -113,6 +115,11 @@ export const imageBlockNodeSpec: NodeSpec = {
         'data-align': align,
         ...(width ? { 'data-width': width } : {}),
       },
+      node.attrs.id,
+    )
+    return [
+      'figure',
+      attrs,
       ['img', { src, alt }],
       ['figcaption', {}, caption],
     ]
@@ -171,19 +178,21 @@ export const mermaidBlockNodeSpec: NodeSpec = {
   defining: true,
   attrs: {
     code: { default: 'graph TD\n  A --> B' },
+    id: { default: null },
   },
   parseDOM: [
     {
       tag: 'div[data-nevo-mermaid-block]',
       getAttrs(dom) {
         if (!(dom instanceof HTMLElement)) return false
-        return { code: dom.dataset.code ?? '' }
+        return { code: dom.dataset.code ?? '', id: readBlockIdAttr(dom) }
       },
     },
   ],
   toDOM(node) {
     const code = typeof node.attrs.code === 'string' ? node.attrs.code : ''
-    return ['div', { 'data-nevo-mermaid-block': 'true', 'data-code': code }, code]
+    const attrs = withBlockIdAttr({ 'data-nevo-mermaid-block': 'true', 'data-code': code }, node.attrs.id)
+    return ['div', attrs, code]
   },
 }
 
@@ -205,6 +214,7 @@ export const drawBlockNodeSpec: NodeSpec = {
     svgPreview: { default: '' },
     // Optional caption shown under the drawing.
     title: { default: '' },
+    id: { default: null },
   },
   parseDOM: [
     {
@@ -216,6 +226,7 @@ export const drawBlockNodeSpec: NodeSpec = {
           src: dom.dataset.src ?? '',
           svgPreview: dom.dataset.svgPreview ?? '',
           title: dom.dataset.title ?? '',
+          id: readBlockIdAttr(dom),
         }
       },
     },
@@ -227,7 +238,7 @@ export const drawBlockNodeSpec: NodeSpec = {
     if (node.attrs.title) attrs['data-title'] = node.attrs.title
     // svgPreview can be large; keep it out of the DOM data-attrs to avoid
     // bloating the serialized HTML. The node-view renders it from the node.
-    return ['div', attrs]
+    return ['div', withBlockIdAttr(attrs, node.attrs.id)]
   },
 }
 
@@ -239,19 +250,21 @@ export const vegaBlockNodeSpec: NodeSpec = {
   defining: true,
   attrs: {
     spec: { default: '{}' },
+    id: { default: null },
   },
   parseDOM: [
     {
       tag: 'div[data-nevo-vega-block]',
       getAttrs(dom) {
         if (!(dom instanceof HTMLElement)) return false
-        return { spec: dom.dataset.spec ?? '{}' }
+        return { spec: dom.dataset.spec ?? '{}', id: readBlockIdAttr(dom) }
       },
     },
   ],
   toDOM(node) {
     const spec = typeof node.attrs.spec === 'string' ? node.attrs.spec : '{}'
-    return ['div', { 'data-nevo-vega-block': 'true', 'data-spec': spec }, spec]
+    const attrs = withBlockIdAttr({ 'data-nevo-vega-block': 'true', 'data-spec': spec }, node.attrs.id)
+    return ['div', attrs, spec]
   },
 }
 
@@ -263,19 +276,47 @@ export const markmapBlockNodeSpec: NodeSpec = {
   defining: true,
   attrs: {
     markdown: { default: '# Topic\n## Idea A\n## Idea B' },
+    id: { default: null },
   },
   parseDOM: [
     {
       tag: 'div[data-nevo-markmap-block]',
       getAttrs(dom) {
         if (!(dom instanceof HTMLElement)) return false
-        return { markdown: dom.dataset.markdown ?? '' }
+        return { markdown: dom.dataset.markdown ?? '', id: readBlockIdAttr(dom) }
       },
     },
   ],
   toDOM(node) {
     const markdown = typeof node.attrs.markdown === 'string' ? node.attrs.markdown : ''
-    return ['div', { 'data-nevo-markmap-block': 'true', 'data-markdown': markdown }, markdown]
+    const attrs = withBlockIdAttr({ 'data-nevo-markmap-block': 'true', 'data-markdown': markdown }, node.attrs.id)
+    return ['div', attrs, markdown]
+  },
+}
+
+export const queryBlockNodeSpec: NodeSpec = {
+  group: 'block',
+  atom: true,
+  selectable: true,
+  draggable: true,
+  defining: true,
+  attrs: {
+    data: { default: null },
+    id: { default: null },
+  },
+  parseDOM: [
+    {
+      tag: 'div[data-nevo-query-block]',
+      getAttrs(dom) {
+        if (!(dom instanceof HTMLElement)) return false
+        return { data: readQueryBlockDataAttr(dom.dataset.query), id: readBlockIdAttr(dom) }
+      },
+    },
+  ],
+  toDOM(node) {
+    const data = normalizeQueryBlockData(node.attrs.data)
+    const attrs = withBlockIdAttr({ 'data-nevo-query-block': 'true', 'data-query': serializeQueryBlockData(data) }, node.attrs.id)
+    return ['div', attrs, 'Query']
   },
 }
 
@@ -287,6 +328,7 @@ export const codeBlockNodeSpec: NodeSpec = {
   defining: true,
   attrs: {
     language: { default: null },
+    id: { default: null },
   },
   parseDOM: [
     {
@@ -298,12 +340,13 @@ export const codeBlockNodeSpec: NodeSpec = {
         const classLanguage = Array.from(dom.classList)
           .map((className) => className.match(/^language-(.+)$/)?.[1] ?? null)
           .find((value): value is string => Boolean(value))
-        return { language: explicitLanguage ?? classLanguage ?? null }
+        return { language: explicitLanguage ?? classLanguage ?? null, id: readBlockIdAttr(dom) }
       },
     },
   ],
   toDOM(node) {
     const language = typeof node.attrs.language === 'string' && node.attrs.language.trim() ? node.attrs.language : null
-    return ['pre', language ? { 'data-language': language, class: `language-${language}` } : {}, ['code', {}, 0]]
+    const attrs = withBlockIdAttr(language ? { 'data-language': language, class: `language-${language}` } : {}, node.attrs.id)
+    return ['pre', attrs, ['code', {}, 0]]
   },
 }

@@ -3,6 +3,10 @@ import type { Node as PMNode } from 'prosemirror-model'
 import type { EditorView, NodeView } from 'prosemirror-view'
 import { ExternalLink, Link, Trash2 } from 'lucide-vue-next'
 import { resolveNodePosition, getStringAttr, renderNodeOverflowMenu, type CoreNodeViewOptions, type NodeViewPosition } from './utils'
+import {
+  createViewportRenderController,
+  type ViewportRenderController,
+} from './viewportRenderController'
 
 const SAFE_URL_RE = /^(https?:|mailto:|tel:|asset:|blob:|data:image\/|#|\/|\.\/|\.\.\/|[^:]*$)/i
 
@@ -92,6 +96,8 @@ export function createNoteEmbedNodeView(
 
   let currentNode = node
   let lastLoadedNoteId = ''
+  let loadGeneration = 0
+  let viewportController: ViewportRenderController | null = null
   // Tracks the noteId the popup menu was last rendered for, so the menu's
   // vdom is only rebuilt when the pickNote/open/remove actions meaningfully
   // change — not on every ProseMirror `update()` (e.g. title/icon edits).
@@ -146,10 +152,21 @@ export function createNoteEmbedNodeView(
 
     if (noteId !== lastLoadedNoteId) {
       lastLoadedNoteId = noteId
+      const generation = ++loadGeneration
       if (noteId) {
         dividerEl.style.display = ''
         setLoading(true)
-        options?.onNoteEmbedContentLoad?.({ noteId, setHtml, setLoading })
+        options?.onNoteEmbedContentLoad?.({
+          noteId,
+          setHtml: (html) => {
+            if (!viewportController?.isActive() || generation !== loadGeneration) return
+            setHtml(html)
+          },
+          setLoading: (loading) => {
+            if (!viewportController?.isActive() || generation !== loadGeneration) return
+            setLoading(loading)
+          },
+        })
       } else {
         dividerEl.style.display = 'none'
         contentEl.innerHTML = ''
@@ -197,7 +214,19 @@ export function createNoteEmbedNodeView(
     })
   }
 
-  sync()
+  viewportController = createViewportRenderController(dom, {
+    render: sync,
+    suspend: () => {
+      loadGeneration++
+      lastLoadedNoteId = ''
+      lastRenderedPopupNoteId = null
+      contentEl.replaceChildren()
+      contentEl.style.display = 'none'
+      loadingEl.style.display = 'none'
+      render(null, moreBtnContainer)
+    },
+    initialPlaceholderHeight: 160,
+  })
 
   return {
     dom,
@@ -205,10 +234,12 @@ export function createNoteEmbedNodeView(
     update(nextNode) {
       if (nextNode.type !== currentNode.type) return false
       currentNode = nextNode
-      sync()
+      viewportController?.requestRender()
       return true
     },
     destroy() {
+      viewportController?.destroy()
+      loadGeneration++
       render(null, moreBtnContainer)
     },
   }

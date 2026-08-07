@@ -4,6 +4,14 @@ import type { Command } from 'prosemirror-state'
 import { CellSelection } from 'prosemirror-tables'
 import { nevoBaseSchema } from '../schema'
 import { createCoreCommands } from '../commands'
+import { stripNullBlockIds } from '../serialization'
+
+// These assertions verify command behavior on editor content, so the
+// canonical shape to compare against is the persisted one — lazily assigned
+// block ids (see `schema/blockIdAttr.ts`) stripped when null. Raw
+// `doc.toJSON()` always includes `attrs.id: null` once a node type declares
+// the attr; normalizing the actual side keeps these fixtures stable as more
+// node types join the lazy-id set.
 
 function runCommand(state: EditorState, command: Command): { applied: boolean; state: EditorState } {
   let nextState = state
@@ -166,7 +174,7 @@ describe('core commands', () => {
     const result = runCommand(state, core.commands.get('core.bulletList') as Command)
 
     expect(result.applied).toBe(true)
-    expect(result.state.doc.toJSON()).toEqual({
+    expect(stripNullBlockIds(result.state.doc.toJSON())).toEqual({
       type: 'doc',
       content: [
         {
@@ -214,7 +222,7 @@ describe('core commands', () => {
     const result = runCommand(state, core.commands.get('core.orderedList') as Command)
 
     expect(result.applied).toBe(true)
-    expect(result.state.doc.toJSON()).toEqual({
+    expect(stripNullBlockIds(result.state.doc.toJSON())).toEqual({
       type: 'doc',
       content: [
         {

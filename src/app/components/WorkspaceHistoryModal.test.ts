@@ -6,22 +6,18 @@ import WorkspaceHistoryModal from './WorkspaceHistoryModal.vue'
 import en from '../../locales/en.json'
 import type { NoteDocument, NoteSnapshotMeta, NoteSnapshotsEntry } from '../../types/note'
 import type { WorkspaceManifest } from '../../types/workspace'
-import { noteCommands } from '../../tauri/commands'
+// History is served by the workspace backend, so that a cloud workspace — which
+// has no path on disk — reaches its snapshots the same way a local one does.
+const backend = {
+  listNoteSnapshots: vi.fn(),
+  listAllNoteSnapshots: vi.fn(),
+  loadNoteSnapshot: vi.fn(),
+  loadNoteWithContent: vi.fn(),
+  restoreNoteSnapshot: vi.fn(),
+}
 
-vi.mock('../../tauri/commands', () => ({
-  noteCommands: {
-    createNote: vi.fn(),
-    loadNote: vi.fn(),
-    saveNote: vi.fn(),
-    deleteNote: vi.fn(),
-    moveNote: vi.fn(),
-    listNoteSnapshots: vi.fn(),
-    listAllNoteSnapshots: vi.fn(),
-    loadNoteSnapshot: vi.fn(),
-    restoreNoteSnapshot: vi.fn(),
-    pruneNoteSnapshots: vi.fn(),
-    importImageAsset: vi.fn(),
-  },
+vi.mock('../../stores/workspace', () => ({
+  useWorkspaceStore: () => ({ backend }),
 }))
 
 const i18n = createI18n({
@@ -108,9 +104,9 @@ describe('WorkspaceHistoryModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    vi.mocked(noteCommands.listNoteSnapshots).mockImplementation(async (_workspacePath, noteId) => snapshotsForNote(noteId))
+    backend.listNoteSnapshots.mockImplementation(async (noteId: string) => snapshotsForNote(noteId))
 
-    vi.mocked(noteCommands.listAllNoteSnapshots).mockImplementation(async () => {
+    backend.listAllNoteSnapshots.mockImplementation(async () => {
       const entries: NoteSnapshotsEntry[] = []
       for (const noteId of ['note-1', 'note-2']) {
         const snapshots = snapshotsForNote(noteId)
@@ -119,16 +115,16 @@ describe('WorkspaceHistoryModal', () => {
       return entries
     })
 
-    vi.mocked(noteCommands.loadNoteSnapshot).mockImplementation(async (_workspacePath, noteId, snapshotId) => {
+    backend.loadNoteSnapshot.mockImplementation(async (noteId: string, snapshotId: string) => {
       if (noteId === 'note-1') return createNote(noteId, 'Snapshot One', snapshotId)
       return createNote(noteId, 'Snapshot Two', snapshotId)
     })
 
-    vi.mocked(noteCommands.loadNote).mockImplementation(async (_workspacePath, noteId) => {
+    backend.loadNoteWithContent.mockImplementation(async (noteId: string) => {
       return createNote(noteId, noteId === 'note-1' ? 'Current One' : 'Current Two', `current-${noteId}`)
     })
 
-    vi.mocked(noteCommands.restoreNoteSnapshot).mockResolvedValue(
+    backend.restoreNoteSnapshot.mockResolvedValue(
       createNote('note-2', 'Restored Two', 'restored-body'),
     )
   })
@@ -145,7 +141,6 @@ describe('WorkspaceHistoryModal', () => {
       },
       props: {
         open: true,
-        workspacePath: '/workspace',
         manifest,
         activeNoteId: 'note-2',
         activeNote: createNote('note-2', 'Current Two', 'current-note-2'),
@@ -172,7 +167,7 @@ describe('WorkspaceHistoryModal', () => {
       await flushHistoryModal()
     }
 
-    expect(noteCommands.loadNoteSnapshot).toHaveBeenLastCalledWith('/workspace', 'note-1', 'snapshot-1-old')
+    expect(backend.loadNoteSnapshot).toHaveBeenLastCalledWith('note-1', 'snapshot-1-old')
     wrapper.unmount()
   })
 
@@ -184,7 +179,6 @@ describe('WorkspaceHistoryModal', () => {
       },
       props: {
         open: true,
-        workspacePath: '/workspace',
         manifest,
         activeNoteId: 'note-2',
         activeNote: createNote('note-2', 'Current Two', 'current-note-2'),
@@ -208,7 +202,7 @@ describe('WorkspaceHistoryModal', () => {
     await nextTick()
 
     expect(document.body.textContent ?? '').not.toContain('Restore this snapshot to the live note?')
-    expect(noteCommands.restoreNoteSnapshot).not.toHaveBeenCalled()
+    expect(backend.restoreNoteSnapshot).not.toHaveBeenCalled()
     wrapper.unmount()
   })
 
@@ -220,7 +214,6 @@ describe('WorkspaceHistoryModal', () => {
       },
       props: {
         open: false,
-        workspacePath: '/workspace',
         manifest,
         activeNoteId: 'note-2',
         activeNote: createNote('note-2', 'Current Two', 'current-note-2'),

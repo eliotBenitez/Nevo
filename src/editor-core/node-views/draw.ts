@@ -2,6 +2,10 @@ import type { Node as PMNode } from 'prosemirror-model'
 import type { EditorView, NodeView } from 'prosemirror-view'
 import { resolveNodePosition, getStringAttr, selectNodeAt, type CoreNodeViewOptions, type NodeViewPosition } from './utils'
 import { sanitizeSvg } from '../../utils/sanitizeSvg'
+import {
+  createViewportRenderController,
+  type ViewportRenderController,
+} from './viewportRenderController'
 
 function buildHeader(): HTMLElement {
   const header = document.createElement('div')
@@ -52,6 +56,7 @@ export function createDrawNodeView(node: PMNode, view: EditorView, getPos: NodeV
 
   let currentNode = node
   let lastRenderedPreview = ''
+  let viewportController: ViewportRenderController | null = null
 
   const sync = () => {
     const svgPreview = sanitizeSvg(getStringAttr(currentNode, 'svgPreview'))
@@ -81,6 +86,15 @@ export function createDrawNodeView(node: PMNode, view: EditorView, getPos: NodeV
     }
   }
 
+  viewportController = createViewportRenderController(dom, {
+    render: sync,
+    suspend: () => {
+      rendered.replaceChildren()
+      lastRenderedPreview = ''
+    },
+    initialPlaceholderHeight: 240,
+  })
+
   const requestOpen = () => {
     const position = resolveNodePosition(getPos)
     if (typeof position !== 'number') return
@@ -105,17 +119,17 @@ export function createDrawNodeView(node: PMNode, view: EditorView, getPos: NodeV
 
   dom.addEventListener('click', onClick)
   dom.addEventListener('dblclick', onDblClick)
-  sync()
 
   return {
     dom,
     update(nextNode) {
       if (nextNode.type !== currentNode.type) return false
       currentNode = nextNode
-      sync()
+      viewportController?.requestRender()
       return true
     },
     destroy() {
+      viewportController?.destroy()
       dom.removeEventListener('click', onClick)
       dom.removeEventListener('dblclick', onDblClick)
     },

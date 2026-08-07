@@ -5,6 +5,7 @@ import type { WorkspaceSettings } from '../../../types/workspace'
 import { useGraphStore } from '../../../stores/graph'
 import { extractLinks } from '../../../editor-core/extract-links'
 import { countWordsInText } from '../../../utils/noteWordCount'
+import { createIdleTaskScheduler } from './idleTaskScheduler'
 
 const STATS_UPDATE_DELAY_MS = 200
 const GRAPH_UPDATE_DELAY_MS = 600
@@ -21,32 +22,15 @@ export function useEditorDocStats(
 
   const editorDocText = ref('')
   const editorWordText = ref('')
-  let statsUpdateTimer: ReturnType<typeof setTimeout> | null = null
   let lastStatsDoc: object | null = null
-  let graphUpdateTimer: ReturnType<typeof setTimeout> | null = null
   let pendingGraphDoc: ProseMirrorNode | null = null
   let pendingGraphNoteId: string | null = null
-
-  function clearStatsUpdateTimer() {
-    if (statsUpdateTimer) {
-      clearTimeout(statsUpdateTimer)
-      statsUpdateTimer = null
-    }
-  }
-
-  function clearGraphUpdateTimer() {
-    if (graphUpdateTimer) {
-      clearTimeout(graphUpdateTimer)
-      graphUpdateTimer = null
-    }
-  }
 
   function statsVisible() {
     return getSettings().editor.editorStatsVisibility === 'corner'
   }
 
-  function updateEditorStatsNow() {
-    clearStatsUpdateTimer()
+  function calculateEditorStats() {
     if (!statsVisible()) {
       if (editorDocText.value) editorDocText.value = ''
       if (editorWordText.value) editorWordText.value = ''
@@ -60,32 +44,47 @@ export function useEditorDocStats(
     lastStatsDoc = currentDoc
   }
 
+  const statsUpdateTask = createIdleTaskScheduler(calculateEditorStats, {
+    delayMs: STATS_UPDATE_DELAY_MS,
+    idleTimeoutMs: 800,
+  })
+
+  function updateEditorStatsNow() {
+    statsUpdateTask.cancel()
+    calculateEditorStats()
+  }
+
   function scheduleEditorStatsUpdate() {
-    clearStatsUpdateTimer()
     if (!statsVisible()) {
+      statsUpdateTask.cancel()
       if (editorDocText.value) editorDocText.value = ''
       if (editorWordText.value) editorWordText.value = ''
       return
     }
-    statsUpdateTimer = setTimeout(updateEditorStatsNow, STATS_UPDATE_DELAY_MS)
+    statsUpdateTask.schedule()
   }
+
+  function flushGraphUpdate() {
+    const nextDoc = pendingGraphDoc
+    const nextNoteId = pendingGraphNoteId
+    pendingGraphDoc = null
+    pendingGraphNoteId = null
+    if (nextDoc && nextNoteId) {
+      graphStore.updateNoteEdges(nextNoteId, extractLinks(nextDoc))
+    }
+  }
+
+  const graphUpdateTask = createIdleTaskScheduler(flushGraphUpdate, {
+    delayMs: GRAPH_UPDATE_DELAY_MS,
+    idleTimeoutMs: 1_200,
+  })
 
   function scheduleGraphUpdate(doc: ProseMirrorNode) {
     const noteId = getNoteId()
     if (!noteId) return
     pendingGraphDoc = doc
     pendingGraphNoteId = noteId
-    clearGraphUpdateTimer()
-    graphUpdateTimer = setTimeout(() => {
-      graphUpdateTimer = null
-      const nextDoc = pendingGraphDoc
-      const nextNoteId = pendingGraphNoteId
-      pendingGraphDoc = null
-      pendingGraphNoteId = null
-      if (nextDoc && nextNoteId) {
-        graphStore.updateNoteEdges(nextNoteId, extractLinks(nextDoc))
-      }
-    }, GRAPH_UPDATE_DELAY_MS)
+    graphUpdateTask.schedule()
   }
 
   /** Stats half of the editor's after-transaction hook: re-measure only when
@@ -104,10 +103,8 @@ export function useEditorDocStats(
   }
 
   function clearTimers() {
-    clearStatsUpdateTimer()
-    clearGraphUpdateTimer()
-    pendingGraphDoc = null
-    pendingGraphNoteId = null
+    statsUpdateTask.cancel()
+    graphUpdateTask.flush()
   }
 
   const editorWordCount = computed(() => {

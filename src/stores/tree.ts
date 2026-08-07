@@ -81,7 +81,25 @@ export const useTreeStore = defineStore('tree', () => {
   async function deleteFolder(folderId: string, recursive = false) {
     const backend = workspaceStore.backend
     if (!backend || !workspaceStore.manifest) return
+    const folder = folderById.value.get(folderId)
+    const nestedNotes = recursive && folder ? _collectNotes(folder) : []
     await backend.deleteFolder(folderId, recursive)
+    if (nestedNotes.length > 0) {
+      workspaceStore.manifest.trash ??= []
+      const trashedIds = new Set(workspaceStore.manifest.trash.map(item => item.id))
+      const deletedAt = new Date().toISOString()
+      for (const meta of nestedNotes) {
+        if (trashedIds.has(meta.id)) continue
+        workspaceStore.manifest.trash.push({
+          id: meta.id,
+          type: 'note',
+          title: meta.title,
+          deletedAt,
+          originalParentId: null,
+          icon: meta.icon,
+        })
+      }
+    }
     _removeFolderFromTree(workspaceStore.manifest.tree, folderId)
     workspaceStore.manifest.rootOrder = workspaceStore.manifest.rootOrder.filter(id => id !== folderId)
   }
@@ -327,6 +345,10 @@ export const useTreeStore = defineStore('tree', () => {
 })
 
 // --- tree mutation helpers ---
+
+function _collectNotes(folder: FolderMeta): NoteMeta[] {
+  return [...folder.notes, ...folder.children.flatMap(_collectNotes)]
+}
 
 function _removeFolderFromTree(tree: FolderMeta[], folderId: string): boolean {
   const idx = tree.findIndex(f => f.id === folderId)

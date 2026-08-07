@@ -35,6 +35,7 @@
       "localFirst": "Local-first · rien ne quitte cet appareil"
     },
     "create": {
+      "titlebar": "Créer un espace",
       "title": "Créez votre espace de travail",
       "subtitle": "Choisissez un nom, une couleur et son emplacement. Vous pourrez le renommer ou le déplacer plus tard.",
       "step": "Étape {n} sur {total}",
@@ -50,6 +51,8 @@
       "namePlaceholder": "Mon espace",
       "iconLabel": "Icône & couleur",
       "iconHint": "Modifiable à tout moment dans les réglages de l'espace",
+      "glyphLabel": "Symbole",
+      "colourLabel": "Couleur",
       "locationLabel": "Emplacement",
       "locationHint": "Où les fichiers sont stockés sur votre machine",
       "locationBrowse": "Parcourir…",
@@ -88,6 +91,33 @@
           }
         }
       },
+      "mobile": {
+        "titlebar": "Nouvel espace",
+        "identityTitle": "Comment appeler votre espace ?",
+        "identitySubtitle": "Donnez-lui un nom et une identité. Vous pourrez tout modifier plus tard.",
+        "localWorkspace": "Espace local",
+        "storageTitle": "Où stocker vos données ?",
+        "storageSubtitle": "Commencez en local. La synchronisation pourra être activée plus tard.",
+        "deviceTitle": "Sur cet appareil",
+        "deviceSubtitle": "Recommandé · sans compte",
+        "cloudTitle": "Nevo Cloud",
+        "cloudSubtitle": "Accès sur tous vos appareils",
+        "signIn": "Se connecter",
+        "cloudUnavailable": "La connexion au cloud n'est pas encore disponible pendant la configuration mobile",
+        "privacyTitle": "Vos notes vous appartiennent",
+        "privacyBody": "Un espace local fonctionne hors ligne et reste dans le stockage protégé de l'application.",
+        "storageInfoAction": "Comment fonctionne le stockage ?",
+        "storageInfoTitle": "Stockage local protégé",
+        "storageInfoBody": "Nevo conserve cet espace dans la zone de données privée de l'application. Les autres applications ne peuvent pas la parcourir et vous n'avez aucun chemin de fichier à gérer.",
+        "templateTitle": "Par où commencer ?",
+        "templateSubtitle": "Choisissez une structure de départ ou laissez l'espace vide.",
+        "summary": "Sur l'appareil · {template}",
+        "edit": "Modifier",
+        "close": "Fermer",
+        "continue": "Continuer",
+        "createNamed": "Créer {name}",
+        "createError": "Impossible de créer l'espace. Réessayez."
+      },
       "serverLabel": "URL du serveur",
       "serverHint": "URL de base de votre relais auto-hébergé",
       "serverPlaceholder": "http://localhost:8080",
@@ -100,9 +130,12 @@
       "create": "Créer l'espace"
     },
     "open": {
+      "titlebar": "Ouvrir un espace",
       "title": "Ouvrir un espace de travail",
       "subtitle": "Choisissez parmi les récents, parcourez les dossiers, ou déposez-en un n'importe où dans cette fenêtre.",
+      "mobileSubtitle": "Choisissez un espace récent ou sélectionnez son dossier.",
       "browse": "Parcourir un dossier",
+      "importArchive": "Importer depuis une archive",
       "new": "Nouvel espace",
       "filter": "Filtrer les espaces…",
       "recent": "Récents",
@@ -116,7 +149,9 @@
       "removeRecentConfirm": "Retirer « {name} » des récents ? Les fichiers restent sur le disque.",
       "deleteStorage": "Supprimer le stockage",
       "deleteStorageConfirm": "Supprimer « {name} » ? Cette action est irréversible.",
-      "deleteFailed": "Impossible de supprimer le stockage. Veuillez réessayer."
+      "deleteFailed": "Impossible de supprimer le stockage. Veuillez réessayer.",
+      "emptyTitle": "Aucun espace récent",
+      "emptySubtitle": "Sélectionnez le dossier d’un espace pour l’ouvrir sur cet appareil."
     }
   },
   "common": {
@@ -131,6 +166,119 @@
     "back": "Espaces",
     "localWorkspace": "Espace local",
     "cloudWorkspace": "Stockage cloud",
+    "canvas": {
+      "document": "Document",
+      "canvas": "Canvas",
+      "viewSwitcher": "Vue de la note",
+      "ariaLabel": "Canvas infini de la note",
+      "collapse": "Réduire la note",
+      "expand": "Développer la note",
+      "collapsedHint": "Double-cliquez pour développer",
+      "toolbar": "Outils du canvas",
+      "addText": "Ajouter un bloc de texte",
+      "richNote": "Note enrichie",
+      "noteLink": "Note liée",
+      "frame": "Cadre",
+      "mindMap": "Carte mentale",
+      "addShape": "Ajouter une forme",
+      "select": "Sélectionner",
+      "hand": "Déplacer",
+      "rectangle": "Rectangle",
+      "ellipse": "Ellipse",
+      "diamond": "Losange",
+      "connector": "Connecteur",
+      "pen": "Crayon",
+      "highlighter": "Surligneur",
+      "eraser": "Gomme",
+      "image": "Image",
+      "fullscreen": "Plein écran",
+      "present": "Présenter les cadres",
+      "presentation": "Présentation",
+      "previousFrame": "Cadre précédent",
+      "nextFrame": "Cadre suivant",
+      "exitPresentation": "Quitter la présentation",
+      "properties": "Propriétés",
+      "fill": "Remplissage",
+      "stroke": "Contour",
+      "strokeWidth": "Épaisseur du trait",
+      "opacity": "Opacité",
+      "fontSize": "Taille de police",
+      "textColor": "Couleur du texte",
+      "fontFamily": "Police",
+      "fontSans": "Sans-serif",
+      "fontSerif": "Serif",
+      "fontMono": "Monospace",
+      "fontHandwriting": "Manuscrite",
+      "rotation": "Rotation",
+      "alt": "Texte alternatif",
+      "routing": "Tracé",
+      "straight": "Droit",
+      "orthogonal": "Orthogonal",
+      "bezier": "Courbe",
+      "startCap": "Début",
+      "endCap": "Fin",
+      "none": "Aucun",
+      "arrow": "Flèche",
+      "dot": "Point",
+      "alignLeft": "Aligner à gauche",
+      "alignCenter": "Centrer",
+      "alignRight": "Aligner à droite",
+      "alignTop": "Aligner en haut",
+      "alignMiddle": "Aligner au milieu",
+      "alignBottom": "Aligner en bas",
+      "distributeHorizontal": "Répartir horizontalement",
+      "distributeVertical": "Répartir verticalement",
+      "duplicate": "Dupliquer",
+      "bringFront": "Mettre au premier plan",
+      "bringForward": "Avancer",
+      "sendBackward": "Reculer",
+      "sendBack": "Mettre à l’arrière-plan",
+      "group": "Grouper",
+      "ungroup": "Dissocier",
+      "lock": "Verrouiller",
+      "unlock": "Déverrouiller",
+      "rotate": "Faire pivoter la sélection",
+      "connectorFrom": "Déplacer le début du connecteur",
+      "connectorTo": "Déplacer la fin du connecteur",
+      "connectAnchor": "Faire glisser pour connecter",
+      "editText": "Modifier le texte du canevas",
+      "editRichText": "Modifier la note enrichie",
+      "bold": "Gras",
+      "italic": "Italique",
+      "underline": "Souligné",
+      "strike": "Barré",
+      "code": "Code",
+      "heading": "Titre",
+      "bulletList": "Liste à puces",
+      "numberList": "Liste numérotée",
+      "todo": "Tâche",
+      "quote": "Citation",
+      "frameTitle": "Titre du cadre",
+      "presentationOrder": "Ordre des diapositives",
+      "openLinkedNote": "Ouvrir la note liée",
+      "addMindMapChild": "Ajouter un nœud enfant",
+      "layoutMindMap": "Réorganiser la carte mentale",
+      "noteLinkPickerTitle": "Lier une note",
+      "noteLinkSearch": "Rechercher des notes",
+      "noteLinkEmpty": "Aucune note correspondante.",
+      "zoomIn": "Zoom avant",
+      "zoomOut": "Zoom arrière",
+      "fit": "Tout afficher",
+      "undo": "Annuler",
+      "redo": "Rétablir",
+      "export": "Exporter le canvas",
+      "exportTitle": "Exporter le canvas",
+      "exportScope": "Zone",
+      "exportAll": "Tout le contenu",
+      "exportSelection": "Sélection",
+      "exportViewport": "Vue actuelle",
+      "exportFormat": "Format",
+      "exportAction": "Exporter",
+      "exporting": "Exportation…",
+      "exportSelectionEmpty": "Sélectionnez au moins un élément du canvas.",
+      "exportFailed": "Échec de l’exportation du canvas.",
+      "cancel": "Annuler"
+    },
     "toggleSidebar": "Basculer la barre latérale",
     "toggleRightPanel": "Basculer le panneau droit",
     "openDrawer": "Ouvrir la barre latérale",
@@ -231,6 +379,59 @@
         "moved": "{title} déplacé en position {position}.",
         "footer": "Les favoris sont enregistrés avec cet espace.",
         "done": "Terminé"
+      }
+    },
+    "mobile": {
+      "navigation": {
+        "label": "Navigation de l’espace",
+        "home": "Accueil",
+        "notes": "Notes",
+        "search": "Recherche",
+        "boards": "Tableaux",
+        "more": "Plus"
+      },
+      "editor": {
+        "export": "Exporter la note",
+        "noteDetails": "Détails de la note"
+      },
+      "noteDetails": {
+        "title": "Détails de la note",
+        "done": "Terminé",
+        "navigation": "Navigation",
+        "sections": "{count} sections",
+        "localGraph": "Graphe local",
+        "document": "Document",
+        "readingTime": "Temps de lecture",
+        "export": "Exporter la note"
+      },
+      "library": {
+        "title": "Notes",
+        "search": "Rechercher une note",
+        "filters": "Ouvrir les filtres de recherche",
+        "contentType": "Type de contenu",
+        "all": "Tout",
+        "folders": "Dossiers",
+        "tags": "Étiquettes",
+        "allNotes": "Toutes les notes",
+        "byDate": "Par date",
+        "noteCount": "{count} notes",
+        "noPreview": "Aucun aperçu",
+        "noResults": "Aucune note correspondante",
+        "noTags": "Aucune étiquette"
+      },
+      "boards": {
+        "updated": "Mis à jour le {date}",
+        "unavailable": "Tableaux indisponibles",
+        "unavailableDescription": "Activez le plugin système Kanban pour utiliser les tableaux sur mobile."
+      },
+      "more": {
+        "title": "Plus",
+        "workspace": "Espace",
+        "management": "Gestion",
+        "cloud": "Espace cloud",
+        "onDevice": "Stocké sur cet appareil",
+        "import": "Importer",
+        "switchWorkspace": "Changer d’espace"
       }
     },
     "pluginUi": {
@@ -613,12 +814,30 @@
       "workspace": "Espace",
       "ai": "IA",
       "plugins": "Plugins",
+      "mcp": "Agents IA",
       "hotkeys": "Raccourcis",
       "files": "Fichiers & Stockage",
+      "backup": "Sauvegarde & Restauration",
       "advanced": "Avancé",
       "about": "À propos"
     },
     "navigationLabel": "Sections des réglages",
+    "mobile": {
+      "groups": {
+        "primary": "Principal",
+        "system": "Données et système"
+      },
+      "descriptions": {
+        "appearance": "Thème, accent et confort visuel",
+        "editor": "Texte, saisie et comportement de l’éditeur",
+        "workspace": "Organisation et préférences de l’espace",
+        "ai": "Modèles locaux et fonctions d’IA",
+        "files": "Fichiers, pièces jointes et diagnostic",
+        "backup": "Exporter et restaurer vos données",
+        "plugins": "Extensions et fonctions de l’application",
+        "about": "Version, plateforme et détails de Nevo"
+      }
+    },
     "search": {
       "label": "Rechercher dans les réglages",
       "placeholder": "Rechercher dans les réglages...",
@@ -1335,6 +1554,37 @@
         "saved": "Enregistré"
       }
     },
+    "mcp": {
+      "description": "Autorisez des agents de code externes à lire et modifier cet espace via le pont MCP local.",
+      "groups": { "access": "Accès", "connect": "Connecter un agent" },
+      "modes": {
+        "off": "Désactivé",
+        "readOnly": "Lecture seule",
+        "ask": "Demander avant chaque modification",
+        "auto": "Autoriser les modifications"
+      },
+      "mode": {
+        "title": "Accès de l'agent",
+        "description": "Désactivé signifie que le pont n'écoute pas du tout. Seuls les espaces locaux sont pris en charge."
+      },
+      "autoSnapshot": {
+        "title": "Instantané avant chaque modification",
+        "description": "Enregistrer un instantané de la note avant qu'un agent la modifie, pour pouvoir revenir en arrière depuis l'historique."
+      },
+      "status": {
+        "title": "État du pont",
+        "off": "Arrêté.",
+        "starting": "Démarrage…",
+        "running": "À l'écoute sur 127.0.0.1:{port}.",
+        "unsupported": "Disponible uniquement pour les espaces locaux."
+      },
+      "connect": {
+        "title": "Enregistrer le serveur MCP",
+        "description": "Compilez le serveur avec pnpm --filter {'@'}nevo/mcp-server build, puis enregistrez-le auprès de votre agent avec le chemin absolu vers dist/index.js. Aucun port ni jeton dans la configuration.",
+        "copy": "Copier la commande",
+        "copied": "Copié"
+      }
+    },
     "hotkeys": {
       "description": "Les commandes clavier modifiables de Nevo peuvent être enregistrées ici. Les raccourcis de mise en forme de l'éditeur sont fixes.",
       "resetAll": "Tout réinitialiser",
@@ -1510,7 +1760,10 @@
       "highlight": "Surlignage (mark)",
       "textColor": "Couleur du texte",
       "math": "Math en ligne",
-      "image": "Insérer une image"
+      "image": "Insérer une image",
+      "mobile": "Outils de l’éditeur",
+      "insertBlock": "Insérer un bloc",
+      "moreFormatting": "Plus de mise en forme"
     },
     "linkPicker": {
       "createNote": "Créer la note « {title} »",
@@ -1521,6 +1774,13 @@
     "blockHandle": {
       "drag": "Glisser pour réorganiser",
       "options": "Options du bloc"
+    },
+    "blockEmbed": {
+      "header": "Bloc intégré",
+      "notFound": "Bloc référencé introuvable",
+      "openSource": "Ouvrir la note source",
+      "referencedFromPrefix": "Référencé depuis :",
+      "loading": "Chargement du bloc intégré…"
     },
     "colorPicker": {
       "none": "Aucune",
@@ -1576,6 +1836,54 @@
       "applyHint": "pour appliquer",
       "apply": "Appliquer",
       "delete": "Supprimer"
+    },
+    "queryBlock": {
+      "title": "Requête",
+      "edit": "Modifier la requête",
+      "loading": "Chargement…",
+      "noContext": "Les résultats de la requête ne sont pas disponibles",
+      "error": "Impossible de charger les résultats de la requête",
+      "empty": "Aucune note ne correspond à cette requête",
+      "resultsLabel": "résultats",
+      "retry": "Réessayer",
+      "label": "Interroger les notes",
+      "applyHint": "pour appliquer",
+      "apply": "Appliquer",
+      "delete": "Supprimer",
+      "view": "Vue",
+      "sort": "Tri",
+      "views": {
+        "list": "Liste",
+        "table": "Tableau",
+        "cards": "Cartes"
+      },
+      "fields": {
+        "title": "Titre",
+        "tags": "Tags",
+        "status": "Statut",
+        "type": "Type",
+        "date": "Date",
+        "folder": "Dossier"
+      },
+      "sortFields": {
+        "title": "Titre",
+        "date": "Date",
+        "updatedAt": "Modifié",
+        "createdAt": "Créé"
+      },
+      "filters": {
+        "any": "N'importe lequel",
+        "tagsAny": "A au moins un tag",
+        "tagsAll": "A tous les tags",
+        "tagsPlaceholder": "tag1, tag2",
+        "status": "Statut",
+        "type": "Type",
+        "dateFrom": "Date de début",
+        "dateTo": "Date de fin",
+        "folder": "Dossier",
+        "folderPlaceholder": "Chemin du dossier",
+        "includeSubtree": "Inclure les sous-dossiers"
+      }
     },
     "vega": {
       "label": "Graphique Vega-Lite",
@@ -1725,6 +2033,7 @@
     "emptyTitle": "Aucune note pour l'instant",
     "emptySub": "Créez des notes et reliez-les avec [[nom de la note]] — elles apparaîtront ici sous forme de réseau.",
     "searchPlaceholder": "Rechercher des nœuds…",
+    "filters": "Filtres du graphe",
     "untitled": "Sans titre",
     "connections": "connexions",
     "nodes": "nœuds",
@@ -1855,6 +2164,7 @@
       "file": "Fichier joint",
       "table": "Tableau",
       "mermaid": "Diagramme Mermaid",
+      "query": "Requête",
       "draw": "Dessin",
       "markmap": "Carte mentale",
       "chart": "Graphique",
@@ -2085,6 +2395,12 @@
       "fieldName": "Étiquettes",
       "urgent": "Urgent",
       "feature": "En cours"
+    },
+    "defaultStatuses": {
+      "status": "Statut",
+      "toDo": "À faire",
+      "inProgress": "En cours",
+      "done": "Terminé"
     },
     "view": {
       "loading": "Chargement…",
@@ -2422,6 +2738,77 @@
     "errors": {
       "noKey": "Vous n'avez pas encore la clé de ce stockage — demandez à un propriétaire ou un admin de vous accorder l'accès.",
       "generic": "Une erreur s'est produite. Veuillez réessayer."
+    }
+  },
+  "workspaceTransfer": {
+    "panelTitle": "Sauvegarde & Restauration",
+    "panelDescription": "Exportez cet espace de travail dans un seul fichier, ou restaurez-en un depuis une archive.",
+    "localOnly": "La sauvegarde et la restauration sont réservées aux espaces de travail locaux.",
+    "export": {
+      "title": "Exporter l'espace de travail",
+      "description": "Regroupe les notes, dossiers, fichiers, tableaux, bases de données, modèles et l'historique dans un seul fichier .nevoz.",
+      "action": "Exporter l'espace de travail"
+    },
+    "import": {
+      "title": "Importer dans cet espace de travail",
+      "mergeTitle": "Fusionner une archive",
+      "mergeAction": "Importer dans cet espace de travail",
+      "mergeDescription": "Ajoute les notes, dossiers, fichiers et bases de données d'une archive à cet espace de travail dans un nouveau dossier « Importé : … ».",
+      "mergeConfirmTitle": "Fusionner l'archive avec cet espace de travail ?",
+      "mergeConfirmMessage": "Les notes et dossiers de l'archive seront ajoutés dans un nouveau dossier « Importé : … », avec de nouveaux identifiants, afin que rien dans cet espace de travail ne soit écrasé. Les tableaux Kanban et l'historique des notes de l'archive ne sont pas fusionnés.",
+      "mergeConfirmAction": "Fusionner l'archive"
+    },
+    "passwordPrompt": {
+      "exportTitle": "Protéger l'archive par un mot de passe ?",
+      "exportMessage": "Facultatif — laissez le champ vide pour exporter sans mot de passe.",
+      "exportLabel": "Mot de passe (facultatif)",
+      "confirmExport": "Exporter",
+      "importTitle": "Entrez le mot de passe de l'archive",
+      "importMessage": "Cette archive est protégée par un mot de passe.",
+      "importLabel": "Mot de passe",
+      "confirmImport": "Continuer",
+      "placeholder": "Entrez le mot de passe",
+      "show": "Afficher le mot de passe",
+      "hide": "Masquer le mot de passe"
+    },
+    "progress": {
+      "starting": "Préparation…",
+      "packing": "Compression des fichiers…",
+      "encrypting": "Chiffrement de l'archive…",
+      "extracting": "Extraction des fichiers…",
+      "finishing": "Finalisation…"
+    },
+    "toast": {
+      "exportSuccessTitle": "Espace de travail exporté",
+      "exportSuccess": "L'archive a été enregistrée avec succès.",
+      "exportCancelled": "Export annulé.",
+      "exportErrorTitle": "Échec de l'export",
+      "importSuccessTitle": "Espace de travail importé",
+      "importSuccess": "L'archive a été restaurée en tant que nouvel espace de travail.",
+      "importCancelled": "Import annulé.",
+      "importErrorTitle": "Échec de l'import",
+      "importError": "Échec de l'import de l'archive de l'espace de travail.",
+      "mergeSuccessTitle": "Archive fusionnée",
+      "mergeSuccess": "{notes} notes et {folders} dossiers importés depuis l'archive.",
+      "mergeSuccessCaveat": "Les tableaux Kanban et l'historique des notes de l'archive n'ont pas été fusionnés ; importez-la comme nouvel espace de travail pour les récupérer aussi.",
+      "mergeErrorTitle": "Échec de la fusion",
+      "mergeError": "Échec de la fusion de l'archive de l'espace de travail."
+    },
+    "errors": {
+      "incorrectPassword": "Mot de passe de l'archive incorrect.",
+      "passwordRequired": "Cette archive est protégée par un mot de passe. Entrez-le pour continuer.",
+      "notNevoArchive": "Le fichier sélectionné n'est pas une archive d'espace de travail Nevo valide.",
+      "unsupportedVersion": "Cette archive Nevo a été créée par une version de l'application incompatible.",
+      "destinationNotEmpty": "Choisissez un dossier vide pour le nouvel espace de travail.",
+      "localOnly": "Cette action est réservée aux espaces de travail locaux."
+    }
+  },
+  "mcp": {
+    "confirm": {
+      "title": "Autoriser la modification de l'agent ?",
+      "message": "Un agent externe souhaite exécuter « {method} » dans cet espace de travail.",
+      "allow": "Autoriser",
+      "deny": "Refuser"
     }
   }
 }

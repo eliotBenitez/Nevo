@@ -32,6 +32,30 @@ export async function generateKeypair(): Promise<SerializedKeypair> {
   return { publicKey: toBase64(spki), privateKey: toBase64(pkcs8) }
 }
 
+/**
+ * Derive the public half of a stored private key.
+ *
+ * WebCrypto cannot export the public part of a private key directly, but an
+ * RSA private JWK carries the modulus and exponent — which is all a public key
+ * is. Used to check a device key against the one registered server-side: a
+ * mismatch means this device cannot unwrap any storage DEK, and must say so
+ * instead of quietly minting a replacement identity.
+ */
+export async function derivePublicKey(privateKeyPkcs8: string): Promise<string> {
+  const priv = await crypto.subtle.importKey(
+    'pkcs8', fromBase64(privateKeyPkcs8), RSA_PARAMS, true, ['decrypt'],
+  )
+  const jwk = await crypto.subtle.exportKey('jwk', priv)
+  const pub = await crypto.subtle.importKey(
+    'jwk',
+    { kty: jwk.kty, n: jwk.n, e: jwk.e, alg: jwk.alg, ext: true, key_ops: ['encrypt'] },
+    RSA_PARAMS,
+    true,
+    ['encrypt'],
+  )
+  return toBase64(await crypto.subtle.exportKey('spki', pub))
+}
+
 async function importPublicKey(b64Spki: string): Promise<CryptoKey> {
   return crypto.subtle.importKey('spki', fromBase64(b64Spki), RSA_PARAMS, false, ['encrypt'])
 }

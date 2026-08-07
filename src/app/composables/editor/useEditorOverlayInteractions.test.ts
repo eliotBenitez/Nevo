@@ -10,6 +10,7 @@ function emptyElements(): EditorOverlayElements {
     mathPopoverEl: null,
     formulaPopoverEl: null,
     mermaidPopoverEl: null,
+    queryPopoverEl: null,
     markmapPopoverEl: null,
     vegaPopoverEl: null,
     pluginNodePopoverEl: null,
@@ -29,6 +30,7 @@ function createOptions(overrides: Record<string, unknown> = {}) {
     isMathPopoverOpen: () => false,
     isFormulaPopoverOpen: () => false,
     isMermaidPopoverOpen: () => false,
+    isQueryPopoverOpen: () => false,
     isMarkmapPopoverOpen: () => false,
     isVegaPopoverOpen: () => false,
     isPluginNodePopoverOpen: () => false,
@@ -41,6 +43,7 @@ function createOptions(overrides: Record<string, unknown> = {}) {
     closeMathPopover: vi.fn(),
     closeFormulaPopover: vi.fn(),
     closeMermaidPopover: vi.fn(),
+    closeQueryPopover: vi.fn(),
     closeMarkmapPopover: vi.fn(),
     closeVegaPopover: vi.fn(),
     closePluginNodePopover: vi.fn(),
@@ -91,18 +94,48 @@ describe('useEditorOverlayInteractions', () => {
     expect(closePluginNodePopover).not.toHaveBeenCalled()
   })
 
-  it('updates scroll metrics before repositioning every overlay', () => {
+  it('keeps a query popover open while interacting with a teleported date picker', () => {
+    const closeQueryPopover = vi.fn()
+    const datePopover = document.createElement('div')
+    datePopover.className = 'ndp-popover'
+    const day = document.createElement('button')
+    datePopover.append(day)
+    const interactions = useEditorOverlayInteractions(createOptions({
+      isQueryPopoverOpen: () => true,
+      closeQueryPopover,
+    }))
+
+    interactions.onDocumentMouseDown({ target: day } as unknown as MouseEvent)
+
+    expect(closeQueryPopover).not.toHaveBeenCalled()
+  })
+
+  it('updates scroll metrics once per frame and repositions only active overlays', () => {
     const calls: string[] = []
+    let pendingFrame: FrameRequestCallback | null = null
+    const requestFrame = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      pendingFrame = callback
+      return 1
+    })
     const interactions = useEditorOverlayInteractions(createOptions({
       onEditorScroll: () => calls.push('scroll'),
       repositionOverlays: [
-        () => calls.push('toolbar'),
-        () => calls.push('math'),
+        { isActive: () => true, reposition: () => calls.push('toolbar') },
+        { isActive: () => false, reposition: () => calls.push('math') },
       ],
     }))
 
     interactions.handleEditorScroll()
+    interactions.handleEditorScroll()
 
-    expect(calls).toEqual(['scroll', 'toolbar', 'math'])
+    expect(requestFrame).toHaveBeenCalledOnce()
+    expect(calls).toEqual([])
+
+    const frame = pendingFrame as FrameRequestCallback | null
+    expect(frame).not.toBeNull()
+    frame?.(16)
+
+    expect(calls).toEqual(['scroll', 'toolbar'])
+    requestFrame.mockRestore()
   })
 })

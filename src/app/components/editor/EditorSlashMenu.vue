@@ -25,6 +25,7 @@ import {
   Table,
   Palette,
   Database,
+  ListFilter,
 } from 'lucide-vue-next'
 import type { NevoSlashItem } from '../../../types/editor-plugin'
 import NvIconPicker from '../../../ui/primitives/NvIconPicker.vue'
@@ -68,6 +69,7 @@ const slashIconById: Record<string, Component> = {
   'math-inline': Sigma,
   table: Table,
   database: Database,
+  query: ListFilter,
   image: ImageIcon,
   ul: List,
   ol: ListOrdered,

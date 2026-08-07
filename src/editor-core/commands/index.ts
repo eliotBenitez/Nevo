@@ -23,6 +23,7 @@ import { getLinkRange, createLinkSetCommand, createUnsetLinkCommand } from './li
 import { getInternalLinkRange, createSetInternalLinkCommand, createUnsetInternalLinkCommand } from './internal-link'
 import { createInsertMathInlineCommand, createInsertMathBlockCommand, createUpdateMathCommand, createRemoveMathCommand } from './math'
 import { createInsertMermaidCommand, createUpdateMermaidCommand, createRemoveMermaidCommand } from './mermaid'
+import { createInsertQueryCommand, createUpdateQueryCommand, createRemoveQueryCommand } from './query'
 import { createInsertDrawCommand, createUpdateDrawByIdCommand, createRemoveDrawCommand } from './draw'
 import { createInsertMarkmapCommand, createUpdateMarkmapCommand, createRemoveMarkmapCommand } from './markmap'
 import { createInsertVegaCommand, createUpdateVegaCommand, createRemoveVegaCommand } from './vega'
@@ -31,9 +32,12 @@ import { createImageAttrsCommand, createInsertImageCommand, createRemoveImageCom
 import { createFileAttrsCommand, createInsertFileCommand, createRemoveFileCommand } from './file'
 import { createInsertNoteEmbedCommand, createNoteEmbedAttrsCommand } from './note-embed'
 import { createInsertEmbedCommand, createEmbedAttrsCommand } from './embed'
+import { createInsertBlockEmbedCommand, createRemoveBlockEmbedCommand } from './blockEmbed'
+import type { BlockRefTarget } from '../../core/blockRef/resolveBlockRef'
 import { createInsertMediaBlockCommand, createMediaBlockAttrsCommand } from './media'
 import { createInsertDatabaseCommand, createDatabaseDataCommand } from './database'
 import type { DatabaseBlockData } from '../../types/database-block'
+import { emptyQueryBlockData, type QueryBlockData } from '../../features/query/queryBlockData'
 import { createInsertBlockCommand, createCodeLanguageCommand, createSetNodeAttrsCommand } from './utils'
 import { createInsertToggleCommand, createToggleCollapseCommand } from './toggle'
 
@@ -111,10 +115,12 @@ export function createCoreCommands(schema: Schema) {
   const imageBlock = schema.nodes.image_block
   const fileBlock = schema.nodes.file_block
   const mermaidBlock = schema.nodes.mermaid_block
+  const queryBlock = schema.nodes.query_block
   const markmapBlock = schema.nodes.markmap_block
   const vegaBlock = schema.nodes.vega_block
   const noteEmbed = schema.nodes.note_embed
   const embedBlock = schema.nodes.embed_block
+  const blockEmbed = schema.nodes.block_embed
   const mediaBlock = schema.nodes.media_block
   const databaseBlock = schema.nodes.database_block
   const toggle = schema.nodes.toggle
@@ -224,6 +230,14 @@ export function createCoreCommands(schema: Schema) {
   commands.set('core.mermaid.insert', insertMermaid())
   commands.set('core.mermaid.update', updateMermaidAtSelection(''))
 
+  const insertQuery = queryBlock ? () => createInsertQueryCommand(queryBlock) : () => () => false
+  const updateQueryAtSelection = queryBlock ? (data: QueryBlockData) => createUpdateQueryCommand(queryBlock, data) : () => () => false
+  const removeQueryAtSelection = queryBlock ? createRemoveQueryCommand(queryBlock) : () => false
+
+  commands.set('core.query.insert', insertQuery())
+  commands.set('core.query.update', updateQueryAtSelection(emptyQueryBlockData()))
+  commands.set('core.query.remove', removeQueryAtSelection)
+
   const insertMarkmap = markmapBlock ? () => createInsertMarkmapCommand(markmapBlock) : () => () => false
   const updateMarkmapAtSelection = markmapBlock ? (markdown: string) => createUpdateMarkmapCommand(markmapBlock, markdown) : () => () => false
   const removeMarkmapAtSelection = markmapBlock ? createRemoveMarkmapCommand(markmapBlock) : () => false
@@ -249,6 +263,7 @@ export function createCoreCommands(schema: Schema) {
 
   if (noteEmbed) commands.set('core.noteEmbed.insert', createInsertNoteEmbedCommand(noteEmbed))
   if (embedBlock) commands.set('core.embed.insert', createInsertEmbedCommand(embedBlock))
+  if (blockEmbed) commands.set('core.blockEmbed.remove', createRemoveBlockEmbedCommand(blockEmbed))
   if (mediaBlock) {
     commands.set('core.media.audio.insert', createInsertMediaBlockCommand(mediaBlock, 'audio'))
     commands.set('core.media.video.insert', createInsertMediaBlockCommand(mediaBlock, 'video'))
@@ -263,6 +278,7 @@ export function createCoreCommands(schema: Schema) {
   const setMediaBlockAttrsAtSelection = mediaBlock ? (attrs: Partial<MediaBlockAttrs>) => createMediaBlockAttrsCommand(mediaBlock, attrs) : () => () => false
   const setEmbedAttrsAtSelection = embedBlock ? (attrs: Partial<EmbedBlockAttrs>) => createEmbedAttrsCommand(embedBlock, attrs) : () => () => false
   const setDatabaseDataAtSelection = databaseBlock ? (data: DatabaseBlockData) => createDatabaseDataCommand(databaseBlock, data) : () => () => false
+  const insertBlockEmbed = blockEmbed ? (target: BlockRefTarget) => createInsertBlockEmbedCommand(blockEmbed, target) : () => () => false
   const setCalloutIcon = callout ? (icon: string) => createSetNodeAttrsCommand(callout, (node) => ({ ...node.attrs, icon })) : () => () => false
   const setCalloutVariant = callout ? (variant: string) => createSetNodeAttrsCommand(callout, (node) => ({ ...node.attrs, variant })) : () => () => false
 
@@ -345,6 +361,9 @@ export function createCoreCommands(schema: Schema) {
     insertMermaid,
     updateMermaidAtSelection,
     removeMermaidAtSelection,
+    insertQuery,
+    updateQueryAtSelection,
+    removeQueryAtSelection,
     insertMarkmap,
     updateMarkmapAtSelection,
     removeMarkmapAtSelection,
@@ -355,5 +374,6 @@ export function createCoreCommands(schema: Schema) {
     setMediaBlockAttrsAtSelection,
     setEmbedAttrsAtSelection,
     setDatabaseDataAtSelection,
+    insertBlockEmbed,
   }
 }

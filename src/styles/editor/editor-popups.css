@@ -6,6 +6,7 @@
 
 .editor-popup-panel {
   width: min(520px, calc(100vw - 24px));
+  overflow-y: auto;
   display: grid;
   gap: 10px;
   padding: 14px;
@@ -21,6 +22,78 @@
 .math-popover,
 .vega-popover {
   width: min(480px, calc(100vw - 24px));
+}
+
+/* src/app/components/editor/EditorQueryPopover.vue */
+.query-popover {
+  --query-popover-control-height: 30px;
+  width: min(440px, calc(100vw - 24px));
+}
+
+.query-popover__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(168px, 100%), 1fr));
+  gap: 8px;
+}
+
+.query-popover__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.query-popover__field--wide {
+  grid-column: 1 / -1;
+}
+
+.query-popover__field-label {
+  color: var(--text-4);
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.query-popover__control {
+  width: 100%;
+  min-width: 0;
+}
+
+.query-popover .query-popover__control.nv-text-input,
+.query-popover .query-popover__control .nv-select__trigger,
+.query-popover .query-popover__control .ndp-trigger {
+  height: var(--query-popover-control-height);
+}
+
+.query-popover .query-popover__control .ndp-trigger {
+  width: 100%;
+}
+
+.query-popover__control.nv-select {
+  min-width: 0;
+}
+
+.query-popover__checkbox {
+  grid-column: 1 / -1;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.query-popover__sorts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* NvMenuSeparator/NvMenuLabel already carry their own vertical rhythm; the
+   surrounding .editor-popup-panel grid gap would otherwise double it up. */
+.query-popover .nv-menu-separator {
+  margin: 0;
+}
+
+.query-popover .nv-menu-label {
+  padding-left: 0;
 }
 
 .editor-popup-panel__label {

@@ -1,6 +1,8 @@
 import { invoke } from '@tauri-apps/api/core'
 
-// Thin wrapper over the Rust secure store (OS app-config-dir backed).
+// Thin wrapper over the Rust secure store: the OS credential store (macOS
+// Keychain, Windows Credential Manager, Secret Service on *nix), falling back
+// to an app-config-dir file where no credential store is available.
 // Keys are namespaced strings; values are opaque strings (base64 / tokens).
 
 export const SECRET_PRIVATE_KEY = 'e2e.privateKey'

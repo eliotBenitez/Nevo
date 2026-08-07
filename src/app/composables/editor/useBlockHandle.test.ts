@@ -8,6 +8,10 @@ import EditorBlockHandle from '../../components/editor/EditorBlockHandle.vue'
 import type { EditorCore } from './useEditorCore'
 import { createDeleteBlockTransaction, isPointInBlockHandleStickyArea, resolveBlockHandlePosition, resolveBlockTypeMenuPosition, resolveTurnIntoSelectionPos, useBlockHandle } from './useBlockHandle'
 import { buildDropTransaction } from '../../../editor-core/dnd/blockDnd'
+// Referenceable blocks carry a lazy `id` attr (default null); the canonical
+// content shape strips unset ids, so assert through the same normalization the
+// persistence path uses rather than baking `id: null` into fixtures.
+import { stripNullBlockIds } from '../../../editor-core/serialization'
 import en from '../../../locales/en.json'
 
 const i18n = createI18n({
@@ -111,7 +115,7 @@ describe('createDeleteBlockTransaction', () => {
 
     expect(tr).toBeTruthy()
     const nextDoc = tr?.doc
-    expect(nextDoc?.toJSON()).toEqual({
+    expect(stripNullBlockIds(nextDoc?.toJSON())).toEqual({
       type: 'doc',
       content: [{ type: 'paragraph' }],
     })
@@ -191,7 +195,7 @@ describe('createDeleteBlockTransaction', () => {
 
       blockHandle.deleteBlock()
 
-      expect(view.state.doc.toJSON()).toEqual({
+      expect(stripNullBlockIds(view.state.doc.toJSON())).toEqual({
         type: 'doc',
         content: [
           { type: 'paragraph', content: [{ type: 'text', text: 'before' }] },
@@ -269,5 +273,29 @@ describe('EditorBlockHandle', () => {
       expect(wrapper.find(`.lucide-heading-${level}`).exists()).toBe(true)
       wrapper.unmount()
     }
+  })
+
+  it('renders separate button controls for dragging and block type options', () => {
+    const wrapper = mountVue(EditorBlockHandle, {
+      props: {
+        visible: true,
+        position: { top: 0, left: 0 },
+        hoveredBlockTypeName: 'paragraph',
+        hoveredBlockIconAttrs: null,
+      },
+      global: {
+        plugins: [i18n],
+      },
+    })
+
+    const dragButton = wrapper.get('.block-handle__drag')
+    const typeButton = wrapper.get('.block-handle__type')
+
+    expect(dragButton.attributes('type')).toBe('button')
+    expect(typeButton.attributes('type')).toBe('button')
+
+    expect(dragButton.attributes('aria-label')).toBeTruthy()
+    expect(typeButton.attributes('aria-label')).toBeTruthy()
+    wrapper.unmount()
   })
 })

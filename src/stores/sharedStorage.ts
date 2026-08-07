@@ -42,6 +42,23 @@ export const useSharedStorageStore = defineStore('sharedStorage', () => {
     return created
   }
 
+  /**
+   * Renames / restyles a storage server-side (admin+).
+   *
+   * An open cloud workspace keeps its identity in the Yjs manifest, which is
+   * authoritative. The storage row is the copy read *before* a workspace is
+   * opened — the storage list and the recents entries — so it has to follow, or
+   * a renamed workspace keeps showing its old name on the start screen.
+   */
+  async function updateStorage(
+    storageId: string,
+    meta: { name: string; glyph: string; gradient: string },
+  ): Promise<void> {
+    await api.patch(`/api/v1/storages/${storageId}`, meta)
+    const existing = storages.value.find(storage => storage.id === storageId)
+    if (existing) Object.assign(existing, meta)
+  }
+
   async function deleteStorage(storageId: string): Promise<void> {
     await api.del(`/api/v1/storages/${storageId}`)
     storages.value = storages.value.filter(storage => storage.id !== storageId)
@@ -140,7 +157,7 @@ export const useSharedStorageStore = defineStore('sharedStorage', () => {
 
   return {
     storages, activeStorageId, activeStorage, members, invites, documents,
-    loadStorages, createStorage, deleteStorage, openStorage, getDekKey,
+    loadStorages, createStorage, updateStorage, deleteStorage, openStorage, getDekKey,
     loadMembers, loadInvites, loadDocuments, createDocument,
     inviteMember, acceptInvite, approveMember, setMemberRole, removeMember,
     reset,

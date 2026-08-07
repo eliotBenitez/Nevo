@@ -34,15 +34,15 @@ export function useLinkEditor(
     linkPopover.error = ''
   }
 
-  function openLinkPopover() {
+  function openLinkPopover(anchorPosition?: { top: number; left: number }) {
     if (!core.editorView || !core.coreCommands) return
-    if (!toolbarOverlay.visible) return
+    if (!toolbarOverlay.visible && !anchorPosition) return
     const existing = core.coreCommands.getLinkRange(core.editorView.state)
     linkPopover.open = true
     linkPopover.href = existing?.href ?? ''
     linkPopover.editing = Boolean(existing)
     linkPopover.error = ''
-    linkPopover.position = {
+    linkPopover.position = anchorPosition ?? {
       top: toolbarOverlay.position.top - 12,
       left: toolbarOverlay.position.left,
     }

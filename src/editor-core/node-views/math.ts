@@ -9,6 +9,10 @@ import {
   type CoreNodeViewOptions,
   type NodeViewPosition,
 } from './utils'
+import {
+  createViewportRenderController,
+  type ViewportRenderController,
+} from './viewportRenderController'
 
 function formatKatexError(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error)
@@ -34,6 +38,7 @@ export function createMathNodeView(node: PMNode, view: EditorView, getPos: NodeV
   let pendingRender = false
   let lastRenderedLatex: string | null = null
   let lastRenderedDisplayMode: boolean | null = null
+  let viewportController: ViewportRenderController | null = null
 
   const sync = () => {
     if (!isVisible) {
@@ -78,14 +83,36 @@ export function createMathNodeView(node: PMNode, view: EditorView, getPos: NodeV
     lastRenderedDisplayMode = displayMode
   }
 
-  const lazyRender = createLazyRenderObserver(dom, () => {
-    isVisible = true
-    if (pendingRender) {
-      pendingRender = false
-      sync()
-    }
-  })
-  isVisible = lazyRender.isInitiallyVisible
+  const lazyRender = isInline
+    ? createLazyRenderObserver(dom, () => {
+        isVisible = true
+        if (pendingRender) {
+          pendingRender = false
+          sync()
+        }
+      })
+    : null
+  if (lazyRender) {
+    isVisible = lazyRender.isInitiallyVisible
+  } else {
+    viewportController = createViewportRenderController(dom, {
+      render: () => {
+        isVisible = true
+        pendingRender = false
+        sync()
+      },
+      suspend: () => {
+        isVisible = false
+        pendingRender = true
+        lastRenderedLatex = null
+        lastRenderedDisplayMode = null
+        rendered.replaceChildren()
+        errorEl.replaceChildren()
+        errorEl.hidden = true
+      },
+      initialPlaceholderHeight: 72,
+    })
+  }
 
   const requestMathEdit = (event?: MouseEvent) => {
     const position = resolveNodePosition(getPos)
@@ -117,12 +144,17 @@ export function createMathNodeView(node: PMNode, view: EditorView, getPos: NodeV
       currentNode = nextNode
       const newLatex = getStringAttr(nextNode, 'latex')
       const newDisplayMode = nextNode.type.name === 'math_block' || nextNode.attrs.displayMode === true
-      if (isVisible && (newLatex !== lastRenderedLatex || newDisplayMode !== lastRenderedDisplayMode)) sync()
-      else if (!isVisible) pendingRender = true
+      if (isVisible && (newLatex !== lastRenderedLatex || newDisplayMode !== lastRenderedDisplayMode)) {
+        if (viewportController) viewportController.requestRender()
+        else sync()
+      } else if (!isVisible) {
+        pendingRender = true
+      }
       return true
     },
     destroy() {
-      lazyRender.disconnect()
+      lazyRender?.disconnect()
+      viewportController?.destroy()
       dom.removeEventListener('click', onClick)
     },
   }

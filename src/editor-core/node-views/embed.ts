@@ -7,6 +7,10 @@ import { resolveNodePosition, getStringAttr, addClickHandler, type CoreNodeViewO
 import { ensureMediaServer, youTubeEmbedUrl } from '../../tauri/mediaServer'
 import { systemCommands } from '../../tauri/commands'
 import { extractYouTubeVideoId } from '../../utils/oembed'
+import {
+  createViewportRenderController,
+  type ViewportRenderController,
+} from './viewportRenderController'
 
 interface EmbedIframeAttrs {
   src: string
@@ -104,12 +108,15 @@ export function createEmbedNodeView(
   let currentNode = node
   let iframeEl: HTMLIFrameElement | null = null
   let mediaServerPrefetching = false
+  let viewportController: ViewportRenderController | null = null
 
   const prefetchMediaServer = () => {
     if (mediaServerPrefetching) return
     mediaServerPrefetching = true
     void ensureMediaServer().then(() => {
-      if (getStringAttr(currentNode, 'embedType') === 'youtube') sync()
+      if (getStringAttr(currentNode, 'embedType') === 'youtube') {
+        viewportController?.requestRender()
+      }
     })
   }
 
@@ -302,7 +309,16 @@ export function createEmbedNodeView(
 
   const cleanupPlaceholderBtn = addClickHandler(placeholderBtn, onPick)
 
-  sync()
+  viewportController = createViewportRenderController(dom, {
+    render: sync,
+    suspend: () => {
+      iframeEl?.remove()
+      iframeEl = null
+      previewEl.replaceChildren()
+      render(null, moreBtnContainer)
+    },
+    initialPlaceholderHeight: 260,
+  })
 
   return {
     dom,
@@ -310,10 +326,11 @@ export function createEmbedNodeView(
     update(nextNode) {
       if (nextNode.type !== currentNode.type) return false
       currentNode = nextNode
-      sync()
+      viewportController?.requestRender()
       return true
     },
     destroy() {
+      viewportController?.destroy()
       cleanupPlaceholderBtn()
       render(null, moreBtnContainer)
     },

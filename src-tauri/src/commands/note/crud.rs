@@ -8,6 +8,7 @@ use super::{
     NoteProperties,
 };
 use crate::commands::folder::{load_manifest, manifest_lock, save_manifest};
+use crate::commands::note_index;
 use crate::commands::path_utils::{normalize_workspace_path, validate_id};
 use crate::commands::workspace::{self, NoteMeta};
 use crate::logging::{LogContext, LogError};
@@ -73,6 +74,7 @@ pub(crate) fn create_note_impl(
         updated_at: now.clone(),
         properties: Some(NoteProperties::empty()),
         content: empty_doc(),
+        canvas: None,
     };
 
     let path = note_path(&workspace_path, &note.id)?;
@@ -134,6 +136,22 @@ pub(crate) fn create_note_impl(
             "folderId": folder_id,
         })),
     );
+
+    // Best-effort: the note metadata index is a rebuildable cache
+    // (`note_index::reindex_all`), so a failure here must never fail the
+    // create.
+    let index_folder_path = note_index::folder_path_for_id(&manifest.tree, folder_id.as_deref());
+    if let Err(message) =
+        note_index::upsert_note_document(&workspace_path, &note, &index_folder_path)
+    {
+        let _ = logger.warn(
+            "tauri.note",
+            "create_note",
+            "Failed to update note metadata index",
+            diagnostics_enabled,
+            note_error_context(&workspace_path, "note_index", message),
+        );
+    }
 
     Ok(note)
 }
@@ -299,6 +317,23 @@ pub(crate) fn save_note_impl(workspace_path: String, note: NoteDocument) -> Resu
             "hasCover": note.cover.is_some(),
         })),
     );
+
+    // Best-effort, mirrors create_note_impl: the index is a rebuildable
+    // cache, so a failure here must never fail the save.
+    let index_folder_path =
+        note_index::folder_path_for_id(&manifest.tree, note.folder_id.as_deref());
+    if let Err(message) =
+        note_index::upsert_note_document(&workspace_path, &note, &index_folder_path)
+    {
+        let _ = logger.warn(
+            "tauri.note",
+            "save_note",
+            "Failed to update note metadata index",
+            diagnostics_enabled,
+            note_error_context(&workspace_path, "note_index", message),
+        );
+    }
+
     Ok(())
 }
 
@@ -505,6 +540,20 @@ pub(crate) fn delete_note_impl(workspace_path: String, note_id: String) -> Resul
                 "noteId": note_id,
             })),
         );
+
+        // Best-effort: trashed notes should not surface in query_notes; the
+        // index is rebuildable via note_index::reindex_all if this fails.
+        if let Err(message) =
+            note_index::remove_note(std::path::Path::new(&workspace_path), &note_id)
+        {
+            let _ = logger.warn(
+                "tauri.note",
+                "delete_note",
+                "Failed to remove note from metadata index",
+                diagnostics_enabled,
+                note_error_context(&workspace_path, "note_index", message),
+            );
+        }
     }
 
     Ok(())
@@ -646,5 +695,25 @@ pub(crate) fn move_note_impl(
             "targetFolderId": target_folder_id,
         })),
     );
+
+    // Best-effort: keep the index's folder_id/folder_path in sync with the
+    // move. Recomputed from `manifest` after the move was applied above, so
+    // this reflects the note's new location. The index is a rebuildable
+    // cache (note_index::reindex_all), so a failure here must not fail the
+    // move.
+    let index_folder_path =
+        note_index::folder_path_for_id(&manifest.tree, doc.folder_id.as_deref());
+    if let Err(message) =
+        note_index::upsert_note_document(&workspace_path, &doc, &index_folder_path)
+    {
+        let _ = logger.warn(
+            "tauri.note",
+            "move_note",
+            "Failed to update note metadata index",
+            diagnostics_enabled,
+            note_error_context(&workspace_path, "note_index", message),
+        );
+    }
+
     Ok(())
 }

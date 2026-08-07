@@ -5,6 +5,9 @@ import { loadHyperformula } from '../editor-core/tableFormula'
 import type { DocxExportOptions } from '../utils/noteExport/docxOptions'
 import { normalizeDatabaseData, type DatabaseBlockDataV1 } from '../types/database-block'
 import { createDatabaseRepository } from '../features/database/databaseRepository'
+import { useWorkspaceStore } from '../stores/workspace'
+import { CloudBackend } from '../core/workspace-backend'
+import { prepareCloudExportAssets, type PreparedCloudAssets } from '../utils/noteExport/cloudExportAssets'
 
 function sanitizeFilename(title: string, fallback: string): string {
   const safe = title.replace(/[/\\?%*:|"<>]/g, '-').trim()
@@ -21,11 +24,29 @@ function cloneNote(note: NoteDocument): NoteDocument {
   return JSON.parse(JSON.stringify(raw)) as NoteDocument
 }
 
+/**
+ * Everything the serializers need that they cannot do themselves, on a
+ * disposable clone: v2 database references hydrated into v1 shape (the
+ * serializers are synchronous), and — for cloud workspaces — asset references
+ * rewritten to local-shaped paths with their bytes pulled off the relay.
+ */
+async function prepareNoteForExport(note: NoteDocument, workspacePath: string | null): Promise<PreparedCloudAssets> {
+  const store = useWorkspaceStore()
+  const hydrated = await hydrateDatabasesForExport(note, workspacePath)
+  const backend = store.backend
+  if (!(backend instanceof CloudBackend)) {
+    return { note: hydrated, inlineAssets: [], bytesByName: new Map() }
+  }
+  return prepareCloudExportAssets(hydrated, src => backend.readAssetBytes(src))
+}
+
 /** Export serializers are synchronous, so hydrate v2 database references into
  * a disposable v1-shaped clone before passing the note to them. */
-async function hydrateDatabasesForExport(note: NoteDocument, workspacePath: string): Promise<NoteDocument> {
+async function hydrateDatabasesForExport(note: NoteDocument, workspacePath: string | null): Promise<NoteDocument> {
   const hydrated = cloneNote(note)
-  const repository = createDatabaseRepository(workspacePath)
+  // The row store is backend-owned: SQLite locally, the manifest doc on cloud.
+  const repository = useWorkspaceStore().backend?.databaseRepository()
+    ?? createDatabaseRepository(workspacePath)
   const visit = async (node: NoteDocument['content']): Promise<void> => {
     if (node.type === 'database_block') {
       const data = normalizeDatabaseData(node.attrs?.data)
@@ -52,6 +73,8 @@ export function useNoteExport() {
     open: false,
     note: null as NoteDocument | null,
     workspacePath: '',
+    /** Cloud asset bytes by generated file name; empty for local workspaces. */
+    assetBytes: new Map<string, Uint8Array>(),
   })
 
   const docxPreview = reactive({
@@ -60,8 +83,8 @@ export function useNoteExport() {
     workspacePath: '',
   })
 
-  async function exportAsMarkdown(note: NoteDocument, workspacePath: string): Promise<void> {
-    const exportNote = await hydrateDatabasesForExport(note, workspacePath)
+  async function exportAsMarkdown(note: NoteDocument, workspacePath: string | null): Promise<void> {
+    const { note: exportNote, inlineAssets } = await prepareNoteForExport(note, workspacePath)
     const safeName = sanitizeFilename(note.title, `note-${note.id}`)
     const assetsSubfolderName = `${safeName}_assets`
     await loadHyperformula()
@@ -72,14 +95,17 @@ export function useNoteExport() {
       workspacePath,
       `${safeName}.md`,
       markdown,
-      assetSrcs,
+      // Cloud assets are written from the bytes below; only a real workspace
+      // has files on disk to copy.
+      workspacePath ? assetSrcs : [],
       assetsSubfolderName,
+      inlineAssets,
     )
   }
 
-  async function exportAsDocx(note: NoteDocument, workspacePath: string): Promise<void> {
+  async function exportAsDocx(note: NoteDocument, workspacePath: string | null): Promise<void> {
     docxPreview.note = await hydrateDatabasesForExport(note, workspacePath)
-    docxPreview.workspacePath = workspacePath
+    docxPreview.workspacePath = workspacePath ?? ''
     docxPreview.open = true
   }
 
@@ -104,8 +130,8 @@ export function useNoteExport() {
     await noteCommands.exportNoteDocx(`${safeName}.docx`, bytes)
   }
 
-  async function exportAsHtml(note: NoteDocument, workspacePath: string): Promise<void> {
-    const exportNote = await hydrateDatabasesForExport(note, workspacePath)
+  async function exportAsHtml(note: NoteDocument, workspacePath: string | null): Promise<void> {
+    const { note: exportNote, inlineAssets } = await prepareNoteForExport(note, workspacePath)
     const safeName = sanitizeFilename(note.title, `note-${note.id}`)
 
     const assetsSubfolderName = `${safeName}_assets`
@@ -116,13 +142,14 @@ export function useNoteExport() {
       workspacePath,
       `${safeName}.html`,
       html,
-      assetSrcs,
+      workspacePath ? assetSrcs : [],
       assetsSubfolderName,
+      inlineAssets,
     )
   }
 
-  async function exportAsTypst(note: NoteDocument, workspacePath: string): Promise<void> {
-    const exportNote = await hydrateDatabasesForExport(note, workspacePath)
+  async function exportAsTypst(note: NoteDocument, workspacePath: string | null): Promise<void> {
+    const { note: exportNote, bytesByName } = await prepareNoteForExport(note, workspacePath)
     const safeName = sanitizeFilename(note.title, `note-${note.id}`)
 
     const stem = `${safeName}-typst`
@@ -130,18 +157,23 @@ export function useNoteExport() {
     const { buildTypstExport } = await import('../utils/noteExport/buildTypstExport')
     const { source, assets } = await buildTypstExport(exportNote, undefined, {
       assetPathPrefix: `${stem}_assets/`,
+      assetBytes: bytesByName,
     })
     await noteCommands.exportNoteTypstArchive(
-      workspacePath,
+      workspacePath ?? '',
       `${safeName}-typst.zip`,
       source,
       assets,
     )
   }
 
-  async function exportAsPdf(note: NoteDocument, workspacePath: string): Promise<void> {
-    pdfPreview.note = await hydrateDatabasesForExport(note, workspacePath)
-    pdfPreview.workspacePath = workspacePath
+  async function exportAsPdf(note: NoteDocument, workspacePath: string | null): Promise<void> {
+    // The preview modal builds the Typst source itself, so it needs the cloud
+    // asset bytes alongside the note.
+    const prepared = await prepareNoteForExport(note, workspacePath)
+    pdfPreview.note = prepared.note
+    pdfPreview.assetBytes = prepared.bytesByName
+    pdfPreview.workspacePath = workspacePath ?? ''
     pdfPreview.open = true
   }
 

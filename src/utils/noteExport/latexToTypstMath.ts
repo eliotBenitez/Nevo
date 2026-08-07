@@ -6,54 +6,126 @@
 // (`"name"`) rather than a bare identifier (which Typst rejects as an unknown
 // variable). The result may be visually imperfect, but it always compiles.
 
-// Greek letters and operators that Typst recognises verbatim in math mode.
+// Mathematical functions that Typst recognises verbatim in math mode.
 const SAFE_BARE = new Set([
-  'alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta', 'iota',
-  'kappa', 'lambda', 'mu', 'nu', 'xi', 'omicron', 'pi', 'rho', 'sigma', 'tau',
-  'upsilon', 'phi', 'chi', 'psi', 'omega',
-  'Gamma', 'Delta', 'Theta', 'Lambda', 'Xi', 'Pi', 'Sigma', 'Upsilon', 'Phi', 'Psi', 'Omega',
   'sin', 'cos', 'tan', 'cot', 'sec', 'csc', 'sinh', 'cosh', 'tanh', 'coth',
   'arcsin', 'arccos', 'arctan', 'exp', 'ln', 'log', 'lg', 'lim', 'limsup', 'liminf',
   'max', 'min', 'sup', 'inf', 'det', 'dim', 'gcd', 'hom', 'ker', 'deg', 'arg', 'Pr',
-  'sum', 'dif', 'diff', 'nabla', 'forall', 'exists', 'aleph', 'ell', 'Re', 'Im',
-  'angle', 'triangle', 'square', 'diamond', 'star', 'dagger', 'bullet', 'top', 'bot',
+  'dif',
 ])
 
 const COMMAND_MAP: Record<string, string> = {
   // relations
-  le: '<=', leq: '<=', ge: '>=', geq: '>=', neq: '!=', ne: '!=',
-  ll: 'lt.double', gg: 'gt.double', equiv: 'equiv', cong: 'tilde.equiv',
-  simeq: 'tilde.eq', sim: 'tilde', approx: 'approx', asymp: '≍', propto: 'prop',
-  parallel: 'parallel', perp: 'perp', mid: 'divides', models: 'models',
-  prec: 'prec', succ: 'succ', preceq: 'prec.eq', succeq: 'succ.eq',
-  doteq: 'eq.dot', vdash: 'tack.r', dashv: 'tack.l',
+  le: '≤', leq: '≤', ge: '≥', geq: '≥', neq: '≠', ne: '≠',
+  ll: '≪', gg: '≫', equiv: '≡', cong: '≅', simeq: '≃', sim: '∼',
+  approx: '≈', asymp: '≍', propto: '∝', parallel: '∥', perp: '⊥',
+  mid: '∣', models: '⊨', prec: '≺', succ: '≻', preceq: '⪯', succeq: '⪰',
+  doteq: '≐', vdash: '⊢', dashv: '⊣',
+  nleq: '≰', ngeq: '≱', nless: '≮', ngtr: '≯', nparallel: '∦', nmid: '∤',
+  ncong: '≆', nsim: '≁',
   // set theory
-  in: 'in', notin: 'in.not', ni: 'in.rev', subset: 'subset', supset: 'supset',
-  subseteq: 'subset.eq', supseteq: 'supset.eq', subsetneq: 'subset.neq',
-  supsetneq: 'supset.neq', nsubseteq: 'subset.eq.not', cup: 'union', cap: 'sect',
-  bigcup: 'union.big', bigcap: 'sect.big', setminus: 'without',
-  emptyset: 'nothing', varnothing: 'nothing',
+  in: '∈', notin: '∉', ni: '∋', subset: '⊂', supset: '⊃',
+  subseteq: '⊆', supseteq: '⊇', subsetneq: '⊊', supsetneq: '⊋',
+  nsubseteq: '⊈', nsupseteq: '⊉',
+  cup: '∪', cap: '∩', bigcup: '⋃', bigcap: '⋂', setminus: '∖',
+  emptyset: '∅', varnothing: '∅',
   // logic
-  wedge: 'and', land: 'and', vee: 'or', lor: 'or', neg: 'not', lnot: 'not',
-  implies: 'arrow.r.double', iff: 'arrow.l.r.double',
+  wedge: '∧', land: '∧', vee: '∨', lor: '∨', neg: '¬', lnot: '¬',
+  implies: '⟹', impliedby: '⟸', iff: '⟺',
+  forall: '∀', exists: '∃', nexists: '∄',
+  therefore: '∴', because: '∵',
   // operators
-  cdot: 'dot.op', times: 'times', div: 'div', ast: 'ast', circ: 'compose',
-  oplus: 'plus.circle', otimes: 'times.circle', odot: 'dot.circle',
-  pm: 'plus.minus', mp: 'minus.plus', prod: 'product', int: 'integral',
-  iint: 'integral.double', oint: 'integral.cont', partial: 'diff', infty: 'infinity',
+  cdot: '⋅', times: '×', div: '÷', ast: '∗', circ: '∘',
+  oplus: '⊕', otimes: '⊗', odot: '⊙',
+  ominus: '⊖', oslash: '⊘', uplus: '⊎', sqcap: '⊓', sqcup: '⊔',
+  pm: '±', mp: '∓', sum: '∑', prod: '∏', coprod: '∐',
+  int: '∫', iint: '∬', iiint: '∭', oint: '∮', oiint: '∯', oiiint: '∰',
+  bigvee: '⋁', bigwedge: '⋀', biguplus: '⨄', bigsqcup: '⨆',
+  bigoplus: '⨁', bigotimes: '⨂', bigodot: '⨀',
+  partial: '∂', infty: '∞',
   // arrows
-  to: 'arrow.r', rightarrow: 'arrow.r', leftarrow: 'arrow.l', gets: 'arrow.l',
-  leftrightarrow: 'arrow.l.r', Rightarrow: 'arrow.r.double', Leftarrow: 'arrow.l.double',
-  Leftrightarrow: 'arrow.l.r.double', uparrow: 'arrow.t', downarrow: 'arrow.b',
-  mapsto: 'arrow.r.bar', longrightarrow: 'arrow.r.long', longleftarrow: 'arrow.l.long',
+  to: '→', rightarrow: '→', leftarrow: '←', gets: '←', leftrightarrow: '↔',
+  Rightarrow: '⇒', Leftarrow: '⇐', Leftrightarrow: '⇔',
+  longrightarrow: '⟶', longleftarrow: '⟵', longleftrightarrow: '⟷',
+  Longrightarrow: '⟹', Longleftarrow: '⟸', Longleftrightarrow: '⟺',
+  uparrow: '↑', downarrow: '↓', updownarrow: '↕',
+  Uparrow: '⇑', Downarrow: '⇓', Updownarrow: '⇕',
+  nearrow: '↗', searrow: '↘', swarrow: '↙', nwarrow: '↖',
+  mapsto: '↦', longmapsto: '⟼', hookleftarrow: '↩', hookrightarrow: '↪',
+  leftharpoonup: '↼', leftharpoondown: '↽',
+  rightharpoonup: '⇀', rightharpoondown: '⇁',
+  rightleftharpoons: '⇌', leftrightharpoons: '⇋',
+  nleftarrow: '↚', nrightarrow: '↛', nleftrightarrow: '↮',
+  nLeftarrow: '⇍', nRightarrow: '⇏', nLeftrightarrow: '⇎',
+  twoheadleftarrow: '↞', twoheadrightarrow: '↠',
+  leftarrowtail: '↢', rightarrowtail: '↣',
+  dashleftarrow: '⇠', dashrightarrow: '⇢',
+  rightsquigarrow: '⇝', leadsto: '⇝', leftrightsquigarrow: '↭',
   // delimiters / dots
-  langle: 'angle.l', rangle: 'angle.r', lfloor: 'floor.l', rfloor: 'floor.r',
-  lceil: 'ceil.l', rceil: 'ceil.r', lbrace: '{', rbrace: '}',
-  ldots: 'dots.h', cdots: 'dots.h', dots: 'dots.h', vdots: 'dots.v', ddots: 'dots.down',
-  prime: 'prime', hbar: 'planck.reduce',
-  // greek variants
-  varepsilon: 'epsilon.alt', vartheta: 'theta.alt', varphi: 'phi.alt',
-  varrho: 'rho.alt', varsigma: 'sigma.alt', varpi: 'pi.alt', varkappa: 'kappa.alt',
+  langle: '⟨', rangle: '⟩', lfloor: '⌊', rfloor: '⌋',
+  lceil: '⌈', rceil: '⌉', lbrace: '{', rbrace: '}',
+  ldots: '…', cdots: '⋯', dots: '…', vdots: '⋮', ddots: '⋱',
+  prime: '′', hbar: 'ℏ', diamond: '⋄', bullet: '∙',
+  angle: '∠', triangle: '△', square: '□', star: '⋆', dagger: '†',
+  top: '⊤', bot: '⊥', nabla: '∇', aleph: 'ℵ', ell: 'ℓ', Re: 'ℜ', Im: 'ℑ',
+  // greek
+  alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ',
+  epsilon: 'ϵ', varepsilon: 'ε', zeta: 'ζ', eta: 'η',
+  theta: 'θ', vartheta: 'ϑ', iota: 'ι', kappa: 'κ', varkappa: 'ϰ',
+  lambda: 'λ', mu: 'μ', nu: 'ν', xi: 'ξ', omicron: 'ο',
+  pi: 'π', varpi: 'ϖ', rho: 'ρ', varrho: 'ϱ',
+  sigma: 'σ', varsigma: 'ς', tau: 'τ', upsilon: 'υ',
+  phi: 'ϕ', varphi: 'φ', chi: 'χ', psi: 'ψ', omega: 'ω',
+  Gamma: 'Γ', Delta: 'Δ', Theta: 'Θ', Lambda: 'Λ', Xi: 'Ξ',
+  Pi: 'Π', Sigma: 'Σ', Upsilon: 'Υ', Phi: 'Φ', Psi: 'Ψ', Omega: 'Ω',
+}
+
+// LaTeX accents whose Typst equivalents are unary math functions.
+const ACCENT_FUNCTION_MAP: Record<string, string> = {
+  acute: 'acute',
+  grave: 'grave',
+  ddot: 'dot.double',
+  tilde: 'tilde',
+  bar: 'macron',
+  breve: 'breve',
+  check: 'caron',
+  hat: 'hat',
+  vec: 'arrow',
+  dot: 'dot',
+  mathring: 'circle',
+  widecheck: 'caron',
+  widehat: 'hat',
+  widetilde: 'tilde',
+  overline: 'overline',
+  underline: 'underline',
+  overbrace: 'overbrace',
+  underbrace: 'underbrace',
+  overbracket: 'overbracket',
+  underbracket: 'underbracket',
+  overlinesegment: 'overline',
+  underlinesegment: 'underline',
+}
+
+// Stretchy accents without a dedicated Typst function. Combining characters
+// are used for accents below the base so Typst positions them correctly.
+const ACCENT_SYMBOL_MAP: Record<string, string> = {
+  overrightarrow: '→',
+  overleftarrow: '←',
+  overleftrightarrow: '↔',
+  overgroup: '⏠',
+  overleftharpoon: '↼',
+  overrightharpoon: '⇀',
+  underleftarrow: '\u20ee',
+  underrightarrow: '\u20ef',
+  underleftrightarrow: '\u034d',
+  undergroup: '⏡',
+  utilde: '\u0330',
+}
+
+// Double arrows are not valid combining accents in Typst. A centered top
+// attachment preserves the double shaft without overlapping the base.
+const ACCENT_ATTACHMENT_MAP: Record<string, string> = {
+  Overrightarrow: '⟹',
 }
 
 // LaTeX font/style commands → Typst math styling functions taking a group.
@@ -74,17 +146,33 @@ function readGroup(src: string, start: number): { content: string; next: number 
   return { content: src.slice(start + 1), next: src.length }
 }
 
-function readScriptArg(src: string, i: number): { arg: string; next: number } {
+function requiredArg(value: string): string {
+  return value.trim() || '""'
+}
+
+/**
+ * Read one required LaTeX argument. Braced groups and single-token shorthand
+ * are both valid (`\frac{1}{2}` and `\frac12`). Missing or empty arguments
+ * degrade to invisible text because Typst functions reject omitted arguments.
+ */
+function readRequiredArg(src: string, start: number): { arg: string; next: number } {
+  let i = start
+  while (i < src.length && /\s/.test(src[i])) i++
+
   if (src[i] === '{') {
     const { content, next } = readGroup(src, i)
-    return { arg: convert(content), next }
+    return { arg: requiredArg(convert(content)), next }
   }
+
   if (src[i] === '\\') {
     let j = i + 1
     while (j < src.length && /[a-zA-Z]/.test(src[j])) j++
-    return { arg: convert(src.slice(i, j)), next: j }
+    if (j === i + 1 && j < src.length) j++
+    return { arg: requiredArg(convert(src.slice(i, j))), next: j }
   }
-  return { arg: src[i] ?? '', next: i + 1 }
+
+  if (i >= src.length) return { arg: '""', next: i }
+  return { arg: requiredArg(convert(src[i])), next: i + 1 }
 }
 
 function mapCommand(name: string): string {
@@ -96,7 +184,7 @@ function mapCommand(name: string): string {
 
 function convert(latex: string): string {
   const src = latex
-    .replace(/\\(left|right|big|Big|bigg|Bigg|displaystyle|textstyle|scriptstyle)\s*/g, '')
+    .replace(/\\(left|right|big|Big|bigg|Bigg|displaystyle|textstyle|scriptstyle)(?![a-zA-Z])\s*/g, '')
     .replace(/\\begin\{[^}]*\}|\\end\{[^}]*\}/g, ' ')
     .replace(/\\[,;:!]/g, ' ')
     .replace(/\\quad|\\qquad/g, ' ')
@@ -104,6 +192,17 @@ function convert(latex: string): string {
     .replace(/&/g, ' ')
 
   let out = ''
+
+  // Typst lexes a letter followed by more letters or digits as a single
+  // identifier, so emitting `bold(x)` right after `t` yields the unknown
+  // variable `tbold`, and `2` after `n` yields `n2`. Every appended token that
+  // could extend a preceding identifier gets a separating space (Typst ignores
+  // whitespace between math elements, so this changes nothing visually).
+  const push = (token: string) => {
+    if (/\p{L}$/u.test(out) && /^[\p{L}\p{N}]/u.test(token)) out += ' '
+    out += token
+  }
+
   let i = 0
   while (i < src.length) {
     const ch = src[i]
@@ -114,53 +213,72 @@ function convert(latex: string): string {
       i = j
       if (name === '') {
         // Escaped non-letter (e.g. \{ \} \| \%): emit the literal character.
-        out += src[i] ?? ''
+        push(src[i] ?? '')
         i += 1
       } else if (name === 'frac' || name === 'dfrac' || name === 'tfrac') {
-        const a = readGroup(src, i); const b = readGroup(src, a.next)
-        out += `frac(${convert(a.content)}, ${convert(b.content)})`
-        i = b.next
+        const numerator = readRequiredArg(src, i)
+        const denominator = readRequiredArg(src, numerator.next)
+        push(`frac(${numerator.arg}, ${denominator.arg})`)
+        i = denominator.next
       } else if (name === 'sqrt') {
         if (src[i] === '[') {
           const close = src.indexOf(']', i)
-          const idx = src.slice(i + 1, close)
-          const g = readGroup(src, close + 1)
-          out += `root(${convert(idx)}, ${convert(g.content)})`
-          i = g.next
+          if (close < 0) {
+            push('sqrt("")')
+            i = src.length
+          } else {
+            const index = requiredArg(convert(src.slice(i + 1, close)))
+            const radicand = readRequiredArg(src, close + 1)
+            push(`root(${index}, ${radicand.arg})`)
+            i = radicand.next
+          }
         } else {
-          const g = readGroup(src, i)
-          out += `sqrt(${convert(g.content)})`
-          i = g.next
+          const radicand = readRequiredArg(src, i)
+          push(`sqrt(${radicand.arg})`)
+          i = radicand.next
         }
-      } else if (STYLE_MAP[name] && src[i] === '{') {
-        const g = readGroup(src, i)
-        out += `${STYLE_MAP[name]}(${convert(g.content)})`
-        i = g.next
+      } else if (ACCENT_FUNCTION_MAP[name]) {
+        const value = readRequiredArg(src, i)
+        push(`${ACCENT_FUNCTION_MAP[name]}(${value.arg})`)
+        i = value.next
+      } else if (ACCENT_SYMBOL_MAP[name]) {
+        const value = readRequiredArg(src, i)
+        push(`accent(${value.arg}, "${ACCENT_SYMBOL_MAP[name]}")`)
+        i = value.next
+      } else if (ACCENT_ATTACHMENT_MAP[name]) {
+        const value = readRequiredArg(src, i)
+        push(`attach(limits(${value.arg}), t: ${ACCENT_ATTACHMENT_MAP[name]})`)
+        i = value.next
+      } else if (STYLE_MAP[name]) {
+        const value = readRequiredArg(src, i)
+        push(`${STYLE_MAP[name]}(${value.arg})`)
+        i = value.next
       } else if ((name === 'text' || name === 'operatorname' || name === 'mbox') && src[i] === '{') {
         const g = readGroup(src, i)
-        out += `"${g.content.replace(/"/g, '')}"`
+        push(`"${g.content.replace(/"/g, '')}"`)
         i = g.next
       } else {
         // Separate from a preceding alphanumeric so e.g. `A\Rightarrow` does not
         // glue into the identifier `Aarrow`. Trailing space separates from what follows.
         if (/[A-Za-z0-9]$/.test(out)) out += ' '
-        out += `${mapCommand(name)} `
+        push(`${mapCommand(name)} `)
       }
     } else if (ch === '{') {
       const g = readGroup(src, i)
-      out += `(${convert(g.content)})`
+      push(`(${convert(g.content)})`)
       i = g.next
     } else if (ch === '}') {
       i++
     } else if (ch === '^' || ch === '_') {
-      const { arg, next } = readScriptArg(src, i + 1)
+      const { arg, next } = readRequiredArg(src, i + 1)
+      // Typst attachments need a base expression. Keep malformed/orphaned
+      // LaTeX scripts exportable by attaching them to an invisible text node.
+      if (!out.trim()) out += '""'
       out += `${ch}(${arg})`
       i = next
     } else {
-      // Typst reads consecutive letters as one identifier, but in LaTeX `XZ`
-      // means X·Z. Separate adjacent plain letters into distinct variables.
-      if (/[A-Za-z]/.test(ch) && /[A-Za-z]$/.test(out)) out += ' '
-      out += ch
+      // In LaTeX `XZ` means X·Z and `n2` means n·2; `push` keeps them apart.
+      push(ch)
       i++
     }
   }

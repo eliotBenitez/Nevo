@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
 import { filterAndSortInWorker } from './databaseWorkerClient'
+import { applyOperationsToRecords, buildImportedRecords, cloneRecord, recordsFromSnapshot } from './databaseRecordOps'
 import type { DbCellValue, DbField, DbFilterRule, DbRecord, DbSortRule } from '../../types/database-block'
 
 export interface DatabaseQuery {
@@ -43,10 +44,6 @@ export class DatabaseWriteQueue {
   }
 }
 
-function cloneRecord(record: DbRecord): DbRecord {
-  return { id: record.id, cells: { ...record.cells } }
-}
-
 /** A deterministic repository for the web preview and unit tests. */
 export class MemoryDatabaseRepository implements DatabaseRepository {
   private readonly databases = new Map<string, DbRecord[]>()
@@ -60,41 +57,13 @@ export class MemoryDatabaseRepository implements DatabaseRepository {
   }
 
   async applyOperations(databaseId: string, operations: DatabaseOperation[]): Promise<number> {
-    let records = [...(this.databases.get(databaseId) ?? [])]
-    for (const operation of operations) {
-      if (operation.type === 'insert') {
-        const index = operation.index == null ? records.length : Math.max(0, Math.min(operation.index, records.length))
-        records.splice(index, 0, cloneRecord(operation.record))
-      } else if (operation.type === 'updateCell') {
-        const index = records.findIndex(record => record.id === operation.recordId)
-        if (index >= 0) records[index] = { ...records[index], cells: { ...records[index].cells, [operation.fieldId]: operation.value } }
-      } else if (operation.type === 'delete') {
-        records = records.filter(record => record.id !== operation.recordId)
-      } else if (operation.type === 'replace') {
-        records = operation.records.map(cloneRecord)
-      } else {
-        records = records.map(record => {
-          if (!(operation.fieldId in record.cells)) return record
-          const cells = { ...record.cells }
-          delete cells[operation.fieldId]
-          return { ...record, cells }
-        })
-      }
-    }
+    const records = applyOperationsToRecords(this.databases.get(databaseId) ?? [], operations)
     this.databases.set(databaseId, records)
     return records.length
   }
 
   async importRecords(databaseId: string, records: DbRecord[], mode: 'replace' | 'append', onProgress?: (completed: number, total: number) => void): Promise<number> {
-    const total = records.length
-    const next = mode === 'append' ? [...(this.databases.get(databaseId) ?? [])] : []
-    const batchSize = 500
-    for (let index = 0; index < records.length; index += batchSize) {
-      next.push(...records.slice(index, index + batchSize).map(cloneRecord))
-      onProgress?.(Math.min(index + batchSize, total), total)
-      // Lets the UI paint progress without changing persistence semantics.
-      await Promise.resolve()
-    }
+    const next = await buildImportedRecords(this.databases.get(databaseId) ?? [], records, mode, onProgress)
     this.databases.set(databaseId, next)
     return next.length
   }
@@ -106,16 +75,12 @@ export class MemoryDatabaseRepository implements DatabaseRepository {
   async createSnapshot(databaseId: string): Promise<unknown> { return this.readAllRecords(databaseId) }
 
   async restoreSnapshot(databaseId: string, snapshot: unknown): Promise<number> {
-    const records = Array.isArray(snapshot) ? snapshot.filter(isRecord).map(cloneRecord) : []
+    const records = recordsFromSnapshot(snapshot)
     this.databases.set(databaseId, records)
     return records.length
   }
 
   async deleteDatabase(databaseId: string): Promise<void> { this.databases.delete(databaseId) }
-}
-
-function isRecord(value: unknown): value is DbRecord {
-  return !!value && typeof value === 'object' && typeof (value as DbRecord).id === 'string' && !!(value as DbRecord).cells
 }
 
 /** Tauri-backed repository. The command contract mirrors DatabaseRepository. */

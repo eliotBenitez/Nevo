@@ -10,6 +10,9 @@ export default tseslint.config(
   {
     ignores: [
       'dist/**',
+      // Workspace packages emit their own build output; linting generated
+      // JavaScript reports errors that have no source to fix.
+      'packages/*/dist/**',
       'node_modules/**',
       'src-tauri/**',
       'public/**',

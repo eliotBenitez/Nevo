@@ -12,6 +12,8 @@ import {
 import { latexToTypstMath } from './latexToTypstMath'
 import { normalizeDatabaseData, type DatabaseBlockData, type DbCellValue, type DbField } from '../../types/database-block'
 import { visibleRecords } from '../../editor-core/databaseFilterSort'
+import { normalizeQueryBlockData } from '../../features/query/queryBlockData'
+import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSummary'
 
 export interface TypstImageAsset {
   /** Filename referenced inside the Typst source via `image("name")`. */
@@ -84,9 +86,11 @@ function quote(value: string): string {
  * Escape free text so Typst markup mode treats it verbatim.
  * Parentheses are escaped too: an unescaped `(` directly after an inline call
  * like `#strong[..]` or `#raw(..)` is otherwise parsed as an argument list.
+ * A slash must also be escaped because `/ ` at the start of a line begins a
+ * term-list item and makes Typst require a trailing colon.
  */
 function escapeText(value: string): string {
-  return value.replace(/([\\#$*_`<>@[\]()])/g, '\\$1')
+  return value.replace(/([\\/#$*_`<>@[\]()])/g, '\\$1')
 }
 
 function wrapMarks(text: string, marks: BlockNode['marks']): string {
@@ -266,6 +270,12 @@ function nodeToTypst(node: BlockNode, ctx: SerializeCtx): string {
       const name = registerDraw(svg, ctx)
       return `#figure(image(${quote(name)}, width: 70%))`
     }
+    case 'query_block': {
+      // Query results are dynamic (live cross-note search) and are never
+      // materialized into export output — only a static summary of the filters.
+      const data = normalizeQueryBlockData(node.attrs?.data)
+      return `#emph[Query: ${escapeText(summarizeQueryBlockFilters(data))}]`
+    }
     case 'note_embed': {
       const title = String(node.attrs?.title ?? 'Note')
       const previewText = String(node.attrs?.previewText ?? '')
@@ -277,6 +287,11 @@ function nodeToTypst(node: BlockNode, ctx: SerializeCtx): string {
     case 'media_block': {
       const name = String(node.attrs?.name ?? (node.attrs?.kind === 'video' ? 'Video' : 'Audio'))
       return `#emph[${node.attrs?.kind === 'video' ? '🎬' : '🔊'} ${escapeText(name)}]`
+    }
+    case 'block_embed': {
+      // Static placeholder only — the referenced block is never resolved
+      // during export (mirrors query_block above), matching v1 scope.
+      return `#emph[↪ Embedded block]`
     }
     case 'embed_block': {
       const url = String(node.attrs?.url ?? '')

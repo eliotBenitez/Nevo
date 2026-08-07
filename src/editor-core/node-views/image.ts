@@ -45,6 +45,7 @@ export function createImageNodeView(node: PMNode, view: EditorView, getPos: Node
   const image = document.createElement('img')
   image.className = 'nv-image-preview'
   image.loading = 'lazy'
+  image.decoding = 'async'
 
   const menuBtn = document.createElement('button')
   menuBtn.type = 'button'

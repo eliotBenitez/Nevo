@@ -13,7 +13,7 @@ import {
 } from '../../utils/noteExport/docxOptions'
 import { useDocxPagination } from '../composables/useDocxPagination'
 import DocxExportSettings from './DocxExportSettings.vue'
-import DocxPreviewNode from './DocxPreviewNode.vue'
+import DocxPreviewContent from './DocxPreviewContent.vue'
 
 interface Props {
   note: NoteDocument
@@ -79,7 +79,6 @@ const hiddenContainerRef = ref<HTMLElement | null>(null)
 
 const {
   pageStyle,
-  processedContent,
   paginatedContentNodes,
   contentPages,
   pages,
@@ -216,18 +215,12 @@ onBeforeUnmount(() => {
               :class="[paperFormat, orientation]"
             >
               <div class="docx-page__body">
-                <div class="docx-page__content">
-                  <div v-if="exportNoteTitle && !titlePage" class="docx-page__content-title-wrapper">
-                    <h1 class="docx-page__title-inline">{{ note.icon }} {{ note.title || 'Untitled' }}</h1>
-                  </div>
-                  <div
-                    v-for="(node, idx) in paginatedContentNodes"
-                    :key="idx"
-                    class="docx-preview-node-wrapper"
-                  >
-                    <DocxPreviewNode :node="node" />
-                  </div>
-                </div>
+                <DocxPreviewContent
+                  :nodes="paginatedContentNodes"
+                  :title="note.title"
+                  :icon="note.icon"
+                  :show-title="exportNoteTitle && !titlePage"
+                />
               </div>
             </div>
 
@@ -267,21 +260,13 @@ onBeforeUnmount(() => {
                   </div>
 
                   <!-- Main Content Simulation -->
-                  <div v-else-if="page.type === 'content'" class="docx-page__content">
-                    <div v-if="exportNoteTitle && !titlePage && (page.contentPageIndex === 0 || page.contentPageIndex === undefined)" class="docx-page__content-title-wrapper">
-                      <h1 class="docx-page__title-inline">{{ note.icon }} {{ note.title || 'Untitled' }}</h1>
-                    </div>
-                    <template v-if="page.contentPageIndex === undefined">
-                      <DocxPreviewNode v-if="processedContent" :node="processedContent" />
-                    </template>
-                    <template v-else-if="contentPages[page.contentPageIndex]">
-                      <DocxPreviewNode
-                        v-for="(node, idx) in contentPages[page.contentPageIndex].nodes"
-                        :key="idx"
-                        :node="node"
-                      />
-                    </template>
-                  </div>
+                  <DocxPreviewContent
+                    v-else-if="page.type === 'content' && page.contentPageIndex !== undefined"
+                    :nodes="contentPages[page.contentPageIndex]?.nodes ?? []"
+                    :title="note.title"
+                    :icon="note.icon"
+                    :show-title="Boolean(contentPages[page.contentPageIndex]?.hasTitle)"
+                  />
                 </div>
 
                 <!-- Page Numbers -->

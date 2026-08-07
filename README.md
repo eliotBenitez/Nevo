@@ -215,6 +215,18 @@ Nevo follows strict architectural boundaries to stay maintainable:
 
 > **Note:** ProseMirror editor state is kept strictly out of Vue/Pinia to avoid performance and reactivity issues.
 
+## 🧩 Plugin development
+
+Start with the [Plugin SDK V2 documentation](docs/plugins.md) for a guided
+quick start, manifest and capability reference, editor transactions, custom UI,
+host services, testing, security, and SDK V1 migration.
+
+## 🤖 AI agents
+
+The [MCP bridge](docs/mcp-bridge.md) lets external coding agents such as Claude
+Code and codex read and edit the workspace you have open. It is off by default;
+enable it under **Settings → AI agents** and pick how much access to grant.
+
 ## 📄 License
 
 Nevo is licensed under the **AGPL-3.0** License. See [LICENSE](LICENSE) for details.

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { isReactive } from 'vue'
 import type { NoteDocument, NoteMeta, NoteSnapshotMeta } from '../types/note'
 import type { WorkspaceManifest } from '../types/workspace'
 import { noteCommands } from '../tauri/commands'
@@ -356,5 +357,29 @@ describe('useNoteStore', () => {
     await saveRequest
 
     expect(workspaceStore.manifest?.rootNotes[0]).toEqual(originalMeta)
+  })
+
+  it('keeps the note body out of deep reactivity so document walks stay cheap', async () => {
+    const mockedNoteCommands = vi.mocked(noteCommands)
+    // A note id no other case in this file loads: the store's LRU note cache is
+    // module-level and outlives individual tests.
+    const loaded = createNote('note-raw', 'Loaded text')
+    mockedNoteCommands.loadNote.mockResolvedValue(loaded)
+    mockedNoteCommands.listNoteSnapshots.mockResolvedValue([])
+
+    const noteStore = useNoteStore()
+    await noteStore.loadNote('note-raw')
+
+    // Identity must survive: isSameDraft and the editor's reload check compare
+    // content by reference.
+    expect(noteStore.activeNote?.content).toBe(loaded.content)
+    expect(isReactive(noteStore.activeNote?.content)).toBe(false)
+
+    const nextContent = createNote('note-raw', 'Edited text').content
+    noteStore.setContent(nextContent)
+
+    expect(noteStore.activeNote?.content).toBe(nextContent)
+    expect(isReactive(noteStore.activeNote?.content)).toBe(false)
+    expect(noteStore.saveStatus).toBe('unsaved')
   })
 })

@@ -118,7 +118,6 @@ export function createDefaultWorkspaceSettings(): WorkspaceSettings {
       typewriterPosition: 'lower',
     },
     workspace: {
-      defaultLandingView: 'editor',
       showBacklinksByDefault: true,
       showGraphLabels: false,
       folderCreateBehavior: 'current-folder',
@@ -172,6 +171,10 @@ export function createDefaultWorkspaceSettings(): WorkspaceSettings {
       templates: true,
       vega: true,
       markmap: true,
+    },
+    mcp: {
+      mode: 'off',
+      autoSnapshot: true,
     },
     hotkeys: {
       bindings: DEFAULT_HOTKEY_BINDINGS.map(binding => ({ ...binding })),

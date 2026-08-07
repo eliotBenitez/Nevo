@@ -8,6 +8,8 @@ import { renderMarkmapToSvg } from './markmapToSvg'
 import { renderVegaToSvg } from './vegaToSvg'
 import { normalizeDatabaseData, type DatabaseBlockData, type DbCellValue, type DbField } from '../../types/database-block'
 import { visibleRecords } from '../../editor-core/databaseFilterSort'
+import { normalizeQueryBlockData } from '../../features/query/queryBlockData'
+import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSummary'
 
 export interface HtmlSerializeResult {
   html: string
@@ -418,12 +420,23 @@ export async function blockNode(node: BlockNode, ctx: SerializeCtx): Promise<str
         : `<div class="vega-error">Invalid chart spec</div>`
       return `<figure class="vega-block">${rendered}</figure>`
     }
+    case 'query_block': {
+      // Query results are dynamic (live cross-note search) and are never
+      // materialized into export output — only a static summary of the filters.
+      const data = normalizeQueryBlockData(node.attrs?.data)
+      return `<blockquote class="query-block"><strong>Query:</strong> ${escapeHtml(summarizeQueryBlockFilters(data))}</blockquote>`
+    }
     case 'note_embed': {
       const noteId = String(node.attrs?.noteId ?? '')
       const title = String(node.attrs?.title ?? 'Note embed')
       const previewText = String(node.attrs?.previewText ?? '')
       const href = `nevo://note/${encodeURIComponent(noteId)}`
       return `<article class="note-embed" data-note-id="${escapeAttr(noteId)}"><a href="${escapeAttr(href)}">${escapeHtml(title)}</a>${previewText ? `<p>${escapeHtml(previewText)}</p>` : ''}</article>`
+    }
+    case 'block_embed': {
+      // Static placeholder only — the referenced block is never resolved
+      // during export (mirrors query_block above), matching v1 scope.
+      return `<blockquote class="block-embed">↪ Embedded block</blockquote>`
     }
     case 'embed_block': {
       const url = String(node.attrs?.url ?? '')

@@ -23,6 +23,7 @@ import { createDrawSelection } from './editor/useDrawSelection'
 import { createDrawSelectionTransforms } from './editor/useDrawSelectionTransforms'
 import { createDrawTextEditor } from './editor/useDrawTextEditor'
 import { createDrawStrokeInput } from './editor/useDrawStrokeInput'
+import { cloneStrokes } from './editor/drawGeometry'
 
 export { constrainGeometryPoint }
 
@@ -127,8 +128,39 @@ export function useDrawEditor(options: UseDrawEditorOptions) {
     autoDetectShapes,
   })
 
+  let touchGestureSnapshot: {
+    strokes: DrawStroke[]
+    undoStack: DrawStroke[][]
+    redoStack: DrawStroke[][]
+  } | null = null
+
   function setOverlay(el: SVGSVGElement | null) {
     overlayEl.value = el
+  }
+
+  function beginTouchGesture() {
+    if (touchGestureSnapshot) return
+    touchGestureSnapshot = {
+      strokes: cloneStrokes(strokes.value),
+      undoStack: [...history.undoStack.value],
+      redoStack: [...history.redoStack.value],
+    }
+  }
+
+  function commitTouchGesture() {
+    touchGestureSnapshot = null
+  }
+
+  function cancelPointerGesture() {
+    strokeInput.cancelGesture()
+    transforms.cancelGesture()
+    textEditorModule.cancelText()
+    if (touchGestureSnapshot) {
+      strokes.value = touchGestureSnapshot.strokes
+      history.undoStack.value = touchGestureSnapshot.undoStack
+      history.redoStack.value = touchGestureSnapshot.redoStack
+      touchGestureSnapshot = null
+    }
   }
 
   function clear() {
@@ -189,6 +221,9 @@ export function useDrawEditor(options: UseDrawEditorOptions) {
     canRedo: history.canRedo,
     canPaste: history.canPaste,
     setOverlay,
+    beginTouchGesture,
+    commitTouchGesture,
+    cancelPointerGesture,
     beginStroke: strokeInput.beginStroke,
     moveStroke: strokeInput.moveStroke,
     endStroke: strokeInput.endStroke,

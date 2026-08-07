@@ -15,7 +15,23 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../app/WorkspaceShell.vue'),
   },
   {
+    path: '/workspace/notes',
+    component: () => import('../app/WorkspaceShell.vue'),
+  },
+  {
+    path: '/workspace/boards',
+    component: () => import('../app/WorkspaceShell.vue'),
+  },
+  {
+    path: '/workspace/more',
+    component: () => import('../app/WorkspaceShell.vue'),
+  },
+  {
     path: '/workspace/note/:noteId',
+    component: () => import('../app/WorkspaceShell.vue'),
+  },
+  {
+    path: '/workspace/note/:noteId/canvas',
     component: () => import('../app/WorkspaceShell.vue'),
   },
   {

@@ -4,6 +4,8 @@ import type { useLinkEditor } from './useLinkEditor'
 import type { useMathEditor } from './useMathEditor'
 import type { useFormulaEditor } from './useFormulaEditor'
 import type { useMermaidEditor } from './useMermaidEditor'
+import type { useQueryEditor } from './useQueryEditor'
+import type { QueryBlockData } from '../../../features/query/queryBlockData'
 import type { useMarkmapEditor } from './useMarkmapEditor'
 import type { useVegaEditor } from './useVegaEditor'
 import type { usePluginNodePopover } from './usePluginNodePopover'
@@ -17,6 +19,7 @@ interface ValueState {
   code?: string
   markdown?: string
   spec?: string
+  data?: QueryBlockData
 }
 
 interface WorkspaceEditorOverlayHandlerOptions {
@@ -26,6 +29,7 @@ interface WorkspaceEditorOverlayHandlerOptions {
   mathEditor: ReturnType<typeof useMathEditor>
   formulaEditor: ReturnType<typeof useFormulaEditor>
   mermaidEditor: ReturnType<typeof useMermaidEditor>
+  queryEditor: ReturnType<typeof useQueryEditor>
   markmapEditor: ReturnType<typeof useMarkmapEditor>
   vegaEditor: ReturnType<typeof useVegaEditor>
   pluginNodeEditor: ReturnType<typeof usePluginNodePopover>
@@ -34,6 +38,7 @@ interface WorkspaceEditorOverlayHandlerOptions {
   mathPopover: ValueState
   formulaPopover: ValueState
   mermaidPopover: ValueState
+  queryPopover: ValueState
   markmapPopover: ValueState
   vegaPopover: ValueState
   backendSupportsPathImport: () => boolean
@@ -63,6 +68,7 @@ export function createWorkspaceEditorOverlayHandlers(
     mathEditor,
     formulaEditor,
     mermaidEditor,
+    queryEditor,
     markmapEditor,
     vegaEditor,
     pluginNodeEditor,
@@ -108,6 +114,10 @@ export function createWorkspaceEditorOverlayHandlers(
     applyMermaid: mermaidEditor.applyMermaidFromPopover,
     removeMermaid: mermaidEditor.removeMermaidFromPopover,
     onMermaidInputKeyDown: mermaidEditor.onMermaidInputKeyDown,
+    updateQueryData: (value) => { options.queryPopover.data = value },
+    applyQuery: queryEditor.applyQueryFromPopover,
+    removeQuery: queryEditor.removeQueryFromPopover,
+    onQueryInputKeyDown: queryEditor.onQueryInputKeyDown,
     updateMarkmapMarkdown: (value) => { options.markmapPopover.markdown = value },
     applyMarkmap: markmapEditor.applyMarkmapFromPopover,
     removeMarkmap: markmapEditor.removeMarkmapFromPopover,

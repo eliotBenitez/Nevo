@@ -98,7 +98,10 @@ fn database_path(workspace: &Path) -> PathBuf {
     workspace.join(".nevo").join("databases.sqlite")
 }
 
-fn open_database(workspace: &Path) -> Result<Connection, String> {
+/// `pub(crate)` so the workspace-transfer merge flow (`workspace_transfer::merge::databases`)
+/// can open both the extracted archive's and the current workspace's
+/// `databases.sqlite` directly to copy V2 database-block rows across.
+pub(crate) fn open_database(workspace: &Path) -> Result<Connection, String> {
     std::fs::create_dir_all(workspace.join(".nevo")).map_err(|error| error.to_string())?;
     let connection =
         Connection::open(database_path(workspace)).map_err(|error| error.to_string())?;

@@ -14,7 +14,7 @@ function collectAllNotes(manifest: WorkspaceManifest): NoteMeta[] {
   return notes
 }
 
-export function useGraphData(_workspacePath: string, manifest: WorkspaceManifest) {
+export function useGraphData(manifest: WorkspaceManifest) {
   const workspaceStore = useWorkspaceStore()
   const snapshot = ref<GraphSnapshot | null>(null)
   const loading = ref(false)

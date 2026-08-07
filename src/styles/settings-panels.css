@@ -556,7 +556,11 @@
   }
 
   .panel-body {
-    padding: 16px;
+    padding:
+      16px
+      calc(16px + max(var(--safe-area-right), 0px))
+      24px
+      calc(16px + max(var(--safe-area-left), 0px));
     gap: 16px;
   }
 

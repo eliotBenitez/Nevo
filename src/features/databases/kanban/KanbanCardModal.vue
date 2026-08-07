@@ -13,6 +13,7 @@ import {
   getCardStatusValue,
   serializeCardProperties,
   computeTaskProgress,
+  localizeDefaultKanbanLabel,
 } from './kanbanFields'
 import KanbanCardProperties from './KanbanCardProperties.vue'
 import KanbanCardLinks from './KanbanCardLinks.vue'
@@ -54,6 +55,11 @@ onMounted(() => {
 const statusProp = computed(() => getBoardStatusProperty(props.board))
 const statusOption = computed(() =>
   statusProp.value?.options?.find(option => option.id === localStatusValue.value) ?? null
+)
+const statusOptionLabel = computed(() =>
+  statusOption.value
+    ? localizeDefaultKanbanLabel(statusOption.value.name, key => t(key))
+    : ''
 )
 
 const taskProgress = computed(() => computeTaskProgress(localContent.value))
@@ -137,7 +143,7 @@ function onKeydown(event: KeyboardEvent) {
               :style="statusOption.color ? { background: `${statusOption.color}28`, color: statusOption.color } : {}"
             >
               <span class="km-status__dot" :style="statusOption.color ? { background: statusOption.color } : {}" />
-              {{ statusOption.name }}
+              {{ statusOptionLabel }}
             </span>
           </div>
           <div class="km-header__right">

@@ -1,17 +1,24 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import WelcomeView from './components/WelcomeView.vue'
 import CreateWorkspaceView from './components/CreateWorkspaceView.vue'
 import OpenWorkspaceView from './components/OpenWorkspaceView.vue'
 import WindowControls from '../../ui/primitives/WindowControls.vue'
 import type { OnboardingView } from '../../types/workspace'
 import { useDeviceLayout } from '../../composables/useDeviceLayout'
+import { useMobileBackButton } from '../../composables/useMobileBackButton'
 
 const router = useRouter()
+const { t } = useI18n()
 const { runtime, useCompactHeader } = useDeviceLayout()
 
 const currentView = ref<OnboardingView>('welcome')
+useMobileBackButton(
+  () => { currentView.value = 'welcome' },
+  computed(() => runtime.value.isMobileRuntime && currentView.value !== 'welcome'),
+)
 
 function onDone() {
   router.push('/workspace')
@@ -23,6 +30,7 @@ function onDone() {
     <div class="nv-canvas" />
 
     <div
+      v-if="!runtime.isMobileRuntime || currentView !== 'create'"
       class="onboard-titlebar"
       :class="{
         'onboard-titlebar--compact': useCompactHeader,
@@ -31,7 +39,7 @@ function onDone() {
     >
       <div class="tl-spacer" />
       <div v-if="currentView !== 'welcome'" class="titlebar-label">
-        {{ currentView === 'create' ? 'Create workspace' : 'Open workspace' }}
+        {{ currentView === 'create' ? t('onboarding.create.titlebar') : t('onboarding.open.titlebar') }}
       </div>
       <div class="tl-spacer" />
       <WindowControls />

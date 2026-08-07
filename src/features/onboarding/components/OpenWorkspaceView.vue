@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Folder, Plus, Search, Pin, Trash2, ArrowRight, Cloud } from 'lucide-vue-next'
+import { Archive, Folder, Plus, Search, Pin, Trash2, ArrowRight, Cloud } from 'lucide-vue-next'
 import AmbientBackdrop from '../../../ui/glass/AmbientBackdrop.vue'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import NevoMark from './NevoMark.vue'
@@ -11,6 +11,7 @@ import { useSharedStorageStore } from '../../../stores/sharedStorage'
 import { useAuthStore } from '../../../stores/auth'
 import { useDeviceLayout } from '../../../composables/useDeviceLayout'
 import { useConfirmDialog } from '../../../ui/composables/useConfirmDialog'
+import { useWorkspaceTransfer } from '../../../composables/useWorkspaceTransfer'
 import type { RecentWorkspace } from '../../../types/workspace'
 import { systemCommands } from '../../../tauri/commands'
 
@@ -24,10 +25,12 @@ const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
 const shared = useSharedStorageStore()
 const auth = useAuthStore()
-const { isTouch, runtime } = useDeviceLayout()
+const { isPhone, isTouch, runtime } = useDeviceLayout()
 const { confirm } = useConfirmDialog()
+const { importAsNewWorkspace } = useWorkspaceTransfer()
 
 const filterQuery = ref('')
+const importingArchive = ref(false)
 const isDragOver = ref(false)
 const deletingWorkspaceKey = ref<string | null>(null)
 const allowWorkspaceDrop = computed(() => runtime.value.isDesktopRuntime && !isTouch.value)
@@ -38,17 +41,6 @@ onMounted(async () => {
     try { await shared.loadStorages() } catch { /* offline */ }
   }
 })
-
-const signingIn = ref(false)
-async function signIn() {
-  signingIn.value = true
-  try {
-    await auth.login('github')
-    await shared.loadStorages()
-  } catch { /* cancelled or failed */ } finally {
-    signingIn.value = false
-  }
-}
 
 // Local recents + any cloud storages the user belongs to (deduped by storageId).
 const allWorkspaces = computed<RecentWorkspace[]>(() => {
@@ -86,6 +78,17 @@ async function browseFolder() {
     }
   } catch {
     // dev/web fallback
+  }
+}
+
+async function importFromArchive() {
+  if (importingArchive.value) return
+  importingArchive.value = true
+  try {
+    const opened = await importAsNewWorkspace()
+    if (opened) emit('done')
+  } finally {
+    importingArchive.value = false
   }
 }
 
@@ -192,17 +195,24 @@ async function onDrop(e: DragEvent) {
       <NevoMark :size="42" />
       <div class="header-text">
         <h1 class="header-title">{{ t('onboarding.open.title') }}</h1>
-        <div class="header-sub">{{ t('onboarding.open.subtitle') }}</div>
+        <div class="header-sub">{{ t(isPhone ? 'onboarding.open.mobileSubtitle' : 'onboarding.open.subtitle') }}</div>
       </div>
-      <button v-if="!auth.isAuthenticated" class="nv-btn nv-btn--ghost open-header-btn" :disabled="signingIn" @click="signIn">
-        <Cloud :size="12" /> {{ t('cloud.account.signIn') }}
-      </button>
-      <button class="nv-btn nv-btn--ghost open-header-btn" @click="browseFolder">
-        <Folder :size="12" /> {{ t('onboarding.open.browse') }}
-      </button>
-      <button class="nv-btn nv-btn--primary open-header-btn" @click="emit('create')">
-        <Plus :size="12" /> {{ t('onboarding.open.new') }}
-      </button>
+      <div class="open-header__actions">
+        <button v-if="!runtime.isMobileRuntime" class="nv-btn nv-btn--ghost open-header-btn" @click="browseFolder">
+          <Folder :size="12" /> {{ t('onboarding.open.browse') }}
+        </button>
+        <button
+          v-if="!runtime.isMobileRuntime"
+          class="nv-btn nv-btn--ghost open-header-btn"
+          :disabled="importingArchive"
+          @click="importFromArchive"
+        >
+          <Archive :size="12" /> {{ t('onboarding.open.importArchive') }}
+        </button>
+        <button class="nv-btn nv-btn--primary open-header-btn" @click="emit('create')">
+          <Plus :size="12" /> {{ t('onboarding.open.new') }}
+        </button>
+      </div>
     </div>
 
     <!-- Search -->
@@ -233,6 +243,7 @@ async function onDrop(e: DragEvent) {
           class="ws-row"
           :class="{ 'ws-row--first': i === 0 }"
           :style="{ borderBottom: i === filteredRecents.length - 1 ? 'none' : '1px solid var(--line-1)' }"
+          @click="openWorkspace(ws.id)"
           @keydown.enter="openWorkspace(ws.id)"
           @keydown.space.prevent="openWorkspace(ws.id)"
         >
@@ -248,32 +259,45 @@ async function onDrop(e: DragEvent) {
                 {{ ws.unreadCount }} {{ t('onboarding.open.unread') }}
               </span>
             </div>
-            <div class="ws-path">{{ ws.kind === 'cloud' ? t('workspace.cloudWorkspace') : ws.path }}</div>
+            <div class="ws-path">
+              {{ ws.kind === 'cloud'
+                ? t('workspace.cloudWorkspace')
+                : isPhone
+                  ? t('workspace.mobile.more.onDevice')
+                  : ws.path }}
+            </div>
           </div>
           <div class="ws-meta">
             <div class="ws-date">{{ workspaceStore.getRelativeTime(ws.lastOpened) }}</div>
             <div class="ws-pages">{{ ws.pageCount.toLocaleString() }} {{ t('onboarding.open.pages') }}</div>
           </div>
-          <button
-            class="nv-btn ws-open-btn"
-            :class="i === 0 ? 'nv-btn--primary' : ''"
-            @keydown.enter.stop
-            @keydown.space.stop
-            @click="openWorkspace(ws.id)"
-          >
-            {{ t('onboarding.open.open') }} <ArrowRight v-if="i === 0" :size="11" />
-          </button>
-          <button
-            class="nv-btn nv-btn--ghost ws-delete-btn"
-            :aria-label="deleteWorkspaceLabel(ws)"
-            :title="deleteWorkspaceLabel(ws)"
-            :disabled="deletingWorkspaceKey === workspaceKey(ws)"
-            @keydown.enter.stop
-            @keydown.space.stop
-            @click.stop="deleteWorkspace(ws)"
-          >
-            <Trash2 :size="13" />
-          </button>
+          <div class="ws-actions">
+            <button
+              class="nv-btn ws-open-btn"
+              :class="i === 0 ? 'nv-btn--primary' : ''"
+              @keydown.enter.stop
+              @keydown.space.stop
+              @click.stop="openWorkspace(ws.id)"
+            >
+              {{ t('onboarding.open.open') }} <ArrowRight v-if="i === 0" :size="11" />
+            </button>
+            <button
+              class="nv-btn nv-btn--ghost ws-delete-btn"
+              :aria-label="deleteWorkspaceLabel(ws)"
+              :title="deleteWorkspaceLabel(ws)"
+              :disabled="deletingWorkspaceKey === workspaceKey(ws)"
+              @keydown.enter.stop
+              @keydown.space.stop
+              @click.stop="deleteWorkspace(ws)"
+            >
+              <Trash2 :size="13" />
+            </button>
+          </div>
+        </div>
+        <div v-if="filteredRecents.length === 0" class="open-empty-state">
+          <Folder :size="22" aria-hidden="true" />
+          <strong>{{ t('onboarding.open.emptyTitle') }}</strong>
+          <p>{{ t('onboarding.open.emptySubtitle') }}</p>
         </div>
       </div>
 

@@ -4,6 +4,8 @@ use std::path::Path;
 use std::sync::{Arc, Mutex, OnceLock};
 use uuid::Uuid;
 
+use super::note::note_error_context;
+use super::note_index;
 use super::path_utils::{normalize_workspace_path, write_atomic};
 use super::workspace::{FolderMeta, NoteMeta, WorkspaceManifest};
 
@@ -208,11 +210,13 @@ pub(crate) fn delete_folder_sync(
         }
     }
 
+    let mut trashed_note_ids: Vec<String> = Vec::new();
     if let Some(removed) = remove_from_tree(&mut manifest.tree, &folder_id) {
         if recursive {
             // "Notes to Root" behavior: Move all nested notes to trash, but they will be restored to root
             let notes_to_trash = collect_notes_meta(&removed);
             for meta in notes_to_trash {
+                trashed_note_ids.push(meta.id.clone());
                 manifest.trash.push(super::workspace::TrashedItem {
                     id: meta.id.clone(),
                     item_type: "note".to_string(),
@@ -225,7 +229,28 @@ pub(crate) fn delete_folder_sync(
         }
         manifest.root_order.retain(|id| id != &folder_id);
     }
-    save_manifest(&workspace_path, &manifest)
+    save_manifest(&workspace_path, &manifest)?;
+
+    // Best-effort: notes cascaded into trash by a recursive folder delete
+    // should not surface in query_notes, mirroring note::delete_note_impl
+    // (the index only tracks live notes). The index is a rebuildable cache
+    // (note_index::reindex_all), and restoring one of these notes later
+    // already re-upserts it via note::trash::restore_from_trash, so a
+    // failure here must not fail the folder delete.
+    for note_id in &trashed_note_ids {
+        if let Err(message) = note_index::remove_note(Path::new(&workspace_path), note_id) {
+            let _ = crate::logging::logger().warn(
+                "tauri.folder",
+                "delete_folder",
+                "Failed to remove note from metadata index",
+                true,
+                note_error_context(&workspace_path, "note_index", message)
+                    .with_payload(serde_json::json!({ "noteId": note_id, "folderId": folder_id })),
+            );
+        }
+    }
+
+    Ok(())
 }
 
 fn collect_notes_meta(folder: &FolderMeta) -> Vec<NoteMeta> {

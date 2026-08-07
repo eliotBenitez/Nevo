@@ -21,6 +21,21 @@ export interface KanbanFieldDescriptor {
   options?: KanbanPropertyOption[]
 }
 
+const DEFAULT_KANBAN_LABEL_KEYS: Readonly<Record<string, string>> = {
+  Status: 'kanban.defaultStatuses.status',
+  'To Do': 'kanban.defaultStatuses.toDo',
+  'In Progress': 'kanban.defaultStatuses.inProgress',
+  Done: 'kanban.defaultStatuses.done',
+}
+
+export function localizeDefaultKanbanLabel(
+  label: string,
+  translate: (key: string) => string,
+): string {
+  const key = DEFAULT_KANBAN_LABEL_KEYS[label]
+  return key ? translate(key) : label
+}
+
 export function createKanbanId() {
   return (crypto as Crypto).randomUUID()
 }

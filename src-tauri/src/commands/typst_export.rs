@@ -10,7 +10,7 @@ use typst_as_lib::typst_kit_options::TypstKitFontOptions;
 use typst_as_lib::TypstEngine;
 use typst_layout::PagedDocument;
 use typst_render::RenderOptions;
-use zip::write::FileOptions;
+use zip::write::SimpleFileOptions;
 use zip::CompressionMethod;
 use zip::ZipWriter;
 
@@ -142,7 +142,7 @@ fn write_typst_archive<W: Write + Seek>(
     assets: Vec<(String, Vec<u8>)>,
 ) -> Result<(), String> {
     let mut zip = ZipWriter::new(writer);
-    let options = FileOptions::default().compression_method(CompressionMethod::Deflated);
+    let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
 
     zip.start_file(format!("{stem}.typ"), options)
         .map_err(|err| err.to_string())?;

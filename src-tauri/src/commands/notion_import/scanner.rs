@@ -19,7 +19,7 @@ const MAX_ASSET_BYTES: u64 = 100 * 1024 * 1024;
 const MAX_TOTAL_UNCOMPRESSED_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 const MAX_TOTAL_DOCUMENT_BYTES: u64 = 200 * 1024 * 1024;
 
-fn normalized_entry_path(entry: &zip::read::ZipFile<'_>) -> Result<String, String> {
+fn normalized_entry_path<R: Read>(entry: &zip::read::ZipFile<'_, R>) -> Result<String, String> {
     if entry.name().contains('\\') {
         return Err("ZIP entries with backslash paths are not supported".to_string());
     }
@@ -40,7 +40,7 @@ fn normalized_entry_path(entry: &zip::read::ZipFile<'_>) -> Result<String, Strin
         .join("/"))
 }
 
-fn is_symlink(entry: &zip::read::ZipFile<'_>) -> bool {
+fn is_symlink<R: Read>(entry: &zip::read::ZipFile<'_, R>) -> bool {
     entry
         .unix_mode()
         .is_some_and(|mode| mode & 0o170000 == 0o120000)

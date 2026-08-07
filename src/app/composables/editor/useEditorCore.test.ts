@@ -61,6 +61,7 @@ function createCallbacks() {
     onSlashMathItemRan: vi.fn(),
     onSlashEmojiPickRequest: vi.fn(),
     onMermaidEditRequest: vi.fn(),
+    onQueryEditRequest: vi.fn(),
     onMarkmapEditRequest: vi.fn(),
     onVegaEditRequest: vi.fn(),
     onPluginNodeEditRequest: vi.fn(),
@@ -87,6 +88,29 @@ async function mountEditor(note: NoteDocument, settingsOverride = settings) {
 afterEach(() => {
   document.body.innerHTML = ''
   document.documentElement.lang = ''
+})
+
+describe('useEditorCore transaction callbacks', () => {
+  it('skips the after-transaction hook for metadata-only decoration updates', async () => {
+    const note = createNote({
+      type: 'doc',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Large canvas note' }] }],
+    })
+    const { core, callbacks, destroy } = await mountEditor(note)
+
+    try {
+      const view = core.editorView!
+      callbacks.onAfterTransaction.mockClear()
+
+      view.dispatch(view.state.tr.setMeta('canvas-layout-preview', true))
+      expect(callbacks.onAfterTransaction).not.toHaveBeenCalled()
+
+      view.dispatch(view.state.tr.insertText(' updated', view.state.doc.content.size - 1))
+      expect(callbacks.onAfterTransaction).toHaveBeenCalledTimes(1)
+    } finally {
+      destroy()
+    }
+  })
 })
 
 describe('useEditorCore internal links', () => {
@@ -230,8 +254,17 @@ describe('useEditorCore internal links', () => {
     }
   })
 
-  it('serializes once after the debounce window for rapid edits', async () => {
+  it('serializes once during idle after the debounce window for rapid edits', async () => {
     vi.useFakeTimers()
+    let runIdle: (() => void) | null = null
+    vi.stubGlobal('requestIdleCallback', vi.fn((callback: IdleRequestCallback) => {
+      runIdle = () => callback({
+        didTimeout: false,
+        timeRemaining: () => 10,
+      })
+      return 1
+    }))
+    vi.stubGlobal('cancelIdleCallback', vi.fn())
     const note = createNote({
       type: 'doc',
       content: [{ type: 'paragraph' }],
@@ -250,6 +283,11 @@ describe('useEditorCore internal links', () => {
 
       vi.advanceTimersByTime(1)
 
+      expect(callbacks.onContentUpdate).not.toHaveBeenCalled()
+      const idleCallback = runIdle as (() => void) | null
+      expect(idleCallback).not.toBeNull()
+      idleCallback?.()
+
       expect(callbacks.onContentUpdate).toHaveBeenCalledTimes(1)
       expect(callbacks.onContentUpdate).toHaveBeenCalledWith({
         type: 'doc',
@@ -262,6 +300,7 @@ describe('useEditorCore internal links', () => {
       })
     } finally {
       destroy()
+      vi.unstubAllGlobals()
       vi.useRealTimers()
     }
   })

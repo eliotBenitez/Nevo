@@ -4,7 +4,7 @@ import { ChevronDown, ChevronUp, Plus, Trash2, X } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import type { BlockNode } from '../../../types/note'
 import type { TemplateDocument, TemplateField, TemplateFieldType } from '../../../types/template'
-import { templateCommands } from '../../../tauri/commands'
+import { useWorkspaceStore } from '../../../stores/workspace'
 import { plainTextToNoteContent, noteContentToPlainText } from '../../../utils/noteContent'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
@@ -24,6 +24,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const workspaceStore = useWorkspaceStore()
 
 const saving = ref(false)
 const error = ref<string | null>(null)
@@ -94,7 +95,8 @@ function normalizeEditableTemplate(): TemplateDocument {
 }
 
 async function saveEditableTemplate() {
-  if (!props.workspacePath) return
+  const backend = workspaceStore.backend
+  if (!backend) return
   const template = normalizeEditableTemplate()
   if (!template.id || !template.name) {
     error.value = t('templates.errors.nameRequired')
@@ -104,8 +106,8 @@ async function saveEditableTemplate() {
   error.value = null
   try {
     const saved = props.mode === 'edit'
-      ? await templateCommands.updateTemplate(props.workspacePath, template.id, template)
-      : await templateCommands.createTemplate(props.workspacePath, template)
+      ? await backend.updateTemplate(template.id, template)
+      : await backend.createTemplate(template)
     emit('saved', saved)
   } catch (err) {
     error.value = localizeTemplateError(err)

@@ -10,6 +10,7 @@ import {
   type ClampOverlayPosition,
 } from './editorPopoverPosition'
 import type { EditorCore } from './useEditorCore'
+import { emptyQueryBlockData, type QueryBlockData } from '../../../features/query/queryBlockData'
 
 export interface OverlayPosition {
   top: number
@@ -63,6 +64,13 @@ export interface FormulaPopoverState {
 export interface MermaidPopoverState {
   open: boolean
   code: string
+  position: OverlayPosition
+  nodePos: number | null
+}
+
+export interface QueryPopoverState {
+  open: boolean
+  data: QueryBlockData
   position: OverlayPosition
   nodePos: number | null
 }
@@ -174,6 +182,13 @@ export function useEditorOverlays(
     nodePos: null,
   })
 
+  const queryPopover = reactive<QueryPopoverState>({
+    open: false,
+    data: emptyQueryBlockData(),
+    position: { top: 0, left: 0 },
+    nodePos: null,
+  })
+
   const markmapPopover = reactive<MarkmapPopoverState>({
     open: false,
     markdown: '',
@@ -258,6 +273,8 @@ export function useEditorOverlays(
     formulaPopover.cellPos = null
     mermaidPopover.open = false
     mermaidPopover.nodePos = null
+    queryPopover.open = false
+    queryPopover.nodePos = null
     markmapPopover.open = false
     markmapPopover.nodePos = null
     vegaPopover.open = false
@@ -486,6 +503,7 @@ export function useEditorOverlays(
     mathPopover,
     formulaPopover,
     mermaidPopover,
+    queryPopover,
     markmapPopover,
     vegaPopover,
     pluginNodePopover,

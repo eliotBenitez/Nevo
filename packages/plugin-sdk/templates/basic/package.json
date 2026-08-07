@@ -1,5 +1,6 @@
 {
-  "name": "nevo-plugin-example",
+  "name": "acme-hello",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,6 +9,7 @@
   },
   "devDependencies": {
     "@nevo/plugin-sdk": "^2.0.0",
+    "typescript": "~5.6.2",
     "vite": "^6.0.0"
   }
 }

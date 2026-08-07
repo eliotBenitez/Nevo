@@ -1,6 +1,7 @@
 /* App shell styles — split into per-component partials under ./app/.
    Imported in cascade order; each partial owns one component's styles. */
 @import './app/workspace-shell.css';
+@import './app/mobile-workspace.css';
 @import './app/note-breadcrumb.css';
 @import './app/pdf-preview-modal.css';
 @import './app/docx-preview-modal.css';

@@ -6,6 +6,7 @@ use crate::commands::workspace::{FolderMeta, NoteMeta};
 use crate::logging::{LogContext, LogError};
 
 mod assets;
+mod canvas;
 mod collab;
 mod crud;
 mod export;
@@ -22,6 +23,7 @@ mod tests;
 // (e.g. `__cmd__create_note`) are re-exported alongside the function — Tauri's
 // `generate_handler!` in lib.rs resolves them as siblings of `note::<command>`.
 pub use assets::*;
+pub use canvas::*;
 pub use collab::*;
 pub use crud::*;
 pub use export::*;
@@ -45,6 +47,8 @@ pub struct NoteDocument {
     pub updated_at: String,
     pub properties: Option<NoteProperties>,
     pub content: Value,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub canvas: Option<CanvasSnapshotV1>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -132,7 +136,9 @@ fn empty_doc() -> Value {
     serde_json::json!({ "type": "doc", "content": [] })
 }
 
-fn note_path(workspace_path: &str, note_id: &str) -> Result<std::path::PathBuf, String> {
+/// `pub(crate)` so `note_index` (the SQLite metadata index) can resolve the
+/// same validated note file path when backfilling/reindexing from disk.
+pub(crate) fn note_path(workspace_path: &str, note_id: &str) -> Result<std::path::PathBuf, String> {
     crate::commands::path_utils::validate_id(note_id)?;
     Ok(Path::new(workspace_path)
         .join("notes")
@@ -147,11 +153,15 @@ fn notes_dir_path(workspace_path: &str) -> std::path::PathBuf {
     Path::new(workspace_path).join("notes")
 }
 
-fn note_context(workspace_path: &str) -> LogContext {
+/// `pub(crate)` so sibling command modules whose operations also touch the
+/// note metadata index (e.g. `folder::delete_folder_sync`'s trash cascade)
+/// can log index failures with the same shape as the note module's own
+/// best-effort logging, instead of duplicating this construction.
+pub(crate) fn note_context(workspace_path: &str) -> LogContext {
     LogContext::workspace(workspace_path.to_string())
 }
 
-fn note_error_context(workspace_path: &str, kind: &str, message: String) -> LogContext {
+pub(crate) fn note_error_context(workspace_path: &str, kind: &str, message: String) -> LogContext {
     note_context(workspace_path).with_error(LogError {
         kind: Some(kind.to_string()),
         message,

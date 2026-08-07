@@ -207,8 +207,6 @@ impl Default for EditorSettings {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WorkspaceBehaviorSettings {
-    #[serde(rename = "defaultLandingView")]
-    pub default_landing_view: String,
     #[serde(rename = "showBacklinksByDefault", default = "bool_true")]
     pub show_backlinks_by_default: bool,
     #[serde(rename = "showGraphLabels")]
@@ -328,7 +326,6 @@ fn default_sidebar_sort_mode() -> String {
 impl Default for WorkspaceBehaviorSettings {
     fn default() -> Self {
         Self {
-            default_landing_view: "editor".to_string(),
             show_backlinks_by_default: true,
             show_graph_labels: false,
             folder_create_behavior: "current-folder".to_string(),
@@ -444,6 +441,77 @@ impl Default for FeaturesSettings {
     }
 }
 
+/// Access level granted to the local MCP bridge, which lets external coding
+/// agents read and edit workspace notes. `Off` is the default so upgrading an
+/// existing workspace never opens a listening socket without consent.
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum McpMode {
+    #[default]
+    Off,
+    ReadOnly,
+    Ask,
+    Auto,
+}
+
+impl McpMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Off => "off",
+            Self::ReadOnly => "read-only",
+            Self::Ask => "ask",
+            Self::Auto => "auto",
+        }
+    }
+
+    /// Unknown values fall back to `Off` rather than a permissive mode: a
+    /// hand-edited or future-version settings file must never widen access.
+    pub fn parse(value: &str) -> Self {
+        match value {
+            "read-only" => Self::ReadOnly,
+            "ask" => Self::Ask,
+            "auto" => Self::Auto,
+            _ => Self::Off,
+        }
+    }
+
+    pub fn allows_read(self) -> bool {
+        !matches!(self, Self::Off)
+    }
+
+    pub fn allows_write(self) -> bool {
+        matches!(self, Self::Ask | Self::Auto)
+    }
+
+    /// `Ask` performs the write only after the user confirms it in the app.
+    pub fn requires_confirmation(self) -> bool {
+        matches!(self, Self::Ask)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct McpSettings {
+    #[serde(default)]
+    pub mode: McpMode,
+    /// Store a note snapshot before every agent-initiated mutation so the user
+    /// can roll back from the existing note history.
+    #[serde(default = "default_true", rename = "autoSnapshot")]
+    pub auto_snapshot: bool,
+}
+
+impl Default for McpSettings {
+    fn default() -> Self {
+        Self {
+            mode: McpMode::Off,
+            auto_snapshot: true,
+        }
+    }
+}
+
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HotkeyBinding {
     #[serde(rename = "commandId")]
@@ -528,6 +596,8 @@ pub struct WorkspaceSettings {
     pub plugin_settings: std::collections::HashMap<String, serde_json::Value>,
     #[serde(default)]
     pub features: FeaturesSettings,
+    #[serde(default)]
+    pub mcp: McpSettings,
     pub hotkeys: HotkeysSettings,
     pub files: FilesSettings,
     pub advanced: AdvancedSettings,

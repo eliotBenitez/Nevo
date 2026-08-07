@@ -285,6 +285,20 @@ export function buildWorkspaceSettingsSearchItems(options: BuildWorkspaceSetting
       value: `${settings.files.snapshotRetentionCount}`,
     },
     {
+      type: 'setting', id: 'mcp.mode', section: 'mcp',
+      sectionLabel: sectionLabel(t, 'mcp'),
+      title: t('settings.mcp.mode.title'),
+      description: t('settings.mcp.mode.description'),
+      value: t(`settings.mcp.modes.${settings.mcp.mode === 'read-only' ? 'readOnly' : settings.mcp.mode}`),
+    },
+    {
+      type: 'setting', id: 'mcp.autoSnapshot', section: 'mcp',
+      sectionLabel: sectionLabel(t, 'mcp'),
+      title: t('settings.mcp.autoSnapshot.title'),
+      description: t('settings.mcp.autoSnapshot.description'),
+      value: booleanLabel(t, settings.mcp.autoSnapshot),
+    },
+    {
       type: 'setting', id: 'advanced.experimentalGraphTools', section: 'advanced',
       sectionLabel: sectionLabel(t, 'advanced'),
       title: t('settings.advanced.experimentalGraphTools.title'),

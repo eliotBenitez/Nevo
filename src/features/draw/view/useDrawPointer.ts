@@ -27,6 +27,8 @@ export interface DrawPointerOptions {
   beginEditText: (id: string) => void
   strokes: Ref<Array<{ id?: string; type: string }>>
   moveSelectionTo: (world: { x: number; y: number }) => void
+  beginTouchGesture: () => void
+  commitTouchGesture: () => void
 }
 
 export function useDrawPointer(options: DrawPointerOptions) {
@@ -58,6 +60,7 @@ export function useDrawPointer(options: DrawPointerOptions) {
   }
 
   function onPointerDown(event: PointerEvent) {
+    if (event.pointerType === 'touch') options.beginTouchGesture()
     if (event.button === 1) {
       startPan(event)
       return
@@ -101,24 +104,33 @@ export function useDrawPointer(options: DrawPointerOptions) {
   function onPointerUp(event: PointerEvent) {
     if (options.selectMode.value) {
       options.endSelectGesture(event)
+      if (event.pointerType === 'touch') options.commitTouchGesture()
       return
     }
     if (options.isMovingStroke.value) {
       options.endMove(event)
+      if (event.pointerType === 'touch') options.commitTouchGesture()
       return
     }
     if (isPanning.value) {
       isPanning.value = false
       options.overlayEl.value?.releasePointerCapture?.(event.pointerId)
       options.scheduleSave()
+      if (event.pointerType === 'touch') options.commitTouchGesture()
       return
     }
     options.endStroke(event)
+    if (event.pointerType === 'touch') options.commitTouchGesture()
   }
 
   function onPointerLeave(event: PointerEvent) {
     eraserCursor.value.visible = false
     onPointerUp(event)
+  }
+
+  function cancelGesture() {
+    isPanning.value = false
+    eraserCursor.value.visible = false
   }
 
   function onWheel(event: WheelEvent) {
@@ -150,6 +162,7 @@ export function useDrawPointer(options: DrawPointerOptions) {
     onPointerMove,
     onPointerUp,
     onPointerLeave,
+    cancelGesture,
     onWheel,
     onMouseDown,
     onCanvasDblClick,

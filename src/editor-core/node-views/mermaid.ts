@@ -3,11 +3,14 @@ import type { EditorView, NodeView } from 'prosemirror-view'
 import {
   resolveNodePosition,
   getStringAttr,
-  createLazyRenderObserver,
   selectNodeAt,
   type CoreNodeViewOptions,
   type NodeViewPosition,
 } from './utils'
+import {
+  createViewportRenderController,
+  type ViewportRenderController,
+} from './viewportRenderController'
 import { sanitizeSvg } from '../../utils/sanitizeSvg'
 
 let renderCounter = 0
@@ -90,17 +93,13 @@ export function createMermaidNodeView(node: PMNode, view: EditorView, getPos: No
   dom.append(buildHeader(), rendered)
 
   let currentNode = node
-  let isVisible = false
-  let pendingRender = false
   let lastRenderedCode = ''
+  let renderVersion = 0
+  let viewportController: ViewportRenderController | null = null
 
   const sync = async () => {
-    if (!isVisible) {
-      pendingRender = true
-      return
-    }
-
     const code = getStringAttr(currentNode, 'code')
+    const version = ++renderVersion
     const isEmpty = code.trim().length === 0
     dom.dataset.empty = isEmpty ? 'true' : 'false'
 
@@ -116,10 +115,20 @@ export function createMermaidNodeView(node: PMNode, view: EditorView, getPos: No
       const mermaid = await ensureMermaid()
       const id = `nv-mermaid-${++renderCounter}`
       const { svg } = await mermaid.render(id, code)
+      if (
+        !viewportController?.isActive()
+        || getStringAttr(currentNode, 'code') !== code
+        || renderVersion !== version
+      ) return
       rendered.innerHTML = sanitizeSvg(svg)
       dom.dataset.error = 'false'
       lastRenderedCode = code
     } catch {
+      if (
+        !viewportController?.isActive()
+        || getStringAttr(currentNode, 'code') !== code
+        || renderVersion !== version
+      ) return
       rendered.innerHTML = ''
       rendered.textContent = 'Invalid diagram syntax'
       dom.dataset.error = 'true'
@@ -127,14 +136,15 @@ export function createMermaidNodeView(node: PMNode, view: EditorView, getPos: No
     }
   }
 
-  const lazyRender = createLazyRenderObserver(dom, () => {
-    isVisible = true
-    if (pendingRender) {
-      pendingRender = false
-      void sync()
-    }
+  viewportController = createViewportRenderController(dom, {
+    render: sync,
+    suspend: () => {
+      renderVersion++
+      rendered.replaceChildren()
+      lastRenderedCode = ''
+    },
+    initialPlaceholderHeight: 220,
   })
-  isVisible = lazyRender.isInitiallyVisible
 
   const requestMermaidEdit = (event?: MouseEvent) => {
     const position = resolveNodePosition(getPos)
@@ -156,7 +166,6 @@ export function createMermaidNodeView(node: PMNode, view: EditorView, getPos: No
   }
 
   dom.addEventListener('click', onClick)
-  sync()
 
   return {
     dom,
@@ -164,12 +173,14 @@ export function createMermaidNodeView(node: PMNode, view: EditorView, getPos: No
       if (nextNode.type !== currentNode.type) return false
       currentNode = nextNode
       const newCode = getStringAttr(nextNode, 'code')
-      if (isVisible && newCode !== lastRenderedCode) void sync()
-      else if (!isVisible) pendingRender = true
+      if (viewportController?.isActive() && newCode !== lastRenderedCode) {
+        viewportController.requestRender()
+      }
       return true
     },
     destroy() {
-      lazyRender.disconnect()
+      renderVersion++
+      viewportController?.destroy()
       dom.removeEventListener('click', onClick)
     },
   }

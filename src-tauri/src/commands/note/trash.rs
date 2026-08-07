@@ -1,8 +1,11 @@
+use std::path::Path;
+
 use chrono::Utc;
 
 use super::snapshots::snapshot_dir_path;
-use super::{insert_note_in_folder, note_context, note_path, NoteDocument};
+use super::{insert_note_in_folder, note_context, note_error_context, note_path, NoteDocument};
 use crate::commands::folder::{load_manifest, manifest_lock, save_manifest};
+use crate::commands::note_index;
 use crate::commands::path_utils::normalize_workspace_path;
 use crate::commands::workspace::NoteMeta;
 
@@ -65,6 +68,25 @@ pub fn restore_from_trash(workspace_path: String, item_id: String) -> Result<(),
                 "itemId": item_id,
             })),
         );
+
+        // Best-effort: a restored note is active again and should reappear
+        // in query_notes. The index is a rebuildable cache
+        // (note_index::reindex_all), so a failure here must not fail the
+        // restore.
+        let index_folder_path =
+            note_index::folder_path_for_id(&manifest.tree, note.folder_id.as_deref());
+        if let Err(message) =
+            note_index::upsert_note_document(&workspace_path, &note, &index_folder_path)
+        {
+            let _ = logger.warn(
+                "tauri.note",
+                "restore_from_trash",
+                "Failed to update note metadata index",
+                true,
+                note_error_context(&workspace_path, "note_index", message)
+                    .with_payload(serde_json::json!({ "itemId": item_id })),
+            );
+        }
     }
 
     Ok(())
@@ -93,6 +115,20 @@ pub fn permanently_delete_from_trash(
             let snap_dir = snapshot_dir_path(&workspace_path, &item.id)?;
             if snap_dir.exists() {
                 std::fs::remove_dir_all(snap_dir).map_err(|error| error.to_string())?;
+            }
+
+            // Best-effort: already removed on trashing via delete_note_impl,
+            // but idempotent cleanup here covers any index entry that
+            // survived (e.g. a failed removal at trash time).
+            if let Err(message) = note_index::remove_note(Path::new(&workspace_path), &item.id) {
+                let _ = logger.warn(
+                    "tauri.note",
+                    "permanently_delete_from_trash",
+                    "Failed to remove note from metadata index",
+                    true,
+                    note_error_context(&workspace_path, "note_index", message)
+                        .with_payload(serde_json::json!({ "itemId": item.id })),
+                );
             }
         }
 
@@ -139,6 +175,17 @@ pub fn empty_trash(workspace_path: String) -> Result<(), String> {
             if let Err(error) = result {
                 errors.push(format!("{}: {error}", item.id));
                 retained.push(item);
+            } else if let Err(message) =
+                note_index::remove_note(Path::new(&workspace_path), &item.id)
+            {
+                let _ = logger.warn(
+                    "tauri.note",
+                    "empty_trash",
+                    "Failed to remove note from metadata index",
+                    true,
+                    note_error_context(&workspace_path, "note_index", message)
+                        .with_payload(serde_json::json!({ "itemId": item.id })),
+                );
             }
         }
     }

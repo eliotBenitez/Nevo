@@ -108,6 +108,21 @@ describe('useDrawEditor — перемещение объектов (инстр�
     expect(editor.isMovingStroke.value).toBe(false)
   })
 
+  it('restores touch edits when a second finger turns the gesture into a pinch', () => {
+    const editor = setup()
+    editor.strokes.value = [makeStroke()]
+    editor.tool.value = 'eraser'
+
+    editor.beginTouchGesture()
+    editor.beginStroke(ptr(10, 10))
+    expect(editor.strokes.value).toHaveLength(0)
+
+    editor.cancelPointerGesture()
+
+    expect(editor.strokes.value).toEqual([makeStroke()])
+    expect(editor.canUndo.value).toBe(false)
+  })
+
   it('сохраняет z-order и поддерживает undo перемещения', () => {
     const editor = setup()
     const a: DrawStroke = { type: 'rectangle', points: [{ x: 100, y: 100 }, { x: 200, y: 150 }], color: '#a00', size: 3 }
@@ -1393,4 +1408,3 @@ describe('useDrawEditor — авто-распознавание фигур', () 
     expect(pts[1].y).toBe(0)
   })
 })
-

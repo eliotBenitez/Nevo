@@ -200,7 +200,6 @@ export function normalizeWorkspaceSettings(input: unknown): WorkspaceSettings {
   normalized.editor.editorStatsVisibility = editor.editorStatsVisibility === 'corner' || (editor.editorStatsVisibility as string) === 'footer' ? 'corner' : defaults.editor.editorStatsVisibility
   normalized.editor.typewriterPosition = editor.typewriterPosition === 'upper' || editor.typewriterPosition === 'center' ? editor.typewriterPosition : defaults.editor.typewriterPosition
 
-  normalized.workspace.defaultLandingView = normalizeView(workspace.defaultLandingView ?? normalized.general.defaultStartupView)
   normalized.workspace.showBacklinksByDefault = typeof workspace.showBacklinksByDefault === 'boolean' ? workspace.showBacklinksByDefault : defaults.workspace.showBacklinksByDefault
   normalized.workspace.showGraphLabels = typeof workspace.showGraphLabels === 'boolean' ? workspace.showGraphLabels : defaults.workspace.showGraphLabels
   normalized.workspace.folderCreateBehavior = 'current-folder'
@@ -264,6 +263,13 @@ export function normalizeWorkspaceSettings(input: unknown): WorkspaceSettings {
   normalized.features.templates = typeof features.templates === 'boolean' ? features.templates : defaults.features.templates
   normalized.features.vega = typeof features.vega === 'boolean' ? features.vega : defaults.features.vega
   normalized.features.markmap = typeof features.markmap === 'boolean' ? features.markmap : defaults.features.markmap
+
+  const mcp = raw.mcp && typeof raw.mcp === 'object' ? raw.mcp as Record<string, unknown> : {}
+  // Unknown modes fall back to 'off' so a hand-edited or newer settings file
+  // can never widen the agent's access.
+  normalized.mcp.mode = mcp.mode === 'read-only' || mcp.mode === 'ask' || mcp.mode === 'auto'
+    ? mcp.mode : defaults.mcp.mode
+  normalized.mcp.autoSnapshot = typeof mcp.autoSnapshot === 'boolean' ? mcp.autoSnapshot : defaults.mcp.autoSnapshot
 
   normalized.hotkeys.bindings = normalizeHotkeyBindings(hotkeys.bindings)
 

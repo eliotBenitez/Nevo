@@ -19,7 +19,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-clipboard-manager = "2"
@@ -41,12 +41,13 @@ typst-layout = "0.15.1"
 typst-pdf = "0.15.1"
 typst-render = "0.15.1"
 typst-as-lib = { version = "0.16.0", features = ["typst-kit-fonts", "typst-kit-embed-fonts"] }
-zip = { version = "0.6", default-features = false, features = ["deflate"] }
+zip = { version = "4", default-features = false, features = ["deflate", "aes-crypto"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 percent-encoding = "2"
 
 [target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
+keyring = { version = "4.1.6", features = ["apple-native-keyring-store"] }
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-updater = "2"
 

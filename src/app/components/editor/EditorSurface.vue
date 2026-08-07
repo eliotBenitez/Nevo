@@ -21,6 +21,7 @@ import { useEditorOverlays } from '../../composables/editor/useEditorOverlays'
 import { useMathEditor } from '../../composables/editor/useMathEditor'
 import { useFormulaEditor } from '../../composables/editor/useFormulaEditor'
 import { useMermaidEditor } from '../../composables/editor/useMermaidEditor'
+import { useQueryEditor } from '../../composables/editor/useQueryEditor'
 import { usePluginNodePopover } from '../../composables/editor/usePluginNodePopover'
 import { useMarkmapEditor } from '../../composables/editor/useMarkmapEditor'
 import { useVegaEditor } from '../../composables/editor/useVegaEditor'
@@ -79,6 +80,7 @@ interface OverlayContainerInstance {
   formulaPopoverComp: { focusInput: () => void } | null
   mermaidPopoverEl: HTMLElement | null
   mermaidPopoverComp: { focusInput: () => void } | null
+  queryPopoverEl: HTMLElement | null
   markmapPopoverEl: HTMLElement | null
   markmapPopoverComp: { focusInput: () => void } | null
   vegaPopoverEl: HTMLElement | null
@@ -112,6 +114,7 @@ const blockHandleComposable = useBlockHandle(core, {
   getHandleBoundaryEl: () => surfaceRootEl.value,
   getTypeMenuBoundaryEl: () => surfaceRootEl.value,
   getTypeMenuEl: () => overlayContainerRef.value?.blockTypeMenuEl ?? null,
+  getCurrentNoteId: () => props.currentNoteId ?? null,
 })
 const { blockHandle } = blockHandleComposable
 const { isTouch } = useDeviceLayout()
@@ -122,7 +125,7 @@ const overlays = useEditorOverlays(core, {
   getTableMenuEl: () => overlayContainerRef.value?.tableMenuEl ?? null,
   getLinkPickerEl: () => overlayContainerRef.value?.linkPickerEl ?? null,
 })
-const { slashOverlay, toolbarOverlay, tableMenuOverlay, linkPopover, highlightPicker, textColorPicker, mathPopover, formulaPopover, mermaidPopover, markmapPopover, vegaPopover, pluginNodePopover, linkPickerOverlay, activeMarkNames } = overlays
+const { slashOverlay, toolbarOverlay, tableMenuOverlay, linkPopover, highlightPicker, textColorPicker, mathPopover, formulaPopover, mermaidPopover, queryPopover, markmapPopover, vegaPopover, pluginNodePopover, linkPickerOverlay, activeMarkNames } = overlays
 
 const { imageCtxMenu, imageMenuItems, openImageContextMenu } = useImageContextMenu(() => props.workspacePath)
 const imageUpload = useImageUpload(core, () => props.workspacePath, overlays.updateOverlays)
@@ -198,6 +201,16 @@ const mermaidEditor = useMermaidEditor(
   {
     getMermaidPopoverEl: () => overlayContainerRef.value?.mermaidPopoverEl ?? null,
     onFocusInput: () => overlayContainerRef.value?.mermaidPopoverComp?.focusInput(),
+  },
+  overlays.updateOverlays,
+  overlays.clampOverlayPosition,
+)
+
+const queryEditor = useQueryEditor(
+  core,
+  queryPopover,
+  {
+    getQueryPopoverEl: () => overlayContainerRef.value?.queryPopoverEl ?? null,
   },
   overlays.updateOverlays,
   overlays.clampOverlayPosition,
@@ -353,16 +366,19 @@ const editorSetup = useEditorCore(core, {
   onNoteEmbedContentLoad: async ({ noteId, setHtml, setLoading }) => {
     setLoading(true)
     try {
-      const workspacePath = props.workspacePath
-      if (!workspacePath) throw new Error('No workspace')
-      const doc = await noteCommands.loadNote(workspacePath, noteId)
+      // Through the backend: a cloud workspace has no path, and its note
+      // bodies are not part of `loadNote` (see loadNoteWithContent).
+      const backend = workspaceStore.backend
+      if (!backend) throw new Error('No workspace')
+      const doc = await backend.loadNoteWithContent(noteId)
       const ctx = { assetSrcs: [] as string[], assetsSubfolderName: '__EMBED__' }
       const rawHtml = await blockNode(doc.content, ctx)
       const html = ctx.assetSrcs.length === 0 ? rawHtml : rawHtml.replace(
         /\bsrc="__EMBED__\/([^"]+)"/g,
         (_, filename: string) => {
           const original = ctx.assetSrcs.find(s => s.endsWith(filename)) ?? filename
-          return `src="${workspaceAssetUrl(original)}"`
+          // A cloud asset resolves to a cached object URL, not a workspace path.
+          return `src="${resolveAssetSrc(original)}"`
         },
       )
       setHtml(html || '')
@@ -373,9 +389,11 @@ const editorSetup = useEditorCore(core, {
     }
   },
   onNoteEmbedOpen: (noteId) => emit('open-note', noteId),
+  onOpenBlockRefSource: (noteId) => emit('open-note', noteId),
   onMathEditRequest: (pos, rect) => mathEditor.openMathPopoverForNode(pos, rect),
   onFormulaEditRequest: (cellPos, _formula, rect) => formulaEditor.openFormulaPopoverForCell(cellPos, rect),
   onMermaidEditRequest: (pos, rect) => mermaidEditor.openMermaidPopoverForNode(pos, rect),
+  onQueryEditRequest: (pos, rect) => queryEditor.openQueryPopoverForNode(pos, rect),
   onPluginNodeEditRequest: (pos, nodeName, rect) => pluginNodeEditor.openForNode(pos, nodeName, rect),
   onMarkmapEditRequest: (pos, rect) => markmapEditor.openMarkmapPopoverForNode(pos, rect),
   onVegaEditRequest: (pos, rect) => vegaEditor.openVegaPopoverForNode(pos, rect),
@@ -558,6 +576,10 @@ const overlayHandlers: OverlayHandlers = {
   applyMermaid: mermaidEditor.applyMermaidFromPopover,
   removeMermaid: mermaidEditor.removeMermaidFromPopover,
   onMermaidInputKeyDown: mermaidEditor.onMermaidInputKeyDown,
+  updateQueryData: (v) => { queryPopover.data = v },
+  applyQuery: queryEditor.applyQueryFromPopover,
+  removeQuery: queryEditor.removeQueryFromPopover,
+  onQueryInputKeyDown: queryEditor.onQueryInputKeyDown,
   updateMarkmapMarkdown: (v) => { markmapPopover.markdown = v },
   applyMarkmap: markmapEditor.applyMarkmapFromPopover,
   removeMarkmap: markmapEditor.removeMarkmapFromPopover,
@@ -596,8 +618,8 @@ const overlayHandlers: OverlayHandlers = {
   hideToolbarManually: overlays.hideToolbarManually,
 }
 
-function isInsideNvSelectMenu(target: Node): boolean {
-  return target instanceof Element && target.closest('.nv-select__menu') !== null
+function isInsideNestedControlPopup(target: Node): boolean {
+  return target instanceof Element && target.closest('.nv-select__menu, .ndp-popover') !== null
 }
 
 function closeFloatingUiFromDocument(target: Node) {
@@ -615,9 +637,10 @@ function closeFloatingUiFromDocument(target: Node) {
   if (mathPopover.open && !(c?.mathPopoverEl?.contains(target) ?? false)) mathEditor.closeMathPopover()
   if (formulaPopover.open && !(c?.formulaPopoverEl?.contains(target) ?? false)) formulaEditor.closeFormulaPopover()
   if (mermaidPopover.open && !(c?.mermaidPopoverEl?.contains(target) ?? false)) mermaidEditor.closeMermaidPopover()
+  if (queryPopover.open && !(c?.queryPopoverEl?.contains(target) ?? false) && !isInsideNestedControlPopup(target)) queryEditor.closeQueryPopover()
   if (markmapPopover.open && !(c?.markmapPopoverEl?.contains(target) ?? false)) markmapEditor.closeMarkmapPopover()
   if (vegaPopover.open && !(c?.vegaPopoverEl?.contains(target) ?? false)) vegaEditor.closeVegaPopover()
-  if (pluginNodePopover.open && !(c?.pluginNodePopoverEl?.contains(target) ?? false) && !isInsideNvSelectMenu(target)) pluginNodeEditor.close()
+  if (pluginNodePopover.open && !(c?.pluginNodePopoverEl?.contains(target) ?? false) && !isInsideNestedControlPopup(target)) pluginNodeEditor.close()
   if (embedUrlPopover.open) {
     const insidePopover = c?.embedUrlPopoverEl?.contains(target) ?? false
     const insideSlashMenu = c?.slashMenuEl?.contains(target) ?? false
@@ -846,6 +869,7 @@ defineExpose({
     :math-popover="mathPopover"
     :formula-popover="formulaPopover"
     :mermaid-popover="mermaidPopover"
+    :query-popover="queryPopover"
     :markmap-popover="markmapPopover"
     :vega-popover="vegaPopover"
     :plugin-node-popover="pluginNodePopover"

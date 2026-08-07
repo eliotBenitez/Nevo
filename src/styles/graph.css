@@ -66,6 +66,10 @@
   margin-left: auto;
 }
 
+.graph-header__filter {
+  display: none;
+}
+
 .graph-meta-pill {
   display: inline-flex;
   align-items: center;
@@ -255,6 +259,7 @@
   height: 100%;
   display: block;
   cursor: grab;
+  touch-action: none;
 }
 
 /* src/features/graph/components/GraphControls.vue */
@@ -460,3 +465,162 @@
 .tip-leave-active { transition: opacity 80ms ease; }
 .tip-enter-from  { opacity: 0; transform: translateY(4px); }
 .tip-leave-to    { opacity: 0; }
+
+@media (max-width: 719px) {
+  .graph-view {
+    position: relative;
+  }
+
+  .graph-header {
+    position: absolute;
+    z-index: 20;
+    top: 0;
+    right: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    height: auto;
+    min-height: calc(58px + max(var(--safe-area-top), 0px));
+    gap: 8px;
+    padding:
+      max(var(--safe-area-top), 0px)
+      calc(14px + max(var(--safe-area-right), 0px))
+      7px
+      calc(12px + max(var(--safe-area-left), 0px));
+    border-bottom: 0;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    pointer-events: none;
+  }
+
+  .graph-header > .nv-btn {
+    display: grid;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    padding: 0;
+    place-items: center;
+    border: 1px solid var(--line-2);
+    border-radius: calc(14px * var(--radius-scale, 1));
+    background: color-mix(in oklab, var(--glass-titlebar) 92%, transparent);
+    box-shadow: 0 12px 30px -22px var(--shadow);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    pointer-events: auto;
+  }
+
+  .graph-header > .nv-btn span {
+    display: none;
+  }
+
+  .graph-header__search {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    height: 44px;
+    border-radius: calc(14px * var(--radius-scale, 1));
+    background: color-mix(in oklab, var(--glass-titlebar) 92%, transparent);
+    box-shadow: 0 12px 30px -22px var(--shadow);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    pointer-events: auto;
+  }
+
+  .graph-header__search-input {
+    min-width: 0;
+    font-size: 14px;
+  }
+
+  .graph-header__meta {
+    display: none;
+  }
+
+  .graph-header__filter {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    place-items: center;
+    border: 1px solid var(--line-2);
+    border-radius: calc(14px * var(--radius-scale, 1));
+    color: var(--text-2);
+    background: color-mix(in oklab, var(--glass-titlebar) 92%, transparent);
+    box-shadow: 0 12px 30px -22px var(--shadow);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    pointer-events: auto;
+  }
+
+  .graph-header__filter.is-active {
+    border-color: color-mix(in oklab, var(--accent) 42%, var(--line-2));
+    color: var(--accent);
+    background: color-mix(in oklab, var(--accent-soft) 72%, var(--glass-titlebar));
+  }
+
+  .graph-controls {
+    right: calc(14px + max(var(--safe-area-right), 0px));
+    bottom: calc(18px + max(var(--safe-area-bottom), 0px));
+    left: auto;
+  }
+
+  .gc-panel {
+    width: auto;
+    min-width: 0;
+    max-width: calc(100vw - 28px - max(var(--safe-area-right), 0px) - max(var(--safe-area-left), 0px));
+    max-height: min(46vh, 320px);
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .gc-zoom__btn {
+    width: 44px;
+    height: 44px;
+    touch-action: manipulation;
+  }
+
+  .gc-filters {
+    display: none;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .gc-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .gc-chip {
+    flex: 0 0 auto;
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  .gc-stats {
+    display: none;
+    min-height: 20px;
+  }
+
+  .gc-panel > .gc-sep {
+    display: none;
+  }
+
+  .graph-controls--filters-open {
+    left: calc(14px + max(var(--safe-area-left), 0px));
+  }
+
+  .graph-controls--filters-open .gc-panel {
+    width: 100%;
+  }
+
+  .graph-controls--filters-open .gc-filters {
+    display: flex;
+  }
+
+  .graph-controls--filters-open .gc-stats,
+  .graph-controls--filters-open .gc-panel > .gc-sep {
+    display: flex;
+  }
+}

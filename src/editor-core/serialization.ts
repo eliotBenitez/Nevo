@@ -87,11 +87,66 @@ function normalizeNoteContent(content: unknown): unknown {
 export function parseNoteContentToDoc(schema: Schema, content: unknown): PMNode {
   try {
     return schema.nodeFromJSON(normalizeNoteContent(content))
-  } catch {
+  } catch (error) {
+    // A failing `nodeFromJSON` collapses the whole note to a single empty
+    // paragraph below, which surfaces as a "one giant block" / truncated note
+    // on the canvas and as silent data loss elsewhere. Never swallow it: log
+    // enough to identify the offending node before falling back.
+    console.error('[editor-core] parseNoteContentToDoc: schema.nodeFromJSON failed, falling back to plain text', {
+      error,
+      topLevelType:
+        content && typeof content === 'object' && 'type' in content
+          ? (content as { type?: unknown }).type
+          : typeof content,
+    })
     return schema.nodeFromJSON(fallbackDocFromUnknown(content))
   }
 }
 
+/**
+ * `Node.toJSON()` includes `attrs` whenever the node has ANY declared attrs,
+ * regardless of value — so the lazily-assigned `id` attr (see
+ * `schema/blockIdAttr.ts`) would otherwise appear as `id: null` on every
+ * referenceable block, even ones that never became a reference target. That
+ * would be pure noise in saved note JSON and would break `toEqual` compat
+ * checks against pre-existing content. Strip it back out here so a block
+ * with no assigned id serializes identically to before this attr existed;
+ * a block WITH an id keeps `attrs.id` untouched.
+ *
+ * Builds new plain objects rather than mutating in place — `Node.toJSON()`
+ * reuses the live node's `attrs` object by reference, so deleting keys on it
+ * directly would corrupt the in-memory document.
+ */
+export function stripNullBlockIds<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map(stripNullBlockIds) as unknown as T
+  }
+  if (!value || typeof value !== 'object') return value
+
+  const node = value as Record<string, unknown>
+  const result: Record<string, unknown> = { ...node }
+
+  const attrs = result.attrs
+  if (attrs && typeof attrs === 'object' && !Array.isArray(attrs)) {
+    const attrsRecord = attrs as Record<string, unknown>
+    if (attrsRecord.id === null || attrsRecord.id === undefined) {
+      const strippedAttrs = { ...attrsRecord }
+      delete strippedAttrs.id
+      if (Object.keys(strippedAttrs).length === 0) {
+        delete result.attrs
+      } else {
+        result.attrs = strippedAttrs
+      }
+    }
+  }
+
+  if (Array.isArray(result.content)) {
+    result.content = result.content.map(stripNullBlockIds)
+  }
+
+  return result as T
+}
+
 export function serializeDocToNoteContent(doc: PMNode): BlockNode {
-  return doc.toJSON() as BlockNode
+  return stripNullBlockIds(doc.toJSON()) as BlockNode
 }

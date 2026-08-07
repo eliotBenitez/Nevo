@@ -5,10 +5,19 @@ import { NodeSelection, TextSelection } from 'prosemirror-state'
 import type { Node as PMNode } from 'prosemirror-model'
 import { createNevoEditorState } from '../state'
 import { nevoBaseSchema } from '../schema'
-import { parseNoteContentToDoc, serializeDocToNoteContent } from '../serialization'
+import { parseNoteContentToDoc, serializeDocToNoteContent, stripNullBlockIds } from '../serialization'
 import { createYDocFromContent, Y_FRAGMENT_NAME } from '../collaboration'
 import { createCoreKeymap } from '../keymap'
 import type { BlockNode } from '../../types/note'
+
+// These assertions verify editor content/behavior, not raw PM internals, so
+// the canonical shape to compare against is the persisted one — lazily
+// assigned block ids (see `schema/blockIdAttr.ts`) stripped when null.
+// `view.state.doc.toJSON()` is the RAW ProseMirror shape, which always
+// includes `attrs.id: null` once a node type declares the attr; normalizing
+// the actual side through `stripNullBlockIds` keeps these fixtures stable as
+// more node types join the lazy-id set, without baking `id: null` noise into
+// every expected literal in this file.
 
 function dispatchEditorKey(view: EditorView, event: KeyboardEvent): boolean {
   let handled = false
@@ -99,6 +108,7 @@ const paragraphAfterSelectedBlockCases: Array<[string, BlockNode]> = [
   ['image_block', { type: 'image_block', attrs: { src: 'image.png', alt: '', caption: '', sizePreset: 'medium', width: null, align: 'center' } }],
   ['media_block', { type: 'media_block', attrs: { kind: 'audio', src: 'audio.mp3', name: 'audio.mp3', mime: 'audio/mpeg', size: 1 } }],
   ['embed_block', { type: 'embed_block', attrs: { url: 'https://example.com', title: 'Example' } }],
+  ['block_embed', { type: 'block_embed', attrs: { noteId: 'note-1', blockId: 'block-1' } }],
   [
     'table',
     {
@@ -476,7 +486,7 @@ describe('editor regression', () => {
       )
 
       expect(handled).toBe(true)
-      expect(view.state.doc.toJSON()).toEqual({
+      expect(stripNullBlockIds(view.state.doc.toJSON())).toEqual({
         type: 'doc',
         content: [
           { type: 'paragraph', content: [{ type: 'text', text: 'he' }] },
@@ -615,7 +625,7 @@ describe('editor regression', () => {
     try {
       const listItem = mount.querySelector('li')
       expect(listItem?.getAttribute('data-nevo-list-marker')).toBe('•')
-      expect(view.state.doc.toJSON()).toEqual(content)
+      expect(stripNullBlockIds(view.state.doc.toJSON())).toEqual(content)
     } finally {
       view.destroy()
       mount.remove()
@@ -690,7 +700,7 @@ describe('editor regression', () => {
     try {
       const listItem = mount.querySelector('li')
       expect(listItem?.getAttribute('data-nevo-list-marker')).toBe('3.')
-      expect(view.state.doc.toJSON()).toEqual(content)
+      expect(stripNullBlockIds(view.state.doc.toJSON())).toEqual(content)
     } finally {
       view.destroy()
       mount.remove()
@@ -736,7 +746,7 @@ describe('editor regression', () => {
       expect(handled).toBe(true)
       expect(list?.type.name).toBe('bullet_list')
       expect(list?.childCount).toBe(1)
-      expect(list?.child(0).toJSON()).toEqual({
+      expect(stripNullBlockIds(list?.child(0).toJSON())).toEqual({
         type: 'list_item',
         content: [
           { type: 'paragraph', content: [{ type: 'text', text: 'item' }, { type: 'hard_break' }] },
@@ -787,7 +797,7 @@ describe('editor regression', () => {
       expect(handled).toBe(true)
       expect(list?.type.name).toBe('ordered_list')
       expect(list?.childCount).toBe(1)
-      expect(list?.child(0).toJSON()).toEqual({
+      expect(stripNullBlockIds(list?.child(0).toJSON())).toEqual({
         type: 'list_item',
         content: [
           { type: 'paragraph', content: [{ type: 'text', text: 'item' }, { type: 'hard_break' }] },
@@ -816,7 +826,7 @@ describe('editor regression', () => {
       expect(view.state.selection.$from.parent.childCount).toBe(3)
 
       const serialized = serializeDocToNoteContent(view.state.doc)
-      expect(parseNoteContentToDoc(nevoBaseSchema, serialized).toJSON()).toEqual(serialized)
+      expect(stripNullBlockIds(parseNoteContentToDoc(nevoBaseSchema, serialized).toJSON())).toEqual(serialized)
     } finally {
       destroy()
     }
@@ -835,7 +845,7 @@ describe('editor regression', () => {
       expect(dispatchEditorKey(view, new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }))).toBe(true)
       view.dispatch(view.state.tr.insertText('next'))
 
-      expect(view.state.doc.firstChild?.toJSON()).toEqual({
+      expect(stripNullBlockIds(view.state.doc.firstChild?.toJSON())).toEqual({
         type: 'code_block',
         attrs: { language: 'typescript' },
         content: [{ type: 'text', text: 'const value\nnext' }],
@@ -922,7 +932,7 @@ describe('editor regression', () => {
       )
 
       expect(tabHandled).toBe(true)
-      expect(view.state.doc.toJSON()).toEqual({
+      expect(stripNullBlockIds(view.state.doc.toJSON())).toEqual({
         type: 'doc',
         content: [
           {
@@ -954,7 +964,7 @@ describe('editor regression', () => {
       )
 
       expect(shiftTabHandled).toBe(true)
-      expect(view.state.doc.toJSON()).toEqual({
+      expect(stripNullBlockIds(view.state.doc.toJSON())).toEqual({
         type: 'doc',
         content: [
           {
@@ -1004,7 +1014,7 @@ describe('editor regression', () => {
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, markerStart + 1)))
 
       expect(dispatchTextInput(view, ' ')).toBe(true)
-      expect(view.state.doc.toJSON()).toEqual({
+      expect(stripNullBlockIds(view.state.doc.toJSON())).toEqual({
         type: 'doc',
         content: [
           {
@@ -1066,7 +1076,7 @@ describe('editor regression', () => {
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, markerStart + 2)))
 
       expect(dispatchTextInput(view, ' ')).toBe(true)
-      expect(view.state.doc.toJSON()).toEqual({
+      expect(stripNullBlockIds(view.state.doc.toJSON())).toEqual({
         type: 'doc',
         content: [
           {
@@ -1160,7 +1170,7 @@ describe('editor regression', () => {
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, quoteStart + 'quote'.length)))
 
       expect(dispatchEditorKey(view, new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }))).toBe(true)
-      expect(view.state.doc.child(0).child(0).toJSON()).toEqual({
+      expect(stripNullBlockIds(view.state.doc.child(0).child(0).toJSON())).toEqual({
         type: 'paragraph',
         content: [{ type: 'text', text: 'quote' }, { type: 'hard_break' }],
       })
@@ -1208,7 +1218,7 @@ describe('editor regression', () => {
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 11)))
 
       expect(dispatchEditorKey(view, new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))).toBe(true)
-      expect(view.state.doc.toJSON()).toEqual({
+      expect(stripNullBlockIds(view.state.doc.toJSON())).toEqual({
         type: 'doc',
         content: [
           {
@@ -1259,7 +1269,7 @@ describe('editor regression', () => {
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, bodyStart + 'body'.length)))
 
       expect(dispatchEditorKey(view, new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true, cancelable: true }))).toBe(true)
-      expect(view.state.doc.toJSON()).toEqual({
+      expect(stripNullBlockIds(view.state.doc.toJSON())).toEqual({
         type: 'doc',
         content: [
           {
@@ -1314,7 +1324,7 @@ describe('editor regression', () => {
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, emptyPositions[1])))
 
       expect(dispatchEditorKey(view, new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))).toBe(true)
-      expect(view.state.doc.toJSON()).toEqual({
+      expect(stripNullBlockIds(view.state.doc.toJSON())).toEqual({
         type: 'doc',
         content: [
           {

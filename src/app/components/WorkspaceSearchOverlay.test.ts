@@ -170,6 +170,8 @@ describe('WorkspaceSearchOverlay', () => {
   })
 
   it('selects the active result with ArrowDown + Enter and emits select-result', async () => {
+    const onSelectResult = vi.fn()
+    const onClose = vi.fn()
     const wrapper = mount(WorkspaceSearchOverlay, {
       attachTo: document.body,
       global: {
@@ -181,6 +183,8 @@ describe('WorkspaceSearchOverlay', () => {
         manifest,
         workspacePath: '/workspace',
         settingsItems,
+        onSelectResult,
+        onClose,
       },
     })
 
@@ -190,18 +194,19 @@ describe('WorkspaceSearchOverlay', () => {
     await input.trigger('keydown', { key: 'ArrowDown' })
     await input.trigger('keydown', { key: 'Enter' })
 
-    expect(wrapper.emitted('select-result')?.[0]?.[0]).toEqual(
+    expect(onSelectResult).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'note',
         id: 'note-1',
       }),
     )
-    expect(wrapper.emitted('close')).toBeTruthy()
+    expect(onClose).toHaveBeenCalledOnce()
 
     wrapper.unmount()
   })
 
   it('emits close on Escape', async () => {
+    const onClose = vi.fn()
     const wrapper = mount(WorkspaceSearchOverlay, {
       attachTo: document.body,
       global: {
@@ -212,6 +217,7 @@ describe('WorkspaceSearchOverlay', () => {
         manifest,
         workspacePath: '/workspace',
         settingsItems,
+        onClose,
       },
     })
 
@@ -220,7 +226,7 @@ describe('WorkspaceSearchOverlay', () => {
     const input = getInput()
     await input.trigger('keydown', { key: 'Escape' })
 
-    expect(wrapper.emitted('close')).toHaveLength(1)
+    expect(onClose).toHaveBeenCalledOnce()
 
     wrapper.unmount()
   })

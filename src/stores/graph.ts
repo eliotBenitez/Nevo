@@ -1,15 +1,33 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useWorkspaceStore } from './workspace'
+import { useTreeStore } from './tree'
 import type { BacklinkRef, GraphEdge, ExtractedEdge } from '../types/graph'
 import { appLogger } from '../utils/logger'
 
 export const useGraphStore = defineStore('graph', () => {
   const workspaceStore = useWorkspaceStore()
+  const treeStore = useTreeStore()
 
   const backlinks = ref<BacklinkRef[]>([])
   const outlinks = ref<GraphEdge[]>([])
   const activeNoteId = ref<string | null>(null)
+
+  // The local Rust graph index stores empty title/icon for backlink sources
+  // (only the cloud backend enriches them). Fill missing metadata from the
+  // workspace manifest so the panel shows real titles/icons on every backend.
+  function enrichBacklinks(refs: BacklinkRef[]): BacklinkRef[] {
+    return refs.map((entry) => {
+      if (entry.sourceTitle && entry.sourceIcon) return entry
+      const meta = treeStore.noteById.get(entry.sourceId)
+      if (!meta) return entry
+      return {
+        ...entry,
+        sourceTitle: entry.sourceTitle || meta.title,
+        sourceIcon: entry.sourceIcon || meta.icon,
+      }
+    })
+  }
 
   async function loadNoteGraph(noteId: string) {
     const backend = workspaceStore.backend
@@ -21,7 +39,7 @@ export const useGraphStore = defineStore('graph', () => {
         backend.graphGetOutlinks(noteId),
       ])
       activeNoteId.value = noteId
-      backlinks.value = bl
+      backlinks.value = enrichBacklinks(bl)
       outlinks.value = ol
     } catch (error) {
       await appLogger.error({

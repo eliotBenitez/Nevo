@@ -297,50 +297,51 @@
 
 /* Document Page Simulation */
 .docx-page {
+  flex: 0 0 auto;
   background: #ffffff;
   color: #1a1a1a;
   box-shadow: 0 12px 36px oklch(0 0 0 / 0.4);
   border-radius: calc(4px * var(--radius-scale, 1));
-  transition: width 0.3s ease, min-height 0.3s ease, padding 0.3s ease;
+  transition: width 0.3s ease, height 0.3s ease, padding 0.3s ease;
   position: relative;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   
   /* Defaults */
-  --docx-font-family: 'Calibri', sans-serif;
-  --docx-font-size: 11px;
+  --docx-page-scale: 1;
+  --docx-font-family: Calibri, Carlito, Arial, sans-serif;
+  --docx-font-size: 14.6667px;
   --docx-line-height: 1.15;
-  --docx-padding-top: 24px;
-  --docx-padding-right: 24px;
-  --docx-padding-bottom: 24px;
-  --docx-padding-left: 24px;
+  --docx-padding-top: 94.4882px;
+  --docx-padding-right: 75.5906px;
+  --docx-padding-bottom: 94.4882px;
+  --docx-padding-left: 75.5906px;
+  --docx-header-distance: 48px;
+  --docx-footer-distance: 48px;
+  --docx-content-height: 933.5433px;
+  --docx-title-page-font-size: 32px;
+  --docx-title-font-size: 37.3333px;
+  --docx-heading-1-font-size: 21.3333px;
+  --docx-heading-2-font-size: 17.3333px;
+  --docx-heading-3-font-size: 16px;
+  --docx-heading-4-font-size: var(--docx-font-size);
+  --docx-heading-5-font-size: var(--docx-font-size);
+  --docx-heading-6-font-size: var(--docx-font-size);
+  --docx-heading-1-color: #2e74b5;
+  --docx-heading-2-color: #2e74b5;
+  --docx-heading-3-color: #1f4d78;
+  --docx-heading-4-color: #2e74b5;
+  --docx-heading-5-color: #2e74b5;
+  --docx-heading-6-color: #1f4d78;
+  --docx-code-font-size: 12px;
+  --docx-list-left-indent: 48px;
+  --docx-blockquote-left-indent: 32px;
   
   font-family: var(--docx-font-family);
   font-size: var(--docx-font-size);
   line-height: var(--docx-line-height);
   padding: var(--docx-padding-top) var(--docx-padding-right) var(--docx-padding-bottom) var(--docx-padding-left);
-}
-
-/* Formats & Orientations */
-.docx-page.A4.portrait {
-  width: 480px;
-  min-height: 678px; /* A4 Ratio 1:1.414 */
-}
-
-.docx-page.A4.landscape {
-  width: 678px;
-  min-height: 480px;
-}
-
-.docx-page.Letter.portrait {
-  width: 490px;
-  min-height: 634px; /* Letter Ratio 1:1.294 */
-}
-
-.docx-page.Letter.landscape {
-  width: 634px;
-  min-height: 490px;
 }
 
 /* Margins grid */
@@ -354,7 +355,7 @@
 /* Page Elements */
 .docx-page__header {
   position: absolute;
-  top: 8px;
+  top: var(--docx-header-distance);
   left: var(--docx-padding-left);
   right: var(--docx-padding-right);
   border-bottom: 0.5px solid #dddddd;
@@ -368,7 +369,7 @@
 
 .docx-page__footer {
   position: absolute;
-  bottom: 8px;
+  bottom: var(--docx-footer-distance);
   left: var(--docx-padding-left);
   right: var(--docx-padding-right);
   border-top: 0.5px solid #dddddd;
@@ -382,6 +383,7 @@
 
 .docx-page__body {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -399,18 +401,17 @@
 
 .docx-page__title {
   margin: 0 0 16px 0;
-  font-size: calc(var(--docx-font-size) * 2.2);
+  font-size: var(--docx-title-page-font-size);
   font-weight: 700;
   color: #111111;
 }
 
 .docx-page__title-inline {
-  margin: 0 0 20px 0;
-  font-size: calc(var(--docx-font-size) * 2.2);
-  font-weight: 700;
-  color: #111111;
-  border-bottom: 2px solid #eaeaea;
-  padding-bottom: 6px;
+  margin: 0 0 var(--docx-paragraph-spacing, 8pt);
+  font-size: var(--docx-title-font-size);
+  font-weight: 400;
+  color: inherit;
+  line-height: var(--docx-line-height);
 }
 
 /* Page Break Indicator */
@@ -469,27 +470,67 @@
 .docx-page__content {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  min-height: 0;
+}
+
+.docx-preview-node-wrapper {
+  display: flow-root;
+  flex: 0 0 auto;
 }
 
 .docx-page__heading {
-  margin: 14px 0 4px 0;
-  font-weight: 700;
-  color: #222222;
-  line-height: 1.25;
+  margin: 0 0 var(--docx-paragraph-spacing, 8pt);
+  font-weight: 400;
+  line-height: var(--docx-line-height);
 }
 
 .docx-page__heading.h1 {
-  font-size: calc(var(--docx-font-size) * 1.6);
+  color: var(--docx-heading-1-color);
+  font-size: var(--docx-heading-1-font-size);
 }
 
 .docx-page__heading.h2 {
-  font-size: calc(var(--docx-font-size) * 1.3);
+  color: var(--docx-heading-2-color);
+  font-size: var(--docx-heading-2-font-size);
+}
+
+.docx-page__heading.h3 {
+  color: var(--docx-heading-3-color);
+  font-size: var(--docx-heading-3-font-size);
+}
+
+.docx-page__heading.h4 {
+  color: var(--docx-heading-4-color);
+  font-size: var(--docx-heading-4-font-size);
+  font-style: italic;
+}
+
+.docx-page__heading.h5 {
+  color: var(--docx-heading-5-color);
+  font-size: var(--docx-heading-5-font-size);
+}
+
+.docx-page__heading.h6 {
+  color: var(--docx-heading-6-color);
+  font-size: var(--docx-heading-6-font-size);
 }
 
 .docx-page__paragraph {
   margin: 0 0 var(--docx-paragraph-spacing, 8pt);
-  text-align: justify;
+  text-align: left;
+}
+
+.docx-preview-node--continues {
+  margin-bottom: 0;
+}
+
+.docx-preview-node--continued {
+  margin-top: 0;
+}
+
+.docx-page__bullet-list.docx-preview-node--continued,
+.docx-page__ordered-list.docx-preview-node--continued {
+  list-style: none;
 }
 
 .docx-state {
@@ -584,41 +625,33 @@
 }
 
 .docx-mark-code {
-  font-family: var(--font-mono);
-  background: #f1f3f5;
-  padding: 1px 4px;
-  border-radius: 4px;
-  font-size: 0.9em;
+  font-family: Consolas, "Courier New", monospace;
 }
 
 .docx-page__code-block {
-  background: #27272a;
-  color: #f4f4f5;
-  padding: 10px;
-  border-radius: 6px;
-  font-family: var(--font-mono);
-  font-size: calc(var(--docx-font-size) - 1px);
+  margin: 0 0 var(--docx-paragraph-spacing, 8pt);
+  padding: 0;
+  border-radius: 0;
+  background: #f4f6f8;
+  color: inherit;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: var(--docx-code-font-size);
+  line-height: var(--docx-line-height);
   overflow-x: auto;
-  margin: 8px 0;
 }
 
 .docx-page__blockquote {
-  border-left: 4px solid #cbd5e1;
-  padding-left: 12px;
-  margin: 10px 0;
-  color: #4b5563;
-  font-style: italic;
+  margin: 0;
+  padding-left: var(--docx-blockquote-left-indent);
+  border-left: calc(3px * var(--docx-page-scale)) solid #8aa2c8;
+  color: inherit;
+  font-style: normal;
 }
 
 .docx-page__bullet-list,
 .docx-page__ordered-list {
-  margin: 6px 0;
-  padding-left: 20px;
-}
-
-.docx-page__bullet-list + .docx-page__bullet-list,
-.docx-page__ordered-list + .docx-page__ordered-list {
-  margin-top: -6px;
+  margin: 0;
+  padding-left: var(--docx-list-left-indent);
 }
 
 .docx-page__bullet-list {
@@ -682,19 +715,20 @@
 .docx-page__table {
   width: 100%;
   border-collapse: collapse;
-  margin: 12px 0;
+  margin: 0;
 }
 
 .docx-page__th,
 .docx-page__td {
   border: 1px solid #e4e4e7;
-  padding: 6px 8px;
-  font-size: calc(var(--docx-font-size) - 0.5px);
+  padding: 0 calc(7.2px * var(--docx-page-scale));
+  font-size: var(--docx-font-size);
   text-align: left;
+  vertical-align: top;
 }
 
 .docx-page__th {
-  background: #f4f4f5;
+  background: #f1f5f9;
   font-weight: 700;
 }
 
@@ -706,10 +740,42 @@
   display: flex;
   justify-content: center;
   margin: 10px 0;
+  box-sizing: border-box;
+  max-width: 100%;
+  max-height: var(--docx-content-height);
+  overflow: hidden;
 }
 
 .docx-page__draw-block svg {
   max-width: 100%;
+  max-height: calc(var(--docx-content-height) - 14px);
+  width: auto;
   height: auto;
 }
 
+.docx-page__image-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  max-height: var(--docx-content-height);
+  margin: 0;
+  overflow: hidden;
+}
+
+.docx-page__image {
+  display: block;
+  max-width: 100%;
+  max-height: var(--docx-content-height);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.docx-page__media-caption {
+  flex: 0 0 auto;
+  margin-top: 4px;
+  font-size: 0.82em;
+  font-style: italic;
+  text-align: center;
+}

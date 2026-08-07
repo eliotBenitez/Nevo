@@ -2,8 +2,19 @@ import { nextTick, reactive } from 'vue'
 import type { Ref } from 'vue'
 import type { FolderMeta, NoteDocument, NoteMeta } from '../../types/note'
 import type { WorkspaceManifest, WorkspaceSettings } from '../../types/workspace'
-import { noteCommands } from '../../tauri/commands'
+import type { WorkspaceBackend } from '../../core/workspace-backend'
 import { useConfirmDialog } from '../../ui/composables/useConfirmDialog'
+
+/**
+ * Loads a note that is not the open one so it can be exported. A cloud note's
+ * body is not part of `loadNote`, hence `loadNoteWithContent`.
+ */
+async function loadNoteForExport(
+  noteId: string,
+  backend: WorkspaceBackend | null,
+): Promise<NoteDocument | null> {
+  return backend ? backend.loadNoteWithContent(noteId) : null
+}
 
 type TreeMenuAction = 'rename' | 'delete' | 'search' | 'history' | 'export'
 type ExportFormat = 'markdown' | 'html' | 'docx' | 'typst' | 'pdf'
@@ -24,8 +35,11 @@ interface ContextMenuDeps {
   activeFolderId: Ref<string | null>
   activeNote: Ref<NoteDocument | null>
   workspacePath: Ref<string | null>
+  /** Serves exports for workspaces that have no path on disk (cloud). */
+  getBackend?: () => WorkspaceBackend | null
   treeOps: TreeOps
   clearNote: () => void
+  closeNoteTab: (noteId: string) => string | null
   setTitle: (v: string) => void
   flushSave: () => void | Promise<void>
   t: (key: string) => string
@@ -35,12 +49,13 @@ interface ContextMenuDeps {
 interface ContextMenuHandlers {
   openHistory: (id: string | null) => void
   runSearch: (seed?: string) => Promise<void>
+  navigateToNote: (noteId: string) => Promise<void>
   navigateToWorkspaceRoot: () => Promise<void>
-  exportAsMarkdown: (note: NoteDocument, path: string) => Promise<void>
-  exportAsHtml: (note: NoteDocument, path: string) => Promise<void>
-  exportAsDocx: (note: NoteDocument, path: string) => Promise<void>
-  exportAsTypst: (note: NoteDocument, path: string) => Promise<void>
-  exportAsPdf: (note: NoteDocument, path: string) => void
+  exportAsMarkdown: (note: NoteDocument, path: string | null) => Promise<void>
+  exportAsHtml: (note: NoteDocument, path: string | null) => Promise<void>
+  exportAsDocx: (note: NoteDocument, path: string | null) => Promise<void>
+  exportAsTypst: (note: NoteDocument, path: string | null) => Promise<void>
+  exportAsPdf: (note: NoteDocument, path: string | null) => void
 }
 
 export function useTreeContextMenu(deps: ContextMenuDeps, handlers: ContextMenuHandlers) {
@@ -73,12 +88,15 @@ export function useTreeContextMenu(deps: ContextMenuDeps, handlers: ContextMenuH
 
   async function exportTarget(target: TreeMenuTarget, format: ExportFormat) {
     if (target.kind !== 'note') return
+    // A cloud workspace has no path; exporting it is served by the backend.
     const path = deps.workspacePath.value
-    if (!path) return
+    const backend = deps.getBackend?.() ?? null
+    if (!path && !backend) return
     const isActive = deps.activeNote.value?.id === target.id
     if (isActive && format === 'pdf') await deps.flushSave()
     let note: NoteDocument | null = isActive ? deps.activeNote.value : null
-    if (!note) note = await noteCommands.loadNote(path, target.id)
+    if (!note) note = await loadNoteForExport(target.id, backend)
+    if (!note) return
     if (format === 'markdown') await handlers.exportAsMarkdown(note, path)
     else if (format === 'html') await handlers.exportAsHtml(note, path)
     else if (format === 'docx') await handlers.exportAsDocx(note, path)
@@ -100,8 +118,14 @@ export function useTreeContextMenu(deps: ContextMenuDeps, handlers: ContextMenuH
         variant: 'danger',
       })) return
       if (target.kind === 'note') {
+        const wasActive = deps.activeNoteId.value === target.id
         await deps.treeOps.deleteNote(target.id)
-        if (deps.activeNoteId.value === target.id) { deps.clearNote(); await handlers.navigateToWorkspaceRoot() }
+        const nextNoteId = deps.closeNoteTab(target.id)
+        if (wasActive) {
+          deps.clearNote()
+          if (nextNoteId) await handlers.navigateToNote(nextNoteId)
+          else await handlers.navigateToWorkspaceRoot()
+        }
         return
       }
       const folder = deps.manifest.value ? findFolderById(deps.manifest.value.tree, target.id) : null

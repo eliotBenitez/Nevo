@@ -3,9 +3,36 @@ import { prosemirrorJSONToYDoc } from 'y-prosemirror'
 import type { Schema } from 'prosemirror-model'
 
 export const Y_FRAGMENT_NAME = 'prosemirror'
+export { hardRestoreKnownNoteTypes } from './hardRestore'
 
 export function createYDocFromContent(schema: Schema, content: unknown): Y.Doc {
   return prosemirrorJSONToYDoc(schema, content as Record<string, unknown>, Y_FRAGMENT_NAME)
+}
+
+/**
+ * Seeds a collaborative document only when its ProseMirror fragment has no
+ * blocks at all. An empty Y.XmlFragment is not the same as an empty
+ * ProseMirror document: ySyncPlugin renders it without a textblock, leaving a
+ * visible caret that cannot accept text.
+ *
+ * Callers must establish that the remote state was received completely before
+ * using this for an existing cloud document. The empty check deliberately
+ * prevents placeholder content from replacing any collaborative history.
+ */
+export function seedEmptyYDocFromContent(ydoc: Y.Doc, schema: Schema, content: unknown): boolean {
+  const fragment = ydoc.getXmlFragment(Y_FRAGMENT_NAME)
+  if (fragment.length > 0) return false
+
+  let seed: Y.Doc | null = null
+  try {
+    seed = createYDocFromContent(schema, content)
+    Y.applyUpdate(ydoc, Y.encodeStateAsUpdate(seed))
+    return fragment.length > 0
+  } catch {
+    return false
+  } finally {
+    seed?.destroy()
+  }
 }
 
 export function restoreYDocFromBinary(binary: Uint8Array): Y.Doc {

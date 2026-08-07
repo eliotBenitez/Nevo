@@ -35,6 +35,7 @@
       "localFirst": "Lokal · nichts verlässt dieses Gerät"
     },
     "create": {
+      "titlebar": "Arbeitsbereich erstellen",
       "title": "Erstellen Sie Ihren Arbeitsbereich",
       "subtitle": "Wählen Sie einen Namen, eine Farbe und den Speicherort. Sie können ihn später umbenennen oder verschieben.",
       "step": "Schritt {n} von {total}",
@@ -50,6 +51,8 @@
       "namePlaceholder": "Mein Arbeitsbereich",
       "iconLabel": "Symbol & Farbe",
       "iconHint": "Jederzeit in den Arbeitsbereich-Einstellungen änderbar",
+      "glyphLabel": "Symbol",
+      "colourLabel": "Farbe",
       "locationLabel": "Speicherort",
       "locationHint": "Wo die Dateien auf Ihrem Gerät liegen",
       "locationBrowse": "Durchsuchen…",
@@ -88,6 +91,33 @@
           }
         }
       },
+      "mobile": {
+        "titlebar": "Neuer Arbeitsbereich",
+        "identityTitle": "Wie soll dein Arbeitsbereich heißen?",
+        "identitySubtitle": "Gib ihm einen Namen und Charakter. Alles lässt sich später ändern.",
+        "localWorkspace": "Lokaler Arbeitsbereich",
+        "storageTitle": "Wo sollen deine Daten liegen?",
+        "storageSubtitle": "Starte lokal. Die Synchronisierung kannst du später aktivieren.",
+        "deviceTitle": "Auf diesem Gerät",
+        "deviceSubtitle": "Empfohlen · ohne Konto",
+        "cloudTitle": "Nevo Cloud",
+        "cloudSubtitle": "Zugriff auf allen Geräten",
+        "signIn": "Anmelden",
+        "cloudUnavailable": "Die Cloud-Anmeldung ist während der mobilen Einrichtung noch nicht verfügbar",
+        "privacyTitle": "Deine Notizen gehören dir",
+        "privacyBody": "Ein lokaler Arbeitsbereich funktioniert offline und bleibt im geschützten App-Speicher.",
+        "storageInfoAction": "Wie funktioniert der Speicher?",
+        "storageInfoTitle": "Geschützter lokaler Speicher",
+        "storageInfoBody": "Nevo speichert diesen Arbeitsbereich im privaten Datenbereich der App. Andere Apps können ihn nicht durchsuchen und du musst keinen Dateipfad verwalten.",
+        "templateTitle": "Womit möchtest du beginnen?",
+        "templateSubtitle": "Wähle eine Startstruktur oder lasse den Arbeitsbereich leer.",
+        "summary": "Auf dem Gerät · {template}",
+        "edit": "Bearbeiten",
+        "close": "Schließen",
+        "continue": "Weiter",
+        "createNamed": "{name} erstellen",
+        "createError": "Der Arbeitsbereich konnte nicht erstellt werden. Versuche es erneut."
+      },
       "serverLabel": "Server-URL",
       "serverHint": "Basis-URL Ihres selbst gehosteten Relays",
       "serverPlaceholder": "http://localhost:8080",
@@ -100,9 +130,12 @@
       "create": "Arbeitsbereich erstellen"
     },
     "open": {
+      "titlebar": "Arbeitsbereich öffnen",
       "title": "Arbeitsbereich öffnen",
       "subtitle": "Wählen Sie aus den letzten, suchen Sie einen Ordner oder legen Sie einen anywhere in diesem Fenster ab.",
+      "mobileSubtitle": "Wähle einen kürzlich verwendeten Arbeitsbereich oder seinen Ordner.",
       "browse": "Ordner durchsuchen",
+      "importArchive": "Aus Archiv importieren",
       "new": "Neuer Arbeitsbereich",
       "filter": "Arbeitsbereiche filtern…",
       "recent": "Zuletzt verwendet",
@@ -116,7 +149,9 @@
       "removeRecentConfirm": "„{name}“ aus „Zuletzt verwendet“ entfernen? Dateien bleiben auf der Festplatte.",
       "deleteStorage": "Speicher löschen",
       "deleteStorageConfirm": "„{name}“ löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
-      "deleteFailed": "Speicher konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
+      "deleteFailed": "Speicher konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
+      "emptyTitle": "Keine zuletzt verwendeten Arbeitsbereiche",
+      "emptySubtitle": "Wähle einen Arbeitsbereichsordner aus, um ihn auf diesem Gerät zu öffnen."
     }
   },
   "common": {
@@ -131,6 +166,119 @@
     "back": "Arbeitsbereiche",
     "localWorkspace": "Lokaler Arbeitsbereich",
     "cloudWorkspace": "Cloud-Speicher",
+    "canvas": {
+      "document": "Dokument",
+      "canvas": "Canvas",
+      "viewSwitcher": "Notizansicht",
+      "ariaLabel": "Unendlicher Notiz-Canvas",
+      "collapse": "Notiz einklappen",
+      "expand": "Notiz ausklappen",
+      "collapsedHint": "Doppelklick zum Ausklappen",
+      "toolbar": "Canvas-Werkzeuge",
+      "addText": "Textblock hinzufügen",
+      "richNote": "Formatierte Notiz",
+      "noteLink": "Verknüpfte Notiz",
+      "frame": "Rahmen",
+      "mindMap": "Mindmap",
+      "addShape": "Form hinzufügen",
+      "select": "Auswählen",
+      "hand": "Verschieben",
+      "rectangle": "Rechteck",
+      "ellipse": "Ellipse",
+      "diamond": "Raute",
+      "connector": "Verbinder",
+      "pen": "Stift",
+      "highlighter": "Textmarker",
+      "eraser": "Radierer",
+      "image": "Bild",
+      "fullscreen": "Vollbild",
+      "present": "Rahmen präsentieren",
+      "presentation": "Präsentation",
+      "previousFrame": "Vorheriger Rahmen",
+      "nextFrame": "Nächster Rahmen",
+      "exitPresentation": "Präsentation beenden",
+      "properties": "Eigenschaften",
+      "fill": "Füllung",
+      "stroke": "Kontur",
+      "strokeWidth": "Linienstärke",
+      "opacity": "Deckkraft",
+      "fontSize": "Schriftgröße",
+      "textColor": "Textfarbe",
+      "fontFamily": "Schriftart",
+      "fontSans": "Serifenlos",
+      "fontSerif": "Serifenschrift",
+      "fontMono": "Monospace",
+      "fontHandwriting": "Handschrift",
+      "rotation": "Drehung",
+      "alt": "Alternativtext",
+      "routing": "Linienführung",
+      "straight": "Gerade",
+      "orthogonal": "Orthogonal",
+      "bezier": "Kurve",
+      "startCap": "Anfang",
+      "endCap": "Ende",
+      "none": "Keine",
+      "arrow": "Pfeil",
+      "dot": "Punkt",
+      "alignLeft": "Links ausrichten",
+      "alignCenter": "Zentriert ausrichten",
+      "alignRight": "Rechts ausrichten",
+      "alignTop": "Oben ausrichten",
+      "alignMiddle": "Mittig ausrichten",
+      "alignBottom": "Unten ausrichten",
+      "distributeHorizontal": "Horizontal verteilen",
+      "distributeVertical": "Vertikal verteilen",
+      "duplicate": "Duplizieren",
+      "bringFront": "Ganz nach vorn",
+      "bringForward": "Nach vorn",
+      "sendBackward": "Nach hinten",
+      "sendBack": "Ganz nach hinten",
+      "group": "Gruppieren",
+      "ungroup": "Gruppierung aufheben",
+      "lock": "Sperren",
+      "unlock": "Entsperren",
+      "rotate": "Auswahl drehen",
+      "connectorFrom": "Verbinderanfang verschieben",
+      "connectorTo": "Verbinderende verschieben",
+      "connectAnchor": "Zum Verbinden ziehen",
+      "editText": "Canvas-Text bearbeiten",
+      "editRichText": "Formatierte Notiz bearbeiten",
+      "bold": "Fett",
+      "italic": "Kursiv",
+      "underline": "Unterstrichen",
+      "strike": "Durchgestrichen",
+      "code": "Code",
+      "heading": "Überschrift",
+      "bulletList": "Aufzählung",
+      "numberList": "Nummerierte Liste",
+      "todo": "Aufgabe",
+      "quote": "Zitat",
+      "frameTitle": "Rahmentitel",
+      "presentationOrder": "Folienreihenfolge",
+      "openLinkedNote": "Verknüpfte Notiz öffnen",
+      "addMindMapChild": "Untergeordnetes Element hinzufügen",
+      "layoutMindMap": "Mindmap neu anordnen",
+      "noteLinkPickerTitle": "Notiz verknüpfen",
+      "noteLinkSearch": "Notizen durchsuchen",
+      "noteLinkEmpty": "Keine passenden Notizen.",
+      "zoomIn": "Vergrößern",
+      "zoomOut": "Verkleinern",
+      "fit": "Alles einpassen",
+      "undo": "Rückgängig",
+      "redo": "Wiederholen",
+      "export": "Canvas exportieren",
+      "exportTitle": "Canvas exportieren",
+      "exportScope": "Bereich",
+      "exportAll": "Alle Inhalte",
+      "exportSelection": "Auswahl",
+      "exportViewport": "Aktueller Ausschnitt",
+      "exportFormat": "Format",
+      "exportAction": "Exportieren",
+      "exporting": "Export läuft…",
+      "exportSelectionEmpty": "Wähle mindestens ein Canvas-Element aus.",
+      "exportFailed": "Canvas konnte nicht exportiert werden.",
+      "cancel": "Abbrechen"
+    },
     "toggleSidebar": "Seitenleiste umschalten",
     "toggleRightPanel": "Rechtes Panel umschalten",
     "openDrawer": "Seitenleiste öffnen",
@@ -231,6 +379,59 @@
         "moved": "{title} wurde auf Position {position} verschoben.",
         "footer": "Favoriten werden mit diesem Workspace gespeichert.",
         "done": "Fertig"
+      }
+    },
+    "mobile": {
+      "navigation": {
+        "label": "Arbeitsbereichsnavigation",
+        "home": "Start",
+        "notes": "Notizen",
+        "search": "Suche",
+        "boards": "Boards",
+        "more": "Mehr"
+      },
+      "editor": {
+        "export": "Notiz exportieren",
+        "noteDetails": "Notizdetails"
+      },
+      "noteDetails": {
+        "title": "Notizdetails",
+        "done": "Fertig",
+        "navigation": "Navigation",
+        "sections": "{count} Abschnitte",
+        "localGraph": "Lokaler Graph",
+        "document": "Dokument",
+        "readingTime": "Lesezeit",
+        "export": "Notiz exportieren"
+      },
+      "library": {
+        "title": "Notizen",
+        "search": "Notiz suchen",
+        "filters": "Suchfilter öffnen",
+        "contentType": "Inhaltstyp",
+        "all": "Alle",
+        "folders": "Ordner",
+        "tags": "Tags",
+        "allNotes": "Alle Notizen",
+        "byDate": "Nach Datum",
+        "noteCount": "{count} Notizen",
+        "noPreview": "Noch keine Vorschau",
+        "noResults": "Keine passenden Notizen",
+        "noTags": "Noch keine Tags"
+      },
+      "boards": {
+        "updated": "Aktualisiert am {date}",
+        "unavailable": "Boards sind nicht verfügbar",
+        "unavailableDescription": "Aktiviere das Kanban-System-Plugin, um Boards mobil zu verwenden."
+      },
+      "more": {
+        "title": "Mehr",
+        "workspace": "Arbeitsbereich",
+        "management": "Verwaltung",
+        "cloud": "Cloud-Arbeitsbereich",
+        "onDevice": "Auf diesem Gerät gespeichert",
+        "import": "Importieren",
+        "switchWorkspace": "Arbeitsbereich wechseln"
       }
     },
     "pluginUi": {
@@ -613,12 +814,30 @@
       "workspace": "Arbeitsbereich",
       "ai": "KI",
       "plugins": "Plugins",
+      "mcp": "KI-Agenten",
       "hotkeys": "Tastenkürzel",
       "files": "Dateien & Speicher",
+      "backup": "Sicherung & Wiederherstellung",
       "advanced": "Erweitert",
       "about": "Über"
     },
     "navigationLabel": "Einstellungsabschnitte",
+    "mobile": {
+      "groups": {
+        "primary": "Allgemein",
+        "system": "Daten & System"
+      },
+      "descriptions": {
+        "appearance": "Design, Akzent und Bedienkomfort",
+        "editor": "Text, Eingabe und Editorverhalten",
+        "workspace": "Organisation und Arbeitsbereich",
+        "ai": "Lokale Modelle und KI-Funktionen",
+        "files": "Dateien, Anhänge und Diagnose",
+        "backup": "Daten exportieren und wiederherstellen",
+        "plugins": "Erweiterungen und App-Funktionen",
+        "about": "Version, Plattform und Nevo-Details"
+      }
+    },
     "search": {
       "label": "Einstellungen durchsuchen",
       "placeholder": "Einstellungen suchen...",
@@ -1335,6 +1554,37 @@
         "saved": "Gespeichert"
       }
     },
+    "mcp": {
+      "description": "Erlaube externen Coding-Agenten, diesen Workspace über die lokale MCP-Brücke zu lesen und zu bearbeiten.",
+      "groups": { "access": "Zugriff", "connect": "Agent verbinden" },
+      "modes": {
+        "off": "Aus",
+        "readOnly": "Nur lesen",
+        "ask": "Vor jeder Änderung fragen",
+        "auto": "Änderungen erlauben"
+      },
+      "mode": {
+        "title": "Agentenzugriff",
+        "description": "Aus bedeutet, dass die Brücke gar nicht lauscht. Es werden nur lokale Workspaces unterstützt."
+      },
+      "autoSnapshot": {
+        "title": "Snapshot vor jeder Änderung",
+        "description": "Vor einer Bearbeitung durch einen Agenten einen Snapshot der Notiz speichern, damit die Änderung aus dem Verlauf zurückgenommen werden kann."
+      },
+      "status": {
+        "title": "Status der Brücke",
+        "off": "Nicht aktiv.",
+        "starting": "Wird gestartet…",
+        "running": "Lauscht auf 127.0.0.1:{port}.",
+        "unsupported": "Nur für lokale Workspaces verfügbar."
+      },
+      "connect": {
+        "title": "MCP-Server registrieren",
+        "description": "Baue den Server mit pnpm --filter {'@'}nevo/mcp-server build und registriere ihn in deinem Agenten mit dem absoluten Pfad zu dist/index.js. Port und Token gehören nicht in die Konfiguration.",
+        "copy": "Befehl kopieren",
+        "copied": "Kopiert"
+      }
+    },
     "hotkeys": {
       "description": "Bearbeitbare Tastaturbefehle in Nevo können hier aufgenommen werden. Formatierungskürzel des Editors sind fix.",
       "resetAll": "Alle zurücksetzen",
@@ -1510,7 +1760,10 @@
       "highlight": "Hervorhebung (mark)",
       "textColor": "Textfarbe",
       "math": "Inline-Mathe",
-      "image": "Bild einfügen"
+      "image": "Bild einfügen",
+      "mobile": "Editor-Werkzeuge",
+      "insertBlock": "Block einfügen",
+      "moreFormatting": "Weitere Formatierung"
     },
     "linkPicker": {
       "createNote": "Notiz „{title}“ erstellen",
@@ -1521,6 +1774,13 @@
     "blockHandle": {
       "drag": "Ziehen zum Sortieren",
       "options": "Block-Optionen"
+    },
+    "blockEmbed": {
+      "header": "Eingebetteter Block",
+      "notFound": "Referenzierter Block nicht gefunden",
+      "openSource": "Quellnotiz öffnen",
+      "referencedFromPrefix": "Referenziert aus:",
+      "loading": "Eingebetteter Block wird geladen…"
     },
     "colorPicker": {
       "none": "Keine",
@@ -1576,6 +1836,54 @@
       "applyHint": "zum Anwenden",
       "apply": "Anwenden",
       "delete": "Löschen"
+    },
+    "queryBlock": {
+      "title": "Abfrage",
+      "edit": "Abfrage bearbeiten",
+      "loading": "Wird geladen…",
+      "noContext": "Abfrageergebnisse nicht verfügbar",
+      "error": "Abfrageergebnisse konnten nicht geladen werden",
+      "empty": "Keine Notizen entsprechen dieser Abfrage",
+      "resultsLabel": "Ergebnisse",
+      "retry": "Wiederholen",
+      "label": "Notizen abfragen",
+      "applyHint": "zum Anwenden",
+      "apply": "Anwenden",
+      "delete": "Löschen",
+      "view": "Ansicht",
+      "sort": "Sortierung",
+      "views": {
+        "list": "Liste",
+        "table": "Tabelle",
+        "cards": "Karten"
+      },
+      "fields": {
+        "title": "Titel",
+        "tags": "Tags",
+        "status": "Status",
+        "type": "Typ",
+        "date": "Datum",
+        "folder": "Ordner"
+      },
+      "sortFields": {
+        "title": "Titel",
+        "date": "Datum",
+        "updatedAt": "Aktualisiert",
+        "createdAt": "Erstellt"
+      },
+      "filters": {
+        "any": "Beliebig",
+        "tagsAny": "Hat einen der Tags",
+        "tagsAll": "Hat alle Tags",
+        "tagsPlaceholder": "Tag1, Tag2",
+        "status": "Status",
+        "type": "Typ",
+        "dateFrom": "Datum von",
+        "dateTo": "Datum bis",
+        "folder": "Ordner",
+        "folderPlaceholder": "Ordnerpfad",
+        "includeSubtree": "Unterordner einbeziehen"
+      }
     },
     "vega": {
       "label": "Vega-Lite-Diagramm",
@@ -1725,6 +2033,7 @@
     "emptyTitle": "Noch keine Notizen",
     "emptySub": "Erstellen Sie Notizen und verknüpfen Sie sie mit [[Notizname]] — sie erscheinen hier als Netzwerk.",
     "searchPlaceholder": "Knoten suchen…",
+    "filters": "Graphfilter",
     "untitled": "Unbenannt",
     "connections": "Verbindungen",
     "nodes": "Knoten",
@@ -1855,6 +2164,7 @@
       "file": "Dateianhang",
       "table": "Tabelle",
       "mermaid": "Mermaid-Diagramm",
+      "query": "Abfrage",
       "draw": "Zeichnung",
       "markmap": "Mindmap",
       "chart": "Diagramm",
@@ -2085,6 +2395,12 @@
       "fieldName": "Tags",
       "urgent": "Dringend",
       "feature": "In Arbeit"
+    },
+    "defaultStatuses": {
+      "status": "Status",
+      "toDo": "Zu erledigen",
+      "inProgress": "In Arbeit",
+      "done": "Erledigt"
     },
     "view": {
       "loading": "Wird geladen…",
@@ -2422,6 +2738,77 @@
     "errors": {
       "noKey": "Sie haben noch nicht den Schlüssel für diesen Speicher — bitten Sie einen Eigentümer oder Administrator um Zugang.",
       "generic": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
+    }
+  },
+  "workspaceTransfer": {
+    "panelTitle": "Sicherung & Wiederherstellung",
+    "panelDescription": "Exportieren Sie diesen Arbeitsbereich in eine einzelne Datei oder stellen Sie einen aus einem Archiv wieder her.",
+    "localOnly": "Sicherung und Wiederherstellung sind nur für lokale Arbeitsbereiche verfügbar.",
+    "export": {
+      "title": "Arbeitsbereich exportieren",
+      "description": "Verpackt Notizen, Ordner, Dateien, Boards, Datenbanken, Vorlagen und Verlauf in einer einzigen .nevoz-Datei.",
+      "action": "Arbeitsbereich exportieren"
+    },
+    "import": {
+      "title": "In diesen Arbeitsbereich importieren",
+      "mergeTitle": "Archiv zusammenführen",
+      "mergeAction": "In diesen Arbeitsbereich importieren",
+      "mergeDescription": "Fügt die Notizen, Ordner, Dateien und Datenbanken eines Archivs diesem Arbeitsbereich in einem neuen Ordner „Importiert: …“ hinzu.",
+      "mergeConfirmTitle": "Archiv mit diesem Arbeitsbereich zusammenführen?",
+      "mergeConfirmMessage": "Die Notizen und Ordner des Archivs werden in einem neuen Ordner „Importiert: …“ mit neuen IDs hinzugefügt, sodass nichts in diesem Arbeitsbereich überschrieben wird. Kanban-Boards und der Notizverlauf aus dem Archiv werden nicht zusammengeführt.",
+      "mergeConfirmAction": "Archiv zusammenführen"
+    },
+    "passwordPrompt": {
+      "exportTitle": "Archiv mit einem Passwort schützen?",
+      "exportMessage": "Optional — lassen Sie das Feld leer, um ohne Passwort zu exportieren.",
+      "exportLabel": "Passwort (optional)",
+      "confirmExport": "Exportieren",
+      "importTitle": "Archivpasswort eingeben",
+      "importMessage": "Dieses Archiv ist passwortgeschützt.",
+      "importLabel": "Passwort",
+      "confirmImport": "Weiter",
+      "placeholder": "Passwort eingeben",
+      "show": "Passwort anzeigen",
+      "hide": "Passwort verbergen"
+    },
+    "progress": {
+      "starting": "Vorbereiten…",
+      "packing": "Dateien werden gepackt…",
+      "encrypting": "Archiv wird verschlüsselt…",
+      "extracting": "Dateien werden entpackt…",
+      "finishing": "Wird abgeschlossen…"
+    },
+    "toast": {
+      "exportSuccessTitle": "Arbeitsbereich exportiert",
+      "exportSuccess": "Das Archiv wurde erfolgreich gespeichert.",
+      "exportCancelled": "Export abgebrochen.",
+      "exportErrorTitle": "Export fehlgeschlagen",
+      "importSuccessTitle": "Arbeitsbereich importiert",
+      "importSuccess": "Das Archiv wurde als neuer Arbeitsbereich wiederhergestellt.",
+      "importCancelled": "Import abgebrochen.",
+      "importErrorTitle": "Import fehlgeschlagen",
+      "importError": "Das Arbeitsbereichsarchiv konnte nicht importiert werden.",
+      "mergeSuccessTitle": "Archiv zusammengeführt",
+      "mergeSuccess": "{notes} Notizen und {folders} Ordner aus dem Archiv importiert.",
+      "mergeSuccessCaveat": "Kanban-Boards und Notizverlauf aus dem Archiv wurden nicht zusammengeführt; importieren Sie es als neuen Arbeitsbereich, um auch diese zu übernehmen.",
+      "mergeErrorTitle": "Zusammenführung fehlgeschlagen",
+      "mergeError": "Das Arbeitsbereichsarchiv konnte nicht zusammengeführt werden."
+    },
+    "errors": {
+      "incorrectPassword": "Falsches Archivpasswort.",
+      "passwordRequired": "Dieses Archiv ist passwortgeschützt. Geben Sie das Passwort ein, um fortzufahren.",
+      "notNevoArchive": "Die ausgewählte Datei ist kein gültiges Nevo-Arbeitsbereichsarchiv.",
+      "unsupportedVersion": "Dieses Nevo-Archiv wurde mit einer inkompatiblen App-Version erstellt.",
+      "destinationNotEmpty": "Wählen Sie einen leeren Ordner für den neuen Arbeitsbereich.",
+      "localOnly": "Diese Aktion ist nur für lokale Arbeitsbereiche verfügbar."
+    }
+  },
+  "mcp": {
+    "confirm": {
+      "title": "Bearbeitung durch Agent zulassen?",
+      "message": "Ein externer Agent möchte „{method}“ in diesem Workspace ausführen.",
+      "allow": "Zulassen",
+      "deny": "Ablehnen"
     }
   }
 }

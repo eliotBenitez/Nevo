@@ -2,6 +2,7 @@ import { useWorkspaceStore } from '../../../stores/workspace'
 import { useNoteStore } from '../../../stores/note'
 import { useTreeStore } from '../../../stores/tree'
 import { collabCommands, noteCommands } from '../../../tauri/commands'
+import { CloudBackend } from '../../../core/workspace-backend'
 import { sanitizeSvg } from '../../../utils/sanitizeSvg'
 import {
   restoreYDocFromBinary,
@@ -47,10 +48,29 @@ export function useDrawNoteSync(options: DrawNoteSyncOptions) {
 
   function patchDrawSrcIntoNoteDoc(src: string, svgPreview: string): Promise<void> {
     const run = async () => {
+      const noteId = options.getNoteId()
+      if (!noteId || !src) return
+
+      // A cloud note's document is the live relay session rather than a file,
+      // so the attrs are patched straight into it and sync on their own. The
+      // drawing editor replaces the editor pane, so there is no EditorView to
+      // dispatch a transaction on in either case.
+      const backend = workspaceStore.backend
+      if (backend instanceof CloudBackend) {
+        const session = backend.getNoteSession(noteId)
+        if (!session) return
+        try {
+          await session.whenSynced()
+          updateDrawBlockAttrsInYDoc(session.ydoc, options.drawId, { src, svgPreview: sanitizeSvg(svgPreview) })
+        } catch (error) {
+          console.warn('[DrawView] Failed to patch draw src into cloud note document', error)
+        }
+        return
+      }
+
       if (workspaceStore.backendKind !== 'local') return
       const workspacePath = options.getWorkspacePath()
-      const noteId = options.getNoteId()
-      if (!workspacePath || !noteId || !src) return
+      if (!workspacePath) return
       try {
         const bytes = await collabCommands.loadYjsState(workspacePath, noteId)
         if (!bytes.length) return

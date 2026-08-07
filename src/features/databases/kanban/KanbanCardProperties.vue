@@ -10,7 +10,11 @@ import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import NvDatePicker from '../../../ui/primitives/NvDatePicker.vue'
 import NvNumberInput from '../../../ui/primitives/NvNumberInput.vue'
 import type { NvMenuItemDef } from '../../../ui/primitives/menu-types'
-import { getBoardStatusProperty, createKanbanId } from './kanbanFields'
+import {
+  getBoardStatusProperty,
+  createKanbanId,
+  localizeDefaultKanbanLabel,
+} from './kanbanFields'
 import { useCardFieldsEditor } from './composables/useCardFieldsEditor'
 
 interface TaskProgress {
@@ -68,9 +72,14 @@ const statusProp = computed(() => getBoardStatusProperty(props.board))
 const statusPickerOptions = computed(() =>
   statusProp.value?.options?.map(opt => ({
     value: opt.id,
-    label: opt.name,
+    label: localizeDefaultKanbanLabel(opt.name, key => t(key)),
     color: opt.color ?? null,
   })) ?? []
+)
+const statusPropertyLabel = computed(() =>
+  statusProp.value
+    ? localizeDefaultKanbanLabel(statusProp.value.name, key => t(key))
+    : ''
 )
 
 const PRIORITY_COLORS: Record<KanbanCardPriority, string | null> = {
@@ -276,7 +285,7 @@ defineExpose({ collect })
   <div class="km-props__header">{{ t('kanban.card.properties') }}</div>
 
   <div v-if="statusProp" class="km-prop-col">
-    <span class="km-prop-label">{{ statusProp.name }}</span>
+    <span class="km-prop-label">{{ statusPropertyLabel }}</span>
     <div class="km-picker">
       <button
         v-for="opt in statusPickerOptions"

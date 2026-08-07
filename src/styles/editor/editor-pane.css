@@ -188,6 +188,11 @@
   scroll-behavior: smooth;
 }
 
+.doc-body--layout-stabilizing {
+  scroll-behavior: auto;
+  overflow-anchor: none;
+}
+
 /* While dragging the custom scrollbar thumb, scrollTop is set programmatically per
    mousemove. On WebKitGTK a `contain: paint` layer doesn't repaint on a JS-driven
    scroll until the pointer is released (content jumps into place only on mouse-up),

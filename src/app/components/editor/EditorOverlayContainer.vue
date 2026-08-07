@@ -4,10 +4,11 @@ import type { NevoSlashItem, NevoToolbarAction } from '../../../types/editor-plu
 import { HIGHLIGHT_COLORS, TEXT_COLORS } from '../../../utils/editorColors'
 import type {
   SlashOverlayState, ToolbarOverlayState, TableMenuOverlayState,
-  LinkPopoverState, MathPopoverState, FormulaPopoverState, MermaidPopoverState, MarkmapPopoverState, VegaPopoverState,
+  LinkPopoverState, MathPopoverState, FormulaPopoverState, MermaidPopoverState, QueryPopoverState, MarkmapPopoverState, VegaPopoverState,
   ColorPickerState, LinkPickerOverlayState, PluginNodePopoverState,
 } from '../../composables/editor/useEditorOverlays'
 import type { BlockHandleState } from '../../composables/editor/useBlockHandle'
+import type { QueryBlockData } from '../../../features/query/queryBlockData'
 import EditorSlashMenu from './EditorSlashMenu.vue'
 import EditorFloatingToolbar from './EditorFloatingToolbar.vue'
 import EditorColorPicker from './EditorColorPicker.vue'
@@ -16,6 +17,7 @@ import EditorLinkPopover from './EditorLinkPopover.vue'
 import EditorMathPopover from './EditorMathPopover.vue'
 import EditorFormulaPopover from './EditorFormulaPopover.vue'
 import EditorMermaidPopover from './EditorMermaidPopover.vue'
+import EditorQueryPopover from './EditorQueryPopover.vue'
 import EditorMarkmapPopover from './EditorMarkmapPopover.vue'
 import EditorVegaPopover from './EditorVegaPopover.vue'
 import EditorPluginNodePopover from './EditorPluginNodePopover.vue'
@@ -70,6 +72,10 @@ export interface OverlayHandlers {
   applyMermaid: () => void
   removeMermaid: () => void
   onMermaidInputKeyDown: (e: KeyboardEvent) => void
+  updateQueryData: (v: QueryBlockData) => void
+  applyQuery: () => void
+  removeQuery: () => void
+  onQueryInputKeyDown: (e: KeyboardEvent) => void
   updateMarkmapMarkdown: (v: string) => void
   applyMarkmap: () => void
   removeMarkmap: () => void
@@ -118,6 +124,7 @@ interface Props {
   mathPopover: MathPopoverState
   formulaPopover: FormulaPopoverState
   mermaidPopover: MermaidPopoverState
+  queryPopover: QueryPopoverState
   markmapPopover: MarkmapPopoverState
   vegaPopover: VegaPopoverState
   pluginNodePopover: PluginNodePopoverState
@@ -142,6 +149,7 @@ const linkPopoverElRef = ref<HTMLElement | null>(null)
 const mathPopoverElRef = ref<HTMLElement | null>(null)
 const formulaPopoverElRef = ref<HTMLElement | null>(null)
 const mermaidPopoverElRef = ref<HTMLElement | null>(null)
+const queryPopoverElRef = ref<HTMLElement | null>(null)
 const markmapPopoverElRef = ref<HTMLElement | null>(null)
 const vegaPopoverElRef = ref<HTMLElement | null>(null)
 const pluginNodePopoverElRef = ref<HTMLElement | null>(null)
@@ -181,6 +189,7 @@ const linkPopoverStyle = computed(() => ({ top: `${props.linkPopover.position.to
 const mathPopoverStyle = computed(() => ({ top: `${props.mathPopover.position.top}px`, left: `${props.mathPopover.position.left}px` }))
 const formulaPopoverStyle = computed(() => ({ top: `${props.formulaPopover.position.top}px`, left: `${props.formulaPopover.position.left}px` }))
 const mermaidPopoverStyle = computed(() => ({ top: `${props.mermaidPopover.position.top}px`, left: `${props.mermaidPopover.position.left}px` }))
+const queryPopoverStyle = computed(() => ({ top: `${props.queryPopover.position.top}px`, left: `${props.queryPopover.position.left}px` }))
 const markmapPopoverStyle = computed(() => ({ top: `${props.markmapPopover.position.top}px`, left: `${props.markmapPopover.position.left}px` }))
 const vegaPopoverStyle = computed(() => ({ top: `${props.vegaPopover.position.top}px`, left: `${props.vegaPopover.position.left}px` }))
 const pluginNodePopoverStyle = computed(() => ({ top: `${props.pluginNodePopover.position.top}px`, left: `${props.pluginNodePopover.position.left}px` }))
@@ -203,6 +212,7 @@ defineExpose({
   formulaPopoverComp: formulaPopoverCompRef,
   mermaidPopoverEl: mermaidPopoverElRef,
   mermaidPopoverComp: mermaidPopoverCompRef,
+  queryPopoverEl: queryPopoverElRef,
   markmapPopoverEl: markmapPopoverElRef,
   markmapPopoverComp: markmapPopoverCompRef,
   vegaPopoverEl: vegaPopoverElRef,
@@ -335,6 +345,18 @@ defineExpose({
       />
     </div>
 
+    <div v-if="queryPopover.open" ref="queryPopoverElRef" class="teleport-anchor">
+      <EditorQueryPopover
+        :open="queryPopover.open"
+        :data="queryPopover.data"
+        :popover-style="queryPopoverStyle"
+        @update:data="handlers.updateQueryData"
+        @apply="handlers.applyQuery"
+        @remove="handlers.removeQuery"
+        @keydown="handlers.onQueryInputKeyDown"
+      />
+    </div>
+
     <div v-if="markmapPopover.open" ref="markmapPopoverElRef" class="teleport-anchor">
       <EditorMarkmapPopover
         ref="markmapPopoverCompRef"
@@ -416,7 +438,7 @@ defineExpose({
     </div>
 
     <div
-      v-if="!isTouch && (blockHandle.visible || blockHandle.typeMenuOpen)"
+      v-if="blockHandle.visible || blockHandle.typeMenuOpen"
       ref="blockHandleElRef"
       class="teleport-anchor"
     >
@@ -432,7 +454,7 @@ defineExpose({
       />
     </div>
 
-    <div v-if="!isTouch && blockHandle.typeMenuOpen" ref="blockTypeMenuElRef" class="teleport-anchor">
+    <div v-if="blockHandle.typeMenuOpen" ref="blockTypeMenuElRef" class="teleport-anchor">
       <EditorBlockTypeMenu
         :open="blockHandle.typeMenuOpen"
         :menu-style="blockTypeMenuStyle"

@@ -21,6 +21,7 @@ import { createLinkPickerPlugin } from './link-picker'
 import { createMarkdownInputRules } from './input-rules'
 import { EditorPluginHost } from './plugin-host'
 import { createColumnDropPlugin } from './plugins/column-drop'
+import { createBlockIdRekeyPlugin } from './plugins/blockIds'
 import { createBlockSelectionPlugin } from './plugins/block-selection'
 import { createActiveBlockEmphasisPlugin } from './plugins/active-block-emphasis'
 import { createListMarkerPlugin } from './plugins/list-markers'
@@ -133,6 +134,7 @@ export function createCoreSlashItems(commands: Map<string, Command>): NevoSlashI
     { id: 'file', title: 'File Attachment', category: 'media', keywords: ['attach', 'upload', 'pdf', 'zip', 'document'], ...listBlockCommand('core.file.insert') },
     { id: 'table', title: 'Table', category: 'media', keywords: ['grid', 'cells'], ...listBlockCommand('core.table.insert') },
     { id: 'database', title: 'Database', category: 'media', keywords: ['database', 'db', 'table', 'grid', 'chart', 'cards', 'list', 'csv', 'база', 'таблица'], ...listBlockCommand('core.database.insert') },
+    { id: 'query', title: 'Query', category: 'media', keywords: ['query', 'dataview', 'notes', 'list', 'filter'], ...listBlockCommand('core.query.insert') },
     { id: 'mermaid', title: 'Mermaid Diagram', category: 'media', keywords: ['diagram', 'flowchart', 'chart', 'graph', 'sequence'], ...listBlockCommand('core.mermaid.insert') },
     { id: 'draw', title: 'Drawing', category: 'media', keywords: ['sketch', 'draw', 'excalidraw', 'canvas', 'hand', 'paint', 'whiteboard'], ...listBlockCommand('core.draw.insert') },
     { id: 'markmap', title: 'Mind Map', category: 'media', keywords: ['mindmap', 'markmap', 'map', 'outline', 'tree', 'brainstorm'], ...listBlockCommand('core.markmap.insert') },
@@ -250,6 +252,7 @@ export function createNevoEditorState(options: CreateNevoEditorStateOptions): Ne
   plugins.push(tableEditing())
   plugins.push(createTableFormulaPlugin({ onRequestFormulaEdit: options.nodeViewOptions?.onRequestFormulaEdit }))
   plugins.push(createColumnDropPlugin())
+  plugins.push(createBlockIdRekeyPlugin())
   plugins.push(createBlockSelectionPlugin())
   plugins.push(createActiveBlockEmphasisPlugin())
   plugins.push(createListMarkerPlugin())

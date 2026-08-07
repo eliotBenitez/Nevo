@@ -15,14 +15,20 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 }
 
+type TransactionPosition = NevoTransactionPosition | 'document.end'
+
 function position(
-  value: NevoTransactionPosition | undefined,
+  value: TransactionPosition | undefined,
   state: EditorState,
   fallback: 'from' | 'to',
 ): number {
   if (value === undefined) return state.selection[fallback]
   if (value === 'selection.from') return state.selection.from
   if (value === 'selection.to') return state.selection.to
+  // The MCP bridge uses this internal symbolic position for omitted insertion
+  // positions. Resolve it against the transaction's current document so a
+  // batch of implicit insertions preserves its order at the document end.
+  if (value === 'document.end') return state.doc.content.size
   if (!Number.isSafeInteger(value) || value < 0 || value > state.doc.content.size) {
     throw new Error(`Transaction position ${String(value)} is outside the document`)
   }

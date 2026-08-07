@@ -14,6 +14,7 @@ import type {
 import type { FolderMeta, ImportedImageAsset, NoteDocument, NoteSnapshotMeta, NoteSnapshotsEntry, PickedImportedAsset, SidebarNotePreview, VaultManifest } from '../types/note'
 import type { WorkspaceBlockSearchItem } from '../types/search'
 import type { BacklinkRef, GraphEdge, ExtractedEdge } from '../types/graph'
+import type { NoteQueryRequest, NoteRow } from '../types/note-query'
 import type { KanbanBoard, KanbanCard } from '../types/kanban'
 import type { TemplateDocument, TemplateFieldValues } from '../types/template'
 import type { NotionAssetImportResult, NotionExportManifest } from '../types/notion-import'
@@ -25,6 +26,14 @@ export interface TypstAsset {
   name: string
   bytesBase64?: string
   relPath?: string
+}
+
+/** An export asset supplied as bytes rather than as a workspace-relative path.
+ *  Cloud workspaces have no asset directory on disk, so they send the file
+ *  contents and Rust writes them beside the export. */
+export interface InlineExportAsset {
+  name: string
+  bytesBase64: string
 }
 
 function extractWorkspacePath(args: unknown): string | undefined {
@@ -119,6 +128,9 @@ export const workspaceCommands = {
   openWorkspace: (path: string) =>
     invokeCommand<WorkspaceManifest>('open_workspace', { path }),
 
+  loadManifest: (path: string) =>
+    invokeCommand<WorkspaceManifest>('load_workspace_manifest', { path }),
+
   saveManifest: (path: string, manifest: WorkspaceManifest) =>
     invokeCommand<void>('save_workspace_manifest', { path, manifest }),
 
@@ -136,6 +148,11 @@ export const workspaceCommands = {
 
   listPlugins: (workspacePath: string) =>
     invokeCommand<PluginManifest[]>('list_plugins', { workspacePath }),
+
+  /** Device-local plugin directory for a cloud workspace. Plugins are not part
+   *  of a shared workspace's synced content — see the Rust command. */
+  cloudPluginRoot: (storageId: string) =>
+    invokeCommand<string>('cloud_plugin_root', { storageId }),
 
   validatePluginManifest: (workspacePath: string, pluginId: string) =>
     invokeCommand<PluginManifest>('validate_plugin_manifest', { workspacePath, pluginId }),
@@ -444,31 +461,35 @@ export const noteCommands = {
     invokeCommand<WorkspaceBlockSearchItem[]>('search_workspace_blocks', { workspacePath, query }),
 
   exportNoteMarkdown: (
-    workspacePath: string,
+    workspacePath: string | null,
     defaultFileName: string,
     content: string,
     assetSrcs: string[],
     assetsSubfolderName: string,
+    inlineAssets: InlineExportAsset[] = [],
   ) => invokeCommand<boolean>('export_note_markdown', {
     workspacePath,
     defaultFileName,
     content,
     assetSrcs,
     assetsSubfolderName,
+    inlineAssets,
   }),
 
   exportNoteHtml: (
-    workspacePath: string,
+    workspacePath: string | null,
     defaultFileName: string,
     content: string,
     assetSrcs: string[],
     assetsSubfolderName: string,
+    inlineAssets: InlineExportAsset[] = [],
   ) => invokeCommand<boolean>('export_note_html', {
     workspacePath,
     defaultFileName,
     content,
     assetSrcs,
     assetsSubfolderName,
+    inlineAssets,
   }),
 
   exportNoteDocx: (defaultFileName: string, bytes: number[]) =>
@@ -503,11 +524,18 @@ export const noteCommands = {
 }
 
 export const templateCommands = {
-  listTemplates: (workspacePath: string) =>
+  /** `workspacePath: null` returns the built-in templates only — used by
+   *  workspaces that have no directory on disk. */
+  listTemplates: (workspacePath: string | null) =>
     invokeCommand<TemplateDocument[]>('template_list', { workspacePath, locale: activeLocale() }),
 
-  getTemplate: (workspacePath: string, templateId: string) =>
+  getTemplate: (workspacePath: string | null, templateId: string) =>
     invokeCommand<TemplateDocument>('template_get', { workspacePath, templateId, locale: activeLocale() }),
+
+  /** Resolves a template's placeholders into note content without writing
+   *  anything, for backends that create the note themselves. */
+  resolveContent: (template: TemplateDocument, title: string, workspaceName: string, fieldValues: TemplateFieldValues) =>
+    invokeCommand<NoteDocument['content']>('template_resolve_content', { template, title, workspaceName, fieldValues }),
 
   createTemplate: (workspacePath: string, template: TemplateDocument) =>
     invokeCommand<TemplateDocument>('template_create', { workspacePath, template }),
@@ -625,6 +653,14 @@ export const graphCommands = {
 
   getAllEdges: (workspacePath: string) =>
     invokeCommand<GraphEdge[]>('graph_get_all_edges', { workspacePath }),
+}
+
+export const noteQueryCommands = {
+  queryNotes: (workspacePath: string, request: NoteQueryRequest) =>
+    invokeCommand<NoteRow[]>('query_notes', { workspacePath, request }),
+
+  reindexNotes: (workspacePath: string) =>
+    invokeCommand<number>('reindex_notes', { workspacePath }),
 }
 
 export interface GithubSyncResult {

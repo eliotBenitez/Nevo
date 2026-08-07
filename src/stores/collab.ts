@@ -7,9 +7,6 @@ import { createWebSocketProvider, destroyWebSocketProvider } from '../editor-cor
 import { CloudProvider } from '../editor-core/collaboration/cloudProvider'
 import { generateSessionKey, exportKeyBase64, importKeyBase64 } from '../editor-core/collaboration/encryption'
 import { initAwarenessUser } from '../editor-core/collaboration/yAwareness'
-import { useAuthStore } from './auth'
-import { useServerConfigStore } from './serverConfig'
-import { useSharedStorageStore } from './sharedStorage'
 import type * as Y from 'yjs'
 
 export type CollabConnectionStatus = 'idle' | 'connecting' | 'syncing' | 'connected' | 'disconnected' | 'error'
@@ -39,12 +36,6 @@ export const useCollabStore = defineStore('collab', () => {
   let _cloudAwarenessTarget: Awareness | null = null
   let _cloudAwarenessHandler: (() => void) | null = null
 
-  // Dependent stores captured synchronously while Pinia is active (resolving
-  // them inside an async callback can throw "no active Pinia").
-  const authStore = useAuthStore()
-  const sharedStore = useSharedStorageStore()
-  const serverCfg = useServerConfigStore()
-
   // --- Local (LAN) session ---
 
   async function startHosting(noteId: string, ydoc: Y.Doc, awareness: Awareness, port = 4444): Promise<CollabServerInfo> {
@@ -65,25 +56,6 @@ export const useCollabStore = defineStore('collab', () => {
     const serverUrl = parsed.toString().replace(/\/$/, '')
     mode.value = 'local'
     await _connectLocalProvider(noteId, ydoc, awareness, serverUrl, sessionToken)
-  }
-
-  // --- Shared-storage session (authenticated, server-persisted, E2E) ---
-
-  /**
-   * Connect a shared-storage document (note or manifest) to the relay. The room
-   * code comes from the server; the doc is encrypted with the storage DEK and
-   * the connection is authorized with the user's access token.
-   */
-  async function startStorageDocSession(
-    storageId: string, roomCode: string, ydoc: Y.Doc, awareness: Awareness,
-  ): Promise<void> {
-    const key = await sharedStore.getDekKey(storageId)
-    const token = authStore.accessToken ?? ''
-    const wsUrl = `${serverCfg.wsBase}/ws/${roomCode}?token=${encodeURIComponent(token)}`
-
-    mode.value = 'cloud'
-    cloudRoomCode.value = roomCode
-    _connectCloudProvider(roomCode, ydoc, awareness, wsUrl, key, authStore.user?.displayName || 'User')
   }
 
   // --- Cloud session ---
@@ -230,7 +202,6 @@ export const useCollabStore = defineStore('collab', () => {
     joinSession,
     startCloudSession,
     joinCloudSession,
-    startStorageDocSession,
     leaveSession,
     stopHosting,
     getProvider,

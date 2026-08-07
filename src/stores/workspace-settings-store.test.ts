@@ -6,7 +6,7 @@ import type {
   WorkspaceDiagnostics,
   WorkspaceManifest,
 } from '../types/workspace'
-import { configCommands, workspaceCommands } from '../tauri/commands'
+import { configCommands, noteCommands, workspaceCommands } from '../tauri/commands'
 import { appLogger } from '../utils/logger'
 import { runMarketplacePluginTransaction } from '../core/plugins/marketplaceMigration'
 import { pauseMarketplaceRuntime } from '../core/plugins/marketplaceRuntime'
@@ -29,6 +29,7 @@ vi.mock('../tauri/commands', () => ({
   workspaceCommands: {
     createWorkspace: vi.fn(),
     openWorkspace: vi.fn(),
+    loadManifest: vi.fn(),
     saveManifest: vi.fn(),
     loadSettings: vi.fn(),
     saveSettings: vi.fn(),
@@ -143,10 +144,38 @@ describe('useWorkspaceStore settings integration', () => {
     await store.openWorkspace('/tmp/workspace')
 
     expect(store.settings.general.defaultStartupView).toBe('graph')
-    expect(store.settings.workspace.defaultLandingView).toBe('graph')
     expect(store.settings.workspace.sidebarContentMode).toBe('tree')
     expect(store.settings.appearance.editorFontSize).toBe(18)
     expect(store.settings.editor.spellCheck).toBe(true)
+  })
+
+  it('refreshes the manifest after an out-of-process workspace mutation', async () => {
+    const initial = manifest()
+    const refreshed: WorkspaceManifest = {
+      ...manifest(),
+      rootOrder: ['agent-note'],
+      rootNotes: [{
+        id: 'agent-note',
+        title: 'Created by MCP',
+        icon: '📄',
+        folderId: null,
+        updatedAt: '2026-07-26T20:00:00.000Z',
+      }],
+    }
+    vi.mocked(workspaceCommands.openWorkspace)
+      .mockResolvedValueOnce(initial)
+    vi.mocked(workspaceCommands.loadManifest).mockResolvedValueOnce(refreshed)
+    vi.mocked(workspaceCommands.loadSettings).mockResolvedValue({} as never)
+    vi.mocked(workspaceCommands.listPlugins).mockResolvedValue([])
+
+    const store = useWorkspaceStore()
+    await store.openWorkspace('/tmp/workspace')
+    await store.refreshManifest()
+
+    expect(store.manifest?.rootNotes).toEqual(refreshed.rootNotes)
+    expect(vi.mocked(workspaceCommands.loadManifest)).toHaveBeenCalledWith('/tmp/workspace')
+    expect(vi.mocked(workspaceCommands.loadSettings)).toHaveBeenCalledOnce()
+    expect(vi.mocked(noteCommands.listSidebarNotePreviews)).toHaveBeenCalledTimes(2)
   })
 
   it('saves nested settings updates through the workspace command', async () => {

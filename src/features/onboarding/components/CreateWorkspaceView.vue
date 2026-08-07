@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { Check, ArrowRight, ArrowLeft, Folder } from 'lucide-vue-next'
 import AmbientBackdrop from '../../../ui/glass/AmbientBackdrop.vue'
 import NevoMark from './NevoMark.vue'
+import MobileCreateWorkspaceFlow from './MobileCreateWorkspaceFlow.vue'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { useTreeStore } from '../../../stores/tree'
 import { useAuthStore } from '../../../stores/auth'
@@ -14,13 +15,16 @@ import type { WorkspaceConfig } from '../../../types/workspace'
 import { appLogger } from '../../../utils/logger'
 import { resolveRuntimeCapabilities } from '../../../utils/runtime'
 import { WORKSPACE_GRADIENTS } from '../../../utils/workspaceGradients'
+import { formatWorkspacePath } from '../../../utils/workspacePath'
 import { systemCommands } from '../../../tauri/commands'
 
 const emit = defineEmits<{ back: []; done: [] }>()
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
+const serverConfigStore = useServerConfigStore()
 const { appMetadata } = storeToRefs(workspaceStore)
+const runtime = computed(() => resolveRuntimeCapabilities(appMetadata.value))
 
 const GRADIENTS = WORKSPACE_GRADIENTS
 const GLYPHS = ['N', '◐', '✦', '◇', '◑', '⌘']
@@ -33,43 +37,64 @@ const selectedGradient = ref(0)
 const selectedTemplate = ref<typeof TEMPLATES[number]>('empty')
 const hasInteractedWithTemplates = ref(false)
 const location = ref('~/Documents/Nevo/')
-const serverUrl = ref('http://localhost:8080')
+const serverUrl = ref(serverConfigStore.serverUrl)
 const healthState = ref<'idle' | 'checking' | 'ok' | 'fail'>('idle')
+const creationError = ref('')
 
 const isValidServerUrl = computed(() => /^https?:\/\/.+/.test(serverUrl.value.trim()))
 
+const selectedGlyphValue = computed(() => {
+  if (runtime.value.isMobileRuntime && selectedGlyph.value === 0) {
+    return name.value.trim().charAt(0).toLocaleUpperCase() || 'N'
+  }
+  return GLYPHS[selectedGlyph.value]
+})
+
 const locationBaseWithSeparator = computed(() => {
-  const loc = location.value
+  const loc = formatWorkspacePath(location.value, appMetadata.value?.platform)
   if (!loc) return ''
-  const sep = loc.includes('\\\\') ? '\\\\' : '/'
+  const sep = resolveRuntimeCapabilities(appMetadata.value).platform === 'windows' ? '\\' : '/'
   return loc.endsWith(sep) ? loc : loc + sep
 })
 
 const workspaceFullPath = computed(() => locationBaseWithSeparator.value + name.value.trim())
 
-const steps = computed(() => [
-  { key: 'name', done: name.value.length > 0 },
-  ...(storageType.value === 'local' ? [{ key: 'location', done: location.value.length > 0 }] : []),
-  { key: 'template', done: hasInteractedWithTemplates.value },
-])
+const steps = computed(() => {
+  const items = [
+    { key: 'name', done: name.value.length > 0 },
+    { key: 'template', done: hasInteractedWithTemplates.value },
+  ]
+  if (!runtime.value.isMobileRuntime && storageType.value === 'local') {
+    items.splice(1, 0, { key: 'location', done: location.value.length > 0 })
+  }
+  return items
+})
 
 // Mobile sandboxes block raw file I/O to shared storage (~/Documents), so the
 // default workspace location must live inside the app's writable data dir.
 onMounted(async () => {
-  if (!resolveRuntimeCapabilities(appMetadata.value).isMobileRuntime) return
   try {
-    const { appLocalDataDir, join } = await import('@tauri-apps/api/path')
-    const base = await appLocalDataDir()
+    const { appLocalDataDir, documentDir, join } = await import('@tauri-apps/api/path')
+    const base = runtime.value.isMobileRuntime ? await appLocalDataDir() : await documentDir()
     location.value = await join(base, 'Nevo')
   } catch (error) {
     await appLogger.error({
       source: 'frontend.onboarding',
-      event: 'resolve_mobile_location',
-      message: 'Failed to resolve mobile default workspace location',
+      event: 'resolve_default_workspace_location',
+      message: 'Failed to resolve default workspace location',
       error,
     })
   }
 })
+
+async function resolveWorkspacePath(): Promise<string> {
+  try {
+    const { join } = await import('@tauri-apps/api/path')
+    return await join(location.value, name.value.trim())
+  } catch {
+    return workspaceFullPath.value
+  }
+}
 
 async function browsePath() {
   try {
@@ -88,40 +113,43 @@ async function checkConnection() {
     return
   }
   healthState.value = 'checking'
-  const server = useServerConfigStore()
-  const ok = await server.checkServerHealth(serverUrl.value)
+  const ok = await serverConfigStore.checkServerHealth(serverUrl.value)
   healthState.value = ok ? 'ok' : 'fail'
 }
 
 async function createCloud() {
-  const server = useServerConfigStore()
-  server.setServerUrl(serverUrl.value)
+  serverConfigStore.setServerUrl(serverUrl.value)
   const auth = useAuthStore()
-  if (!auth.isAuthenticated || auth.sessionServerUrl !== server.serverUrl) {
+  if (!auth.isAuthenticated || auth.sessionServerUrl !== serverConfigStore.serverUrl) {
     await auth.login('github')
   }
   const shared = useSharedStorageStore()
   await shared.loadStorages()
   const storage = await shared.createStorage(
-    name.value.trim(), GLYPHS[selectedGlyph.value], GRADIENTS[selectedGradient.value],
+    name.value.trim(),
+    selectedGlyphValue.value,
+    GRADIENTS[selectedGradient.value],
   )
-  await workspaceStore.openCloudWorkspace(storage.id, server.serverUrl)
-  emit('done')
+  await workspaceStore.openCloudWorkspace(storage.id, serverConfigStore.serverUrl)
 }
 
 async function create() {
   if (!name.value.trim() || isCreating.value) return
+  creationError.value = ''
   isCreating.value = true
   try {
     if (storageType.value === 'cloud') {
       await createCloud()
+      emit('done')
       return
     }
+
+    const path = await resolveWorkspacePath()
     const config: WorkspaceConfig = {
       name: name.value.trim(),
-      glyph: GLYPHS[selectedGlyph.value],
+      glyph: selectedGlyphValue.value,
       gradient: GRADIENTS[selectedGradient.value],
-      path: workspaceFullPath.value,
+      path,
       template: selectedTemplate.value,
     }
     await workspaceStore.createWorkspace(config)
@@ -148,6 +176,7 @@ async function create() {
 
     emit('done')
   } catch (error) {
+    creationError.value = t('onboarding.create.mobile.createError')
     await appLogger.error({
       source: 'frontend.onboarding',
       event: 'create_workspace',
@@ -162,7 +191,26 @@ async function create() {
 </script>
 
 <template>
-  <div class="create-root">
+  <MobileCreateWorkspaceFlow
+    v-if="runtime.isMobileRuntime"
+    :name="name"
+    :selected-glyph="selectedGlyph"
+    :selected-gradient="selectedGradient"
+    :selected-template="selectedTemplate"
+    :glyphs="GLYPHS"
+    :gradients="GRADIENTS"
+    :templates="TEMPLATES"
+    :is-creating="isCreating"
+    :creation-error="creationError"
+    @change-name="name = $event"
+    @change-glyph="selectedGlyph = $event"
+    @change-gradient="selectedGradient = $event"
+    @change-template="selectedTemplate = $event"
+    @back="emit('back')"
+    @create="create"
+  />
+
+  <div v-else class="create-root">
     <AmbientBackdrop />
 
     <!-- Left rail -->
@@ -195,47 +243,63 @@ async function create() {
     <!-- Right form -->
     <div class="form-area">
       <div class="form-inner">
-        <div class="step-label">{{ t('onboarding.create.step', { n: 3, total: 3 }) }}</div>
+        <div class="step-label">{{ t('onboarding.create.step', { n: steps.length, total: steps.length }) }}</div>
         <h1 class="form-title">{{ t('onboarding.create.title') }}</h1>
         <p class="form-sub">{{ t('onboarding.create.subtitle') }}</p>
 
         <!-- Storage type -->
         <div class="form-group">
-          <div class="storage-type">
+          <div
+            class="storage-type"
+            role="group"
+            :aria-label="t('onboarding.create.mobile.storageTitle')"
+          >
             <button
               type="button"
               class="storage-type__btn"
               :class="{ 'storage-type__btn--active': storageType === 'local' }"
+              :aria-pressed="storageType === 'local'"
               @click="storageType = 'local'"
-            >{{ t('workspace.localWorkspace') }}</button>
+            >
+              {{ t('workspace.localWorkspace') }}
+            </button>
             <button
               type="button"
               class="storage-type__btn"
               :class="{ 'storage-type__btn--active': storageType === 'cloud' }"
+              :aria-pressed="storageType === 'cloud'"
               @click="storageType = 'cloud'"
-            >{{ t('workspace.cloudWorkspace') }}</button>
+            >
+              {{ t('workspace.cloudWorkspace') }}
+            </button>
           </div>
         </div>
 
         <!-- Server URL (cloud only) -->
         <div v-if="storageType === 'cloud'" class="form-group">
           <div class="form-label-row">
-            <span class="form-label">{{ t('onboarding.create.serverLabel') }}</span>
+            <label class="form-label" for="workspace-server-url">
+              {{ t('onboarding.create.serverLabel') }}
+            </label>
             <span class="form-hint">{{ t('onboarding.create.serverHint') }}</span>
           </div>
           <div class="location-field">
             <input
+              id="workspace-server-url"
               v-model="serverUrl"
               class="server-url-input"
               :placeholder="t('onboarding.create.serverPlaceholder')"
               @input="healthState = 'idle'"
             />
             <button
+              type="button"
               class="nv-btn nv-btn--ghost browse-btn"
               :disabled="healthState === 'checking'"
               @click="checkConnection"
             >
-              {{ healthState === 'checking' ? t('onboarding.create.serverChecking') : t('onboarding.create.serverCheck') }}
+              {{ healthState === 'checking'
+                ? t('onboarding.create.serverChecking')
+                : t('onboarding.create.serverCheck') }}
             </button>
           </div>
           <div
@@ -246,10 +310,12 @@ async function create() {
               'server-health-status--fail': healthState === 'fail',
               'server-health-status--checking': healthState === 'checking',
             }"
+            role="status"
+            aria-live="polite"
           >
             <span v-if="healthState === 'checking'">{{ t('onboarding.create.serverChecking') }}</span>
             <span v-else-if="healthState === 'ok'">{{ t('onboarding.create.serverOk') }}</span>
-            <span v-else-if="healthState === 'fail'">{{ t('onboarding.create.serverFail') }}</span>
+            <span v-else>{{ t('onboarding.create.serverFail') }}</span>
           </div>
         </div>
 
@@ -280,7 +346,7 @@ async function create() {
           </div>
           <div class="icon-colour-row">
             <div>
-              <div class="sub-label">GLYPH</div>
+              <div class="sub-label">{{ t('onboarding.create.glyphLabel') }}</div>
               <div class="glyph-list">
                 <button
                   v-for="(g, i) in GLYPHS"
@@ -294,7 +360,7 @@ async function create() {
               </div>
             </div>
             <div>
-              <div class="sub-label">COLOUR</div>
+              <div class="sub-label">{{ t('onboarding.create.colourLabel') }}</div>
               <div class="gradient-list">
                 <button
                   v-for="(g, i) in GRADIENTS"
@@ -362,7 +428,12 @@ async function create() {
           </button>
           <div class="spacer" />
           <span class="encryption-label">{{ t('onboarding.create.encryption') }}</span>
-          <button class="nv-btn nv-btn--primary footer-btn-create" :class="{ 'nv-btn--loading': isCreating }" :disabled="isCreating || (storageType === 'cloud' && !isValidServerUrl)" @click="create">
+          <button
+            class="nv-btn nv-btn--primary footer-btn-create"
+            :class="{ 'nv-btn--loading': isCreating }"
+            :disabled="isCreating || (storageType === 'cloud' && !isValidServerUrl)"
+            @click="create"
+          >
             <span v-if="isCreating" class="nv-btn__spinner" aria-hidden="true" />
             {{ t('onboarding.create.create') }}
             <ArrowRight v-if="!isCreating" :size="12" />
@@ -372,62 +443,3 @@ async function create() {
     </div>
   </div>
 </template>
-
-<style scoped>
-.storage-type {
-  display: flex;
-  gap: 0.4rem;
-  padding: 0.3rem;
-  border-radius: calc(14px * var(--radius-scale, 1));
-  background: var(--glass-1);
-  border: 1px solid var(--line-1);
-}
-.storage-type__btn {
-  flex: 1;
-  padding: 0.45rem 1rem;
-  border-radius: calc(10px * var(--radius-scale, 1));
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--text-3);
-  font-size: 0.85rem;
-  font-weight: 550;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.storage-type__btn:hover:not(.storage-type__btn--active) {
-  background: var(--hover);
-  color: var(--text-2);
-}
-.storage-type__btn--active {
-  background: var(--accent-soft);
-  color: var(--accent);
-  border-color: oklch(from var(--accent) l c h / 0.18);
-  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.05);
-}
-.server-url-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  font-size: 0.83rem;
-  color: var(--text-1);
-  min-width: 0;
-}
-.server-url-input::placeholder {
-  color: var(--text-4);
-}
-.server-health-status {
-  margin-top: 0.35rem;
-  font-size: 0.75rem;
-  color: var(--text-3);
-}
-.server-health-status--ok {
-  color: var(--green, #34c759);
-}
-.server-health-status--fail {
-  color: var(--red, #ff3b30);
-}
-.server-health-status--checking {
-  color: var(--text-3);
-}
-</style>

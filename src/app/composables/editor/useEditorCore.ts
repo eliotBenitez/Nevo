@@ -28,6 +28,7 @@ import {
 } from '../../../editor-core'
 import {
   loadOrCreateYDoc,
+  seedEmptyYDocFromContent,
   Y_FRAGMENT_NAME,
 } from '../../../editor-core/collaboration'
 import { createYjsPersistence } from './useYjsPersistence'
@@ -35,7 +36,7 @@ import { collabCommands } from '../../../tauri/commands'
 import { initAwarenessUser } from '../../../editor-core/collaboration/yAwareness'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { useAuthStore } from '../../../stores/auth'
-import type { CloudBackend } from '../../../core/workspace-backend'
+import { CloudBackend } from '../../../core/workspace-backend'
 import { createPasteHandler } from './usePasteHandling'
 import { buildPluginRuntime } from './pluginRuntime'
 import { appLogger } from '../../../utils/logger'
@@ -45,6 +46,13 @@ import { useAiCompletion } from '../../../composables/useAiCompletion'
 import { buildAiSlashItems } from './aiSlashItems'
 import { createDatabaseRepository } from '../../../features/database/databaseRepository'
 import { createDatabaseCleanup, collectRemovedAssetSrcs } from './documentCleanup'
+import { createIdleTaskScheduler } from './idleTaskScheduler'
+import { resolveBlockRef } from '../../../core/blockRef/resolveBlockRef'
+import {
+  clearActiveEditor,
+  notifyActiveEditorTransaction,
+  registerActiveEditor,
+} from './activeEditorRegistry'
 
 function resolveEditorLanguage(): string {
   return document.documentElement.lang || 'ru'
@@ -122,6 +130,12 @@ export interface EditorCoreCallbacks {
   onEmbedUrlRequest: (pos: number, anchorRect: DOMRect) => void
   onNoteEmbedContentLoad?: (ctx: { noteId: string; setHtml: (html: string) => void; setLoading: (v: boolean) => void }) => void
   onNoteEmbedOpen: (noteId: string) => void
+  onOpenBlockRefSource?: (noteId: string) => void
+  /** Best-effort live re-resolve signal for `block_embed` — see
+   *  `node-views/utils.ts` `CoreNodeViewOptions.onSubscribeNoteSaved`. Omitted
+   *  by hosts that have no natural "note X was just saved" signal to offer
+   *  (e.g. `EditorSurface.vue`); the node view still resolves once on mount. */
+  onSubscribeNoteSaved?: (noteId: string, callback: () => void) => () => void
   onMathEditRequest: (pos: number, rect?: DOMRect) => void
   onFormulaEditRequest: (cellPos: number, formula: string, rect?: DOMRect) => void
   onMathInlineInsert: () => boolean
@@ -129,6 +143,7 @@ export interface EditorCoreCallbacks {
   onSlashMathItemRan: () => void
   onSlashEmojiPickRequest: () => void
   onMermaidEditRequest: (pos: number, rect?: DOMRect) => void
+  onQueryEditRequest: (pos: number, rect?: DOMRect) => void
   onMarkmapEditRequest: (pos: number, rect?: DOMRect) => void
   onVegaEditRequest: (pos: number, rect?: DOMRect) => void
   /** Open the full-canvas draw editor for a draw_block (drawId). */
@@ -269,7 +284,6 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
   const ai = useAiCompletion()
 
   let pendingContentDoc: Node | null = null
-  let contentSerializeTimer: ReturnType<typeof setTimeout> | null = null
   // v2 database blocks removed from the doc are queued here for a deferred
   // delete (run on disk save), cancelled whenever the id reappears in the live
   // doc — so undo or a cut/paste that restores the block never wipes its records.
@@ -287,15 +301,8 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
   const teardownYjsPersistence = () => yjsPersistence.teardown()
   const flushYjsPersistenceNow = () => yjsPersistence.flushNow()
 
-  function clearContentSerializeTimer() {
-    if (contentSerializeTimer) {
-      clearTimeout(contentSerializeTimer)
-      contentSerializeTimer = null
-    }
-  }
-
   function flushPendingContentUpdate(): NoteDocument['content'] | null {
-    clearContentSerializeTimer()
+    contentUpdateTask.cancel()
     if (!pendingContentDoc) return null
 
     const content = serializeDocToNoteContent(pendingContentDoc)
@@ -307,14 +314,19 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     return content
   }
 
+  const contentUpdateTask = createIdleTaskScheduler(
+    () => flushPendingContentUpdate(),
+    {
+      delayMs: CONTENT_SERIALIZE_DELAY_MS,
+      idleTimeoutMs: 1_000,
+    },
+  )
+
   function scheduleContentUpdate(doc: Node) {
     pendingContentDoc = doc
     callbacks.onDocDirty?.()
     callbacks.onDocChanged?.(doc)
-    clearContentSerializeTimer()
-    contentSerializeTimer = setTimeout(() => {
-      flushPendingContentUpdate()
-    }, CONTENT_SERIALIZE_DELAY_MS)
+    contentUpdateTask.schedule()
   }
 
   function getSlashItemById(id: string): NevoSlashItem | null {
@@ -482,17 +494,24 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     core.toolbarPluginActions = []
     setActivePluginSerialization(null)
 
-    if (!workspacePath) {
+    // Plugins for a cloud workspace live in a device-local directory rather
+    // than in the (pathless) workspace itself, and every plugin command —
+    // including the SDK's storage and assets — is addressed by that path.
+    const backend = workspaceStore.backend
+    const pluginPath = workspacePath
+      ?? (backend instanceof CloudBackend ? backend.pluginWorkspacePath() : null)
+
+    if (!pluginPath) {
       core.schema = createSchemaWithPluginExtensions()
       return
     }
 
     const manifests = pluginManifests.map(toEditorPluginManifest)
     const host = new EditorPluginHost({
-      workspacePath,
+      workspacePath: pluginPath,
       manifests,
       nevoVersion: '1.0.0',
-      runtime: buildPluginRuntime(workspacePath, workspaceStore),
+      runtime: buildPluginRuntime(pluginPath, workspaceStore),
     })
     host.setNodeEditRequestHandler((_view, position, nodeName, anchorRect) =>
       callbacks.onPluginNodeEditRequest(position, nodeName, anchorRect),
@@ -517,6 +536,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
   function destroyEditorView() {
     flushPendingContentUpdate()
     teardownYjsPersistence()
+    if (core.editorView) clearActiveEditor(core.editorView)
     core.editorView?.destroy()
     core.editorView = null
     // Cloud-backed sessions are owned by the workspace backend; only release
@@ -616,7 +636,11 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
       enableTemplates?: boolean
     } = {},
   ) {
-    const databaseRepository = createDatabaseRepository(core.workspacePath)
+    // The backend owns the row store (SQLite for local, manifest Y.Doc for
+    // cloud). Falling back to `createDatabaseRepository(null)` here would hand
+    // cloud workspaces a process-wide in-memory store and silently drop rows.
+    const databaseRepository = workspaceStore.backend?.databaseRepository()
+      ?? createDatabaseRepository(core.workspacePath)
     databaseCleanup.setRepository(databaseRepository)
     const aiSlashItems = (settings.ai.enabled && settings.ai.slashCommands && settings.editor.slashCommands)
       ? buildAiSlashItems({
@@ -663,6 +687,8 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
         onRequestMathEdit: ({ position, anchorRect }) => callbacks.onMathEditRequest(position, anchorRect),
         onRequestFormulaEdit: ({ cellPos, formula, anchorRect }) => callbacks.onFormulaEditRequest(cellPos, formula, anchorRect),
         onRequestMermaidEdit: ({ position, anchorRect }) => callbacks.onMermaidEditRequest(position, anchorRect),
+        onRequestQueryEdit: ({ position, anchorRect }) => callbacks.onQueryEditRequest(position, anchorRect),
+        onQueryNotes: workspaceStore.backend ? (request) => workspaceStore.backend!.queryNotes(request) : undefined,
         onRequestMarkmapEdit: ({ position, anchorRect }) => callbacks.onMarkmapEditRequest(position, anchorRect),
         onRequestVegaEdit: ({ position, anchorRect }) => callbacks.onVegaEditRequest(position, anchorRect),
         onRequestDrawOpen: ({ node }) => callbacks.onDrawOpen?.(node.attrs.drawId),
@@ -671,6 +697,13 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
         onRequestEmbedUrl: ({ position, anchorRect }) => callbacks.onEmbedUrlRequest(position, anchorRect),
         onNoteEmbedContentLoad: (ctx) => callbacks.onNoteEmbedContentLoad?.(ctx),
         onNoteEmbedOpen: (noteId) => callbacks.onNoteEmbedOpen(noteId),
+        onResolveBlockRef: (target) => {
+          const backend = workspaceStore.backend
+          if (!backend) return Promise.resolve({ status: 'note-missing' } as const)
+          return resolveBlockRef(backend, target)
+        },
+        onOpenBlockRefSource: (noteId) => callbacks.onOpenBlockRefSource?.(noteId),
+        onSubscribeNoteSaved: callbacks.onSubscribeNoteSaved,
         t: (key: string) => i18n.global.t(key),
       },
       aiSlashItems,
@@ -718,6 +751,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
             return
           }
           core.pluginHost?.notifyTransactionApplied(nextState, transaction)
+          notifyActiveEditorTransaction()
           if (shouldRefreshOverlays(prevState, nextState, transaction)) {
             callbacks.onOverlaysUpdate()
           }
@@ -729,7 +763,13 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
             databaseCleanup.recordRemoved(prevState.doc, transaction, nextState.doc)
             scheduleContentUpdate(nextState.doc)
           }
-          callbacks.onAfterTransaction?.(view)
+          // Metadata-only transactions (no doc change, no selection change) do
+          // not affect document stats or typewriter scrolling. Skipping the
+          // hook also avoids forced cursor geometry on every pointermove in
+          // very large notes.
+          if (transaction.docChanged || transaction.selectionSet) {
+            callbacks.onAfterTransaction?.(view)
+          }
         },
         handleKeyDown(_view, event) {
           const slashState = getSlashMenuState(_view.state)
@@ -777,6 +817,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
         }),
       })
       applyCaretAnimation(core.editorView.dom as HTMLElement, settings.editor.caretAnimation)
+      registerActiveEditor(core.editorView, documentId)
       callbacks.onOverlaysUpdate()
       return
     }
@@ -795,6 +836,9 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     }
     core.isApplyingExternalState = false
     applyCaretAnimation(core.editorView.dom as HTMLElement, settings.editor.caretAnimation)
+    // Re-register on note switch: the view is reused, but it now holds a
+    // different document, and the revision counter must restart.
+    registerActiveEditor(core.editorView, documentId)
     callbacks.onOverlaysUpdate()
   }
 
@@ -839,6 +883,13 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
       const session = cloud?.getNoteSession(note.id) ?? null
       if (session) {
         await session.whenSynced()
+        // A brand-new relay document has no Y.XmlElement at all. Feeding that
+        // directly to ySyncPlugin produces a caret without a textblock, so
+        // keyboard input is silently ignored. Repair only after a complete
+        // relay sync; a timeout or decrypt failure is not evidence of emptiness.
+        if (session.hasCompleteRelayState) {
+          seedEmptyYDocFromContent(session.ydoc, core.schema, note.content)
+        }
         core.ydoc = session.ydoc
         core.awareness = session.awareness
         core.ownsYdoc = false

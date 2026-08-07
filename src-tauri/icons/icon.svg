@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Nevo Linked Pages</title>
+  <desc id="desc">A single continuous rounded ribbon draws an N on a dark warm square.</desc>
+  <defs>
+    <linearGradient id="bg" x1="114" y1="78" x2="912" y2="946" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#302317"/>
+      <stop offset="1" stop-color="#120F0D"/>
+    </linearGradient>
+    <linearGradient id="ribbon" x1="270" y1="218" x2="750" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F4CC77"/>
+      <stop offset=".45" stop-color="#D59129"/>
+      <stop offset=".74" stop-color="#9A657F"/>
+      <stop offset="1" stop-color="#62456F"/>
+    </linearGradient>
+    <filter id="shadow" x="162" y="132" width="740" height="780" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="24" stdDeviation="22" flood-color="#000" flood-opacity=".4"/>
+    </filter>
+  </defs>
+  <rect x="48" y="48" width="928" height="928" rx="232" fill="url(#bg)"/>
+  <rect x="50" y="50" width="924" height="924" rx="230" fill="none" stroke="#B9894A" stroke-opacity=".26" stroke-width="4"/>
+  <g filter="url(#shadow)">
+    <path d="M282 756V268L742 756V268" fill="none" stroke="#2B180B" stroke-opacity=".6" stroke-width="178" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M282 756V268L742 756V268" fill="none" stroke="url(#ribbon)" stroke-width="148" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <path d="M295 287L724 743" fill="none" stroke="#FFF1C5" stroke-opacity=".32" stroke-width="12" stroke-linecap="round"/>
+  <path d="M487 486l116 122" fill="none" stroke="#563748" stroke-opacity=".52" stroke-width="154"/>
+</svg>

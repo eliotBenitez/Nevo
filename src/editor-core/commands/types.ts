@@ -3,6 +3,8 @@ import type { NoteEmbedAttrs } from './note-embed'
 import type { MediaBlockAttrs } from './media'
 import type { EmbedBlockAttrs } from './embed'
 import type { DatabaseBlockData } from '../../types/database-block'
+import type { QueryBlockData } from '../../features/query/queryBlockData'
+import type { BlockRefTarget } from '../../core/blockRef/resolveBlockRef'
 export type CoreCommandId =
   | 'core.undo'
   | 'core.redo'
@@ -59,6 +61,9 @@ export type CoreCommandId =
   | 'core.code.language.clear'
   | 'core.mermaid.insert'
   | 'core.mermaid.update'
+  | 'core.query.insert'
+  | 'core.query.update'
+  | 'core.query.remove'
   | 'core.markmap.insert'
   | 'core.markmap.update'
   | 'core.draw.insert'
@@ -72,6 +77,7 @@ export type CoreCommandId =
   | 'core.toggle.collapse'
   | 'core.embed.insert'
   | 'core.database.insert'
+  | 'core.blockEmbed.remove'
 
 export interface NevoLinkRange {
   from: number
@@ -146,6 +152,9 @@ export interface NevoCoreCommands {
   insertMermaid: () => Command
   updateMermaidAtSelection: (code: string) => Command
   removeMermaidAtSelection: Command
+  insertQuery: () => Command
+  updateQueryAtSelection: (data: QueryBlockData) => Command
+  removeQueryAtSelection: Command
   insertMarkmap: () => Command
   updateMarkmapAtSelection: (markdown: string) => Command
   removeMarkmapAtSelection: Command
@@ -156,4 +165,5 @@ export interface NevoCoreCommands {
   setMediaBlockAttrsAtSelection: (attrs: Partial<MediaBlockAttrs>) => Command
   setEmbedAttrsAtSelection: (attrs: Partial<EmbedBlockAttrs>) => Command
   setDatabaseDataAtSelection: (data: DatabaseBlockData) => Command
+  insertBlockEmbed: (target: BlockRefTarget) => Command
 }

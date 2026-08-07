@@ -28,6 +28,43 @@
   box-shadow: var(--shadow-pop);
 }
 
+/* These menus teleport to <body>, outside `.nv-app`, so the app-wide
+   `[data-scrollbars]` rules never reach them. Without an explicit style they
+   fall back to the platform default: WebKitGTK draws a thin overlay bar, while
+   WebView2 (Windows) draws the chunky classic system scrollbar. Style them here
+   so the scroll affordance is consistent across platforms. */
+.slash-menu,
+.table-menu {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+.slash-menu::-webkit-scrollbar,
+.table-menu::-webkit-scrollbar {
+  display: block;
+  width: 8px;
+  height: 8px;
+}
+
+.slash-menu::-webkit-scrollbar-track,
+.table-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.slash-menu::-webkit-scrollbar-thumb,
+.table-menu::-webkit-scrollbar-thumb {
+  min-height: 34px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--line-strong);
+  background-clip: padding-box;
+}
+
+.slash-menu::-webkit-scrollbar-thumb:hover,
+.table-menu::-webkit-scrollbar-thumb:hover {
+  background-color: var(--text-4);
+}
+
 .slash-menu--picker {
   width: min(420px, calc(100vw - 24px));
 }
@@ -260,3 +297,53 @@
   color: #c84e4e;
 }
 
+@media (max-width: 719px) {
+  .floating-toolbar {
+    display: none;
+  }
+
+  .slash-menu {
+    position: fixed !important;
+    top: auto !important;
+    right: calc(12px + max(var(--safe-area-right), 0px));
+    bottom:
+      calc(
+        88px
+        + max(var(--safe-area-bottom), 0px)
+        + var(--mobile-keyboard-inset, 0px)
+      );
+    left: calc(12px + max(var(--safe-area-left), 0px)) !important;
+    width: auto;
+    max-width: none;
+    max-height: min(58dvh, 430px);
+    border-radius: calc(20px * var(--radius-scale, 1));
+    box-shadow: 0 20px 54px -18px var(--shadow);
+  }
+
+  .slash-menu__header {
+    min-height: 48px;
+    padding-inline: 14px;
+  }
+
+  .slash-menu__item {
+    min-height: 44px;
+    padding: 8px 14px;
+  }
+
+  .link-popover {
+    position: fixed !important;
+    top: auto !important;
+    right: calc(12px + max(var(--safe-area-right), 0px));
+    bottom:
+      calc(
+        88px
+        + max(var(--safe-area-bottom), 0px)
+        + var(--mobile-keyboard-inset, 0px)
+      );
+    left: calc(12px + max(var(--safe-area-left), 0px)) !important;
+    width: auto;
+    max-width: none;
+    border-radius: calc(18px * var(--radius-scale, 1));
+    box-shadow: 0 20px 54px -18px var(--shadow);
+  }
+}

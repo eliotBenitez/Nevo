@@ -35,6 +35,7 @@
       "localFirst": "Local-first · nothing leaves this device"
     },
     "create": {
+      "titlebar": "Create workspace",
       "title": "Create your workspace",
       "subtitle": "Pick a name, a colour, and where to keep it. You can rename or move it later.",
       "step": "Step {n} of {total}",
@@ -50,6 +51,8 @@
       "namePlaceholder": "My Workspace",
       "iconLabel": "Icon & colour",
       "iconHint": "Swap any time from workspace settings",
+      "glyphLabel": "Glyph",
+      "colourLabel": "Colour",
       "locationLabel": "Location",
       "locationHint": "Where files live on your machine",
       "locationBrowse": "Browse…",
@@ -88,6 +91,33 @@
           }
         }
       },
+      "mobile": {
+        "titlebar": "New workspace",
+        "identityTitle": "What should we call your workspace?",
+        "identitySubtitle": "Give it a name and a character. You can change everything later.",
+        "localWorkspace": "Local workspace",
+        "storageTitle": "Where should your data live?",
+        "storageSubtitle": "Start locally. You can turn on sync later in settings.",
+        "deviceTitle": "On this device",
+        "deviceSubtitle": "Recommended · no account required",
+        "cloudTitle": "Nevo Cloud",
+        "cloudSubtitle": "Access on all your devices",
+        "signIn": "Sign in",
+        "cloudUnavailable": "Cloud sign-in is not available during mobile setup yet",
+        "privacyTitle": "Your notes belong to you",
+        "privacyBody": "A local workspace works offline and stays in the app's protected storage.",
+        "storageInfoAction": "How does storage work?",
+        "storageInfoTitle": "Protected local storage",
+        "storageInfoBody": "Nevo keeps this workspace in the app's private data area. Other apps cannot browse it, and Nevo does not ask you to manage a filesystem path.",
+        "templateTitle": "Where should we begin?",
+        "templateSubtitle": "Choose a starter structure, or leave the workspace empty.",
+        "summary": "On device · {template}",
+        "edit": "Edit",
+        "close": "Close",
+        "continue": "Continue",
+        "createNamed": "Create {name}",
+        "createError": "Could not create the workspace. Please try again."
+      },
       "serverLabel": "Server URL",
       "serverHint": "Base URL of your self-hosted relay",
       "serverPlaceholder": "http://localhost:8080",
@@ -100,9 +130,12 @@
       "create": "Create workspace"
     },
     "open": {
+      "titlebar": "Open workspace",
       "title": "Open a workspace",
       "subtitle": "Pick from recent, browse for a folder, or drop one anywhere in this window.",
+      "mobileSubtitle": "Choose a recent workspace or select its folder.",
       "browse": "Browse for folder",
+      "importArchive": "Import from archive",
       "new": "New workspace",
       "filter": "Filter workspaces…",
       "recent": "Recent",
@@ -116,7 +149,9 @@
       "removeRecentConfirm": "Remove \"{name}\" from recents? Files stay on disk.",
       "deleteStorage": "Delete storage",
       "deleteStorageConfirm": "Delete \"{name}\"? This action can't be undone.",
-      "deleteFailed": "Could not delete the storage. Please try again."
+      "deleteFailed": "Could not delete the storage. Please try again.",
+      "emptyTitle": "No recent workspaces",
+      "emptySubtitle": "Select a workspace folder to open it on this device."
     }
   },
   "common": {
@@ -131,6 +166,119 @@
     "back": "Workspaces",
     "localWorkspace": "Local workspace",
     "cloudWorkspace": "Cloud storage",
+    "canvas": {
+      "document": "Document",
+      "canvas": "Canvas",
+      "viewSwitcher": "Note view",
+      "ariaLabel": "Edgeless note canvas",
+      "collapse": "Collapse note",
+      "expand": "Expand note",
+      "collapsedHint": "Double-click to expand",
+      "toolbar": "Canvas tools",
+      "addText": "Add text block",
+      "richNote": "Rich note",
+      "noteLink": "Linked note",
+      "frame": "Frame",
+      "mindMap": "Mind map",
+      "addShape": "Add shape",
+      "select": "Select",
+      "hand": "Pan",
+      "rectangle": "Rectangle",
+      "ellipse": "Ellipse",
+      "diamond": "Diamond",
+      "connector": "Connector",
+      "pen": "Pen",
+      "highlighter": "Highlighter",
+      "eraser": "Eraser",
+      "image": "Image",
+      "fullscreen": "Full screen",
+      "present": "Present frames",
+      "presentation": "Presentation",
+      "previousFrame": "Previous frame",
+      "nextFrame": "Next frame",
+      "exitPresentation": "Exit presentation",
+      "properties": "Properties",
+      "fill": "Fill",
+      "stroke": "Stroke",
+      "strokeWidth": "Stroke width",
+      "opacity": "Opacity",
+      "fontSize": "Font size",
+      "textColor": "Text color",
+      "fontFamily": "Font",
+      "fontSans": "Sans",
+      "fontSerif": "Serif",
+      "fontMono": "Mono",
+      "fontHandwriting": "Handwriting",
+      "rotation": "Rotation",
+      "alt": "Alternative text",
+      "routing": "Routing",
+      "straight": "Straight",
+      "orthogonal": "Orthogonal",
+      "bezier": "Curved",
+      "startCap": "Start",
+      "endCap": "End",
+      "none": "None",
+      "arrow": "Arrow",
+      "dot": "Dot",
+      "alignLeft": "Align left",
+      "alignCenter": "Align center",
+      "alignRight": "Align right",
+      "alignTop": "Align top",
+      "alignMiddle": "Align middle",
+      "alignBottom": "Align bottom",
+      "distributeHorizontal": "Distribute horizontally",
+      "distributeVertical": "Distribute vertically",
+      "duplicate": "Duplicate",
+      "bringFront": "Bring to front",
+      "bringForward": "Bring forward",
+      "sendBackward": "Send backward",
+      "sendBack": "Send to back",
+      "group": "Group",
+      "ungroup": "Ungroup",
+      "lock": "Lock",
+      "unlock": "Unlock",
+      "rotate": "Rotate selection",
+      "connectorFrom": "Move connector start",
+      "connectorTo": "Move connector end",
+      "connectAnchor": "Drag to connect",
+      "editText": "Edit canvas text",
+      "editRichText": "Edit rich note",
+      "bold": "Bold",
+      "italic": "Italic",
+      "underline": "Underline",
+      "strike": "Strikethrough",
+      "code": "Code",
+      "heading": "Heading",
+      "bulletList": "Bullet list",
+      "numberList": "Numbered list",
+      "todo": "To-do",
+      "quote": "Quote",
+      "frameTitle": "Frame title",
+      "presentationOrder": "Slide order",
+      "openLinkedNote": "Open linked note",
+      "addMindMapChild": "Add child",
+      "layoutMindMap": "Re-layout mind map",
+      "noteLinkPickerTitle": "Link a note",
+      "noteLinkSearch": "Search notes",
+      "noteLinkEmpty": "No matching notes.",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "fit": "Fit all",
+      "undo": "Undo",
+      "redo": "Redo",
+      "export": "Export canvas",
+      "exportTitle": "Export canvas",
+      "exportScope": "Area",
+      "exportAll": "All content",
+      "exportSelection": "Selection",
+      "exportViewport": "Current viewport",
+      "exportFormat": "Format",
+      "exportAction": "Export",
+      "exporting": "Exporting…",
+      "exportSelectionEmpty": "Select at least one canvas item.",
+      "exportFailed": "Canvas export failed.",
+      "cancel": "Cancel"
+    },
     "toggleSidebar": "Toggle sidebar",
     "toggleRightPanel": "Toggle right panel",
     "openDrawer": "Open sidebar",
@@ -241,6 +389,59 @@
         "moved": "{title} moved to position {position}.",
         "footer": "Favorites are saved with this workspace.",
         "done": "Done"
+      }
+    },
+    "mobile": {
+      "navigation": {
+        "label": "Workspace navigation",
+        "home": "Home",
+        "notes": "Notes",
+        "search": "Search",
+        "boards": "Boards",
+        "more": "More"
+      },
+      "editor": {
+        "export": "Export note",
+        "noteDetails": "Note details"
+      },
+      "noteDetails": {
+        "title": "Note details",
+        "done": "Done",
+        "navigation": "Navigation",
+        "sections": "{count} sections",
+        "localGraph": "Local graph",
+        "document": "Document",
+        "readingTime": "Reading time",
+        "export": "Export note"
+      },
+      "library": {
+        "title": "Notes",
+        "search": "Find a note",
+        "filters": "Open search filters",
+        "contentType": "Content type",
+        "all": "All",
+        "folders": "Folders",
+        "tags": "Tags",
+        "allNotes": "All notes",
+        "byDate": "By date",
+        "noteCount": "{count} notes",
+        "noPreview": "No preview yet",
+        "noResults": "No matching notes",
+        "noTags": "No tags yet"
+      },
+      "boards": {
+        "updated": "Updated {date}",
+        "unavailable": "Boards are unavailable",
+        "unavailableDescription": "Enable the Kanban system plugin to use boards on mobile."
+      },
+      "more": {
+        "title": "More",
+        "workspace": "Workspace",
+        "management": "Management",
+        "cloud": "Cloud workspace",
+        "onDevice": "Stored on this device",
+        "import": "Import",
+        "switchWorkspace": "Switch workspace"
       }
     },
     "pluginUi": {
@@ -623,12 +824,30 @@
       "workspace": "Workspace",
       "ai": "AI",
       "plugins": "Plugins",
+      "mcp": "AI agents",
       "hotkeys": "Hotkeys",
       "files": "Files & Storage",
+      "backup": "Backup & Restore",
       "advanced": "Advanced",
       "about": "About"
     },
     "navigationLabel": "Settings sections",
+    "mobile": {
+      "groups": {
+        "primary": "Main",
+        "system": "Data & system"
+      },
+      "descriptions": {
+        "appearance": "Theme, accent, and interface comfort",
+        "editor": "Text, input, and editor behavior",
+        "workspace": "Workspace organization and preferences",
+        "ai": "Local models and AI features",
+        "files": "Files, attachments, and diagnostics",
+        "backup": "Export and restore your data",
+        "plugins": "Extensions and app capabilities",
+        "about": "Version, platform, and Nevo details"
+      }
+    },
     "search": {
       "label": "Search settings",
       "placeholder": "Search settings...",
@@ -1345,6 +1564,37 @@
         "saved": "Saved"
       }
     },
+    "mcp": {
+      "description": "Let external coding agents read and edit this workspace through the local MCP bridge.",
+      "groups": { "access": "Access", "connect": "Connect an agent" },
+      "modes": {
+        "off": "Off",
+        "readOnly": "Read only",
+        "ask": "Ask before each change",
+        "auto": "Allow changes"
+      },
+      "mode": {
+        "title": "Agent access",
+        "description": "Off means the bridge does not listen at all. Only local workspaces are supported."
+      },
+      "autoSnapshot": {
+        "title": "Snapshot before each change",
+        "description": "Save a note snapshot before an agent edits it, so you can roll the change back from the note history."
+      },
+      "status": {
+        "title": "Bridge status",
+        "off": "Not running.",
+        "starting": "Starting…",
+        "running": "Listening on 127.0.0.1:{port}.",
+        "unsupported": "Available for local workspaces only."
+      },
+      "connect": {
+        "title": "Register the MCP server",
+        "description": "Build the server with pnpm --filter {'@'}nevo/mcp-server build, then register it with your agent using the absolute path to dist/index.js. No port or token goes in the config.",
+        "copy": "Copy command",
+        "copied": "Copied"
+      }
+    },
     "hotkeys": {
       "description": "Editable keyboard commands in Nevo can be recorded here. Editor formatting shortcuts are fixed by the editor engine.",
       "resetAll": "Reset all",
@@ -1520,7 +1770,10 @@
       "highlight": "Highlight (mark)",
       "textColor": "Text color",
       "math": "Inline math",
-      "image": "Insert image"
+      "image": "Insert image",
+      "mobile": "Editor tools",
+      "insertBlock": "Insert block",
+      "moreFormatting": "More formatting"
     },
     "linkPicker": {
       "createNote": "Create note “{title}”",
@@ -1531,6 +1784,13 @@
     "blockHandle": {
       "drag": "Drag to reorder",
       "options": "Block options"
+    },
+    "blockEmbed": {
+      "header": "Embedded block",
+      "notFound": "Referenced block not found",
+      "openSource": "Open source note",
+      "referencedFromPrefix": "Referenced from:",
+      "loading": "Loading embedded block…"
     },
     "colorPicker": {
       "none": "None",
@@ -1586,6 +1846,54 @@
       "applyHint": "to apply",
       "apply": "Apply",
       "delete": "Delete"
+    },
+    "queryBlock": {
+      "title": "Query",
+      "edit": "Edit query",
+      "loading": "Loading…",
+      "noContext": "Query results are unavailable",
+      "error": "Couldn't load query results",
+      "empty": "No notes match this query",
+      "resultsLabel": "results",
+      "retry": "Retry",
+      "label": "Query notes",
+      "applyHint": "to apply",
+      "apply": "Apply",
+      "delete": "Delete",
+      "view": "View",
+      "sort": "Sort",
+      "views": {
+        "list": "List",
+        "table": "Table",
+        "cards": "Cards"
+      },
+      "fields": {
+        "title": "Title",
+        "tags": "Tags",
+        "status": "Status",
+        "type": "Type",
+        "date": "Date",
+        "folder": "Folder"
+      },
+      "sortFields": {
+        "title": "Title",
+        "date": "Date",
+        "updatedAt": "Updated",
+        "createdAt": "Created"
+      },
+      "filters": {
+        "any": "Any",
+        "tagsAny": "Has any tag",
+        "tagsAll": "Has all tags",
+        "tagsPlaceholder": "tag1, tag2",
+        "status": "Status",
+        "type": "Type",
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "folder": "Folder",
+        "folderPlaceholder": "Folder path",
+        "includeSubtree": "Include subfolders"
+      }
     },
     "vega": {
       "label": "Vega-Lite chart",
@@ -1735,6 +2043,7 @@
     "emptyTitle": "No notes yet",
     "emptySub": "Create notes and link them with [[note name]] — they'll appear here as a network.",
     "searchPlaceholder": "Search nodes…",
+    "filters": "Graph filters",
     "untitled": "Untitled",
     "connections": "connections",
     "nodes": "nodes",
@@ -1865,6 +2174,7 @@
       "file": "File Attachment",
       "table": "Table",
       "mermaid": "Mermaid Diagram",
+      "query": "Query",
       "draw": "Drawing",
       "markmap": "Mind Map",
       "chart": "Chart",
@@ -2095,6 +2405,12 @@
       "fieldName": "Tags",
       "urgent": "Urgent",
       "feature": "Feature"
+    },
+    "defaultStatuses": {
+      "status": "Status",
+      "toDo": "To do",
+      "inProgress": "In progress",
+      "done": "Done"
     },
     "view": {
       "loading": "Loading…",
@@ -2432,6 +2748,77 @@
     "errors": {
       "noKey": "You don't have the key for this storage yet — ask an owner or admin to grant access.",
       "generic": "Something went wrong. Please try again."
+    }
+  },
+  "workspaceTransfer": {
+    "panelTitle": "Backup & Restore",
+    "panelDescription": "Export this workspace to a single file, or restore one from an archive.",
+    "localOnly": "Backup and restore are available for local workspaces only.",
+    "export": {
+      "title": "Export workspace",
+      "description": "Package notes, folders, assets, boards, databases, templates, and history into a single .nevoz file.",
+      "action": "Export workspace"
+    },
+    "import": {
+      "title": "Import into this workspace",
+      "mergeTitle": "Merge an archive",
+      "mergeAction": "Import into this workspace",
+      "mergeDescription": "Add an archive's notes, folders, assets, and databases to this workspace under a new \"Imported: …\" folder.",
+      "mergeConfirmTitle": "Merge archive into this workspace?",
+      "mergeConfirmMessage": "The archive's notes and folders will be added under a new \"Imported: …\" folder, with fresh ids so nothing in this workspace is overwritten. Kanban boards and note history in the archive are not merged.",
+      "mergeConfirmAction": "Merge archive"
+    },
+    "passwordPrompt": {
+      "exportTitle": "Protect the archive with a password?",
+      "exportMessage": "Optional — leave the field empty to export without a password.",
+      "exportLabel": "Password (optional)",
+      "confirmExport": "Export",
+      "importTitle": "Enter the archive password",
+      "importMessage": "This archive is password-protected.",
+      "importLabel": "Password",
+      "confirmImport": "Continue",
+      "placeholder": "Enter password",
+      "show": "Show password",
+      "hide": "Hide password"
+    },
+    "progress": {
+      "starting": "Preparing…",
+      "packing": "Packing files…",
+      "encrypting": "Encrypting archive…",
+      "extracting": "Extracting files…",
+      "finishing": "Finishing…"
+    },
+    "toast": {
+      "exportSuccessTitle": "Workspace exported",
+      "exportSuccess": "The archive was saved successfully.",
+      "exportCancelled": "Export cancelled.",
+      "exportErrorTitle": "Export failed",
+      "importSuccessTitle": "Workspace imported",
+      "importSuccess": "The archive was restored as a new workspace.",
+      "importCancelled": "Import cancelled.",
+      "importErrorTitle": "Import failed",
+      "importError": "Failed to import the workspace archive.",
+      "mergeSuccessTitle": "Archive merged",
+      "mergeSuccess": "Imported {notes} notes and {folders} folders from the archive.",
+      "mergeSuccessCaveat": "Kanban boards and note history from the archive were not merged; import it as a new workspace to bring those in too.",
+      "mergeErrorTitle": "Merge failed",
+      "mergeError": "Failed to merge the workspace archive."
+    },
+    "errors": {
+      "incorrectPassword": "Incorrect archive password.",
+      "passwordRequired": "This archive is password-protected. Enter the password to continue.",
+      "notNevoArchive": "The selected file is not a valid Nevo workspace archive.",
+      "unsupportedVersion": "This archive was created by an incompatible app version.",
+      "destinationNotEmpty": "Choose an empty folder for the new workspace.",
+      "localOnly": "This action is only available for local workspaces."
+    }
+  },
+  "mcp": {
+    "confirm": {
+      "title": "Allow agent edit?",
+      "message": "An external agent wants to run \"{method}\" on this workspace.",
+      "allow": "Allow",
+      "deny": "Deny"
     }
   }
 }

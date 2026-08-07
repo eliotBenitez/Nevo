@@ -1,0 +1,25 @@
+/* Keep ordinary ProseMirror blocks eagerly paintable. WebKitGTK can leave
+ * descendants of `content-visibility: auto` blocks skipped after scrolling,
+ * which also prevents nested lazy NodeViews from receiving their first
+ * IntersectionObserver event. Only replaceable heavy previews are suspended. */
+
+.doc-editor [data-viewport-render-state] {
+  transition: opacity 150ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.doc-editor [data-viewport-render-state='suspended'],
+.doc-editor [data-viewport-render-state='warming'] {
+  opacity: 0;
+}
+
+.doc-editor [data-viewport-render-state='active'],
+.doc-editor .ProseMirror-selectednode[data-viewport-render-state],
+.doc-editor [data-viewport-render-state]:focus-within {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .doc-editor [data-viewport-render-state] {
+    transition: none;
+  }
+}

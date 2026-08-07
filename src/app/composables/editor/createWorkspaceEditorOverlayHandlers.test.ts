@@ -53,6 +53,11 @@ function createOptions(local = true) {
       removeMermaidFromPopover: vi.fn(),
       onMermaidInputKeyDown: vi.fn(),
     },
+    queryEditor: {
+      applyQueryFromPopover: vi.fn(),
+      removeQueryFromPopover: vi.fn(),
+      onQueryInputKeyDown: vi.fn(),
+    },
     markmapEditor: {
       applyMarkmapFromPopover: vi.fn(),
       removeMarkmapFromPopover: vi.fn(),
@@ -88,6 +93,7 @@ function createOptions(local = true) {
     mathPopover,
     formulaPopover: { formula: '' },
     mermaidPopover: { code: '' },
+    queryPopover: { data: {} },
     markmapPopover: { markdown: '' },
     vegaPopover: { spec: '' },
     backendSupportsPathImport: () => local,

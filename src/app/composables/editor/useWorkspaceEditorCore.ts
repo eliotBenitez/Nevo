@@ -2,7 +2,7 @@ import { ref, type Ref } from 'vue'
 import { TextSelection } from 'prosemirror-state'
 import type { Node } from 'prosemirror-model'
 import type { WorkspaceSettings } from '../../../types/workspace'
-import { noteCommands } from '../../../tauri/commands'
+import { useWorkspaceStore } from '../../../stores/workspace'
 import { blockNode } from '../../../utils/noteExport/htmlSerializer'
 import {
   useEditorCore,
@@ -50,9 +50,15 @@ export interface WorkspaceEditorCoreOptions {
   openNoteEmbedPicker: RequiredCallback<'onNoteEmbedPickRequest'>
   openEmbedUrlPopover: RequiredCallback<'onEmbedUrlRequest'>
   openNoteEmbed: (noteId: string) => void
+  /** Reuses the same "open referenced note" behavior for `block_embed`'s
+   *  header click-to-open — callers typically pass the same function as
+   *  `openNoteEmbed`. */
+  openBlockRefSource?: RequiredCallback<'onOpenBlockRefSource'>
+  subscribeNoteSaved?: RequiredCallback<'onSubscribeNoteSaved'>
   openMathEditor: RequiredCallback<'onMathEditRequest'>
   openFormulaEditor: RequiredCallback<'onFormulaEditRequest'>
   openMermaidEditor: RequiredCallback<'onMermaidEditRequest'>
+  openQueryEditor: RequiredCallback<'onQueryEditRequest'>
   openPluginNodeEditor: RequiredCallback<'onPluginNodeEditRequest'>
   openMarkmapEditor: RequiredCallback<'onMarkmapEditRequest'>
   openVegaEditor: RequiredCallback<'onVegaEditRequest'>
@@ -70,10 +76,12 @@ async function loadNoteEmbedContent(
   options: WorkspaceEditorCoreOptions,
   noteId: string,
 ): Promise<string> {
-  const workspacePath = options.getWorkspacePath()
-  if (!workspacePath) throw new Error('No workspace')
+  // Through the backend, not the workspace path: a cloud workspace has none,
+  // and its note bodies are not part of `loadNote` (see loadNoteWithContent).
+  const backend = useWorkspaceStore().backend
+  if (!backend) throw new Error('No workspace')
 
-  const doc = await noteCommands.loadNote(workspacePath, noteId)
+  const doc = await backend.loadNoteWithContent(noteId)
   const context = { assetSrcs: [] as string[], assetsSubfolderName: '__EMBED__' }
   const rawHtml = await blockNode(doc.content, context)
   if (context.assetSrcs.length === 0) return rawHtml
@@ -181,9 +189,12 @@ export function useWorkspaceEditorCore(options: WorkspaceEditorCoreOptions) {
       }
     },
     onNoteEmbedOpen: options.openNoteEmbed,
+    onOpenBlockRefSource: options.openBlockRefSource,
+    onSubscribeNoteSaved: options.subscribeNoteSaved,
     onMathEditRequest: options.openMathEditor,
     onFormulaEditRequest: options.openFormulaEditor,
     onMermaidEditRequest: options.openMermaidEditor,
+    onQueryEditRequest: options.openQueryEditor,
     onPluginNodeEditRequest: options.openPluginNodeEditor,
     onMarkmapEditRequest: options.openMarkmapEditor,
     onVegaEditRequest: options.openVegaEditor,

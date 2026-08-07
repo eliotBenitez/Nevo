@@ -176,6 +176,7 @@ vi.mock('../composables/editor/useEditorOverlays', () => ({
     mathPopover: { open: false, latex: '', isInline: true, position: { top: 0, left: 0 }, nodePos: null },
     formulaPopover: { open: false, formula: '', position: { top: 0, left: 0 }, cellPos: null },
     mermaidPopover: { open: false, code: '', position: { top: 0, left: 0 }, nodePos: null },
+    queryPopover: { open: false, data: { filters: {}, sorts: [], view: 'list' }, position: { top: 0, left: 0 }, nodePos: null },
     markmapPopover: { open: false, markdown: '', position: { top: 0, left: 0 }, nodePos: null },
     vegaPopover: { open: false, spec: '', position: { top: 0, left: 0 }, nodePos: null },
     pluginNodePopover: { open: false, nodeName: null, title: '', fields: [], values: {}, removable: true, position: { top: 0, left: 0 }, nodePos: null },
@@ -231,6 +232,17 @@ vi.mock('../composables/editor/useMermaidEditor', () => ({
     applyMermaidFromPopover: vi.fn(),
     removeMermaidFromPopover: vi.fn(),
     onMermaidInputKeyDown: vi.fn(),
+  }),
+}))
+
+vi.mock('../composables/editor/useQueryEditor', () => ({
+  useQueryEditor: () => ({
+    openQueryPopoverForNode: vi.fn(),
+    closeQueryPopover: vi.fn(),
+    repositionQueryPopover: vi.fn(),
+    applyQueryFromPopover: vi.fn(),
+    removeQueryFromPopover: vi.fn(),
+    onQueryInputKeyDown: vi.fn(),
   }),
 }))
 
@@ -331,7 +343,6 @@ const defaultSettings: WorkspaceSettings = {
     typewriterPosition: 'lower',
   },
   workspace: {
-    defaultLandingView: 'editor',
     showGraphLabels: true,
     folderCreateBehavior: 'current-folder',
     rootNotesVisible: true,
@@ -382,6 +393,10 @@ const defaultSettings: WorkspaceSettings = {
   pluginSettings: {},
   features: {
     kanban: true,
+  },
+  mcp: {
+    mode: 'off',
+    autoSnapshot: true,
   },
   hotkeys: {
     bindings: [],

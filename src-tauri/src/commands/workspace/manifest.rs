@@ -256,6 +256,14 @@ pub fn open_workspace(path: String) -> Result<WorkspaceManifest, String> {
     Ok(manifest)
 }
 
+/// Reads the current manifest without running the open-workspace migrations,
+/// plugin installation, trash retention, or active-root side effects.
+#[tauri::command]
+pub fn load_workspace_manifest(path: String) -> Result<WorkspaceManifest, String> {
+    let path = normalize_workspace_path(&path)?;
+    crate::commands::folder::load_manifest(&path.to_string_lossy())
+}
+
 #[tauri::command]
 pub fn save_workspace_manifest(path: String, manifest: WorkspaceManifest) -> Result<(), String> {
     let logger = crate::logging::logger();

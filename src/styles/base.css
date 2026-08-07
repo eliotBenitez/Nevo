@@ -104,13 +104,11 @@ body {
 [data-chrome="minimal"] .nv-titlebar { height: 0; overflow: hidden; }
 
 /* ── Interface zoom ──────────────────────────────────── */
+/* In Tauri, zoom is applied natively via webview.setZoom() (src/tauri/webview.ts)
+   because WebKitGTK and WebView2 disagree on how CSS `zoom` affects layout
+   dimensions; `--ui-scale` is kept at 1 whenever that succeeds. This CSS `zoom`
+   is only the fallback for the plain web/dev build, where native zoom is unavailable. */
 .nv-app { zoom: var(--ui-scale, 1); }
-/* WebView2 scales the visual `zoom` box but keeps its pre-scaled layout
-   dimensions. WebKitGTK does not, so this compensation must stay Windows-only. */
-:root[data-platform="windows"] .nv-app {
-  width: calc(100% / var(--ui-scale, 1));
-  height: calc(100dvh / var(--ui-scale, 1));
-}
 
 /* ── Reduce transparency ─────────────────────────────── */
 /* When transparency is reduced, override the glass-* color tokens at the root

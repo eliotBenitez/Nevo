@@ -32,6 +32,11 @@ export function placeEditorPopoverNearAnchor(
   margin = 12,
 ): OverlayPosition {
   const bounds = boundaryRect ?? new DOMRect(0, 0, window.innerWidth, window.innerHeight)
+  const availableWidth = Math.max(bounds.width - margin * 2, 1)
+  const availableHeight = Math.max(bounds.height - margin * 2, 1)
+  el.style.maxWidth = `${availableWidth}px`
+  el.style.maxHeight = `${availableHeight}px`
+
   const elRect = el.getBoundingClientRect()
   const elHeight = el.offsetHeight || elRect.height
   const preferredBelowTop = anchorRect.bottom + editorPopoverGap
@@ -45,6 +50,12 @@ export function placeEditorPopoverNearAnchor(
     top: !fitsBelow && fitsAbove ? preferredAboveTop : preferredBelowTop,
     left: anchorRect.left + anchorRect.width / 2,
   }
+
+  // clampOverlayPosition measures the live DOM rect. Apply the preferred
+  // coordinates first so it clamps that candidate rather than the popup's
+  // previous (or initial) position.
+  el.style.top = `${preferredPosition.top}px`
+  el.style.left = `${preferredPosition.left}px`
 
   return clampOverlayPosition(preferredPosition, el, margin, bounds)
 }

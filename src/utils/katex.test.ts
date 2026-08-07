@@ -18,4 +18,16 @@ describe('renderKatexToString', () => {
     expect(html).toContain('katex-display')
     expect(warn).not.toHaveBeenCalledWith(expect.stringContaining('newLineInDisplayMode'))
   })
+
+  it('normalizes Unicode prime characters without strict-mode warnings', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    const html = renderKatexToString('f′(x) + g″(x)', {
+      displayMode: false,
+      throwOnError: true,
+    })
+
+    expect(html).toContain('katex')
+    expect(warn).not.toHaveBeenCalled()
+  })
 })

@@ -24,6 +24,7 @@ export interface DrawSelectionTransforms {
   beginBendArrow(): boolean
   bendArrowTo(point: DrawPoint): void
   endBendArrow(): void
+  cancelGesture(): void
 }
 
 export function createDrawSelectionTransforms(opts: {
@@ -190,6 +191,16 @@ export function createDrawSelectionTransforms(opts: {
     if (g?.moved) history.commitHistory(g.snapshot)
   }
 
+  function cancelGesture() {
+    const active = moveSel.value ?? resizeSel.value ?? rotateSel.value ?? bendSel.value
+    if (active) strokes.value = active.snapshot
+    moveSel.value = null
+    resizeSel.value = null
+    rotateSel.value = null
+    bendSel.value = null
+    selection.reflowArrows()
+  }
+
   return {
     isMovingSelection,
     isResizingSelection,
@@ -207,5 +218,6 @@ export function createDrawSelectionTransforms(opts: {
     beginBendArrow,
     bendArrowTo,
     endBendArrow,
+    cancelGesture,
   }
 }

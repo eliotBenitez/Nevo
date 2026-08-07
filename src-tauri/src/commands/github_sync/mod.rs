@@ -18,7 +18,7 @@ use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 
-use crate::commands::auth::secure_store_get;
+use crate::commands::auth::secure_store::secure_store_get;
 use crate::commands::path_utils::{normalize_workspace_path, write_atomic};
 
 const PLUGIN_ID: &str = "nevo.github-sync";
@@ -671,7 +671,8 @@ async fn perform_sync(
 ) -> Result<SyncResult, String> {
     let _sync_guard = SyncRunGuard::acquire(&workspace_path)?;
     let config = load_config(&workspace_path)?;
-    let token = secure_store_get(app.clone(), TOKEN_SECRET_KEY.to_string())?
+    let token = secure_store_get(app.clone(), TOKEN_SECRET_KEY.to_string())
+        .await?
         .ok_or_else(|| "GitHub token is not set".to_string())?;
 
     let workspace_for_collect = workspace_path.clone();
@@ -772,7 +773,8 @@ async fn perform_sync(
 
 #[tauri::command]
 pub async fn github_sync_test_connection(app: AppHandle, repo: String) -> Result<bool, String> {
-    let token = secure_store_get(app, TOKEN_SECRET_KEY.to_string())?
+    let token = secure_store_get(app, TOKEN_SECRET_KEY.to_string())
+        .await?
         .ok_or_else(|| "GitHub token is not set".to_string())?;
     let client = github_client(&token)?;
     let url = format!("{}/repos/{}", GITHUB_API, repo);

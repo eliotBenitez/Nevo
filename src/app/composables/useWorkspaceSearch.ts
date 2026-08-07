@@ -57,7 +57,9 @@ export function useWorkspaceSearch(opts: UseWorkspaceSearchOptions) {
   }
 
   async function runBlockSearch(queryText: string) {
-    if (!opts.workspacePath.value || !queryText) {
+    // Gated on the backend rather than the workspace path: a cloud workspace
+    // has no path but searches its own client-side index.
+    if (!workspaceStore.backend || !queryText) {
       blockResults.value = []
       isLoadingBlocks.value = false
       return

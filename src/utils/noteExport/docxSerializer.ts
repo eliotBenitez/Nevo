@@ -13,18 +13,35 @@ import {
   WidthType,
   ShadingType,
   LevelFormat,
-  convertMillimetersToTwip,
   Header,
   Footer,
   PageNumber,
   PageBreak,
   Bookmark,
   InternalHyperlink,
+  LineRuleType,
+  PageOrientation,
   type IRunOptions,
   type ILevelsOptions,
   type IParagraphOptions,
 } from 'docx'
 import { DocxExportOptions, DEFAULT_DOCX_OPTIONS } from './docxOptions'
+import {
+  createDocxPageGeometry,
+  mmToTwip,
+  type DocxPageGeometry,
+} from './docxLayout'
+import {
+  DOCX_BLOCKQUOTE_LEFT_INDENT_TWIPS,
+  DOCX_CODE_FONT_SIZE_PT,
+  DOCX_HEADING_STYLES,
+  DOCX_LIST_HANGING_INDENT_TWIPS,
+  DOCX_LIST_LEFT_INDENT_TWIPS,
+  DOCX_TITLE_PAGE_FONT_SIZE_PT,
+  DOCX_TITLE_STYLE,
+  pointsToHalfPoints,
+  type DocxTextStyle,
+} from './docxTypography'
 import type { BlockNode, NoteDocument } from '../../types/note'
 import { computeBlockTableValues } from '../../editor-core/tableFormula'
 import { renderMermaidToSvg } from './mermaidToSvg'
@@ -34,6 +51,8 @@ import { renderMathToSvg } from './mathToSvg'
 import type { RasterPng } from './svgRaster'
 import { normalizeDatabaseData, type DatabaseBlockData, type DbCellValue, type DbField } from '../../types/database-block'
 import { visibleRecords } from '../../editor-core/databaseFilterSort'
+import { normalizeQueryBlockData } from '../../features/query/queryBlockData'
+import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSummary'
 
 /** Raster image type accepted by docx's ImageRun (excludes SVG; we rasterize). */
 export type DocxImageType = 'png' | 'jpg' | 'gif' | 'bmp'
@@ -59,6 +78,7 @@ interface Ctx extends DocxExportHelpers {
   orderedSeq: number
   headingCounters?: number[]
   options?: DocxExportOptions
+  geometry: DocxPageGeometry
   /** Whether a self-contained table of contents is being built; when set, every
    *  rendered heading (levels 1-3) gets a bookmark and contributes an entry. */
   toc?: boolean
@@ -122,7 +142,6 @@ function getHeadingPrefix(level: number, ctx: Ctx): string {
   return segments.join('.') + '. '
 }
 
-const CONTENT_WIDTH_PX = 600
 const LINK_COLOR = '2563EB'
 
 function safeHex(value: unknown): string | undefined {
@@ -131,11 +150,18 @@ function safeHex(value: unknown): string | undefined {
   return /^[0-9a-fA-F]{6}$/.test(hex) ? hex.toUpperCase() : undefined
 }
 
-function fitTransform(width: number, height: number): { width: number; height: number } {
-  if (width <= 0 || height <= 0) return { width: CONTENT_WIDTH_PX, height: 400 }
-  if (width <= CONTENT_WIDTH_PX) return { width: Math.round(width), height: Math.round(height) }
-  const k = CONTENT_WIDTH_PX / width
-  return { width: CONTENT_WIDTH_PX, height: Math.round(height * k) }
+function fitTransform(
+  width: number,
+  height: number,
+  geometry: DocxPageGeometry,
+): { width: number; height: number } {
+  const maxWidth = geometry.contentWidthPx
+  const maxHeight = geometry.contentHeightPx
+  if (width <= 0 || height <= 0) {
+    return { width: maxWidth, height: Math.min(maxHeight, 400) }
+  }
+  const scale = Math.min(1, maxWidth / width, maxHeight / height)
+  return { width: width * scale, height: height * scale }
 }
 
 function alignmentOf(value: unknown) {
@@ -198,7 +224,11 @@ async function mathRun(latex: string, display: boolean, ctx: Ctx): Promise<Inlin
   if (!svg) return null
   const raster = await ctx.rasterizeSvg(svg)
   if (!raster) return null
-  return new ImageRun({ data: raster.data, type: 'png', transformation: fitTransform(raster.width, raster.height) })
+  return new ImageRun({
+    data: raster.data,
+    type: 'png',
+    transformation: fitTransform(raster.width, raster.height, ctx.geometry),
+  })
 }
 
 async function inlineChildren(node: BlockNode, ctx: Ctx, forceBold = false): Promise<InlineChild[]> {
@@ -224,7 +254,10 @@ async function inlineChildren(node: BlockNode, ctx: Ctx, forceBold = false): Pro
 }
 
 function indentForLevel(level: number) {
-  return { left: 720 + level * 360, hanging: 360 }
+  return {
+    left: DOCX_LIST_LEFT_INDENT_TWIPS + level * DOCX_LIST_HANGING_INDENT_TWIPS,
+    hanging: DOCX_LIST_HANGING_INDENT_TWIPS,
+  }
 }
 
 function bulletLevels(): ILevelsOptions[] {
@@ -298,10 +331,16 @@ async function listParagraphs(
   return out
 }
 
-async function imageParagraphFromRaster(raster: RasterPng): Promise<Paragraph> {
+async function imageParagraphFromRaster(raster: RasterPng, geometry: DocxPageGeometry): Promise<Paragraph> {
   return new Paragraph({
     alignment: AlignmentType.CENTER,
-    children: [new ImageRun({ data: raster.data, type: 'png', transformation: fitTransform(raster.width, raster.height) })],
+    children: [
+      new ImageRun({
+        data: raster.data,
+        type: 'png',
+        transformation: fitTransform(raster.width, raster.height, geometry),
+      }),
+    ],
   })
 }
 
@@ -309,7 +348,7 @@ async function rasterBlock(svg: string | null, ctx: Ctx, captionText = ''): Prom
   if (!svg || !svg.trim()) return []
   const raster = await ctx.rasterizeSvg(svg)
   if (!raster) return []
-  const out = [await imageParagraphFromRaster(raster)]
+  const out = [await imageParagraphFromRaster(raster, ctx.geometry)]
   if (captionText.trim()) {
     out.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: captionText, italics: true, size: 18 })] }))
   }
@@ -467,13 +506,18 @@ async function blocksFor(node: BlockNode, ctx: Ctx): Promise<(Paragraph | Table)
       const text = (node.content ?? []).map(c => c.text ?? '').join('')
       const runs: TextRun[] = []
       text.split('\n').forEach((line, i) => {
-        runs.push(new TextRun({ text: line, font: 'Consolas', size: 18, break: i === 0 ? 0 : 1 }))
+        runs.push(new TextRun({
+          text: line,
+          font: 'Consolas',
+          size: pointsToHalfPoints(DOCX_CODE_FONT_SIZE_PT),
+          break: i === 0 ? 0 : 1,
+        }))
       })
       return [new Paragraph({ children: runs, shading: { type: ShadingType.CLEAR, fill: 'F4F6F8' } })]
     }
     case 'blockquote': {
       const decoration: IParagraphOptions = {
-        indent: { left: 480 },
+        indent: { left: DOCX_BLOCKQUOTE_LEFT_INDENT_TWIPS },
         border: { left: { style: BorderStyle.SINGLE, size: 18, color: '8AA2C8', space: 12 } },
       }
       return decoratedBlocks(node, ctx, decoration)
@@ -506,7 +550,16 @@ async function blocksFor(node: BlockNode, ctx: Ctx): Promise<(Paragraph | Table)
       const out: (Paragraph | Table)[] = []
       const align = alignmentOf(node.attrs?.align) ?? AlignmentType.CENTER
       if (img) {
-        out.push(new Paragraph({ alignment: align, children: [new ImageRun({ data: img.data, type: img.type, transformation: fitTransform(img.width, img.height) })] }))
+        out.push(new Paragraph({
+          alignment: align,
+          children: [
+            new ImageRun({
+              data: img.data,
+              type: img.type,
+              transformation: fitTransform(img.width, img.height, ctx.geometry),
+            }),
+          ],
+        }))
       }
       const caption = String(node.attrs?.caption ?? '')
       if (caption) out.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: caption, italics: true, size: 18 })] }))
@@ -529,6 +582,12 @@ async function blocksFor(node: BlockNode, ctx: Ctx): Promise<(Paragraph | Table)
     }
     case 'mermaid_block':
       return rasterBlock(await renderMermaidToSvg(String(node.attrs?.code ?? '')), ctx)
+    case 'query_block': {
+      // Query results are dynamic (live cross-note search) and are never
+      // materialized into export output — only a static summary of the filters.
+      const data = normalizeQueryBlockData(node.attrs?.data)
+      return [new Paragraph({ children: textRuns(`Query: ${summarizeQueryBlockFilters(data)}`, { italics: true }), ...calloutShade('F5F7FB') })]
+    }
     case 'markmap_block':
       return rasterBlock(await renderMarkmapToSvg(String(node.attrs?.markdown ?? '')), ctx)
     case 'vega_block':
@@ -541,6 +600,11 @@ async function blocksFor(node: BlockNode, ctx: Ctx): Promise<(Paragraph | Table)
       const out = [new Paragraph({ children: textRuns(title, { bold: true }), ...calloutShade('F5F7FB') })]
       if (previewText.trim()) out.push(new Paragraph({ children: textRuns(previewText), ...calloutShade('F5F7FB') }))
       return out
+    }
+    case 'block_embed': {
+      // Static placeholder only — the referenced block is never resolved
+      // during export (mirrors query_block above), matching v1 scope.
+      return [new Paragraph({ children: textRuns('↪ Embedded block', { italics: true }) })]
     }
     case 'embed_block': {
       const url = String(node.attrs?.url ?? '')
@@ -590,12 +654,14 @@ export async function serializeNoteToDocx(
   options?: DocxExportOptions
 ): Promise<Document> {
   const opts = options ?? DEFAULT_DOCX_OPTIONS
+  const geometry = createDocxPageGeometry(opts)
   const ctx: Ctx = {
     ...helpers,
     numbering: [],
     orderedSeq: 0,
     headingCounters: [0, 0, 0, 0, 0, 0],
     options: opts,
+    geometry,
   }
 
   ctx.toc = opts.tableOfContents
@@ -616,7 +682,10 @@ export async function serializeNoteToDocx(
         heading: HeadingLevel.TITLE,
         alignment: AlignmentType.CENTER,
         spacing: { before: 2400, after: 240 },
-        children: textRuns(titleText, { size: 48, bold: true }),
+        children: textRuns(titleText, {
+          size: pointsToHalfPoints(DOCX_TITLE_PAGE_FONT_SIZE_PT),
+          bold: true,
+        }),
       }))
       children.push(new Paragraph({ children: [new PageBreak()] }))
     } else {
@@ -649,30 +718,22 @@ export async function serializeNoteToDocx(
   children.push(...bodyBlocks)
 
   // 4. Page Size & Orientation
-  const pageOpts: { width: number; height: number; orientation: 'portrait' | 'landscape' } = {
-    width: convertMillimetersToTwip(210),
-    height: convertMillimetersToTwip(297),
-    orientation: 'portrait',
-  }
-
-  if (opts.paperFormat === 'Letter') {
-    pageOpts.width = convertMillimetersToTwip(215.9)
-    pageOpts.height = convertMillimetersToTwip(279.4)
-  }
-
-  if (opts.orientation === 'landscape') {
-    const tmp = pageOpts.width
-    pageOpts.width = pageOpts.height
-    pageOpts.height = tmp
-    pageOpts.orientation = 'landscape'
+  const pageOpts = {
+    width: mmToTwip(geometry.portraitWidthMm),
+    height: mmToTwip(geometry.portraitHeightMm),
+    orientation: opts.orientation === 'landscape'
+      ? PageOrientation.LANDSCAPE
+      : PageOrientation.PORTRAIT,
   }
 
   // 5. Margins in millimeters converted to twips
   const marginOpts = {
-    top: convertMillimetersToTwip(opts.marginTop),
-    right: convertMillimetersToTwip(opts.marginRight),
-    bottom: convertMillimetersToTwip(opts.marginBottom),
-    left: convertMillimetersToTwip(opts.marginLeft),
+    top: mmToTwip(geometry.marginsMm.top),
+    right: mmToTwip(geometry.marginsMm.right),
+    bottom: mmToTwip(geometry.marginsMm.bottom),
+    left: mmToTwip(geometry.marginsMm.left),
+    header: mmToTwip(geometry.headerDistanceMm),
+    footer: mmToTwip(geometry.footerDistanceMm),
   }
 
   // 6. Running headers & Page numbers
@@ -727,6 +788,11 @@ export async function serializeNoteToDocx(
   const spacingLine = Math.round(opts.lineSpacing * 240)
   // paragraph spacing in twips (dxa): pt * 20
   const spacingAfter = Math.round(opts.paragraphSpacing * 20)
+  const defaultStyleRun = (style: DocxTextStyle) => ({
+    size: style.fontSizePt === undefined ? undefined : pointsToHalfPoints(style.fontSizePt),
+    color: style.color,
+    italics: style.italics,
+  })
 
   return new Document({
     features: {
@@ -744,9 +810,31 @@ export async function serializeNoteToDocx(
             spacing: {
               line: spacingLine,
               after: spacingAfter,
+              lineRule: LineRuleType.AUTO,
             }
           }
-        }
+        },
+        title: {
+          run: defaultStyleRun(DOCX_TITLE_STYLE),
+        },
+        heading1: {
+          run: defaultStyleRun(DOCX_HEADING_STYLES[0]),
+        },
+        heading2: {
+          run: defaultStyleRun(DOCX_HEADING_STYLES[1]),
+        },
+        heading3: {
+          run: defaultStyleRun(DOCX_HEADING_STYLES[2]),
+        },
+        heading4: {
+          run: defaultStyleRun(DOCX_HEADING_STYLES[3]),
+        },
+        heading5: {
+          run: defaultStyleRun(DOCX_HEADING_STYLES[4]),
+        },
+        heading6: {
+          run: defaultStyleRun(DOCX_HEADING_STYLES[5]),
+        },
       }
     },
     sections: [{

@@ -1,5 +1,19 @@
 let cachedHome: string | null = null
 
+function isWindowsPlatform(platform: string | null | undefined): boolean {
+  const normalizedPlatform = platform?.toLowerCase()
+  return normalizedPlatform === 'windows' || normalizedPlatform === 'win32'
+}
+
+/**
+ * Uses the native separator for paths shown to the user. This is deliberately
+ * presentation-only: persisted workspace paths continue to be handled by the
+ * backend as filesystem paths.
+ */
+export function formatWorkspacePath(path: string, platform?: string | null): string {
+  return isWindowsPlatform(platform) ? path.replace(/\//g, '\\') : path.replace(/\\/g, '/')
+}
+
 /**
  * Expand a leading `~` / `~/` / `~\` in a workspace path to the absolute home
  * directory.

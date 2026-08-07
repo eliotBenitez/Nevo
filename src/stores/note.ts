@@ -1,9 +1,14 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { markRaw, ref } from 'vue'
 import type { NoteDocument, NoteProperties, NoteSnapshotMeta } from '../types/note'
+import type { CanvasSnapshotV1 } from '../core/canvas'
 import { appLogger } from '../utils/logger'
 import { useTreeStore } from './tree'
 import { useWorkspaceStore } from './workspace'
+import { createYDocFromContent, encodeYDocState } from '../editor-core/collaboration'
+import { nevoBaseSchema } from '../editor-core/schema'
+import { replaceCanvasSnapshot } from '../core/canvas'
+import { collabCommands } from '../tauri/commands'
 
 export type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -17,6 +22,26 @@ const EMPTY_PROPERTIES: NoteProperties = {
 }
 
 type NotePropertiesPatch = Partial<NoteProperties>
+
+/**
+ * Keeps the note body out of Vue's deep reactivity.
+ *
+ * `content` is a large plain-JSON tree (a ~230k-character note is several
+ * thousand nodes) that is only ever replaced wholesale through `setContent` —
+ * never mutated through the store proxy — so per-node reactivity buys nothing
+ * and costs a lot: every consumer that walks the document (right-panel outline
+ * and word count, editor init via `nodeFromJSON`, serialization) pays proxy
+ * creation plus dependency tracking for every node. Measured on WebKitGTK with
+ * a 230k-character note, the right panel's three document walks take ~37 ms
+ * through proxies versus ~6 ms on the raw tree.
+ *
+ * `markRaw` returns the same object, so content identity — which `isSameDraft`
+ * and the editor's reload check rely on — is preserved.
+ */
+function keepContentRaw<T extends NoteDocument>(note: T): T {
+  if (note.content && typeof note.content === 'object') markRaw(note.content)
+  return note
+}
 
 function pushToCache(note: NoteDocument) {
   noteCache.delete(note.id)
@@ -100,6 +125,7 @@ export const useNoteStore = defineStore('note', () => {
       && a.cover === b.cover
       && a.folderId === b.folderId
       && arePropertiesEqual(a.properties, b.properties)
+      && a.canvas === b.canvas
       // Content identity is preserved across setContent (mutates in place) and
       // saveNote (spreads meta only), so a reference check is sufficient and
       // avoids O(document) JSON.stringify on large notes.
@@ -119,7 +145,7 @@ export const useNoteStore = defineStore('note', () => {
       noteCache.delete(noteId)
       noteCache.set(noteId, cachedNote)
       if (sessionToken !== noteSessionToken || workspaceStore.backend !== backend) return
-      activeNote.value = cachedNote
+      activeNote.value = keepContentRaw(cachedNote)
       isDirty.value = false
       saveStatus.value = 'saved'
       return
@@ -146,7 +172,7 @@ export const useNoteStore = defineStore('note', () => {
 
     if (sessionToken !== noteSessionToken || workspaceStore.backend !== backend) return
 
-    activeNote.value = note
+    activeNote.value = keepContentRaw(note)
     snapshots.value = nextSnapshots
     isDirty.value = false
     saveStatus.value = 'saved'
@@ -161,7 +187,7 @@ export const useNoteStore = defineStore('note', () => {
     try {
       const note = await backend.loadNote(noteId)
       if (workspaceStore.backend !== backend) return
-      pushToCache(note)
+      pushToCache(keepContentRaw(note))
     } catch (error) {
       await appLogger.error({
         source: 'frontend.note',
@@ -210,7 +236,7 @@ export const useNoteStore = defineStore('note', () => {
         return
       }
 
-      activeNote.value = note
+      activeNote.value = keepContentRaw(note)
       isDirty.value = false
       saveStatus.value = 'saved'
       pushToCache(note)
@@ -238,7 +264,16 @@ export const useNoteStore = defineStore('note', () => {
     // avoids invalidating every watcher keyed on `activeNote.value` identity
     // (e.g. WorkspaceShell, WorkspaceEditorPane props.note) on each debounced
     // flush during typing on large documents.
-    note.content = content
+    note.content = content && typeof content === 'object' ? markRaw(content) : content
+    isDirty.value = true
+    dirtyRevision.value += 1
+    saveStatus.value = 'unsaved'
+  }
+
+  function setCanvas(canvas: CanvasSnapshotV1) {
+    const note = activeNote.value
+    if (!note || note.canvas === canvas) return
+    note.canvas = canvas
     isDirty.value = true
     dirtyRevision.value += 1
     saveStatus.value = 'unsaved'
@@ -313,12 +348,26 @@ export const useNoteStore = defineStore('note', () => {
     const sessionToken = noteSessionToken
     saveStatus.value = 'saving'
     try {
+      const contentFlush = pendingContentFlush?.()
+      if (contentFlush instanceof Promise) await contentFlush
+      const yjsFlush = pendingYjsFlush?.()
+      if (yjsFlush instanceof Promise) await yjsFlush
       const restored = await backend.restoreNoteSnapshot(note.id, snapshotId)
+      if (workspaceStore.backendKind === 'local' && workspaceStore.activePath) {
+        const restoredYDoc = createYDocFromContent(nevoBaseSchema, restored.content)
+        if (restored.canvas) replaceCanvasSnapshot(restoredYDoc, restored.canvas)
+        await collabCommands.saveYjsState(
+          workspaceStore.activePath,
+          restored.id,
+          encodeYDocState(restoredYDoc),
+        )
+        restoredYDoc.destroy()
+      }
       const nextSnapshots = await backend.listNoteSnapshots(note.id)
       if (sessionToken !== noteSessionToken || workspaceStore.backend !== backend || activeNote.value?.id !== note.id) {
         return
       }
-      activeNote.value = restored
+      activeNote.value = keepContentRaw(restored)
       snapshots.value = nextSnapshots
       isDirty.value = false
       saveStatus.value = 'saved'
@@ -348,6 +397,7 @@ export const useNoteStore = defineStore('note', () => {
     prewarmCache,
     invalidateNoteCache,
     setContent,
+    setCanvas,
     markContentDirty,
     setTitle,
     setIcon,

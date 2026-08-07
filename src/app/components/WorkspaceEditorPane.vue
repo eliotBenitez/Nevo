@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { defineAsyncComponent, ref } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { SaveStatus } from '../../stores/note'
 import type { NoteDocument } from '../../types/note'
+import type { CanvasSnapshotV1 } from '../../core/canvas'
+import type { NoteViewMode } from '../../features/canvas/canvasPreferences'
 import type { PluginManifest, WorkspaceSettings } from '../../types/workspace'
 import type { NevoSandboxUiContributionSnapshot } from '../../types/editor-plugin'
 import NvNoteIcon from '../../ui/primitives/NvNoteIcon.vue'
@@ -14,6 +16,7 @@ import { useEditorOverlays } from '../composables/editor/useEditorOverlays'
 import { useMathEditor } from '../composables/editor/useMathEditor'
 import { useFormulaEditor } from '../composables/editor/useFormulaEditor'
 import { useMermaidEditor } from '../composables/editor/useMermaidEditor'
+import { useQueryEditor } from '../composables/editor/useQueryEditor'
 import { usePluginNodePopover } from '../composables/editor/usePluginNodePopover'
 import { useMarkmapEditor } from '../composables/editor/useMarkmapEditor'
 import { useVegaEditor } from '../composables/editor/useVegaEditor'
@@ -47,12 +50,14 @@ import DocAppearance from './editor/DocAppearance.vue'
 import AiAskModal from './editor/AiAskModal.vue'
 import NoteEmbedPicker from './editor/NoteEmbedPicker.vue'
 import EditorOverlayContainer from './editor/EditorOverlayContainer.vue'
+import MobileEditorTabBar from './editor/MobileEditorTabBar.vue'
 import type { WorkspaceBlockNavigationTarget } from '../../types/search'
 import LocalGraphPanel from '../../features/graph/LocalGraphPanel.vue'
 import { ChevronRight, EllipsisVertical } from 'lucide-vue-next'
 import type { TreeNode } from '../../types/note'
 import NoteBreadcrumb from './NoteBreadcrumb.vue'
 import { useCollabStore } from '../../stores/collab'
+import EdgelessCanvasView from '../../features/canvas/EdgelessCanvasView.vue'
 
 const TemplatePickerModal = defineAsyncComponent(() => import('./templates/TemplatePickerModal.vue'))
 
@@ -68,12 +73,16 @@ interface Props {
   containerItems: TreeNode[]
   pendingBlockTarget?: WorkspaceBlockNavigationTarget | null
   pendingDrawUpdate?: { drawId: string; svgPreview: string; src: string; title?: string } | null
+  workspaceId?: string
+  viewMode?: NoteViewMode
 }
 
 const props = withDefaults(defineProps<Props>(), {
   workspaceName: '',
   pendingBlockTarget: undefined,
   pendingDrawUpdate: undefined,
+  workspaceId: '',
+  viewMode: 'document',
 })
 const emit = defineEmits<{
   'update:title': [value: string]
@@ -90,6 +99,8 @@ const emit = defineEmits<{
   'request-import-md': []
   'open-draw': [noteId: string, drawId: string]
   'plugin-contributions': [snapshot: NevoSandboxUiContributionSnapshot]
+  'change-view': [mode: NoteViewMode]
+  'update:canvas': [snapshot: CanvasSnapshotV1]
 }>()
 
 function emitOpenDraw(drawId: string) {
@@ -146,6 +157,11 @@ const collabStore = useCollabStore()
 const core = createEditorCore()
 const graphStore = useGraphStore()
 const treeStore = useTreeStore()
+const canvasNoteOptions = computed(() => Array.from(treeStore.noteById.values()).map(note => ({
+  id: note.id,
+  title: note.title,
+  icon: note.icon,
+})))
 const workspaceStore = useWorkspaceStore()
 const assetActions = useEditorAssetActions({
   getWorkspacePath: () => props.workspacePath,
@@ -169,9 +185,15 @@ const blockHandleComposable = useBlockHandle(core, {
   getHandleBoundaryEl: () => editorScrollEl.value ?? editorWrapEl.value ?? editorRoot.value,
   getTypeMenuBoundaryEl: () => editorScrollEl.value ?? editorWrapEl.value ?? editorRoot.value,
   getTypeMenuEl: () => overlayContainerRef.value?.blockTypeMenuEl ?? null,
+  getCurrentNoteId: () => props.note?.id ?? null,
 })
 const { blockHandle } = blockHandleComposable
-const { isTouch, supportsHover } = useDeviceLayout()
+const { isPhone, isTouch, supportsHover } = useDeviceLayout()
+const showMobileEditorTabBar = computed(() =>
+  isPhone.value
+  && props.viewMode === 'document'
+  && Boolean(props.note),
+)
 
 // Overlays
 const overlays = useEditorOverlays(core, {
@@ -180,7 +202,7 @@ const overlays = useEditorOverlays(core, {
   getTableMenuEl: () => overlayContainerRef.value?.tableMenuEl ?? null,
   getLinkPickerEl: () => overlayContainerRef.value?.linkPickerEl ?? null,
 })
-const { slashOverlay, toolbarOverlay, tableMenuOverlay, linkPopover, highlightPicker, textColorPicker, mathPopover, formulaPopover, mermaidPopover, markmapPopover, vegaPopover, pluginNodePopover, linkPickerOverlay, activeMarkNames } = overlays
+const { slashOverlay, toolbarOverlay, tableMenuOverlay, linkPopover, highlightPicker, textColorPicker, mathPopover, formulaPopover, mermaidPopover, queryPopover, markmapPopover, vegaPopover, pluginNodePopover, linkPickerOverlay, activeMarkNames } = overlays
 
 const { imageCtxMenu, imageMenuItems, openImageContextMenu } = useImageContextMenu(() => props.workspacePath)
 
@@ -270,6 +292,16 @@ const mermaidEditor = useMermaidEditor(
   overlays.clampOverlayPosition,
 )
 
+const queryEditor = useQueryEditor(
+  core,
+  queryPopover,
+  {
+    getQueryPopoverEl: () => overlayContainerRef.value?.queryPopoverEl ?? null,
+  },
+  overlays.updateOverlays,
+  overlays.clampOverlayPosition,
+)
+
 const markmapEditor = useMarkmapEditor(
   core,
   markmapPopover,
@@ -313,10 +345,46 @@ const linkEditor = useLinkEditor(
 
 const imageUpload = useImageUpload(core, () => props.workspacePath, overlays.updateOverlays)
 const fileUpload = useFileUpload(core, () => props.workspacePath, overlays.updateOverlays)
-const mediaUpload = useMediaUpload(core, () => props.workspacePath, overlays.updateOverlays)
+const mediaUpload = useMediaUpload(core, () => props.workspacePath, overlays.updateOverlays, () => workspaceStore.backend)
 const notePreload = useNotePreload()
 
 const insertTemplatePickerOpen = ref(false)
+
+function openNoteById(noteId: string) {
+  if (!treeStore.noteById.get(noteId)) return
+  emit('open-note', noteId)
+}
+
+// Best-effort "note saved" signal for block_embed's live re-resolve (see
+// `CoreNodeViewOptions.onSubscribeNoteSaved`). Since only one note is open
+// in this pane at a time, this only ever fires for whichever noteId matches
+// props.note.id — i.e. it benefits a block_embed referencing a block earlier
+// in the SAME note. Cross-note staleness is covered by the mount-time
+// resolve that already runs whenever the editor is rebuilt on note switch.
+const blockRefSavedListeners = new Map<string, Set<() => void>>()
+
+watch(
+  () => [props.saveStatus, props.note?.id] as const,
+  ([status, noteId], previous) => {
+    const previousStatus = previous?.[0]
+    if (status === 'saved' && previousStatus !== 'saved' && noteId) {
+      blockRefSavedListeners.get(noteId)?.forEach((callback) => callback())
+    }
+  },
+)
+
+function subscribeNoteSaved(noteId: string, callback: () => void): () => void {
+  let listeners = blockRefSavedListeners.get(noteId)
+  if (!listeners) {
+    listeners = new Set()
+    blockRefSavedListeners.set(noteId, listeners)
+  }
+  listeners.add(callback)
+  return () => {
+    listeners?.delete(callback)
+    if (listeners?.size === 0) blockRefSavedListeners.delete(noteId)
+  }
+}
 
 const {
   editorSetup,
@@ -358,13 +426,13 @@ const {
   requestMediaPicker: mediaUpload.requestMediaPicker,
   openNoteEmbedPicker,
   openEmbedUrlPopover,
-  openNoteEmbed: (noteId) => {
-    if (!treeStore.noteById.get(noteId)) return
-    emit('open-note', noteId)
-  },
+  openNoteEmbed: openNoteById,
+  openBlockRefSource: openNoteById,
+  subscribeNoteSaved,
   openMathEditor: mathEditor.openMathPopoverForNode,
   openFormulaEditor: (cellPos, _formula, rect) => formulaEditor.openFormulaPopoverForCell(cellPos, rect),
   openMermaidEditor: mermaidEditor.openMermaidPopoverForNode,
+  openQueryEditor: queryEditor.openQueryPopoverForNode,
   openPluginNodeEditor: pluginNodeEditor.openForNode,
   openMarkmapEditor: markmapEditor.openMarkmapPopoverForNode,
   openVegaEditor: vegaEditor.openVegaPopoverForNode,
@@ -377,6 +445,19 @@ const {
   openCalloutIconPicker,
   openTemplatePicker: () => { insertTemplatePickerOpen.value = true },
 })
+
+function openMobileBlockMenu() {
+  const view = core.editorView
+  if (!view) return
+  const { from, to } = view.state.selection
+  view.dispatch(view.state.tr.insertText('/', from, to).scrollIntoView())
+  view.focus()
+  overlays.updateOverlays()
+}
+
+function openMobileLinkPopover() {
+  linkEditor.openLinkPopover({ top: 0, left: 12 })
+}
 
 const documentActions = useEditorDocumentActions({
   core,
@@ -445,6 +526,7 @@ const {
   isMathPopoverOpen: () => mathPopover.open,
   isFormulaPopoverOpen: () => formulaPopover.open,
   isMermaidPopoverOpen: () => mermaidPopover.open,
+  isQueryPopoverOpen: () => queryPopover.open,
   isMarkmapPopoverOpen: () => markmapPopover.open,
   isVegaPopoverOpen: () => vegaPopover.open,
   isPluginNodePopoverOpen: () => pluginNodePopover.open,
@@ -457,6 +539,7 @@ const {
   closeMathPopover: mathEditor.closeMathPopover,
   closeFormulaPopover: formulaEditor.closeFormulaPopover,
   closeMermaidPopover: mermaidEditor.closeMermaidPopover,
+  closeQueryPopover: queryEditor.closeQueryPopover,
   closeMarkmapPopover: markmapEditor.closeMarkmapPopover,
   closeVegaPopover: vegaEditor.closeVegaPopover,
   closePluginNodePopover: pluginNodeEditor.close,
@@ -467,12 +550,19 @@ const {
   isEmbedOpeningClickIgnored,
   onEditorScroll: originalOnEditorScroll,
   repositionOverlays: [
-    overlays.updateOverlays,
-    mathEditor.repositionMathPopover,
-    mermaidEditor.repositionMermaidPopover,
-    markmapEditor.repositionMarkmapPopover,
-    vegaEditor.repositionVegaPopover,
-    pluginNodeEditor.reposition,
+    {
+      isActive: () => slashOverlay.open
+        || toolbarOverlay.visible
+        || tableMenuOverlay.visible
+        || linkPickerOverlay.open,
+      reposition: overlays.updateOverlays,
+    },
+    { isActive: () => mathPopover.open, reposition: mathEditor.repositionMathPopover },
+    { isActive: () => mermaidPopover.open, reposition: mermaidEditor.repositionMermaidPopover },
+    { isActive: () => queryPopover.open, reposition: queryEditor.repositionQueryPopover },
+    { isActive: () => markmapPopover.open, reposition: markmapEditor.repositionMarkmapPopover },
+    { isActive: () => vegaPopover.open, reposition: vegaEditor.repositionVegaPopover },
+    { isActive: () => pluginNodePopover.open, reposition: pluginNodeEditor.reposition },
   ],
 })
 
@@ -483,6 +573,7 @@ const overlayHandlers = createWorkspaceEditorOverlayHandlers({
   mathEditor,
   formulaEditor,
   mermaidEditor,
+  queryEditor,
   markmapEditor,
   vegaEditor,
   pluginNodeEditor,
@@ -491,6 +582,7 @@ const overlayHandlers = createWorkspaceEditorOverlayHandlers({
   mathPopover,
   formulaPopover,
   mermaidPopover,
+  queryPopover,
   markmapPopover,
   vegaPopover,
   backendSupportsPathImport,
@@ -509,6 +601,10 @@ const overlayHandlers = createWorkspaceEditorOverlayHandlers({
   closeCalloutIconPicker,
   hideToolbarManually: overlays.hideToolbarManually,
 })
+
+function requestMobileImage() {
+  overlayHandlers.requestImage()
+}
 
 const {
   showContainerOverview,
@@ -616,6 +712,8 @@ defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup
     :class="{
       'editor-pane--with-graph': localGraphOpen && note,
       'editor-pane--focus-soft': props.settings.editor.focusMode === 'soft',
+      'editor-pane--canvas': props.viewMode === 'canvas' && note,
+      'editor-pane--mobile-tab-bar': showMobileEditorTabBar,
     }"
   >
     <section v-if="showContainerOverview" class="container-overview">
@@ -659,6 +757,22 @@ defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup
     <div v-else class="editor-doc">
       <NoteBreadcrumb :note="note">
         <template #actions>
+          <div class="note-view-switcher" role="group" :aria-label="t('workspace.canvas.viewSwitcher')">
+            <button
+              type="button"
+              :class="{ 'note-view-switcher__button--active': props.viewMode === 'document' }"
+              @click="emit('change-view', 'document')"
+            >
+              {{ t('workspace.canvas.document') }}
+            </button>
+            <button
+              type="button"
+              :class="{ 'note-view-switcher__button--active': props.viewMode === 'canvas' }"
+              @click="emit('change-view', 'canvas')"
+            >
+              {{ t('workspace.canvas.canvas') }}
+            </button>
+          </div>
           <NvPopupMenu
             v-model:open="breadcrumbMenuOpen"
             :items="breadcrumbMenuItems"
@@ -693,6 +807,26 @@ defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup
             :class="editorBodyClasses"
             @scroll="handleEditorScroll"
           >
+            <!-- Keyed per note: the canvas binds to one note's Y.Doc and editor
+                 view, so reusing the instance across a note switch would leave
+                 it driving the previous note's document. -->
+            <EdgelessCanvasView
+              v-if="props.viewMode === 'canvas' && props.note && props.workspaceId"
+              :key="props.note.id"
+              :note-id="props.note.id"
+              :workspace-id="props.workspaceId"
+              :title="props.note.title"
+              :mirror="props.note.canvas"
+              :asset-refresh-token="cloudAssetRefreshToken"
+              :resolve-asset-src="resolveWorkspaceAssetSrc"
+              :get-workspace-backend="() => workspaceStore.backend"
+              :get-editor-view="() => core.editorView"
+              :get-y-doc="() => core.ydoc"
+              :get-awareness="() => core.awareness"
+              :notes="canvasNoteOptions"
+              @update:mirror="emit('update:canvas', $event)"
+              @open-note="emit('open-note', $event)"
+            />
             <DocAppearance
               ref="docAppearanceRef"
               :note-icon="noteIcon"
@@ -817,6 +951,14 @@ defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup
       @update:query="noteEmbedPicker.query = $event"
       @select="selectNoteForEmbed"
     />
+
+    <MobileEditorTabBar
+      v-if="showMobileEditorTabBar"
+      @command="editorSetup.executeCommandById"
+      @open-block-menu="openMobileBlockMenu"
+      @open-link="openMobileLinkPopover"
+      @request-image="requestMobileImage"
+    />
   </main>
 
   <EditorOverlayContainer
@@ -830,6 +972,7 @@ defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup
     :math-popover="mathPopover"
     :formula-popover="formulaPopover"
     :mermaid-popover="mermaidPopover"
+    :query-popover="queryPopover"
     :markmap-popover="markmapPopover"
     :vega-popover="vegaPopover"
     :plugin-node-popover="pluginNodePopover"
@@ -855,3 +998,74 @@ defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup
     @use="insertResolvedTemplate"
   />
 </template>
+
+<style scoped>
+.note-view-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 32px;
+  padding: 3px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--surface-subtle);
+}
+
+.note-view-switcher button {
+  min-height: 26px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--text-tertiary);
+  font: inherit;
+  font-size: 12px;
+  background: transparent;
+}
+
+.note-view-switcher button:hover {
+  color: var(--text-primary);
+}
+
+.note-view-switcher button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.note-view-switcher__button--active {
+  color: var(--text-primary) !important;
+  background: var(--surface-elevated) !important;
+  box-shadow: var(--shadow-sm);
+}
+
+@media (max-width: 719px) {
+  .editor-pane--mobile-tab-bar .doc-body {
+    padding-bottom:
+      calc(
+        124px
+        + max(var(--safe-area-bottom), 0px)
+        + var(--mobile-keyboard-inset, 0px)
+      );
+    scroll-padding-bottom:
+      calc(
+        124px
+        + max(var(--safe-area-bottom), 0px)
+        + var(--mobile-keyboard-inset, 0px)
+      );
+  }
+
+  .editor-pane--mobile-tab-bar .editor-stats-corner {
+    bottom:
+      calc(
+        96px
+        + max(var(--safe-area-bottom), 0px)
+        + var(--mobile-keyboard-inset, 0px)
+      );
+  }
+
+  .note-view-switcher button {
+    min-width: 42px;
+    min-height: 34px;
+    padding: 0 8px;
+  }
+}
+</style>

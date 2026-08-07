@@ -24,6 +24,7 @@ import { useDrawTextOverlay } from './view/useDrawTextOverlay'
 import { useDrawSelectionChrome, ROTATE_OFFSET } from './view/useDrawSelectionChrome'
 import { useDrawPointer } from './view/useDrawPointer'
 import { useDrawKeyboard } from './view/useDrawKeyboard'
+import { usePinchZoom } from '../../composables/usePinchZoom'
 
 const props = defineProps<{
   workspacePath: string | null
@@ -170,6 +171,7 @@ const {
   cursorClass: selectionCursorClass,
   onSelectPointerDown,
   endSelectGesture,
+  cancelGesture: cancelSelectionGesture,
   onPointerMoveChrome,
 } = selectionChrome
 
@@ -200,6 +202,8 @@ const pointer = useDrawPointer({
   beginEditText: editor.beginEditText,
   strokes: editor.strokes,
   moveSelectionTo: editor.moveSelectionTo,
+  beginTouchGesture: editor.beginTouchGesture,
+  commitTouchGesture: editor.commitTouchGesture,
 })
 
 const {
@@ -209,10 +213,25 @@ const {
   onPointerMove,
   onPointerUp,
   onPointerLeave,
+  cancelGesture: cancelPointerGesture,
   onWheel,
   onMouseDown,
   onCanvasDblClick,
 } = pointer
+
+usePinchZoom({
+  target: overlayEl,
+  onStart: () => {
+    cancelPointerGesture()
+    cancelSelectionGesture()
+    editor.cancelPointerGesture()
+  },
+  onUpdate: ({ center, panDelta, scaleFactor }) => {
+    editor.panBy(panDelta.x, panDelta.y)
+    editor.applyZoom(editor.camera.value.scale * scaleFactor, center.x, center.y)
+  },
+  onEnd: editor.scheduleSave,
+})
 
 // --- Keyboard ---
 useDrawKeyboard({

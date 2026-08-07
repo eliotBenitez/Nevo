@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { Copy, Pencil, Plus, Search, Trash2, X } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import type { TemplateDocument, TemplateFieldValues } from '../../../types/template'
-import { templateCommands } from '../../../tauri/commands'
+import { useWorkspaceStore } from '../../../stores/workspace'
 import { buildTemplateFieldDefaults, createEmptyTemplateContent, validateTemplateFieldValues } from '../../../utils/templates'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvCheckbox from '../../../ui/primitives/NvCheckbox.vue'
@@ -28,6 +28,9 @@ const emit = defineEmits<{
 
 const { t, locale } = useI18n()
 const { confirm } = useConfirmDialog()
+// Templates come from the workspace backend: built-ins for either kind, user
+// templates from disk locally and from the workspace document on cloud.
+const workspaceStore = useWorkspaceStore()
 
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -85,11 +88,12 @@ function localizeTemplateError(err: unknown): string {
 }
 
 async function loadTemplates() {
-  if (!props.workspacePath) return
+  const backend = workspaceStore.backend
+  if (!backend) return
   loading.value = true
   error.value = null
   try {
-    templates.value = await templateCommands.listTemplates(props.workspacePath)
+    templates.value = await backend.listTemplates()
     selectedId.value = templates.value.find(template => template.id === props.defaultTemplateId)?.id
       ?? templates.value.find(template => template.id === 'blank')?.id
       ?? templates.value[0]?.id
@@ -169,14 +173,14 @@ async function onTemplateSaved(saved: TemplateDocument) {
 }
 
 async function deleteTemplate(template: TemplateDocument) {
-  if (!props.workspacePath || template.builtIn) return
+  if (!workspaceStore.backend || template.builtIn) return
   if (!await confirm({
     message: t('templates.deleteConfirm', { name: template.name }),
     confirmLabel: t('confirmDialog.delete'),
     variant: 'danger',
   })) return
   try {
-    await templateCommands.deleteTemplate(props.workspacePath, template.id)
+    await workspaceStore.backend.deleteTemplate(template.id)
     await loadTemplates()
   } catch (err) {
     error.value = localizeTemplateError(err)

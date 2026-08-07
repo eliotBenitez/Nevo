@@ -712,7 +712,7 @@ fn manifest_contains_folder(tree: &[FolderMeta], folder_id: &str) -> bool {
 
 #[tauri::command]
 pub async fn template_list(
-    workspace_path: String,
+    workspace_path: Option<String>,
     locale: Option<String>,
 ) -> Result<Vec<TemplateDocument>, String> {
     tauri::async_runtime::spawn_blocking(move || template_list_sync(workspace_path, locale))
@@ -721,18 +721,23 @@ pub async fn template_list(
 }
 
 fn template_list_sync(
-    workspace_path: String,
+    workspace_path: Option<String>,
     locale: Option<String>,
 ) -> Result<Vec<TemplateDocument>, String> {
-    let workspace_path = normalize_workspace(&workspace_path)?;
     let mut templates = builtin_templates(locale.as_deref());
-    templates.extend(read_user_templates(&workspace_path)?);
+    // Built-in templates are generated, not read from disk, so a workspace with
+    // no directory of its own (cloud) still gets them; it stores its own user
+    // templates client-side and merges them there.
+    if let Some(workspace_path) = workspace_path {
+        let workspace_path = normalize_workspace(&workspace_path)?;
+        templates.extend(read_user_templates(&workspace_path)?);
+    }
     Ok(templates)
 }
 
 #[tauri::command]
 pub async fn template_get(
-    workspace_path: String,
+    workspace_path: Option<String>,
     template_id: String,
     locale: Option<String>,
 ) -> Result<TemplateDocument, String> {
@@ -744,12 +749,45 @@ pub async fn template_get(
 }
 
 fn template_get_sync(
-    workspace_path: String,
+    workspace_path: Option<String>,
     template_id: String,
     locale: Option<String>,
 ) -> Result<TemplateDocument, String> {
+    // Without a workspace only the built-ins are reachable; a caller with
+    // client-side user templates resolves those itself.
+    let Some(workspace_path) = workspace_path else {
+        return builtin_templates(locale.as_deref())
+            .into_iter()
+            .find(|template| template.id == template_id)
+            .ok_or_else(|| "Template not found".to_string());
+    };
     let workspace_path = normalize_workspace(&workspace_path)?;
     get_template_document(&workspace_path, &template_id, locale.as_deref())
+}
+
+/// Resolves a template document into note content, with no filesystem access.
+///
+/// The placeholder rules (field defaults, `{{title}}`, `{{workspace}}`, cursor
+/// marker, empty-node pruning) are non-trivial and shared: a workspace that
+/// cannot use `template_create_note` — which writes the note file itself — still
+/// builds its body through exactly this code rather than a second copy of it.
+#[tauri::command]
+pub async fn template_resolve_content(
+    template: TemplateDocument,
+    title: String,
+    workspace_name: String,
+    field_values: Map<String, Value>,
+) -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let values = normalize_field_values(&template, field_values, &title, &workspace_name)?;
+        let mut content = template.content.clone();
+        let mut cursor = false;
+        resolve_node(&mut content, &values, &title, &workspace_name, &mut cursor);
+        prune_empty_text_nodes(&mut content);
+        Ok(content)
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 #[tauri::command]
@@ -905,6 +943,7 @@ fn template_create_note_sync(
             prune_empty_text_nodes(&mut content);
             content
         },
+        canvas: None,
     };
 
     std::fs::create_dir_all(Path::new(&workspace_path).join("notes"))
@@ -1041,9 +1080,23 @@ mod tests {
     }
 
     #[test]
+    fn built_ins_are_available_without_a_workspace() {
+        // A cloud workspace has no directory: it gets the built-ins and merges
+        // its own user templates client-side.
+        let templates = template_list_sync(None, Some("en".to_string())).expect("list templates");
+        assert!(templates.iter().any(|template| template.id == "blank"));
+        assert!(templates.iter().all(|template| template.built_in));
+
+        let blank = template_get_sync(None, "blank".to_string(), Some("en".to_string()))
+            .expect("get built-in");
+        assert_eq!(blank.id, "blank");
+        assert!(template_get_sync(None, "user-made".to_string(), None).is_err());
+    }
+
+    #[test]
     fn built_in_templates_localize_metadata_and_content() {
         let workspace = TestWorkspace::new();
-        let templates = template_list_sync(workspace.path_string(), Some("ru".to_string()))
+        let templates = template_list_sync(Some(workspace.path_string()), Some("ru".to_string()))
             .expect("list templates");
         let meeting = templates
             .iter()

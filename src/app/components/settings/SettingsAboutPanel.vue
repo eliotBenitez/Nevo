@@ -9,6 +9,7 @@ import { appLogger } from '../../../utils/logger'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import { systemCommands, type AppLocation } from '../../../tauri/commands'
+import { formatWorkspacePath } from '../../../utils/workspacePath'
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
@@ -16,6 +17,9 @@ const { manifest, appMetadata, diagnostics, activePath } = storeToRefs(workspace
 
 const { status: updaterStatus, check: checkForUpdates } = useAppUpdater()
 const isChecking = computed(() => updaterStatus.value === 'checking')
+const workspacePath = computed(() => diagnostics.value?.workspacePath
+  ? formatWorkspacePath(diagnostics.value.workspacePath, appMetadata.value?.platform)
+  : t('settings.about.notAvailable'))
 
 async function onCheckUpdates() {
   await checkForUpdates({ silent: false })
@@ -62,7 +66,7 @@ async function openExternalUrl(url: string) {
             <div class="meta-key">{{ t('settings.about.meta.platform') }}</div>
             <div class="meta-value mono">{{ appMetadata?.platform ?? t('settings.common.desktop') }}</div>
             <div class="meta-key">{{ t('settings.about.meta.workspace') }}</div>
-            <div class="meta-value mono">{{ diagnostics?.workspacePath ?? t('settings.about.notAvailable') }}</div>
+            <div class="meta-value mono">{{ workspacePath }}</div>
           </div>
 
           <div class="about-actions">
@@ -100,7 +104,7 @@ async function openExternalUrl(url: string) {
         <div class="about-diagnostic-card">
           <HardDrive :size="15" />
           <span>{{ t('settings.about.meta.workspace') }}</span>
-          <strong>{{ diagnostics?.workspacePath ?? t('settings.about.notAvailable') }}</strong>
+          <strong>{{ workspacePath }}</strong>
         </div>
       </div>
 

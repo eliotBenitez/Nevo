@@ -6,6 +6,9 @@ import type { EditorView } from 'prosemirror-view'
 import NvPopupMenu from '../../ui/primitives/NvPopupMenu.vue'
 import type { NvMenuItemDef } from '../../ui/primitives/menu-types'
 import type { DatabaseRepository } from '../../features/database/databaseRepository'
+import type { NoteQueryRequest, NoteRow } from '../../types/note-query'
+import type { BlockRefResolution, BlockRefTarget } from '../../core/blockRef/resolveBlockRef'
+import { isElementWithinViewportMargin } from './viewportVisibility'
 
 export type NodeViewPosition = (() => number | undefined) | boolean
 
@@ -45,6 +48,10 @@ export interface CoreNodeViewOptions {
   }) => void
   onRequestFormulaEdit?: (ctx: { view: EditorView; cellPos: number; formula: string; anchorRect: DOMRect }) => void
   onRequestMermaidEdit?: (ctx: { view: EditorView; position: number; node: PMNode; anchorRect: DOMRect }) => void
+  onRequestQueryEdit?: (ctx: { view: EditorView; position: number; node: PMNode; anchorRect: DOMRect }) => void
+  /** Runs a cross-note query for the query_block; undefined when no workspace
+   *  backend is available (e.g. no app context in a test/preview render). */
+  onQueryNotes?: (request: NoteQueryRequest) => Promise<NoteRow[]>
   onRequestMarkmapEdit?: (ctx: { view: EditorView; position: number; node: PMNode; anchorRect: DOMRect }) => void
   onRequestVegaEdit?: (ctx: { view: EditorView; position: number; node: PMNode; anchorRect: DOMRect }) => void
   onRequestDrawOpen?: (ctx: { view: EditorView; position: number; node: PMNode }) => void
@@ -57,6 +64,20 @@ export interface CoreNodeViewOptions {
   }) => void
   onRequestMediaAsset?: (ctx: { view: EditorView; position: number; kind: 'audio' | 'video'; attrs: Record<string, unknown> }) => void
   onRequestEmbedUrl?: (ctx: { view: EditorView; position: number; anchorRect: DOMRect }) => void
+  /** Resolves a `block_embed`'s target against the workspace backend. Absent
+   *  (e.g. no app context in a test/preview render) renders the fallback. */
+  onResolveBlockRef?: (target: BlockRefTarget) => Promise<BlockRefResolution>
+  /** Navigates to the note a `block_embed` points at. */
+  onOpenBlockRefSource?: (noteId: string) => void
+  /** Best-effort live re-resolve: subscribes to "note `noteId` was just saved"
+   *  and returns an unsubscribe function. Only fires for whichever note is
+   *  currently open in this editor (see `useWorkspaceEditorCore.ts`), so in
+   *  practice it only benefits a `block_embed` referencing a block earlier in
+   *  the SAME note. Cross-note staleness is resolved by the mount-time
+   *  resolve that runs whenever the editor is torn down/rebuilt on note
+   *  switch. Undefined when the host doesn't wire a save signal — the node
+   *  view still resolves once on mount either way. */
+  onSubscribeNoteSaved?: (noteId: string, callback: () => void) => () => void
   codeLanguages?: string[]
   t?: (key: string) => string
 }
@@ -151,13 +172,21 @@ export function createLazyRenderObserver(
   if (typeof IntersectionObserver === 'undefined') {
     return { isInitiallyVisible: true, disconnect: () => {} }
   }
+  const rootMargin = '200px'
   let observer: IntersectionObserver | null = new IntersectionObserver((entries) => {
     if (!entries[0]?.isIntersecting) return
     observer?.disconnect()
     observer = null
     onVisible()
-  }, { rootMargin: '200px' })
+  }, { rootMargin })
   observer.observe(dom)
+  queueMicrotask(() => {
+    if (!observer) return
+    if (!isElementWithinViewportMargin(dom, null, rootMargin)) return
+    observer.disconnect()
+    observer = null
+    onVisible()
+  })
   return {
     isInitiallyVisible: false,
     disconnect: () => {

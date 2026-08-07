@@ -970,3 +970,136 @@
   cursor: not-allowed;
 }
 
+@media (max-width: 719px) {
+  .draw-view__header {
+    position: absolute;
+    z-index: 12;
+    top: calc(7px + max(var(--safe-area-top), 0px));
+    right: calc(14px + max(var(--safe-area-right), 0px));
+    left: calc(14px + max(var(--safe-area-left), 0px));
+    min-height: 44px;
+    gap: 10px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    pointer-events: none;
+  }
+
+  .draw-view__back {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    border-radius: 14px;
+    background: color-mix(in oklab, var(--bg-2) 90%, transparent);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    pointer-events: auto;
+  }
+
+  .draw-view__title {
+    min-width: 0;
+    padding: 9px 12px;
+    overflow: hidden;
+    border: 1px solid var(--border-2);
+    border-radius: 12px;
+    background: color-mix(in oklab, var(--bg-2) 90%, transparent);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.14);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    pointer-events: auto;
+  }
+
+  .draw-view__error {
+    position: absolute;
+    top: 52px;
+    left: 0;
+    max-width: 100%;
+    pointer-events: auto;
+  }
+
+  .draw-toolbar {
+    right: calc(12px + max(var(--safe-area-right), 0px));
+    bottom: calc(16px + max(var(--safe-area-bottom), 0px));
+    left: calc(12px + max(var(--safe-area-left), 0px));
+    max-width: none;
+    min-height: 56px;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-radius: 18px;
+    transform: none;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .draw-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .draw-toolbar__group {
+    flex: 0 0 auto;
+  }
+
+  .draw-toolbar__btn,
+  .draw-toolbar__size,
+  .draw-zoom__btn {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    scroll-snap-align: center;
+  }
+
+  .draw-toolbar__divider {
+    flex: 0 0 1px;
+  }
+
+  .draw-properties {
+    top: auto;
+    right: calc(12px + max(var(--safe-area-right), 0px));
+    bottom: calc(84px + max(var(--safe-area-bottom), 0px));
+    left: calc(12px + max(var(--safe-area-left), 0px));
+    width: auto;
+    max-height: min(38vh, 330px);
+    transform: none;
+  }
+
+  .draw-export-toggle,
+  .draw-canvas-settings-toggle,
+  .draw-templates-toggle {
+    top: calc(62px + max(var(--safe-area-top), 0px));
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+
+  .draw-templates-toggle {
+    right: calc(14px + max(var(--safe-area-right), 0px));
+  }
+
+  .draw-canvas-settings-toggle {
+    right: calc(64px + max(var(--safe-area-right), 0px));
+  }
+
+  .draw-export-toggle {
+    right: calc(114px + max(var(--safe-area-right), 0px));
+  }
+
+  .draw-templates,
+  .draw-canvas-settings,
+  .draw-export-settings {
+    top: calc(114px + max(var(--safe-area-top), 0px));
+    right: calc(14px + max(var(--safe-area-right), 0px));
+    left: calc(14px + max(var(--safe-area-left), 0px));
+    width: auto;
+    max-height: min(52vh, 420px);
+    overflow-y: auto;
+  }
+}

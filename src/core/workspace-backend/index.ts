@@ -4,6 +4,8 @@ import { LocalBackend } from './localBackend'
 export type { WorkspaceBackend, WorkspaceHandle } from './types'
 export { CloudBackend, CLOUD_ASSET_SCHEME } from './cloud/cloudBackend'
 export type { CloudBackendDeps } from './cloud/cloudBackend'
+export { resolveOfflineCache, nullOfflineCache } from './cloud/offlineCache'
+export type { OfflineDocCache } from './cloud/offlineCache'
 
 /**
  * Build the backend for a local workspace handle. Cloud backends need async

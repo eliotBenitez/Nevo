@@ -47,6 +47,12 @@ const SidebarStub = defineComponent({
       <button class="emit-search" @click="$emit('tree-action', { action: 'search', target: { kind: 'note', id: 'note-1', title: 'Seeded title', folderId: null } })">
         Search
       </button>
+      <button class="emit-delete-note" @click="$emit('tree-action', { action: 'delete', target: { kind: 'note', id: 'note-1', title: 'Alpha note', folderId: null } })">
+        Delete note
+      </button>
+      <button class="emit-delete-background-note" @click="$emit('tree-action', { action: 'delete', target: { kind: 'note', id: 'note-2', title: 'Beta note', folderId: null } })">
+        Delete background note
+      </button>
       <button class="emit-create-folder" @click="$emit('create-folder')">
         Create folder
       </button>
@@ -239,6 +245,7 @@ async function mountShell(options?: {
     notes: [],
     children: [],
   })
+  treeStore.deleteNote = vi.fn().mockResolvedValue(undefined)
 
   vi.mocked(noteCommands.listNoteSnapshots).mockResolvedValue([])
   vi.mocked(noteCommands.loadNote).mockResolvedValue({
@@ -270,6 +277,7 @@ async function mountShell(options?: {
     routes: [
       { path: '/workspace', component: { template: '<div />' } },
       { path: '/workspace/note/:noteId', component: { template: '<div />' } },
+      { path: '/workspace/note/:noteId/canvas', component: { template: '<div />' } },
       { path: '/workspace/folder/:folderId', component: { template: '<div />' } },
       { path: '/workspace/graph', component: { template: '<div />' } },
       { path: '/workspace/board/:boardId', component: { template: '<div />' } },
@@ -322,6 +330,20 @@ describe('WorkspaceShell', () => {
     expect(input).toBeTruthy()
     expect(document.activeElement).toBe(input)
     expect(promptSpy).not.toHaveBeenCalled()
+
+    wrapper.unmount()
+  })
+
+  it('closes the search overlay when the workspace search hotkey is pressed again', async () => {
+    const { wrapper } = await mountShell()
+
+    dispatchHotkeyCommand('workspace.search')
+    await flushUi()
+    expect(document.body.querySelector('.search-overlay__input')).toBeTruthy()
+
+    dispatchHotkeyCommand('workspace.search')
+    await flushUi()
+    expect(document.body.querySelector('.search-overlay__input')).toBeFalsy()
 
     wrapper.unmount()
   })
@@ -516,6 +538,61 @@ describe('WorkspaceShell', () => {
     wrapper.unmount()
   })
 
+  it('uses the mobile editor header and opens the note details screen', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true })
+
+    const { wrapper, noteStore, router } = await mountShell({
+      initialRoute: '/workspace/note/note-1',
+    })
+    noteStore.activeNote = {
+      id: 'note-1',
+      title: 'Alpha note',
+      icon: '📄',
+      folderId: null,
+      createdAt: '2026-05-16T10:00:00.000Z',
+      updatedAt: '2026-05-16T10:00:00.000Z',
+      properties: {
+        type: 'note',
+        status: 'active',
+        date: null,
+        tags: ['alpha'],
+      },
+      content: { type: 'doc', content: [] },
+    }
+    window.dispatchEvent(new Event('resize'))
+    await flushUi()
+
+    expect(wrapper.find('.workspace-titlebar').exists()).toBe(false)
+    expect(wrapper.get('.mobile-editor-header__context').text()).toBe('Workspace')
+
+    await wrapper.get('button[aria-label="More"]').trigger('click')
+    await flushUi()
+    const canvasItem = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.nv-menu-item'))
+      .find(item => item.textContent?.trim() === 'Canvas')
+    canvasItem?.click()
+    await flushUi()
+
+    await vi.waitFor(() => {
+      expect(router.currentRoute.value.path).toBe('/workspace/note/note-1/canvas')
+    })
+    expect(wrapper.get('.mobile-editor-header__canvas-title').text()).toContain('Canvas ·')
+
+    await wrapper.get('button[aria-label="More"]').trigger('click')
+    await flushUi()
+    const detailsItem = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.nv-menu-item'))
+      .find(item => item.textContent?.trim() === 'Note details')
+    detailsItem?.click()
+    await flushUi()
+
+    expect(wrapper.get('.mobile-note-details h1').text()).toBe('Note details')
+    expect(wrapper.get('.workspace-editor-pane-shell').attributes('style')).toContain('display: none')
+    await wrapper.get('.mobile-note-details__done').trigger('click')
+    expect(wrapper.find('.mobile-note-details').exists()).toBe(false)
+    expect(wrapper.get('.workspace-editor-pane-shell').attributes('style')).not.toContain('display: none')
+
+    wrapper.unmount()
+  })
+
   it('renders Home on the workspace route while keeping the editor plugin runtime mounted', async () => {
     const { wrapper } = await mountShell({
       manifestOverride: {
@@ -641,6 +718,70 @@ describe('WorkspaceShell', () => {
 
     expect(tabsStore.tabs).toEqual([])
     expect(router.currentRoute.value.fullPath).toBe('/workspace')
+
+    wrapper.unmount()
+  })
+
+  it('keeps the current note open when a background tab is closed', async () => {
+    const { wrapper, router } = await mountShell({
+      initialRoute: '/workspace/note/note-1',
+    })
+    const tabsStore = useTabsStore()
+    tabsStore.openTab('note-1', 'Alpha note', '📄')
+    tabsStore.openTab('note-2', 'Beta note', '📝')
+    tabsStore.activeTabId = 'note-1'
+    await flushUi()
+
+    const closeButtons = wrapper.findAll('.tab-close')
+    await closeButtons[1].trigger('click')
+    await flushUi()
+
+    expect(tabsStore.tabs.map(tab => tab.noteId)).toEqual(['note-1'])
+    expect(tabsStore.activeTabId).toBe('note-1')
+    expect(router.currentRoute.value.fullPath).toBe('/workspace/note/note-1')
+
+    wrapper.unmount()
+  })
+
+  it('removes a deleted active note from the title bar and opens the adjacent tab', async () => {
+    const { wrapper, router, workspaceStore, treeStore } = await mountShell({
+      initialRoute: '/workspace/note/note-1',
+    })
+    const tabsStore = useTabsStore()
+    tabsStore.openTab('note-1', 'Alpha note', '📄')
+    tabsStore.openTab('note-2', 'Beta note', '📝')
+    tabsStore.activeTabId = 'note-1'
+    workspaceStore.settings.general.confirmBeforeDelete = false
+
+    await wrapper.get('.emit-delete-note').trigger('click')
+    await flushUi()
+
+    expect(treeStore.deleteNote).toHaveBeenCalledWith('note-1')
+    expect(tabsStore.tabs.map(tab => tab.noteId)).toEqual(['note-2'])
+    expect(tabsStore.activeTabId).toBe('note-2')
+    await vi.waitFor(() => {
+      expect(router.currentRoute.value.fullPath).toBe('/workspace/note/note-2')
+    })
+
+    wrapper.unmount()
+  })
+
+  it('removes a deleted background note without changing the active tab', async () => {
+    const { wrapper, router, workspaceStore } = await mountShell({
+      initialRoute: '/workspace/note/note-1',
+    })
+    const tabsStore = useTabsStore()
+    tabsStore.openTab('note-1', 'Alpha note', '📄')
+    tabsStore.openTab('note-2', 'Beta note', '📝')
+    tabsStore.activeTabId = 'note-1'
+    workspaceStore.settings.general.confirmBeforeDelete = false
+
+    await wrapper.get('.emit-delete-background-note').trigger('click')
+    await flushUi()
+
+    expect(tabsStore.tabs.map(tab => tab.noteId)).toEqual(['note-1'])
+    expect(tabsStore.activeTabId).toBe('note-1')
+    expect(router.currentRoute.value.fullPath).toBe('/workspace/note/note-1')
 
     wrapper.unmount()
   })

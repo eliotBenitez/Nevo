@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use tauri::{AppHandle, Manager};
+#[cfg(desktop)]
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
 
@@ -134,6 +135,7 @@ pub async fn open_external_url(app: AppHandle, url: String) -> Result<(), String
 }
 
 #[tauri::command]
+#[cfg(desktop)]
 pub async fn pick_workspace_directory(app: AppHandle) -> Result<Option<String>, String> {
     let (sender, receiver) = tokio::sync::oneshot::channel();
     app.dialog().file().pick_folder(move |selection| {
@@ -149,6 +151,12 @@ pub async fn pick_workspace_directory(app: AppHandle) -> Result<Option<String>, 
                 .map_err(|error| error.to_string())
         })
         .transpose()
+}
+
+#[tauri::command]
+#[cfg(mobile)]
+pub async fn pick_workspace_directory(_app: AppHandle) -> Result<Option<String>, String> {
+    Err("Workspace folder selection is not supported on mobile".to_string())
 }
 
 #[cfg(test)]

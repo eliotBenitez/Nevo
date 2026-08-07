@@ -13,13 +13,22 @@ export interface TypstExportPayload {
 
 export interface BuildTypstExportOptions {
   assetPathPrefix?: string
+  /** Image bytes by file name, for workspaces whose assets are not on disk
+   *  (cloud). Anything not listed here is resolved from its path in Rust. */
+  assetBytes?: Map<string, Uint8Array>
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = ''
+  const chunk = 0x8000
+  for (let index = 0; index < bytes.length; index += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunk))
+  }
+  return btoa(binary)
 }
 
 function utf8ToBase64(value: string): string {
-  const bytes = new TextEncoder().encode(value)
-  let binary = ''
-  for (const byte of bytes) binary += String.fromCharCode(byte)
-  return btoa(binary)
+  return bytesToBase64(new TextEncoder().encode(value))
 }
 
 /**
@@ -58,7 +67,15 @@ export async function buildTypstExport(
     assetPathPrefix: buildOptions.assetPathPrefix,
   })
 
-  const assets: TypstAsset[] = images.map(img => ({ name: img.name, relPath: img.src }))
+  // A workspace image is resolved from its path in Rust; a cloud image has no
+  // file on disk, so its decrypted bytes are carried inline instead. The key is
+  // the file name the cloud asset preparation step assigned.
+  const assets: TypstAsset[] = images.map((img) => {
+    const inline = buildOptions.assetBytes?.get(img.src.split('/').pop() ?? '')
+    return inline
+      ? { name: img.name, bytesBase64: bytesToBase64(inline) }
+      : { name: img.name, relPath: img.src }
+  })
 
   for (const diagram of mermaid) {
     const svg = await renderMermaidToSvgForPdf(diagram.code)

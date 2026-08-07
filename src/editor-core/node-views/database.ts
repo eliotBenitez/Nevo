@@ -12,6 +12,10 @@ import {
   type NodeViewPosition,
 } from './utils'
 import { createDatabaseRepository } from '../../features/database/databaseRepository'
+import {
+  createViewportRenderController,
+  type ViewportRenderController,
+} from './viewportRenderController'
 
 export function createDatabaseNodeView(
   node: PMNode,
@@ -24,6 +28,7 @@ export function createDatabaseNodeView(
   dom.className = 'nv-database-block'
 
   let currentNode = node
+  let viewportController: ViewportRenderController | null = null
 
   const readData = (source: PMNode): DatabaseBlockData => normalizeDatabaseData(source.attrs.data)
 
@@ -52,7 +57,11 @@ export function createDatabaseNodeView(
     )
   }
 
-  mount()
+  viewportController = createViewportRenderController(dom, {
+    render: mount,
+    suspend: () => render(null, dom),
+    initialPlaceholderHeight: 220,
+  })
 
   return {
     dom,
@@ -65,10 +74,11 @@ export function createDatabaseNodeView(
     update(nextNode) {
       if (nextNode.type !== currentNode.type) return false
       currentNode = nextNode
-      mount()
+      viewportController?.requestRender()
       return true
     },
     destroy() {
+      viewportController?.destroy()
       render(null, dom)
     },
   }

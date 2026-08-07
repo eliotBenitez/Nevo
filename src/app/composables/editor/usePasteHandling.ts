@@ -1,6 +1,8 @@
 import type { EditorView } from 'prosemirror-view'
 import type { WorkspaceSettings } from '../../../types/workspace'
 import { looksLikeMarkdown, parseMarkdownToSlice } from './markdownPaste'
+import { decodeBlockRef } from '../../../core/blockRef/resolveBlockRef'
+import { createInsertBlockEmbedCommand } from '../../../editor-core/commands/blockEmbed'
 
 export interface PasteHandlerOptions {
   /** Read at paste time (not captured) so it tracks the live editor settings,
@@ -22,6 +24,23 @@ export interface PasteHandlerOptions {
 export function createPasteHandler(options: PasteHandlerOptions) {
   return function handlePaste(view: EditorView, event: ClipboardEvent): boolean {
     if (options.onImagePaste?.(event)) return true
+
+    // Paste-to-embed: a clipboard containing exactly one `nevo://block/...`
+    // token (written by the block-handle "copy block reference" action, see
+    // `useBlockHandle.ts` copyBlockRef) becomes a `block_embed` transclusion
+    // instead of raw text — independent of the plain-text/rich paste
+    // setting, since the token isn't meant to be read as text. WebKitGTK
+    // withholds `text/uri-list` from JS but not `text/plain`, so this read is
+    // safe on Linux too.
+    const blockEmbedType = view.state.schema.nodes.block_embed
+    const blockRefText = blockEmbedType ? event.clipboardData?.getData('text/plain') : null
+    const blockRefTarget = blockRefText ? decodeBlockRef(blockRefText) : null
+    if (blockEmbedType && blockRefTarget) {
+      event.preventDefault()
+      createInsertBlockEmbedCommand(blockEmbedType, blockRefTarget)(view.state, view.dispatch)
+      return true
+    }
+
     if (options.getPasteBehavior() !== 'plain-text') {
       const html = event.clipboardData?.getData('text/html')
       if (html) return false

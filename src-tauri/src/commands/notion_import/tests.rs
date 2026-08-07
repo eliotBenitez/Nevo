@@ -3,7 +3,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use uuid::Uuid;
-use zip::write::FileOptions;
+use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipWriter};
 
 use super::assets::import_assets;
@@ -33,7 +33,8 @@ fn write_zip(path: &Path, entries: &[(&str, &[u8], Option<u32>)]) {
     let file = File::create(path).expect("create zip");
     let mut writer = ZipWriter::new(file);
     for (name, bytes, mode) in entries {
-        let mut options = FileOptions::default().compression_method(CompressionMethod::Stored);
+        let mut options =
+            SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
         if let Some(mode) = mode {
             options = options.unix_permissions(*mode);
         }
@@ -89,10 +90,20 @@ fn rejects_damaged_unsafe_duplicate_and_symlink_archives() {
     write_zip(&absolute_zip, &[("/absolute.md", b"bad", None)]);
     assert!(scan_archive(absolute_zip, &state).is_err());
 
+    // `zip::ZipWriter` (4.x) itself now rejects two entries with a
+    // byte-identical raw name, and `ZipArchive` de-duplicates by raw name at
+    // parse time, so a literal `"Page.md"` / `"Page.md"` pair can no longer
+    // reach `scan_archive`'s own duplicate guard at all. Two entries whose
+    // raw names differ but collapse to the same path once normalized
+    // (redundant `//`) are distinct as far as the writer/archive are
+    // concerned, so this still exercises that guard.
     let duplicate_zip = temp.path.join("duplicate.zip");
     write_zip(
         &duplicate_zip,
-        &[("Page.md", b"one", None), ("Page.md", b"two", None)],
+        &[
+            ("sub/Page.md", b"one", None),
+            ("sub//Page.md", b"two", None),
+        ],
     );
     assert!(scan_archive(duplicate_zip, &state).is_err());
 
@@ -100,7 +111,7 @@ fn rejects_damaged_unsafe_duplicate_and_symlink_archives() {
     let file = File::create(&symlink_zip).expect("create symlink zip");
     let mut writer = ZipWriter::new(file);
     writer
-        .add_symlink("link.md", "target.md", FileOptions::default())
+        .add_symlink("link.md", "target.md", SimpleFileOptions::default())
         .expect("add symlink");
     writer.finish().expect("finish symlink zip");
     assert!(scan_archive(symlink_zip, &state).is_err());

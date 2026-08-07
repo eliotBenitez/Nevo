@@ -1,15 +1,31 @@
 import { computed, nextTick, ref, watch, type Ref } from 'vue'
-import type { NoteDocument } from '../../types/note'
+import type { BlockNode, NoteDocument } from '../../types/note'
+import {
+  createDocxPageGeometry,
+  mmToPx,
+  ptToPx,
+  twipToPx,
+} from '../../utils/noteExport/docxLayout'
 import type { DocxOrientation, DocxPaperFormat } from '../../utils/noteExport/docxOptions'
+import {
+  markPageContinuation,
+  paginateTableRows,
+  processedNodeText,
+  processedNodeTextLength,
+  splitProcessedNodeAt,
+  textBreakOffsets,
+  type ProcessedNode,
+} from '../../utils/noteExport/docxPagination'
+import {
+  DOCX_BLOCKQUOTE_LEFT_INDENT_TWIPS,
+  DOCX_CODE_FONT_SIZE_PT,
+  DOCX_HEADING_STYLES,
+  DOCX_LIST_LEFT_INDENT_TWIPS,
+  DOCX_TITLE_PAGE_FONT_SIZE_PT,
+  DOCX_TITLE_STYLE,
+} from '../../utils/noteExport/docxTypography'
 
-export interface ProcessedNode {
-  type: string
-  text?: string
-  attrs?: any
-  marks?: any[]
-  content?: ProcessedNode[]
-  headingPrefix?: string
-}
+export type { ProcessedNode } from '../../utils/noteExport/docxPagination'
 
 export interface ContentPage {
   nodes: ProcessedNode[]
@@ -45,14 +61,19 @@ export interface DocxPaginationInput {
   hiddenContainerRef: Ref<HTMLElement | null>
 }
 
-function canonicalWidthFor(format: DocxPaperFormat, orientation: DocxOrientation): number {
-  if (format === 'Letter') {
-    return orientation === 'landscape' ? 634 : 490
-  }
-  return orientation === 'landscape' ? 678 : 480
+interface TextPosition {
+  node: Text
+  start: number
+  end: number
 }
 
-function processNodes(node: any, headingCounters: number[], headingNumbers: boolean): ProcessedNode {
+interface TextMeasurement {
+  positions: TextPosition[]
+  wrapperRect: DOMRect
+  fullRangeRect: DOMRect
+}
+
+function processNodes(node: BlockNode, headingCounters: number[], headingNumbers: boolean): ProcessedNode {
   const result: ProcessedNode = {
     type: node.type,
     text: node.text,
@@ -63,16 +84,14 @@ function processNodes(node: any, headingCounters: number[], headingNumbers: bool
   if (node.type === 'heading' && headingNumbers) {
     const level = Math.min(6, Math.max(1, Number(node.attrs?.level ?? 1)))
     headingCounters[level - 1]++
-    for (let i = level; i < 6; i++) {
-      headingCounters[i] = 0
-    }
+    for (let i = level; i < 6; i++) headingCounters[i] = 0
     const segments = headingCounters.slice(0, level)
     while (segments.length > 1 && segments[0] === 0) segments.shift()
-    result.headingPrefix = segments.join('.') + '. '
+    result.headingPrefix = `${segments.join('.')}. `
   }
 
   if (node.content) {
-    result.content = node.content.map((child: any) => processNodes(child, headingCounters, headingNumbers))
+    result.content = node.content.map(child => processNodes(child, headingCounters, headingNumbers))
   }
 
   return result
@@ -83,16 +102,12 @@ function prepareNodesForPagination(nodes: ProcessedNode[]): ProcessedNode[] {
 
   for (const node of nodes) {
     if ((node.type === 'bullet_list' || node.type === 'ordered_list') && node.content) {
-      let itemIndex = 1
+      let itemIndex = Number(node.attrs?.start ?? 1)
       for (const item of node.content) {
         if (item.type === 'list_item') {
           result.push({
             type: node.type,
-            attrs: {
-              ...node.attrs,
-              start: itemIndex++,
-            },
-            headingPrefix: node.headingPrefix,
+            attrs: { ...node.attrs, start: itemIndex++ },
             content: [item],
           })
         } else {
@@ -107,85 +122,185 @@ function prepareNodesForPagination(nodes: ProcessedNode[]): ProcessedNode[] {
   return result
 }
 
+function boxHeight(element: Element): number {
+  return Math.max(0, element.getBoundingClientRect().height)
+}
+
+function collectTextMeasurement(wrapper: HTMLElement): TextMeasurement | null {
+  if (typeof document === 'undefined' || typeof document.createRange !== 'function') return null
+  const positions: TextPosition[] = []
+  const walker = document.createTreeWalker(wrapper, NodeFilter.SHOW_TEXT)
+  let offset = 0
+  let current = walker.nextNode()
+
+  while (current) {
+    const textNode = current as Text
+    const parent = textNode.parentElement
+    if (!parent?.closest('[data-docx-generated]') && textNode.data.length > 0) {
+      positions.push({ node: textNode, start: offset, end: offset + textNode.data.length })
+      offset += textNode.data.length
+    }
+    current = walker.nextNode()
+  }
+
+  if (!positions.length) return null
+  const range = document.createRange()
+  range.setStart(positions[0].node, 0)
+  const last = positions[positions.length - 1]
+  range.setEnd(last.node, last.node.data.length)
+  if (typeof range.getBoundingClientRect !== 'function') return null
+  const fullRangeRect = range.getBoundingClientRect()
+  const wrapperRect = wrapper.getBoundingClientRect()
+  if (fullRangeRect.height <= 0 || wrapperRect.height <= 0) return null
+  return { positions, wrapperRect, fullRangeRect }
+}
+
+function resolveDomOffset(positions: TextPosition[], offset: number): { node: Text; offset: number } {
+  for (const position of positions) {
+    if (offset <= position.end) {
+      return {
+        node: position.node,
+        offset: Math.max(0, Math.min(position.node.data.length, offset - position.start)),
+      }
+    }
+  }
+  const last = positions[positions.length - 1]
+  return { node: last.node, offset: last.node.data.length }
+}
+
+function measuredSliceHeight(
+  measurement: TextMeasurement,
+  start: number,
+  end: number,
+  includeTop: boolean,
+  includeBottom: boolean,
+): number {
+  const startPosition = resolveDomOffset(measurement.positions, start)
+  const endPosition = resolveDomOffset(measurement.positions, end)
+  const range = document.createRange()
+  range.setStart(startPosition.node, startPosition.offset)
+  range.setEnd(endPosition.node, endPosition.offset)
+  const rect = range.getBoundingClientRect()
+  const topExtra = Math.max(0, measurement.fullRangeRect.top - measurement.wrapperRect.top)
+  const bottomExtra = Math.max(0, measurement.wrapperRect.bottom - measurement.fullRangeRect.bottom)
+  return Math.max(0, rect.height)
+    + (includeTop ? topExtra : 0)
+    + (includeBottom ? bottomExtra : 0)
+}
+
+function largestFittingOffset(
+  offsets: number[],
+  start: number,
+  totalLength: number,
+  capacity: number,
+  measurement: TextMeasurement,
+): number | null {
+  const candidates = offsets.filter(offset => offset > start)
+  let low = 0
+  let high = candidates.length - 1
+  let best: number | null = null
+
+  while (low <= high) {
+    const middle = Math.floor((low + high) / 2)
+    const end = candidates[middle]
+    const height = measuredSliceHeight(measurement, start, end, start === 0, end === totalLength)
+    if (height <= capacity + 0.5) {
+      best = end
+      low = middle + 1
+    } else {
+      high = middle - 1
+    }
+  }
+
+  return best
+}
+
+function sliceProcessedNode(node: ProcessedNode, start: number, end: number): ProcessedNode | null {
+  const throughEnd = splitProcessedNodeAt(node, end).before
+  if (!throughEnd) return null
+  if (start === 0) return throughEnd
+  return splitProcessedNodeAt(throughEnd, start).after
+}
+
 export function useDocxPagination(input: DocxPaginationInput) {
   const contentPages = ref<ContentPage[]>([])
 
-  const paperWidthMm = computed(() => {
-    const isLetter = input.paperFormat.value === 'Letter'
-    const isLandscape = input.orientation.value === 'landscape'
-    if (isLetter) {
-      return isLandscape ? 279.4 : 215.9
-    }
-    return isLandscape ? 297 : 210
-  })
-
-  const paperHeightMm = computed(() => {
-    const isLetter = input.paperFormat.value === 'Letter'
-    const isLandscape = input.orientation.value === 'landscape'
-    if (isLetter) {
-      return isLandscape ? 215.9 : 279.4
-    }
-    return isLandscape ? 210 : 297
-  })
+  const geometry = computed(() => createDocxPageGeometry({
+    paperFormat: input.paperFormat.value,
+    orientation: input.orientation.value,
+    marginTop: input.marginTop.value,
+    marginRight: input.marginRight.value,
+    marginBottom: input.marginBottom.value,
+    marginLeft: input.marginLeft.value,
+  }))
 
   const pageStyleWidthPx = computed(() => {
-    if (input.fitWidth.value) {
-      return Math.max(100, input.surfaceWidth.value - 40)
+    if (input.fitWidth.value) return Math.max(100, input.surfaceWidth.value - 40)
+    return geometry.value.pageWidthPx * (input.zoom.value / 100)
+  })
+
+  const pageScale = computed(() => pageStyleWidthPx.value / geometry.value.pageWidthPx)
+  const pageHeightPx = computed(() => geometry.value.pageHeightPx * pageScale.value)
+  const usableHeightPx = computed(() => geometry.value.contentHeightPx * pageScale.value)
+
+  const pageStyle = computed<Record<string, string>>(() => {
+    const scale = pageScale.value
+    const scaledPoints = (points: number) => `${ptToPx(points) * scale}px`
+    const fontStack = input.fontFamily.value
+      ? `'${input.fontFamily.value.replace(/'/gu, "\\'")}', Calibri, Carlito, Arial, sans-serif`
+      : 'Calibri, Carlito, Arial, sans-serif'
+    const headingFontSize = (level: number) => {
+      return DOCX_HEADING_STYLES[level - 1]?.fontSizePt ?? input.fontSize.value
     }
-    const canonicalWidth = canonicalWidthFor(input.paperFormat.value, input.orientation.value)
-    return canonicalWidth * (input.zoom.value / 100)
-  })
+    const headingColor = (level: number) => {
+      return `#${DOCX_HEADING_STYLES[level - 1]?.color ?? '1A1A1A'}`
+    }
 
-  const pageHeightPx = computed(() => {
-    return (pageStyleWidthPx.value * paperHeightMm.value) / paperWidthMm.value
-  })
-
-  const pageScale = computed(() => {
-    const canonicalWidth = canonicalWidthFor(input.paperFormat.value, input.orientation.value)
-    return pageStyleWidthPx.value / canonicalWidth
-  })
-
-  const paddingTopPx = computed(() => (input.marginTop.value / paperWidthMm.value) * pageStyleWidthPx.value)
-  const paddingRightPx = computed(() => (input.marginRight.value / paperWidthMm.value) * pageStyleWidthPx.value)
-  const paddingBottomPx = computed(() => (input.marginBottom.value / paperWidthMm.value) * pageStyleWidthPx.value)
-  const paddingLeftPx = computed(() => (input.marginLeft.value / paperWidthMm.value) * pageStyleWidthPx.value)
-
-  const usableHeightPx = computed(() => {
-    return pageHeightPx.value - paddingTopPx.value - paddingBottomPx.value - 8
-  })
-
-  const pageStyle = computed(() => {
-    const styles: Record<string, string> = {}
-
-    styles.width = `${pageStyleWidthPx.value}px`
-    styles.height = `${pageHeightPx.value}px`
-    styles.overflow = 'hidden'
-
-    styles['--docx-font-family'] = input.fontFamily.value
-      ? `'${input.fontFamily.value}', sans-serif`
-      : 'var(--font-ui)'
-    styles['--docx-font-size'] = `${input.fontSize.value * pageScale.value}px`
-
-    styles['--docx-padding-top'] = `${paddingTopPx.value}px`
-    styles['--docx-padding-right'] = `${paddingRightPx.value}px`
-    styles['--docx-padding-bottom'] = `${paddingBottomPx.value}px`
-    styles['--docx-padding-left'] = `${paddingLeftPx.value}px`
-
-    styles['--docx-line-height'] = String(input.lineSpacing.value)
-    styles['--docx-paragraph-spacing'] = `${input.paragraphSpacing.value * pageScale.value}pt`
-
-    return styles
+    return {
+      flex: '0 0 auto',
+      width: `${pageStyleWidthPx.value}px`,
+      height: `${pageHeightPx.value}px`,
+      overflow: 'hidden',
+      '--docx-page-scale': String(scale),
+      '--docx-font-family': fontStack,
+      '--docx-font-size': `${ptToPx(input.fontSize.value) * scale}px`,
+      '--docx-padding-top': `${mmToPx(geometry.value.marginsMm.top) * scale}px`,
+      '--docx-padding-right': `${mmToPx(geometry.value.marginsMm.right) * scale}px`,
+      '--docx-padding-bottom': `${mmToPx(geometry.value.marginsMm.bottom) * scale}px`,
+      '--docx-padding-left': `${mmToPx(geometry.value.marginsMm.left) * scale}px`,
+      '--docx-header-distance': `${mmToPx(geometry.value.headerDistanceMm) * scale}px`,
+      '--docx-footer-distance': `${mmToPx(geometry.value.footerDistanceMm) * scale}px`,
+      '--docx-content-width': `${geometry.value.contentWidthPx * scale}px`,
+      '--docx-content-height': `${geometry.value.contentHeightPx * scale}px`,
+      '--docx-line-height': String(input.lineSpacing.value),
+      '--docx-paragraph-spacing': scaledPoints(input.paragraphSpacing.value),
+      '--docx-title-page-font-size': scaledPoints(DOCX_TITLE_PAGE_FONT_SIZE_PT),
+      '--docx-title-font-size': scaledPoints(DOCX_TITLE_STYLE.fontSizePt ?? input.fontSize.value),
+      '--docx-heading-1-font-size': scaledPoints(headingFontSize(1)),
+      '--docx-heading-2-font-size': scaledPoints(headingFontSize(2)),
+      '--docx-heading-3-font-size': scaledPoints(headingFontSize(3)),
+      '--docx-heading-4-font-size': scaledPoints(headingFontSize(4)),
+      '--docx-heading-5-font-size': scaledPoints(headingFontSize(5)),
+      '--docx-heading-6-font-size': scaledPoints(headingFontSize(6)),
+      '--docx-heading-1-color': headingColor(1),
+      '--docx-heading-2-color': headingColor(2),
+      '--docx-heading-3-color': headingColor(3),
+      '--docx-heading-4-color': headingColor(4),
+      '--docx-heading-5-color': headingColor(5),
+      '--docx-heading-6-color': headingColor(6),
+      '--docx-code-font-size': scaledPoints(DOCX_CODE_FONT_SIZE_PT),
+      '--docx-list-left-indent': `${twipToPx(DOCX_LIST_LEFT_INDENT_TWIPS) * scale}px`,
+      '--docx-blockquote-left-indent': `${twipToPx(DOCX_BLOCKQUOTE_LEFT_INDENT_TWIPS) * scale}px`,
+    }
   })
 
   const processedContent = computed<ProcessedNode | null>(() => {
-    if (!input.note.value.content) return null
     const counters = [0, 0, 0, 0, 0, 0]
     return processNodes(input.note.value.content, counters, input.headingNumbers.value)
   })
 
   const paginatedContentNodes = computed<ProcessedNode[]>(() => {
-    if (!processedContent.value || !processedContent.value.content) return []
-    return prepareNodesForPagination(processedContent.value.content)
+    return prepareNodesForPagination(processedContent.value?.content ?? [])
   })
 
   const pages = computed<PreviewPage[]>(() => {
@@ -195,18 +310,16 @@ export function useDocxPagination(input: DocxPaginationInput) {
     if (input.exportNoteTitle.value && input.titlePage.value) {
       list.push({ id: 'title', type: 'title', pageNumber: currentPage++ })
     }
-
     if (input.tableOfContents.value) {
       list.push({ id: 'toc', type: 'toc', pageNumber: currentPage++ })
     }
 
-    if (contentPages.value.length === 0) {
-      list.push({ id: 'content-fallback', type: 'content', pageNumber: currentPage++, contentPageIndex: undefined })
-    } else {
-      contentPages.value.forEach((_page, index) => {
-        list.push({ id: `content-${index}`, type: 'content', pageNumber: currentPage++, contentPageIndex: index })
-      })
-    }
+    const content = contentPages.value.length
+      ? contentPages.value
+      : [{ nodes: paginatedContentNodes.value }]
+    content.forEach((_page, index) => {
+      list.push({ id: `content-${index}`, type: 'content', pageNumber: currentPage++, contentPageIndex: index })
+    })
 
     return list
   })
@@ -217,82 +330,132 @@ export function useDocxPagination(input: DocxPaginationInput) {
       await new Promise(resolve => setTimeout(resolve, 50))
     }
 
-    if (!input.hiddenContainerRef.value) {
-      contentPages.value = [{ nodes: paginatedContentNodes.value }]
+    const hiddenPage = input.hiddenContainerRef.value
+    const contentContainer = hiddenPage?.querySelector('.docx-page__content')
+    const nodes = paginatedContentNodes.value
+    if (!hiddenPage || !contentContainer) {
+      contentPages.value = [{ nodes }]
       return
     }
 
-    const contentContainer = input.hiddenContainerRef.value.querySelector('.docx-page__content')
-    if (!contentContainer) {
-      contentPages.value = [{ nodes: paginatedContentNodes.value }]
+    const wrappers = Array.from(
+      contentContainer.querySelectorAll<HTMLElement>('.docx-preview-node-wrapper[data-docx-node-index]'),
+    )
+    if (!wrappers.length) {
+      contentPages.value = [{ nodes: [] }]
       return
     }
 
-    const children = contentContainer.querySelectorAll('.docx-preview-node-wrapper')
-    if (children.length === 0) {
-      contentPages.value = []
-      return
-    }
-
+    const limit = usableHeightPx.value
     const pagesList: ContentPage[] = []
     let currentPageNodes: ProcessedNode[] = []
     let currentPageHeight = 0
-    let prevMarginBottom = 0
+    let currentPageHasTitle = false
 
-    const limit = usableHeightPx.value
-    const nodes = paginatedContentNodes.value
-
-    let titleHeight = 0
-    if (input.exportNoteTitle.value && !input.titlePage.value) {
-      const titleWrapper = contentContainer.querySelector('.docx-page__content-title-wrapper')
-      if (titleWrapper) {
-        const style = window.getComputedStyle(titleWrapper)
-        const marginTop = parseFloat(style.marginTop) || 0
-        const marginBottom = parseFloat(style.marginBottom) || 0
-        titleHeight = titleWrapper.getBoundingClientRect().height + marginTop
-        prevMarginBottom = marginBottom
-      }
+    const titleWrapper = contentContainer.querySelector<HTMLElement>('[data-docx-title]')
+    if (titleWrapper) {
+      currentPageHeight = boxHeight(titleWrapper)
+      currentPageHasTitle = true
     }
 
-    currentPageHeight += titleHeight
+    const flushPage = () => {
+      if (!currentPageNodes.length && !currentPageHasTitle) return
+      pagesList.push({ nodes: currentPageNodes, hasTitle: currentPageHasTitle })
+      currentPageNodes = []
+      currentPageHeight = 0
+      currentPageHasTitle = false
+    }
 
-    for (let i = 0; i < children.length; i++) {
-      const child = children[i] as HTMLElement
-      const node = nodes[i]
+    for (let index = 0; index < wrappers.length; index++) {
+      const wrapper = wrappers[index]
+      const node = nodes[index]
       if (!node) continue
+      const height = boxHeight(wrapper)
 
-      const style = window.getComputedStyle(child)
-      const marginTop = parseFloat(style.marginTop) || 0
-      const marginBottom = parseFloat(style.marginBottom) || 0
+      if (node.type === 'table') {
+        const table = wrapper.querySelector<HTMLTableElement>(':scope > table.docx-page__table')
+        const rows = table?.tBodies[0] ? Array.from(table.tBodies[0].rows) : []
+        const rowHeights = rows.map(boxHeight)
+        const tableExtraHeight = Math.max(
+          0,
+          height - rowHeights.reduce((total, rowHeight) => total + rowHeight, 0),
+        )
+        const tablePagination = paginateTableRows(
+          node,
+          rowHeights,
+          tableExtraHeight,
+          limit - currentPageHeight,
+          limit,
+        )
 
-      const childHeight = child.getBoundingClientRect().height
+        if (tablePagination) {
+          if (tablePagination.startsOnNextPage) flushPage()
+          for (const fragment of tablePagination.fragments) {
+            if (currentPageHeight > 0 && currentPageHeight + fragment.height > limit + 0.5) {
+              flushPage()
+            }
+            currentPageNodes.push(fragment.node)
+            currentPageHeight += Math.min(fragment.height, limit)
+            if (fragment.node.continuesOnNextPage) flushPage()
+          }
+          continue
+        }
+      }
 
-      const collapsedMargin = Math.max(prevMarginBottom, marginTop)
-      const totalHeightContribution = childHeight + (currentPageHeight > 0 ? collapsedMargin : marginTop)
-
-      if (currentPageNodes.length > 0 && currentPageHeight + totalHeightContribution > limit) {
-        pagesList.push({
-          nodes: currentPageNodes,
-          hasTitle: pagesList.length === 0 && input.exportNoteTitle.value && !input.titlePage.value,
-        })
-        currentPageNodes = [node]
-        currentPageHeight = childHeight + marginTop
-        prevMarginBottom = marginBottom
-      } else {
+      if (height <= limit + 0.5) {
+        if (currentPageHeight > 0 && currentPageHeight + height > limit + 0.5) flushPage()
         currentPageNodes.push(node)
-        currentPageHeight += totalHeightContribution
-        prevMarginBottom = marginBottom
+        currentPageHeight += height
+        continue
+      }
+
+      const text = processedNodeText(node)
+      const totalLength = processedNodeTextLength(node)
+      const measurement = collectTextMeasurement(wrapper)
+      if (!measurement || !text || totalLength !== text.length) {
+        if (currentPageHeight > 0) flushPage()
+        currentPageNodes.push(node)
+        currentPageHeight = Math.min(height, limit)
+        flushPage()
+        continue
+      }
+
+      const breaks = textBreakOffsets(text)
+      let start = 0
+      while (start < totalLength) {
+        let capacity = limit - currentPageHeight
+        let end = largestFittingOffset(breaks.words, start, totalLength, capacity, measurement)
+          ?? largestFittingOffset(breaks.graphemes, start, totalLength, capacity, measurement)
+
+        if (end === null && currentPageHeight > 0) {
+          flushPage()
+          capacity = limit
+          end = largestFittingOffset(breaks.words, start, totalLength, capacity, measurement)
+            ?? largestFittingOffset(breaks.graphemes, start, totalLength, capacity, measurement)
+        }
+
+        if (end === null) {
+          end = breaks.graphemes.find(offset => offset > start) ?? totalLength
+        }
+
+        const fragment = sliceProcessedNode(node, start, end)
+        if (!fragment) break
+        const measuredHeight = measuredSliceHeight(
+          measurement,
+          start,
+          end,
+          start === 0,
+          end === totalLength,
+        )
+        currentPageNodes.push(markPageContinuation(fragment, start > 0, end < totalLength))
+        currentPageHeight += Math.min(measuredHeight, limit)
+        start = end
+        if (start < totalLength) flushPage()
       }
     }
 
-    if (currentPageNodes.length > 0) {
-      pagesList.push({
-        nodes: currentPageNodes,
-        hasTitle: pagesList.length === 0 && input.exportNoteTitle.value && !input.titlePage.value,
-      })
-    }
-
-    contentPages.value = pagesList
+    flushPage()
+    contentPages.value = pagesList.length ? pagesList : [{ nodes: [] }]
   }
 
   watch(
@@ -320,10 +483,13 @@ export function useDocxPagination(input: DocxPaginationInput) {
 
   return {
     contentPages,
+    geometry,
+    pageScale,
     pageStyle,
     processedContent,
     paginatedContentNodes,
     pages,
+    usableHeightPx,
     updatePagination,
   }
 }

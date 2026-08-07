@@ -63,6 +63,14 @@ describe('DocxPreviewModal', () => {
     expect(pageElement.attributes('style')).toContain('--docx-padding-top')
   })
 
+  it('keeps every page at its calculated height inside the scrolling flex surface', async () => {
+    const wrapper = mountModal()
+    await flushDocxModal()
+
+    const pageElement = wrapper.find('.docx-preview__surface .docx-page').element
+    expect(window.getComputedStyle(pageElement).flexShrink).toBe('0')
+  })
+
   it('updates page classes and styling when configuration buttons are clicked', async () => {
     const wrapper = mountModal()
     await flushDocxModal()

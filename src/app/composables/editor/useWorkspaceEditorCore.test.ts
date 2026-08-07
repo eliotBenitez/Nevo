@@ -12,6 +12,14 @@ const editorCoreMock = vi.hoisted(() => ({
   setup: { marker: 'editor-setup' },
 }))
 
+// Note embeds read the referenced note through the workspace backend, so that a
+// cloud workspace — which has no path and keeps bodies in separate documents —
+// renders previews the same way a local one does.
+const backendMock = vi.hoisted(() => ({ loadNoteWithContent: vi.fn() }))
+vi.mock('../../../stores/workspace', () => ({
+  useWorkspaceStore: () => ({ backend: backendMock }),
+}))
+
 const noteCommandMocks = vi.hoisted(() => ({
   loadNote: vi.fn(),
 }))
@@ -82,6 +90,7 @@ function createOptions(overrides: Partial<WorkspaceEditorCoreOptions> = {}) {
     openMathEditor: vi.fn(),
     openFormulaEditor: vi.fn(),
     openMermaidEditor: vi.fn(),
+    openQueryEditor: vi.fn(),
     openPluginNodeEditor: vi.fn(),
     openMarkmapEditor: vi.fn(),
     openVegaEditor: vi.fn(),
@@ -102,6 +111,7 @@ function createOptions(overrides: Partial<WorkspaceEditorCoreOptions> = {}) {
 beforeEach(() => {
   editorCoreMock.callbacks = null
   noteCommandMocks.loadNote.mockReset()
+  backendMock.loadNoteWithContent.mockReset()
   blockNodeMock.mockReset()
 })
 
@@ -163,7 +173,7 @@ describe('useWorkspaceEditorCore', () => {
 
   it('loads note embed HTML and resolves exported asset sources', async () => {
     const { options } = createOptions()
-    noteCommandMocks.loadNote.mockResolvedValue({
+    backendMock.loadNoteWithContent.mockResolvedValue({
       content: { type: 'doc', content: [] },
     })
     blockNodeMock.mockImplementation(async (_content, context) => {
@@ -180,7 +190,7 @@ describe('useWorkspaceEditorCore', () => {
       setLoading,
     })
 
-    expect(noteCommandMocks.loadNote).toHaveBeenCalledWith('/workspace', 'note-2')
+    expect(backendMock.loadNoteWithContent).toHaveBeenCalledWith('note-2')
     expect(setLoading.mock.calls).toEqual([[true], [false]])
     expect(setHtml).toHaveBeenCalledWith(
       '<img src="asset://.nevo/assets/preview.png">',

@@ -71,16 +71,48 @@ describe('serializeNoteToTypst', () => {
     expect(source).toContain('a \\#b \\$c\\* \\_d')
   })
 
+  it('escapes slash-led text so typst does not parse it as a term list', () => {
+    const { source } = serializeNoteToTypst(note({
+      type: 'doc',
+      content: [
+        { type: 'paragraph', content: [{ type: 'text', text: '/ first line' }] },
+        { type: 'paragraph', content: [{ type: 'text', text: '/ second line' }] },
+      ],
+    }))
+    expect(source).toContain('\\/ first line')
+    expect(source).toContain('\\/ second line')
+  })
+
   it('converts math to native typst markup', () => {
     const { source } = serializeNoteToTypst(note({
       type: 'doc',
       content: [
         { type: 'math_block', attrs: { latex: '\\frac{1}{2}' } },
-        { type: 'paragraph', content: [{ type: 'math_inline', attrs: { latex: 'x^2' } }] },
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'math_inline', attrs: { latex: 'x^2' } },
+            { type: 'text', text: ' ' },
+            { type: 'math_inline', attrs: { latex: '^2' } },
+            { type: 'text', text: ' ' },
+            { type: 'math_inline', attrs: { latex: '\\frac{1}' } },
+            { type: 'text', text: ' ' },
+            { type: 'math_inline', attrs: { latex: '\\partial f' } },
+            { type: 'text', text: ' ' },
+            { type: 'math_inline', attrs: { latex: 'A\\Longrightarrow B' } },
+            { type: 'text', text: ' ' },
+            { type: 'math_inline', attrs: { latex: '\\bar{x}+\\hat{y}' } },
+          ],
+        },
       ],
     }))
     expect(source).toContain('$ frac(1, 2) $')
     expect(source).toContain('$x^(2)$')
+    expect(source).toContain('$""^(2)$')
+    expect(source).toContain('$frac(1, "")$')
+    expect(source).toContain('$∂ f$')
+    expect(source).toContain('$A ⟹ B$')
+    expect(source).toContain('$macron(x)+hat(y)$')
   })
 
   it('collects image and mermaid assets', () => {

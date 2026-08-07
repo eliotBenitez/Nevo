@@ -1,9 +1,21 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import type { FolderMeta, NoteMeta } from '../types/note'
 import type { WorkspaceManifest } from '../types/workspace'
 import { useTreeStore } from './tree'
 import { useWorkspaceStore } from './workspace'
+
+const mockBackend = vi.hoisted(() => ({
+  deleteFolder: vi.fn(async () => {}),
+}))
+
+vi.mock('../core/workspace-backend', async () => {
+  const actual = await vi.importActual<typeof import('../core/workspace-backend')>('../core/workspace-backend')
+  return {
+    ...actual,
+    resolveBackend: () => mockBackend,
+  }
+})
 
 function note(id: string, folderId: string | null = null): NoteMeta {
   return { id, title: id.toUpperCase(), icon: '📄', folderId, updatedAt: '2026-01-01T00:00:00.000Z' }
@@ -34,6 +46,7 @@ function buildManifest(): WorkspaceManifest {
 describe('useTreeStore computeds', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    mockBackend.deleteFolder.mockClear()
   })
 
   it('resolves the root tree in rootOrder, interleaving folders and notes', () => {
@@ -78,6 +91,22 @@ describe('useTreeStore computeds', () => {
     expect(treeStore.noteById.get('n-child')).toMatchObject({ title: 'Renamed nested note' })
     expect(treeStore.noteById.get('rn1')).not.toBe(previousRootMeta)
     expect(treeStore.noteById.get('n-child')).not.toBe(previousNestedMeta)
+  })
+
+  it('mirrors recursively deleted folder notes into the visible trash', async () => {
+    const workspaceStore = useWorkspaceStore()
+    workspaceStore.activeHandle = { kind: 'local', path: '/workspace' }
+    workspaceStore.manifest = buildManifest()
+    const treeStore = useTreeStore()
+
+    await treeStore.deleteFolder('f1', true)
+
+    expect(mockBackend.deleteFolder).toHaveBeenCalledWith('f1', true)
+    expect(workspaceStore.manifest.trash).toEqual([
+      expect.objectContaining({ id: 'n-f1', type: 'note', originalParentId: null }),
+      expect.objectContaining({ id: 'n-child', type: 'note', originalParentId: null }),
+    ])
+    expect(treeStore.folderById.has('f1')).toBe(false)
   })
 
   describe('resolveNoteIdByTitle (wiki-link resolution)', () => {

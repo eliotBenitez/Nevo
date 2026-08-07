@@ -1,5 +1,6 @@
 import { computed, ref, watch } from 'vue'
-import { noteCommands } from '../../tauri/commands'
+import { useWorkspaceStore } from '../../stores/workspace'
+import type { WorkspaceBackend } from '../../core/workspace-backend'
 import type { FolderMeta, NoteDocument, NoteMeta, NoteSnapshotMeta } from '../../types/note'
 import type { WorkspaceManifest } from '../../types/workspace'
 import {
@@ -14,7 +15,6 @@ type HistoryPaneMode = 'preview' | 'compare'
 
 interface HistoryProps {
   open: boolean
-  workspacePath: string | null
   manifest: WorkspaceManifest | null
   activeNoteId: string | null
   activeNote: NoteDocument | null
@@ -26,6 +26,10 @@ export function useHistoryData(
   onRestored: (note: NoteDocument) => void,
   t: (key: string, params?: Record<string, unknown>) => string,
 ) {
+  // History is served by whichever backend owns the workspace: snapshots are
+  // files on disk locally and encrypted blobs on the relay for a cloud
+  // workspace, which has no path to key them by.
+  const workspaceStore = useWorkspaceStore()
   const searchQuery = ref('')
   const selectedNoteId = ref<string | null>(null)
   const selectedSnapshotId = ref<string | null>(null)
@@ -53,11 +57,11 @@ export function useHistoryData(
   })
 
   watch(
-    () => { const p = getProps(); return { open: p.open, workspacePath: p.workspacePath, manifest: p.manifest, preselectedNoteId: p.preselectedNoteId, activeNoteId: p.activeNoteId } },
-    async ({ open, workspacePath, manifest }) => {
+    () => { const p = getProps(); return { open: p.open, backend: workspaceStore.backend, manifest: p.manifest, preselectedNoteId: p.preselectedNoteId, activeNoteId: p.activeNoteId } },
+    async ({ open, backend, manifest }) => {
       if (!open) { confirmRestoreOpen.value = false; restoreError.value = null; return }
-      if (!workspacePath || !manifest) { resetState(); filesError.value = t('workspace.history.errors.noWorkspace'); return }
-      await loadFiles(workspacePath, manifest)
+      if (!backend || !manifest) { resetState(); filesError.value = t('workspace.history.errors.noWorkspace'); return }
+      await loadFiles(backend, manifest)
     },
     { immediate: true, deep: true },
   )
@@ -75,14 +79,14 @@ export function useHistoryData(
   })
 
   watch(
-    () => { const p = getProps(); return { open: p.open, workspacePath: p.workspacePath, noteId: selectedNoteId.value, snapshotId: selectedSnapshotId.value, paneMode: paneMode.value, activeUpdatedAt: p.activeNote?.updatedAt } },
-    async ({ open, workspacePath, noteId, snapshotId }) => {
-      if (!open || !workspacePath || !noteId || !snapshotId) {
+    () => { const p = getProps(); return { open: p.open, backend: workspaceStore.backend, noteId: selectedNoteId.value, snapshotId: selectedSnapshotId.value, paneMode: paneMode.value, activeUpdatedAt: p.activeNote?.updatedAt } },
+    async ({ open, backend, noteId, snapshotId }) => {
+      if (!open || !backend || !noteId || !snapshotId) {
         selectedSnapshot.value = null; currentNote.value = null
         previewError.value = null; compareError.value = null
         return
       }
-      await loadPane(workspacePath, noteId, snapshotId)
+      await loadPane(backend, noteId, snapshotId)
     },
     { immediate: true },
   )
@@ -95,12 +99,12 @@ export function useHistoryData(
     filesError.value = null; previewError.value = null; compareError.value = null
   }
 
-  async function loadFiles(workspacePath: string, manifest: WorkspaceManifest) {
+  async function loadFiles(backend: WorkspaceBackend, manifest: WorkspaceManifest) {
     const token = ++loadToken
     resetState(); filesLoading.value = true
     try {
       const notes = collectNotes(manifest)
-      const entries = await noteCommands.listAllNoteSnapshots(workspacePath)
+      const entries = await backend.listAllNoteSnapshots()
       const entriesByNoteId = new Map(entries.map(entry => [entry.noteId, entry.snapshots]))
       if (token !== loadToken) return
       const nextSnapshotsMap: Record<string, NoteSnapshotMeta[]> = {}
@@ -124,12 +128,12 @@ export function useHistoryData(
     }
   }
 
-  async function loadPane(workspacePath: string, noteId: string, snapshotId: string) {
+  async function loadPane(backend: WorkspaceBackend, noteId: string, snapshotId: string) {
     const token = ++loadToken
     paneLoading.value = true; previewError.value = null; compareError.value = null
     selectedSnapshot.value = null; currentNote.value = null
     try {
-      const snapshot = await noteCommands.loadNoteSnapshot(workspacePath, noteId, snapshotId)
+      const snapshot = await backend.loadNoteSnapshot(noteId, snapshotId)
       if (token !== loadToken) return
       selectedSnapshot.value = snapshot
     } catch {
@@ -139,7 +143,9 @@ export function useHistoryData(
     }
     try {
       const p = getProps()
-      currentNote.value = p.activeNote?.id === noteId && p.activeNote ? p.activeNote : await noteCommands.loadNote(workspacePath, noteId)
+      // The comparison needs the note's real body, which on cloud is not part
+      // of loadNote — see WorkspaceBackend.loadNoteWithContent.
+      currentNote.value = p.activeNote?.id === noteId && p.activeNote ? p.activeNote : await backend.loadNoteWithContent(noteId)
     } catch {
       if (token !== loadToken) return
       compareError.value = t('workspace.history.errors.loadCurrent')
@@ -149,14 +155,14 @@ export function useHistoryData(
   }
 
   async function confirmRestore() {
-    const p = getProps()
-    if (!p.workspacePath || !selectedNoteId.value || !selectedSnapshotId.value) return
+    const backend = workspaceStore.backend
+    if (!backend || !selectedNoteId.value || !selectedSnapshotId.value) return
     restoring.value = true; restoreError.value = null
     try {
-      const restored = await noteCommands.restoreNoteSnapshot(p.workspacePath, selectedNoteId.value, selectedSnapshotId.value)
+      const restored = await backend.restoreNoteSnapshot(selectedNoteId.value, selectedSnapshotId.value)
       onRestored(restored)
       historyFiles.value = historyFiles.value.map(f => f.id !== restored.id ? f : { ...f, title: restored.title, icon: restored.icon, folderId: restored.folderId, updatedAt: restored.updatedAt })
-      const snapshots = await noteCommands.listNoteSnapshots(p.workspacePath, restored.id)
+      const snapshots = await backend.listNoteSnapshots(restored.id)
       snapshotsByNoteId.value = { ...snapshotsByNoteId.value, [restored.id]: snapshots }
       historyFiles.value = historyFiles.value.map(f => f.id !== restored.id ? f : { ...f, snapshotCount: snapshots.length, latestSnapshotAt: snapshots[0]?.createdAt ?? f.latestSnapshotAt }).sort((a, b) => b.latestSnapshotAt.localeCompare(a.latestSnapshotAt))
       selectedSnapshotId.value = snapshots[0]?.id ?? null

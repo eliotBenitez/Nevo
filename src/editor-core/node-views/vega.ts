@@ -3,11 +3,14 @@ import type { EditorView, NodeView } from 'prosemirror-view'
 import {
   resolveNodePosition,
   getStringAttr,
-  createLazyRenderObserver,
   selectNodeAt,
   type CoreNodeViewOptions,
   type NodeViewPosition,
 } from './utils'
+import {
+  createViewportRenderController,
+  type ViewportRenderController,
+} from './viewportRenderController'
 
 let vegaEmbedModule: typeof import('vega-embed')['default'] | null = null
 
@@ -70,18 +73,14 @@ export function createVegaNodeView(node: PMNode, view: EditorView, getPos: NodeV
   dom.append(buildHeader(), rendered)
 
   let currentNode = node
-  let isVisible = false
-  let pendingRender = false
   let lastRenderedSpec = ''
+  let renderVersion = 0
   let currentView: { finalize: () => void } | null = null
+  let viewportController: ViewportRenderController | null = null
 
   const sync = async () => {
-    if (!isVisible) {
-      pendingRender = true
-      return
-    }
-
     const specStr = getStringAttr(currentNode, 'spec')
+    const version = ++renderVersion
     const isEmpty = specStr.trim().length === 0 || specStr.trim() === '{}'
     dom.dataset.empty = isEmpty ? 'true' : 'false'
 
@@ -118,6 +117,15 @@ export function createVegaNodeView(node: PMNode, view: EditorView, getPos: NodeV
         renderer: 'svg',
         theme: isDarkTheme() ? 'dark' : undefined,
       })
+      if (
+        !viewportController?.isActive()
+        || getStringAttr(currentNode, 'spec') !== specStr
+        || renderVersion !== version
+      ) {
+        result.view.finalize()
+        rendered.replaceChildren()
+        return
+      }
       currentView = result.view
       dom.dataset.error = 'false'
       lastRenderedSpec = specStr
@@ -131,6 +139,11 @@ export function createVegaNodeView(node: PMNode, view: EditorView, getPos: NodeV
         }
       }
     } catch {
+      if (
+        !viewportController?.isActive()
+        || getStringAttr(currentNode, 'spec') !== specStr
+        || renderVersion !== version
+      ) return
       rendered.innerHTML = ''
       rendered.classList.remove('nv-vega-landscape')
       rendered.textContent = 'Invalid chart specification'
@@ -139,14 +152,20 @@ export function createVegaNodeView(node: PMNode, view: EditorView, getPos: NodeV
     }
   }
 
-  const lazyRender = createLazyRenderObserver(dom, () => {
-    isVisible = true
-    if (pendingRender) {
-      pendingRender = false
-      void sync()
-    }
+  viewportController = createViewportRenderController(dom, {
+    render: sync,
+    suspend: () => {
+      renderVersion++
+      if (currentView) {
+        currentView.finalize()
+        currentView = null
+      }
+      rendered.replaceChildren()
+      rendered.classList.remove('nv-vega-landscape')
+      lastRenderedSpec = ''
+    },
+    initialPlaceholderHeight: 260,
   })
-  isVisible = lazyRender.isInitiallyVisible
 
   const requestVegaEdit = (event?: MouseEvent) => {
     const position = resolveNodePosition(getPos)
@@ -168,7 +187,6 @@ export function createVegaNodeView(node: PMNode, view: EditorView, getPos: NodeV
   }
 
   dom.addEventListener('click', onClick)
-  sync()
 
   return {
     dom,
@@ -176,12 +194,14 @@ export function createVegaNodeView(node: PMNode, view: EditorView, getPos: NodeV
       if (nextNode.type !== currentNode.type) return false
       currentNode = nextNode
       const newSpec = getStringAttr(nextNode, 'spec')
-      if (isVisible && newSpec !== lastRenderedSpec) void sync()
-      else if (!isVisible) pendingRender = true
+      if (viewportController?.isActive() && newSpec !== lastRenderedSpec) {
+        viewportController.requestRender()
+      }
       return true
     },
     destroy() {
-      lazyRender.disconnect()
+      renderVersion++
+      viewportController?.destroy()
       if (currentView) {
         currentView.finalize()
         currentView = null

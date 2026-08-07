@@ -7,7 +7,7 @@ use std::sync::{OnceLock, RwLock};
 
 use self::home_favorites::normalize_home_favorites;
 use super::paths::{settings_path, workspace_context, workspace_error_context};
-use super::types::{default_hotkey_bindings, HotkeyBinding, WorkspaceSettings};
+use super::types::{default_hotkey_bindings, HotkeyBinding, McpMode, WorkspaceSettings};
 use crate::commands::path_utils::{normalize_workspace_path, write_atomic};
 use crate::logging::{LogContext, LogError};
 
@@ -290,12 +290,6 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
         .and_then(|value| value.as_object())
         .cloned()
         .unwrap_or_default();
-    settings.workspace.default_landing_view = normalize_view(
-        workspace
-            .get("defaultLandingView")
-            .and_then(|value| value.as_str())
-            .or(Some(settings.general.default_startup_view.as_str())),
-    );
     settings.workspace.show_backlinks_by_default = workspace
         .get("showBacklinksByDefault")
         .and_then(|value| value.as_bool())
@@ -541,6 +535,21 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
         .unwrap_or(true);
     settings.features.templates = features
         .get("templates")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(true);
+
+    let mcp = object
+        .get("mcp")
+        .and_then(|value| value.as_object())
+        .cloned()
+        .unwrap_or_default();
+    settings.mcp.mode = mcp
+        .get("mode")
+        .and_then(|value| value.as_str())
+        .map(McpMode::parse)
+        .unwrap_or_default();
+    settings.mcp.auto_snapshot = mcp
+        .get("autoSnapshot")
         .and_then(|value| value.as_bool())
         .unwrap_or(true);
 
@@ -886,7 +895,6 @@ mod tests {
         }));
 
         assert_eq!(settings.general.default_startup_view, "graph");
-        assert_eq!(settings.workspace.default_landing_view, "graph");
         assert_eq!(settings.appearance.editor_font_size, 19);
         assert_eq!(settings.appearance.editor_line_width, "wide");
         assert!(settings.editor.spell_check);

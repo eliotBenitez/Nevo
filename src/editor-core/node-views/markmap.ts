@@ -3,11 +3,14 @@ import type { EditorView, NodeView } from 'prosemirror-view'
 import {
   resolveNodePosition,
   getStringAttr,
-  createLazyRenderObserver,
   selectNodeAt,
   type CoreNodeViewOptions,
   type NodeViewPosition,
 } from './utils'
+import {
+  createViewportRenderController,
+  type ViewportRenderController,
+} from './viewportRenderController'
 
 import { transformMarkmap, type MarkmapInstance } from '../../utils/markmap/markmapCore'
 
@@ -78,18 +81,14 @@ export function createMarkmapNodeView(node: PMNode, view: EditorView, getPos: No
   dom.append(header, rendered)
 
   let currentNode = node
-  let isVisible = false
-  let pendingRender = false
   let lastRenderedMarkdown = ''
+  let renderVersion = 0
   let markmap: MarkmapInstance | null = null
+  let viewportController: ViewportRenderController | null = null
 
   const sync = async () => {
-    if (!isVisible) {
-      pendingRender = true
-      return
-    }
-
     const markdown = getStringAttr(currentNode, 'markdown')
+    const version = ++renderVersion
     const isEmpty = markdown.trim().length === 0
     dom.dataset.empty = isEmpty ? 'true' : 'false'
 
@@ -106,6 +105,11 @@ export function createMarkmapNodeView(node: PMNode, view: EditorView, getPos: No
 
     try {
       const { view, root, options } = await transformMarkmap(markdown)
+      if (
+        !viewportController?.isActive()
+        || getStringAttr(currentNode, 'markdown') !== markdown
+        || renderVersion !== version
+      ) return
       const opts = { ...BASE_OPTIONS, ...options }
       placeholder.style.display = 'none'
       if (markmap) {
@@ -118,6 +122,11 @@ export function createMarkmapNodeView(node: PMNode, view: EditorView, getPos: No
       dom.dataset.error = 'false'
       lastRenderedMarkdown = markdown
     } catch {
+      if (
+        !viewportController?.isActive()
+        || getStringAttr(currentNode, 'markdown') !== markdown
+        || renderVersion !== version
+      ) return
       if (markmap) {
         markmap.destroy()
         markmap = null
@@ -129,14 +138,20 @@ export function createMarkmapNodeView(node: PMNode, view: EditorView, getPos: No
     }
   }
 
-  const lazyRender = createLazyRenderObserver(dom, () => {
-    isVisible = true
-    if (pendingRender) {
-      pendingRender = false
-      void sync()
-    }
+  viewportController = createViewportRenderController(dom, {
+    render: sync,
+    suspend: () => {
+      renderVersion++
+      if (markmap) {
+        markmap.destroy()
+        markmap = null
+      }
+      svg.replaceChildren()
+      placeholder.style.display = ''
+      lastRenderedMarkdown = ''
+    },
+    initialPlaceholderHeight: 260,
   })
-  isVisible = lazyRender.isInitiallyVisible
 
   const requestMarkmapEdit = (event?: MouseEvent) => {
     const position = resolveNodePosition(getPos)
@@ -175,20 +190,20 @@ export function createMarkmapNodeView(node: PMNode, view: EditorView, getPos: No
   rendered.addEventListener('wheel', stopBubble, { passive: true })
   rendered.addEventListener('dragstart', onRenderedDragStart)
 
-  void sync()
-
   return {
     dom,
     update(nextNode) {
       if (nextNode.type !== currentNode.type) return false
       currentNode = nextNode
       const newMarkdown = getStringAttr(nextNode, 'markdown')
-      if (isVisible && newMarkdown !== lastRenderedMarkdown) void sync()
-      else if (!isVisible) pendingRender = true
+      if (viewportController?.isActive() && newMarkdown !== lastRenderedMarkdown) {
+        viewportController.requestRender()
+      }
       return true
     },
     destroy() {
-      lazyRender.disconnect()
+      renderVersion++
+      viewportController?.destroy()
       if (markmap) {
         markmap.destroy()
         markmap = null

@@ -7,11 +7,13 @@ import { createHeadingNodeView } from './heading'
 import { createFileNodeView } from './file'
 import { createCodeBlockNodeView } from './code-block'
 import { createMermaidNodeView } from './mermaid'
+import { createQueryNodeView } from './query'
 import { createDrawNodeView } from './draw'
 import { createMarkmapNodeView } from './markmap'
 import { createVegaNodeView } from './vega'
 import { createNoteEmbedNodeView } from './note-embed'
 import { createEmbedNodeView } from './embed'
+import { createBlockEmbedNodeView } from './blockEmbed'
 import { createMediaNodeView } from './media'
 import { createDatabaseNodeView } from './database'
 import { createColumnListNodeView, createColumnNodeView } from './columns'
@@ -50,6 +52,9 @@ export function createCoreNodeViews(schema: Schema, options?: CoreNodeViewOption
   if (schema.nodes.mermaid_block) {
     nodeViews.mermaid_block = (node, view, getPos) => createMermaidNodeView(node, view, getPos, options)
   }
+  if (schema.nodes.query_block) {
+    nodeViews.query_block = (node, view, getPos) => createQueryNodeView(node, view, getPos, options)
+  }
   if (schema.nodes.draw_block) {
     nodeViews.draw_block = (node, view, getPos) => createDrawNodeView(node, view, getPos, options)
   }
@@ -64,6 +69,9 @@ export function createCoreNodeViews(schema: Schema, options?: CoreNodeViewOption
   }
   if (schema.nodes.embed_block) {
     nodeViews.embed_block = (node, view, getPos) => createEmbedNodeView(node, view, getPos, options)
+  }
+  if (schema.nodes.block_embed) {
+    nodeViews.block_embed = (node, view, getPos) => createBlockEmbedNodeView(node, view, getPos, options)
   }
   if (schema.nodes.media_block) {
     nodeViews.media_block = (node, view, getPos) => createMediaNodeView(node, view, getPos, options)

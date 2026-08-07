@@ -17,11 +17,11 @@ import type {
 } from '../types/workspace'
 import type { SidebarNotePreview } from '../types/note'
 import { configCommands, githubSyncCommands, workspaceCommands } from '../tauri/commands'
-import { resolveBackend, CloudBackend, type WorkspaceBackend, type WorkspaceHandle } from '../core/workspace-backend'
+import { resolveBackend, CloudBackend, resolveOfflineCache, type WorkspaceBackend, type WorkspaceHandle } from '../core/workspace-backend'
 import { useSharedStorageStore } from './sharedStorage'
 import { useAuthStore } from './auth'
 import { useServerConfigStore } from './serverConfig'
-import { useApiClient } from '../app/composables/useApiClient'
+import { useApiClient, type ApiError } from '../app/composables/useApiClient'
 import type { CloudDocument, SharedStorage } from '../types/cloud'
 import {
   cloneWorkspaceSettings,
@@ -212,6 +212,32 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     }
   }
 
+  /**
+   * Re-reads only the workspace manifest after an out-of-process mutation
+   * (currently MCP). This keeps the live tree in sync without re-opening the
+   * workspace, rebuilding the backend, or reloading editor/settings state.
+   */
+  async function refreshManifest() {
+    const workspacePath = activePath.value
+    if (!workspacePath) return
+    try {
+      const refreshed = await workspaceCommands.loadManifest(workspacePath)
+      // A workspace switch may finish while the manifest read is in flight.
+      if (activePath.value !== workspacePath) return
+      manifest.value = refreshed
+      await refreshSidebarNotePreviews()
+    } catch (error) {
+      await appLogger.error({
+        source: 'frontend.workspace',
+        event: 'refresh_manifest',
+        message: 'Failed to refresh workspace manifest',
+        workspacePath: activePath.value ?? undefined,
+        error,
+      })
+      throw error
+    }
+  }
+
   /** Open a server-hosted shared storage as a workspace (cloud backend). */
   async function openCloudWorkspace(storageId: string, serverUrl?: string) {
     const shared = useSharedStorageStore()
@@ -239,21 +265,66 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         gradient: storage.gradient,
         manifestRoom: storage.manifestRoom,
         key,
-        token: auth.accessToken ?? '',
+        // A getter, not a snapshot: the relay's access token expires in 15
+        // minutes, and every WS (re)connect must present a fresh one.
+        getToken: () => auth.getValidAccessToken(),
         wsBase: server.wsBase,
         listDocuments: (id) => api.get<CloudDocument[]>(`/api/v1/storages/${id}/documents`),
         createDocument: (id) => api.post<CloudDocument>(`/api/v1/storages/${id}/documents`),
+        updateStorageMeta: async (meta) => {
+          try {
+            await shared.updateStorage(storageId, meta)
+          } catch (error) {
+            // Renaming the storage record is admin+, while editors may still
+            // rename the workspace in its manifest. Swallow the refusal so the
+            // backend stops retrying it on every later manifest write — the
+            // name reached every member through the manifest either way, only
+            // the pre-open listing keeps the old one. Anything else (offline,
+            // server error) is transient and worth retrying.
+            if ((error as ApiError)?.status !== 403) throw error
+            await appLogger.warn({
+              source: 'frontend.workspace',
+              event: 'update_storage_meta',
+              message: 'Renamed the workspace, but this member may not rename the storage record',
+              payload: { storageId },
+            })
+          }
+        },
+        onStorageMetaError: (error) => {
+          void appLogger.error({
+            source: 'frontend.workspace',
+            event: 'update_storage_meta',
+            message: 'Renamed the workspace locally but could not update the storage record',
+            error,
+            payload: { storageId },
+          })
+        },
+        deleteDocument: (docId) =>
+          api.del(`/api/v1/storages/${storageId}/documents/${docId}`),
         listSnapshots: (docId) =>
           api.get<Array<{ id: string; label: string; createdAt: string }>>(`/api/v1/storages/${storageId}/documents/${docId}/snapshots`),
         createSnapshot: (docId, blob, label) =>
           api.postBinary(`/api/v1/storages/${storageId}/documents/${docId}/snapshots?label=${encodeURIComponent(label)}`, blob),
         getSnapshot: (snapshotId) =>
           api.getBinary(`/api/v1/storages/${storageId}/snapshots/${snapshotId}`),
+        pruneSnapshots: (docId, keep) =>
+          api.del<{ deleted: number }>(`/api/v1/storages/${storageId}/documents/${docId}/snapshots?keep=${keep}`),
         uploadAsset: (blob, contentType) =>
           api.postBinary<{ id: string }>(`/api/v1/storages/${storageId}/assets`, blob, contentType),
         fetchAsset: (assetId) =>
           api.getBinaryTyped(`/api/v1/storages/${storageId}/assets/${assetId}`),
+        deleteAsset: (assetId) =>
+          api.del(`/api/v1/storages/${storageId}/assets/${assetId}`),
         onManifest: (m) => { manifest.value = m },
+        cache: resolveOfflineCache(),
+        onIntegrityError: (roomCode) => {
+          void appLogger.error({
+            source: 'frontend.workspace',
+            event: 'cloud_decrypt_failed',
+            message: 'A relay message could not be decrypted; this session will not compact the document',
+            payload: { storageId, roomCode },
+          })
+        },
       })
 
       _setHandle(null) // tear down any previous workspace
@@ -261,13 +332,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       activeHandle.value = { kind: 'cloud', storageId }
 
       manifest.value = await cloud.open()
-      settings.value = normalizeWorkspaceSettings(await cloud.loadSettings())
-      applyWorkspaceStyle(settings.value.appearance)
-      await loadCustomCss()
-      plugins.value = []
       marketplaceCatalog.value = null
-      diagnostics.value = await cloud.getDiagnostics()
-      await refreshSidebarNotePreviews()
+      await hydrateWorkspaceState()
       isOnboarded.value = true
       await _persistCloudRecent(storage)
     } catch (error) {
@@ -301,6 +367,20 @@ export const useWorkspaceStore = defineStore('workspace', () => {
           serverUrl: server.serverUrl,
         }
     recents.value = [recent, ...recents.value.filter(r => r.storageId !== storage.id)]
+    await saveAppConfig({ recents: recents.value })
+  }
+
+  /**
+   * Keeps a cloud workspace's recents entry in step with a rename. Unlike
+   * _persistCloudRecent this does not touch `lastOpened` or reorder the list —
+   * renaming a workspace is not opening it.
+   */
+  async function _updateCloudRecentIdentity(storageId: string, meta: { name: string; glyph: string; gradient: string }) {
+    const existing = recents.value.find(r => r.storageId === storageId)
+    if (!existing) return
+    recents.value = recents.value.map(r => r.storageId === storageId
+      ? { ...r, name: meta.name, glyph: meta.glyph, gradient: meta.gradient }
+      : r)
     await saveAppConfig({ recents: recents.value })
   }
 
@@ -534,6 +614,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       manifest.value = nextManifest
       await backend.value.saveManifest(nextManifest)
       if (activePath.value) await _persistRecent(activePath.value, nextManifest)
+      else if (activeHandle.value?.kind === 'cloud') {
+        await _updateCloudRecentIdentity(activeHandle.value.storageId, nextManifest)
+      }
       await loadDiagnostics()
     } catch (error) {
       await appLogger.error({
@@ -781,6 +864,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     restoreLastWorkspace,
     createWorkspace,
     openWorkspace,
+    refreshManifest,
     openCloudWorkspace,
     removeRecentWorkspace,
     saveAppConfig,

@@ -11,7 +11,6 @@ import HistoryPreviewPane from './WorkspaceHistoryModal/HistoryPreviewPane.vue'
 
 interface Props {
   open: boolean
-  workspacePath: string | null
   manifest: WorkspaceManifest | null
   activeNoteId: string | null
   activeNote: NoteDocument | null

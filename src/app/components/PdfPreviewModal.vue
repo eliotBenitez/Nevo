@@ -18,6 +18,9 @@ import { buildTypstExport } from '../../utils/noteExport/buildTypstExport'
 interface Props {
   note: NoteDocument
   workspacePath: string
+  /** Cloud asset bytes by file name; empty for local workspaces, whose images
+   *  Rust resolves from their workspace-relative path instead. */
+  assetBytes?: Map<string, Uint8Array>
 }
 
 const props = defineProps<Props>()
@@ -140,7 +143,7 @@ async function regeneratePreview() {
   pageUrls.value = []
   pendingBatches.clear()
   try {
-    const { source, assets } = await buildTypstExport(props.note, options.value)
+    const { source, assets } = await buildTypstExport(props.note, options.value, { assetBytes: props.assetBytes })
     const info = await noteCommands.prepareNotePdfPreview(props.workspacePath, source, assets)
     if (currentGeneration !== generationId) return
     previewToken.value = info.token
@@ -169,7 +172,7 @@ async function savePdf() {
   saving.value = true
   try {
     const safeName = (props.note.title || 'note').replace(/[/\\?%*:|"<>]/g, '-').trim() || 'note'
-    const { source, assets } = await buildTypstExport(props.note, options.value)
+    const { source, assets } = await buildTypstExport(props.note, options.value, { assetBytes: props.assetBytes })
     const saved = await noteCommands.exportNotePdf(
       props.workspacePath,
       `${safeName}.pdf`,

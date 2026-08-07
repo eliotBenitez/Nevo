@@ -12,6 +12,7 @@ interface Props {
   focusedNodeTitle?: string | null
   experimentalEnabled?: boolean
   showArrows?: boolean
+  mobileFiltersOpen?: boolean
 }
 
 defineProps<Props>()
@@ -36,13 +37,23 @@ const KINDS: { id: EdgeKind; label: string }[] = [
 </script>
 
 <template>
-  <div class="graph-controls">
+  <div class="graph-controls" :class="{ 'graph-controls--filters-open': mobileFiltersOpen }">
     <div class="gc-panel">
       <!-- Zoom row -->
       <div class="gc-zoom">
-        <button class="gc-zoom__btn" @click="emit('zoom-out')">−</button>
+        <button
+          class="gc-zoom__btn"
+          :title="t('graph.zoomOut')"
+          :aria-label="t('graph.zoomOut')"
+          @click="emit('zoom-out')"
+        >−</button>
         <span class="gc-zoom__pct">{{ Math.round(zoom * 100) }}%</span>
-        <button class="gc-zoom__btn" @click="emit('zoom-in')">+</button>
+        <button
+          class="gc-zoom__btn"
+          :title="t('graph.zoomIn')"
+          :aria-label="t('graph.zoomIn')"
+          @click="emit('zoom-in')"
+        >+</button>
         <div class="gc-divider" />
         <button class="gc-zoom__btn gc-zoom__reset" :title="t('graph.resetView')" @click="emit('reset')">
           <RotateCcw :size="11" />

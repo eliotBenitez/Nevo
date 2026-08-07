@@ -1,4 +1,5 @@
-import type { Ref } from 'vue'
+import { getCurrentScope, onScopeDispose, type Ref } from 'vue'
+import { createAnimationFrameBatcher } from './animationFrameBatcher'
 
 export interface EditorOverlayElements {
   slashMenuEl: HTMLElement | null
@@ -7,6 +8,7 @@ export interface EditorOverlayElements {
   mathPopoverEl: HTMLElement | null
   formulaPopoverEl: HTMLElement | null
   mermaidPopoverEl: HTMLElement | null
+  queryPopoverEl: HTMLElement | null
   markmapPopoverEl: HTMLElement | null
   vegaPopoverEl: HTMLElement | null
   pluginNodePopoverEl: HTMLElement | null
@@ -24,6 +26,7 @@ interface EditorOverlayInteractionsOptions {
   isMathPopoverOpen: () => boolean
   isFormulaPopoverOpen: () => boolean
   isMermaidPopoverOpen: () => boolean
+  isQueryPopoverOpen: () => boolean
   isMarkmapPopoverOpen: () => boolean
   isVegaPopoverOpen: () => boolean
   isPluginNodePopoverOpen: () => boolean
@@ -36,6 +39,7 @@ interface EditorOverlayInteractionsOptions {
   closeMathPopover: () => void
   closeFormulaPopover: () => void
   closeMermaidPopover: () => void
+  closeQueryPopover: () => void
   closeMarkmapPopover: () => void
   closeVegaPopover: () => void
   closePluginNodePopover: () => void
@@ -45,14 +49,25 @@ interface EditorOverlayInteractionsOptions {
   closeNoteEmbedPicker: () => void
   isEmbedOpeningClickIgnored: () => boolean
   onEditorScroll: () => void
-  repositionOverlays: Array<() => void>
+  repositionOverlays: Array<{
+    isActive: () => boolean
+    reposition: () => void
+  }>
 }
 
-function isInsideNvSelectMenu(target: Node): boolean {
-  return target instanceof Element && target.closest('.nv-select__menu') !== null
+function isInsideNestedControlPopup(target: Node): boolean {
+  return target instanceof Element && target.closest('.nv-select__menu, .ndp-popover') !== null
 }
 
 export function useEditorOverlayInteractions(options: EditorOverlayInteractionsOptions) {
+  const scrollFrame = createAnimationFrameBatcher(() => {
+    options.onEditorScroll()
+    for (const overlay of options.repositionOverlays) {
+      if (overlay.isActive()) overlay.reposition()
+    }
+  })
+  if (getCurrentScope()) onScopeDispose(scrollFrame.cancel)
+
   function onDocumentMouseDown(event: MouseEvent) {
     const target = event.target as Node | null
     if (!target) return
@@ -74,13 +89,17 @@ export function useEditorOverlayInteractions(options: EditorOverlayInteractionsO
       && !elements?.formulaPopoverEl?.contains(target)) options.closeFormulaPopover()
     if (options.isMermaidPopoverOpen()
       && !elements?.mermaidPopoverEl?.contains(target)) options.closeMermaidPopover()
+    if (options.isQueryPopoverOpen()) {
+      const insidePopover = elements?.queryPopoverEl?.contains(target) ?? false
+      if (!insidePopover && !isInsideNestedControlPopup(target)) options.closeQueryPopover()
+    }
     if (options.isMarkmapPopoverOpen()
       && !elements?.markmapPopoverEl?.contains(target)) options.closeMarkmapPopover()
     if (options.isVegaPopoverOpen()
       && !elements?.vegaPopoverEl?.contains(target)) options.closeVegaPopover()
     if (options.isPluginNodePopoverOpen()) {
       const insidePopover = elements?.pluginNodePopoverEl?.contains(target) ?? false
-      if (!insidePopover && !isInsideNvSelectMenu(target)) options.closePluginNodePopover()
+      if (!insidePopover && !isInsideNestedControlPopup(target)) options.closePluginNodePopover()
     }
     if (options.isEmbedUrlPopoverOpen()) {
       const insidePopover = elements?.embedUrlPopoverEl?.contains(target) ?? false
@@ -99,8 +118,7 @@ export function useEditorOverlayInteractions(options: EditorOverlayInteractionsO
   }
 
   function handleEditorScroll() {
-    options.onEditorScroll()
-    for (const reposition of options.repositionOverlays) reposition()
+    scrollFrame.schedule()
   }
 
   return { onDocumentMouseDown, handleEditorScroll }

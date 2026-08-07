@@ -12,6 +12,7 @@ import type {
   WindowChromeStyle,
 } from '../types/workspace'
 import { useWorkspaceStore } from './workspace'
+import { applyWebviewZoom } from '../tauri/webview'
 
 type Theme = ThemeMode
 type ResolvedTheme = 'light' | 'dark'
@@ -92,6 +93,18 @@ export const useThemeStore = defineStore('theme', () => {
     scheduleTimer = setInterval(() => applyTheme(theme.value), 60_000)
   }
 
+  /**
+   * Applies interface zoom natively in Tauri (consistent across WebKitGTK and
+   * WebView2) and falls back to the CSS `--ui-scale` var otherwise. Native zoom
+   * must not be doubled up with the CSS fallback, so `--ui-scale` stays at 1
+   * whenever the native path succeeded.
+   */
+  async function applyInterfaceZoom(zoomPercent: number) {
+    const factor = Math.min(120, Math.max(80, zoomPercent || 100)) / 100
+    const native = await applyWebviewZoom(factor)
+    document.documentElement.style.setProperty('--ui-scale', native ? '1' : String(factor))
+  }
+
   function applyAppearance(config: AppConfig) {
     schedule.value = config.themeSchedule ?? schedule.value
     applyTheme(config.theme ?? theme.value, { animate: false })
@@ -102,7 +115,7 @@ export const useThemeStore = defineStore('theme', () => {
     applyRootAttr('chrome', config.windowChromeStyle ?? 'default')
     applyRootAttr('roundness', config.interfaceRoundness ?? 'default')
     applyRootAttr('reduce-transparency', String(resolveReduceTransparency(config.reduceTransparency)))
-    document.documentElement.style.setProperty('--ui-scale', String((config.interfaceZoom ?? 100) / 100))
+    void applyInterfaceZoom(config.interfaceZoom ?? 100)
     startScheduleTimer()
   }
 
@@ -138,7 +151,7 @@ export const useThemeStore = defineStore('theme', () => {
   }
 
   async function setInterfaceZoom(value: number) {
-    document.documentElement.style.setProperty('--ui-scale', String(value / 100))
+    await applyInterfaceZoom(value)
     await useWorkspaceStore().saveAppConfig({ interfaceZoom: value })
   }
 

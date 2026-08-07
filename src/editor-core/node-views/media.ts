@@ -10,6 +10,10 @@ import {
   type CoreNodeViewOptions,
   type NodeViewPosition,
 } from './utils'
+import {
+  createViewportRenderController,
+  type ViewportRenderController,
+} from './viewportRenderController'
 
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60)
@@ -139,6 +143,7 @@ export function createMediaNodeView(
   let currentAudioSrc: string | null = null
   let audioSrcRetry: ReturnType<typeof setTimeout> | null = null
   let currentVideoSrc: string | null = null
+  let viewportController: ViewportRenderController | null = null
 
   // Stop retrying media-server resolution after ~6s so a server that never comes
   // up in the packaged build degrades to an error instead of looping forever.
@@ -347,7 +352,24 @@ export function createMediaNodeView(
   playBtnEl.addEventListener('click', onPlayClick)
 
   const cleanupEmptyPick = addClickHandler(emptyPickBtn, onPick)
-  sync()
+  viewportController = createViewportRenderController(dom, {
+    render: sync,
+    suspend: () => {
+      if (audioSrcRetry) { clearTimeout(audioSrcRetry); audioSrcRetry = null }
+      if (videoSrcRetry) { clearTimeout(videoSrcRetry); videoSrcRetry = null }
+      audioEl.pause()
+      videoEl.pause()
+      audioEl.removeAttribute('src')
+      videoEl.removeAttribute('src')
+      audioEl.load()
+      videoEl.load()
+      currentAudioSrc = null
+      currentVideoSrc = null
+      render(null, moreBtnContainer)
+    },
+    canSuspend: () => audioEl.paused && videoEl.paused,
+    initialPlaceholderHeight: 160,
+  })
 
   return {
     dom,
@@ -362,10 +384,11 @@ export function createMediaNodeView(
     update(nextNode) {
       if (nextNode.type !== currentNode.type) return false
       currentNode = nextNode
-      sync()
+      viewportController?.requestRender()
       return true
     },
     destroy() {
+      viewportController?.destroy()
       audioEl.pause()
       if (audioSrcRetry) { clearTimeout(audioSrcRetry); audioSrcRetry = null }
       if (videoSrcRetry) { clearTimeout(videoSrcRetry); videoSrcRetry = null }

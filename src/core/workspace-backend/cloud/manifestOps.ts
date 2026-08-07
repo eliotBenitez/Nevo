@@ -27,7 +27,50 @@ export function renameFolder(m: WorkspaceManifest, folderId: string, title: stri
   if (f) f.title = title
 }
 
-export function removeFolder(m: WorkspaceManifest, folderId: string): void {
+/** Every note inside a folder, at any depth. */
+function collectNotes(folder: FolderMeta): NoteMeta[] {
+  return [...folder.notes, ...folder.children.flatMap(collectNotes)]
+}
+
+function folderIsEmpty(folder: FolderMeta): boolean {
+  return folder.notes.length === 0 && folder.children.length === 0
+}
+
+/**
+ * Removes a folder, mirroring the local backend (`delete_folder_sync`):
+ * a non-empty folder is refused unless `recursive`, and a recursive delete
+ * moves every nested note to the trash individually rather than dropping it.
+ *
+ * The notes must reach the trash: it is both the only way back for the user and
+ * the only thing that later purges their documents from the relay — a note that
+ * silently vanishes from the manifest is unreachable by `permanentlyDeleteFromTrash`
+ * and would sit on the server forever.
+ *
+ * Nested folders are not trashed, only their notes, which is why restored notes
+ * go to the root (`originalParentId: null`) — their folder no longer exists.
+ */
+export function removeFolder(m: WorkspaceManifest, folderId: string, recursive = false): void {
+  const folder = findFolder(m.tree, folderId)
+  if (!folder) return
+  if (!recursive && !folderIsEmpty(folder)) {
+    throw new Error('Folder is not empty; pass recursive=true to move its contents to trash')
+  }
+
+  if (recursive) {
+    const deletedAt = new Date().toISOString()
+    m.trash ??= []
+    for (const meta of collectNotes(folder)) {
+      m.trash.push({
+        id: meta.id,
+        type: 'note',
+        title: meta.title,
+        deletedAt,
+        originalParentId: null,
+        icon: meta.icon,
+      } as TrashedItem)
+    }
+  }
+
   const strip = (tree: FolderMeta[]): boolean => {
     const idx = tree.findIndex(f => f.id === folderId)
     if (idx !== -1) { tree.splice(idx, 1); return true }
@@ -39,8 +82,14 @@ export function removeFolder(m: WorkspaceManifest, folderId: string): void {
 
 export function addNote(m: WorkspaceManifest, id: string, folderId: string | null, title: string, icon: string): NoteMeta {
   const meta: NoteMeta = { id, title, icon, folderId, updatedAt: new Date().toISOString() }
-  if (folderId) findFolder(m.tree, folderId)?.notes.push(meta)
-  else { m.rootNotes.push(meta); m.rootOrder.push(id) }
+  const folder = folderId ? findFolder(m.tree, folderId) : null
+  if (folder) {
+    folder.notes.push(meta)
+  } else {
+    meta.folderId = null
+    m.rootNotes.push(meta)
+    m.rootOrder.push(id)
+  }
   return meta
 }
 
