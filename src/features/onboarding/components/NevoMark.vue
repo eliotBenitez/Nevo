@@ -4,7 +4,7 @@ withDefaults(defineProps<{ size?: number }>(), { size: 56 })
 
 <template>
   <div
-    class="nevo-mark"
+    class="nevo-mark tw:grid tw:shrink-0 tw:place-items-center tw:bg-accent tw:[font-family:var(--font-serif)] tw:font-normal tw:italic tw:tracking-[-0.04em] tw:text-content-on-accent"
     :style="{
       width: `${size}px`,
       height: `${size}px`,

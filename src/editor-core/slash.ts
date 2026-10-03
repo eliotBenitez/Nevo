@@ -2,6 +2,7 @@ import { Plugin, PluginKey, TextSelection } from 'prosemirror-state'
 import type { EditorState, Transaction } from 'prosemirror-state'
 import type { EditorView } from 'prosemirror-view'
 import type { NevoSlashItem, NevoSlashListContext, NevoSlashMenuState } from '../types/editor-plugin'
+import { resolveSlashGridMove, type SlashGridKey } from './slash-navigation'
 
 interface SlashMetaMove {
   type: 'move'
@@ -86,7 +87,7 @@ function compareSlashItems(a: NevoSlashItem, b: NevoSlashItem): number {
   return a.title.localeCompare(b.title)
 }
 
-function sortSlashItems(items: NevoSlashItem[], query: string): NevoSlashItem[] {
+function sortSlashItems(items: NevoSlashItem[], query: string, getSearchTerms?: (item: NevoSlashItem) => string[]): NevoSlashItem[] {
   const normalizedQuery = query.trim().toLowerCase()
   if (!normalizedQuery) {
     return items.slice().sort(compareSlashItems)
@@ -97,14 +98,16 @@ function sortSlashItems(items: NevoSlashItem[], query: string): NevoSlashItem[] 
       const id = item.id.toLowerCase()
       const title = item.title.toLowerCase()
       const keywords = item.keywords?.map((keyword) => keyword.toLowerCase()) ?? []
+      const searchTerms = getSearchTerms?.(item).map(term => term.toLowerCase()) ?? []
 
-      if (id === normalizedQuery || title === normalizedQuery || keywords.includes(normalizedQuery)) {
+      if (id === normalizedQuery || title === normalizedQuery || keywords.includes(normalizedQuery) || searchTerms.includes(normalizedQuery)) {
         return { item, score: 0 }
       }
 
       if (
         id.startsWith(normalizedQuery) ||
         title.startsWith(normalizedQuery) ||
+        searchTerms.some(term => term.startsWith(normalizedQuery)) ||
         keywords.some((keyword) => keyword.startsWith(normalizedQuery))
       ) {
         return { item, score: 1 }
@@ -113,6 +116,7 @@ function sortSlashItems(items: NevoSlashItem[], query: string): NevoSlashItem[] 
       if (
         id.includes(normalizedQuery) ||
         title.includes(normalizedQuery) ||
+        searchTerms.some(term => term.includes(normalizedQuery)) ||
         keywords.some((keyword) => keyword.includes(normalizedQuery))
       ) {
         return { item, score: 2 }
@@ -182,6 +186,7 @@ function buildSlashState(
   state: EditorState,
   previousState: InternalSlashState,
   getSlashItems: () => NevoSlashItem[],
+  getSearchTerms: ((item: NevoSlashItem) => string[]) | undefined,
   meta: SlashMeta | undefined,
 ): InternalSlashState {
   const resolvedRange = resolveSlashRange(state)
@@ -189,7 +194,7 @@ function buildSlashState(
     return createClosedState()
   }
 
-  const sortedItems = groupAndFlatSlashItems(sortSlashItems(getSlashItems(), resolvedRange.query))
+  const sortedItems = groupAndFlatSlashItems(sortSlashItems(getSlashItems(), resolvedRange.query, getSearchTerms))
   const signature = getSlashSignature(resolvedRange)
   const range = { from: resolvedRange.from, to: resolvedRange.to }
 
@@ -354,20 +359,53 @@ export function dismissSlashMenu(state: EditorState): Transaction {
   return state.tr.setMeta(nevoSlashPluginKey, { type: 'dismiss' } satisfies SlashMeta)
 }
 
-export function createSlashCommandPlugin(getSlashItems: () => NevoSlashItem[]): Plugin {
+export interface SlashCommandPluginOptions {
+  /** Column count while the menu renders as tiles; `0` (or absent) means the
+   *  vertical list, where only ArrowUp/ArrowDown navigate. Read on every key
+   *  press so a settings change applies without rebuilding the editor. */
+  getGridColumns?: () => number
+  /** Additional live search terms such as localized item titles. */
+  getSearchTerms?: (item: NevoSlashItem) => string[]
+}
+
+const GRID_KEYS = new Set<string>(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'])
+
+function gridMoveDelta(
+  slashState: InternalSlashState,
+  items: NevoSlashItem[],
+  key: SlashGridKey,
+  columns: number,
+): number {
+  const categoryById = new Map(items.map(item => [item.id, item.category ?? '']))
+  const categories = slashState.itemIds.map(id => categoryById.get(id) ?? '')
+  return resolveSlashGridMove(categories, slashState.activeIndex, key, columns) - slashState.activeIndex
+}
+
+export function createSlashCommandPlugin(
+  getSlashItems: () => NevoSlashItem[],
+  options: SlashCommandPluginOptions = {},
+): Plugin {
   return new Plugin<InternalSlashState>({
     key: nevoSlashPluginKey,
     state: {
-      init: (_, state) => buildSlashState(state, createClosedState(), getSlashItems, undefined),
+      init: (_, state) => buildSlashState(state, createClosedState(), getSlashItems, options.getSearchTerms, undefined),
       apply(transaction, previousState, _oldState, nextState) {
         const meta = transaction.getMeta(nevoSlashPluginKey) as SlashMeta | undefined
-        return buildSlashState(nextState, previousState, getSlashItems, meta)
+        return buildSlashState(nextState, previousState, getSlashItems, options.getSearchTerms, meta)
       },
     },
     props: {
       handleKeyDown(view, event) {
         const slashState = nevoSlashPluginKey.getState(view.state) ?? createClosedState()
         if (!slashState.open) return false
+
+        const columns = options.getGridColumns?.() ?? 0
+        if (columns > 0 && GRID_KEYS.has(event.key)) {
+          const delta = gridMoveDelta(slashState, getSlashItems(), event.key as SlashGridKey, columns)
+          view.dispatch(view.state.tr.setMeta(nevoSlashPluginKey, { type: 'move', delta } satisfies SlashMeta))
+          event.preventDefault()
+          return true
+        }
 
         if (event.key === 'ArrowDown') {
           view.dispatch(view.state.tr.setMeta(nevoSlashPluginKey, { type: 'move', delta: 1 } satisfies SlashMeta))

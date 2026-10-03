@@ -118,17 +118,6 @@ const treeStoreMocks = vi.hoisted(() => ({
   noteById: new Map<string, NoteMeta>(),
 }))
 
-const collabStoreMocks = vi.hoisted(() => ({
-  startHosting: vi.fn(),
-  startCloudSession: vi.fn(),
-  joinSession: vi.fn(),
-  joinCloudSession: vi.fn(),
-  leaveSession: vi.fn(),
-  mode: null as string | null,
-  connectionStatus: 'idle' as const,
-  sessionNoteId: null as string | null,
-}))
-
 vi.mock('@tauri-apps/api/core', () => ({
   convertFileSrc: (src: string) => `asset://${src}`,
 }))
@@ -151,10 +140,6 @@ vi.mock('../../stores/graph', () => ({
 
 vi.mock('../../stores/tree', () => ({
   useTreeStore: () => treeStoreMocks,
-}))
-
-vi.mock('../../stores/collab', () => ({
-  useCollabStore: () => collabStoreMocks,
 }))
 
 vi.mock('../composables/editor/useEditorCore', () => ({
@@ -288,7 +273,6 @@ const paneStubs = {
   EditorLinkPopover: true,
   EditorMathPopover: true,
   EditorLinkPicker: true,
-  EditorCollabPanel: true,
   LocalGraphPanel: {
     template: '<div class="local-graph-panel-stub" />',
   },
@@ -296,7 +280,6 @@ const paneStubs = {
     props: ['note'],
     template: '<div class="note-breadcrumb-stub"><slot name="actions" /></div>',
   },
-  CollabAvatars: true,
   NvNoteIcon: true,
   Download: true,
   Network: true,
@@ -339,6 +322,7 @@ const defaultSettings: WorkspaceSettings = {
     activeBlockEmphasis: false,
     pasteBehavior: 'smart',
     slashMenuHints: true,
+    slashMenuLayout: 'list',
     editorStatsVisibility: 'off',
     typewriterPosition: 'lower',
   },
@@ -605,8 +589,6 @@ describe('WorkspaceEditorPane scrollbar overlay', () => {
 
     expect(wrapper.get('.note-breadcrumb-stub .breadcrumb-action-btn').attributes('aria-label')).toBe('More options')
     expect(wrapper.find('.doc-head').exists()).toBe(false)
-    expect(wrapper.find('collab-avatars-stub').exists()).toBe(false)
-    expect(wrapper.find('editor-collab-panel-stub').exists()).toBe(false)
   })
 
   it('uploads cover images through the workspace backend and renders resolved local cover URLs', async () => {
@@ -639,7 +621,7 @@ describe('WorkspaceEditorPane scrollbar overlay', () => {
     input.dispatchEvent(new Event('change', { bubbles: true }))
     await flushPane()
 
-    expect(noteCommands.importImageAsset).toHaveBeenCalledWith('/workspace', 'cover.jpg', [97, 98, 99])
+    expect(noteCommands.importImageAsset).toHaveBeenCalledWith('/workspace', 'cover.jpg', new Uint8Array([97, 98, 99]))
     expect(wrapper.emitted('update:cover')).toContainEqual(['image:.nevo/assets/cover.jpg'])
     expect(input.value).toBe('')
   })
@@ -861,6 +843,7 @@ describe('WorkspaceEditorPane scrollbar overlay', () => {
 
     body.scrollTop = 100
     await wrapper.get('.doc-body').trigger('scroll')
+    await new Promise<void>(resolve => window.requestAnimationFrame(() => resolve()))
     await nextTick()
 
     const thumb = wrapper.get('.editor-scrollbar__thumb')

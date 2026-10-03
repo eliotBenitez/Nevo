@@ -2,21 +2,38 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
-import { Check, Copy } from 'lucide-vue-next'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import NvToggle from '../../../ui/primitives/NvToggle.vue'
-import NvButton from '../../../ui/primitives/NvButton.vue'
+import SettingsSectionHeader from './ui/SettingsSectionHeader.vue'
+import SettingsGroup from './ui/SettingsGroup.vue'
+import SettingsRow from './ui/SettingsRow.vue'
+import SettingsMcpAgentCard from './mcp/SettingsMcpAgentCard.vue'
 import { useWorkspaceStore } from '../../../stores/workspace'
-import { getMcpBridgeInfo, type McpBridgeInfo } from '../../../tauri/mcp'
+import {
+  connectMcpAgent,
+  disconnectMcpAgent,
+  getMcpAgentStatus,
+  getMcpBridgeInfo,
+  type McpAgent,
+  type McpAgentStatus,
+  type McpAgentStatuses,
+  type McpBridgeInfo,
+} from '../../../tauri/mcp'
 import type { McpMode } from '../../../types/workspace'
 import { appLogger } from '../../../utils/logger'
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
-const { settings, activePath, backendKind } = storeToRefs(workspaceStore)
+const { settings, activePath, backendKind, appMetadata } = storeToRefs(workspaceStore)
 
 const bridge = ref<McpBridgeInfo | null>(null)
-const copied = ref(false)
+const agents = ['codex', 'claudeCode'] as const
+const agentStatuses = ref<McpAgentStatuses | null>(null)
+const agentError = ref<Partial<Record<McpAgent, string>>>({})
+const agentBusy = ref<Partial<Record<McpAgent, boolean>>>({})
+const confirmingReplacement = ref<McpAgent | null>(null)
+const agentRestartHint = ref<McpAgent | null>(null)
+const desktop = computed(() => appMetadata.value?.runtime === 'desktop')
 
 const mode = computed<McpMode>(() => settings.value.mcp.mode)
 const writesAllowed = computed(() => mode.value === 'ask' || mode.value === 'auto')
@@ -38,9 +55,44 @@ const statusText = computed(() => {
   return t('settings.mcp.status.running', { port: bridge.value.port })
 })
 
-const commandSnippet = computed(() =>
-  'claude mcp add nevo -- node /path/to/nevo/packages/mcp-server/dist/index.js',
-)
+function agentStatus(agent: McpAgent): McpAgentStatus | null {
+  return agentStatuses.value?.[agent] ?? null
+}
+
+async function refreshAgents() {
+  if (!desktop.value) return
+  try {
+    agentStatuses.value = await getMcpAgentStatus()
+  } catch (error) {
+    agentStatuses.value = null
+    const message = String(error)
+    agentError.value = { codex: message, claudeCode: message }
+  }
+}
+
+async function updateAgent(agent: McpAgent, action: 'connect' | 'disconnect', replaceConflict = false) {
+  agentBusy.value[agent] = true
+  agentError.value[agent] = undefined
+  try {
+    if (action === 'connect') await connectMcpAgent(agent, replaceConflict)
+    else await disconnectMcpAgent(agent)
+    confirmingReplacement.value = null
+    agentRestartHint.value = agent
+    await refreshAgents()
+  } catch (error) {
+    agentError.value[agent] = String(error)
+  } finally {
+    agentBusy.value[agent] = false
+  }
+}
+
+function connectAgent(agent: McpAgent) {
+  if (agentStatus(agent)?.kind === 'conflict') {
+    confirmingReplacement.value = agent
+    return
+  }
+  void updateAgent(agent, 'connect')
+}
 
 async function refreshBridge() {
   try {
@@ -72,107 +124,78 @@ async function setAutoSnapshot(value: boolean) {
   })
 }
 
-async function copyCommand() {
-  await navigator.clipboard.writeText(commandSnippet.value)
-  copied.value = true
-  setTimeout(() => { copied.value = false }, 2000)
-}
-
 onMounted(refreshBridge)
 watch(activePath, refreshBridge)
+watch(desktop, (isDesktop) => {
+  if (isDesktop) void refreshAgents()
+  else agentStatuses.value = null
+}, { immediate: true })
 </script>
 
 <template>
-  <section class="panel settings-mcp-panel">
-    <header class="panel-header">
-      <div>
-        <h2 class="panel-title">{{ t('settings.sections.mcp') }}</h2>
-        <p class="panel-sub">{{ t('settings.mcp.description') }}</p>
-      </div>
-    </header>
+  <section class="panel tw:flex tw:h-full tw:min-h-0 tw:flex-col settings-mcp-panel">
+    <SettingsSectionHeader
+      :title="t('settings.sections.mcp')"
+      :description="t('settings.mcp.description')"
+    />
 
-    <div class="panel-body">
-      <div class="group">
-        <div class="group-label">{{ t('settings.mcp.groups.access') }}</div>
-        <div class="settings-card">
-          <div class="settings-row">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.mcp.mode.title') }}</div>
-              <div class="row-sub">{{ t('settings.mcp.mode.description') }}</div>
-            </div>
-            <NvSelect
-              :model-value="mode"
-              :options="modeOptions"
-              :min-width="170"
-              :disabled="!supported"
-              @update:model-value="setMode"
-            />
-          </div>
+    <div class="panel-body tw:flex tw:min-h-0 tw:flex-1 tw:flex-col tw:gap-5 tw:overflow-auto tw:overscroll-contain tw:px-[30px] tw:pt-[18px] tw:pb-[30px]">
+      <SettingsGroup :title="t('settings.mcp.groups.access')">
+        <SettingsRow
+          :title="t('settings.mcp.mode.title')"
+          :description="t('settings.mcp.mode.description')"
+        >
+          <NvSelect
+            :model-value="mode"
+            :options="modeOptions"
+            :min-width="170"
+            :disabled="!supported"
+            @update:model-value="setMode"
+          />
+        </SettingsRow>
 
-          <div class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.mcp.autoSnapshot.title') }}</div>
-              <div class="row-sub">{{ t('settings.mcp.autoSnapshot.description') }}</div>
-            </div>
-            <NvToggle
-              :model-value="settings.mcp.autoSnapshot"
-              :disabled="!supported || !writesAllowed"
-              :aria-label="t('settings.mcp.autoSnapshot.title')"
-              @update:model-value="setAutoSnapshot"
-            />
-          </div>
+        <SettingsRow
+          :title="t('settings.mcp.autoSnapshot.title')"
+          :description="t('settings.mcp.autoSnapshot.description')"
+        >
+          <NvToggle
+            :model-value="settings.mcp.autoSnapshot"
+            :disabled="!supported || !writesAllowed"
+            :aria-label="t('settings.mcp.autoSnapshot.title')"
+            @update:model-value="setAutoSnapshot"
+          />
+        </SettingsRow>
 
-          <div class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.mcp.status.title') }}</div>
-              <div class="row-sub">{{ statusText }}</div>
-            </div>
-          </div>
+        <SettingsRow
+          :title="t('settings.mcp.status.title')"
+          :description="statusText"
+        />
+      </SettingsGroup>
+
+      <SettingsGroup :title="t('settings.mcp.groups.connect')">
+        <SettingsRow
+          :title="t('settings.mcp.connect.title')"
+          :description="t('settings.mcp.connect.description')"
+        />
+
+        <div class="mcp-agents-list">
+          <SettingsMcpAgentCard
+            v-for="agent in agents"
+            :key="agent"
+            :agent="agent"
+            :status="agentStatus(agent)"
+            :desktop="desktop"
+            :busy="Boolean(agentBusy[agent])"
+            :error="agentError[agent]"
+            :restart-hint="agentRestartHint === agent"
+            :is-confirming="confirmingReplacement === agent"
+            @connect="connectAgent"
+            @disconnect="updateAgent($event, 'disconnect')"
+            @replace="updateAgent($event, 'connect', true)"
+            @cancel-replace="confirmingReplacement = null"
+          />
         </div>
-      </div>
-
-      <div class="group">
-        <div class="group-label">{{ t('settings.mcp.groups.connect') }}</div>
-        <div class="settings-card">
-          <div class="settings-row settings-row--stack">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.mcp.connect.title') }}</div>
-              <div class="row-sub">{{ t('settings.mcp.connect.description') }}</div>
-            </div>
-            <div class="mcp-command">
-              <code class="mcp-command__text">{{ commandSnippet }}</code>
-              <NvButton variant="ghost" @click="copyCommand">
-                <Check v-if="copied" :size="14" />
-                <Copy v-else :size="14" />
-                {{ copied ? t('settings.mcp.connect.copied') : t('settings.mcp.connect.copy') }}
-              </NvButton>
-            </div>
-          </div>
-        </div>
-      </div>
+      </SettingsGroup>
     </div>
   </section>
 </template>
-
-<style scoped>
-.mcp-command {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  width: 100%;
-}
-
-.mcp-command__text {
-  flex: 1 1 260px;
-  min-width: 0;
-  overflow-x: auto;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
-  border: 1px solid var(--border-subtle);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  white-space: nowrap;
-}
-</style>

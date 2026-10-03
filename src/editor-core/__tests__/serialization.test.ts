@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { nevoBaseSchema } from '../schema'
-import { parseNoteContentToDoc, serializeDocToNoteContent } from '../serialization'
+import { parseNoteContentToDoc, parseNoteContentToDocSafe, serializeDocToNoteContent } from '../serialization'
 import type { BlockNode } from '../../types/note'
 
 describe('serialization compatibility', () => {
@@ -130,5 +130,56 @@ describe('serialization compatibility', () => {
         },
       ],
     })
+  })
+})
+
+describe('parseNoteContentToDocSafe', () => {
+  it('reports degraded: false and the real doc for content the schema can parse', () => {
+    const content: BlockNode = {
+      type: 'doc',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'hello' }] }],
+    }
+
+    const result = parseNoteContentToDocSafe(nevoBaseSchema, content)
+
+    expect(result.degraded).toBe(false)
+    expect(serializeDocToNoteContent(result.doc)).toEqual(content)
+  })
+
+  it('reports degraded: false for legitimate legacy shapes normalizeNoteContent fixes up', () => {
+    const legacyContent: BlockNode = {
+      type: 'doc',
+      content: [
+        {
+          type: 'callout',
+          attrs: { variant: 'info', icon: '💡', text: 'legacy' },
+          content: [{ type: 'text', text: 'Legacy callout' }],
+        },
+      ],
+    }
+
+    const result = parseNoteContentToDocSafe(nevoBaseSchema, legacyContent)
+
+    expect(result.degraded).toBe(false)
+  })
+
+  it('reports degraded: true and a plain-text fallback doc for an unknown node type', () => {
+    const content = {
+      type: 'doc',
+      content: [{ type: 'totally_unknown_block_type', attrs: { foo: 'bar' } }],
+    }
+
+    const result = parseNoteContentToDocSafe(nevoBaseSchema, content)
+
+    expect(result.degraded).toBe(true)
+    expect(result.doc.type.name).toBe('doc')
+  })
+
+  it('parseNoteContentToDoc keeps returning just the doc, matching prior behavior', () => {
+    const content: BlockNode = { type: 'doc', content: [{ type: 'paragraph' }] }
+    const doc = parseNoteContentToDoc(nevoBaseSchema, content)
+    const safe = parseNoteContentToDocSafe(nevoBaseSchema, content)
+
+    expect(serializeDocToNoteContent(doc)).toEqual(serializeDocToNoteContent(safe.doc))
   })
 })

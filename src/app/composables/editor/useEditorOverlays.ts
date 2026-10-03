@@ -402,6 +402,43 @@ export function useEditorOverlays(
   }
 
   function getCellAnchorRect(view: EditorView, cellPos: number | null): DOMRect | null {
+    const { selection } = view.state
+    if (selection instanceof CellSelection) {
+      let minLeft = Infinity
+      let minTop = Infinity
+      let maxRight = -Infinity
+      let maxBottom = -Infinity
+      let count = 0
+
+      selection.forEachCell((_node, pos) => {
+        const cellDom = view.nodeDOM(pos)
+        if (cellDom instanceof HTMLElement) {
+          const rect = cellDom.getBoundingClientRect()
+          minLeft = Math.min(minLeft, rect.left)
+          minTop = Math.min(minTop, rect.top)
+          maxRight = Math.max(maxRight, rect.right)
+          maxBottom = Math.max(maxBottom, rect.bottom)
+          count++
+        } else {
+          const coords = view.coordsAtPos(pos)
+          minLeft = Math.min(minLeft, coords.left)
+          minTop = Math.min(minTop, coords.top)
+          maxRight = Math.max(maxRight, coords.right)
+          maxBottom = Math.max(maxBottom, coords.bottom)
+          count++
+        }
+      })
+
+      if (count > 0 && minLeft !== Infinity) {
+        return new DOMRect(
+          minLeft,
+          minTop,
+          Math.max(maxRight - minLeft, 1),
+          Math.max(maxBottom - minTop, 1),
+        )
+      }
+    }
+
     if (cellPos == null) return null
     const cellDom = view.nodeDOM(cellPos)
     if (cellDom instanceof HTMLElement) return cellDom.getBoundingClientRect()
@@ -425,10 +462,10 @@ export function useEditorOverlays(
     tableMenuOverlay.visible = true
     tableMenuOverlay.context = context
     if (anchorRect) {
-      // Horizontal anchor at the cell center; vertical will be flipped
+      // Horizontal anchor at the selection center; vertical will be flipped
       // above/below by placeEditorPopoverNearAnchor depending on available room.
       tableMenuOverlay.position = {
-        top: anchorRect.bottom,
+        top: anchorRect.top,
         left: anchorRect.left + anchorRect.width / 2,
       }
     } else {
@@ -445,6 +482,8 @@ export function useEditorOverlays(
           anchorRect,
           clampOverlayPosition as ClampOverlayPosition,
           getEditorOverlayBoundaryRect(core),
+          12,
+          true,
         )
         return
       }

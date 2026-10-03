@@ -24,13 +24,13 @@ const style = computed(() => {
 
 <template>
   <Transition name="tip">
-    <div v-if="node" class="graph-tip" :style="style">
-      <div class="graph-tip__icon">
+    <div v-if="node" class="graph-tip tw:pointer-events-none tw:absolute tw:z-10 tw:flex tw:max-w-60 tw:items-center tw:gap-2.5 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--menu-bg) tw:pt-[9px] tw:pr-[13px] tw:pb-[9px] tw:pl-2.5 tw:shadow-(--shadow-overlay)" :style="style">
+      <div class="graph-tip__icon tw:grid tw:size-7 tw:shrink-0 tw:place-items-center tw:rounded-[calc(8px*var(--radius-scale,1))] tw:bg-(--hover-strong)">
         <NvNoteIcon :value="node.icon" :size="18" />
       </div>
       <div class="graph-tip__body">
-        <div class="graph-tip__title">{{ node.title || t('graph.untitled') }}</div>
-        <div class="graph-tip__meta">
+        <div class="graph-tip__title tw:max-w-[180px] tw:truncate tw:text-[13px] tw:font-[520] tw:text-content-primary">{{ node.title || t('graph.untitled') }}</div>
+        <div class="graph-tip__meta tw:mt-px tw:font-nv-mono tw:text-[11px] tw:text-content-muted">
           {{ node.degree }} {{ t('graph.connections') }}
         </div>
       </div>

@@ -7,6 +7,13 @@ import { useWorkspaceStore } from './workspace'
 
 const mockBackend = vi.hoisted(() => ({
   deleteFolder: vi.fn(async () => {}),
+  createNotebook: vi.fn(async (_folderId: string | null, _title: string, _icon: string, _paper: 'plain' | 'grid' | 'ruled') => ({
+    id: 'created-notebook', title: 'Notebook', icon: '📓', folderId: null,
+    createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+    content: { type: 'doc', content: [{ type: 'paragraph' }] },
+    documentKind: 'notebook' as const,
+    notebook: { version: 1 as const, pages: [] },
+  })),
 }))
 
 vi.mock('../core/workspace-backend', async () => {
@@ -75,6 +82,20 @@ describe('useTreeStore computeds', () => {
     expect(treeStore.tree).toEqual([])
     expect(treeStore.folderById.size).toBe(0)
     expect(treeStore.noteById.size).toBe(0)
+  })
+
+  it('refreshes the full manifest after gated notebook creation', async () => {
+    const workspaceStore = useWorkspaceStore()
+    workspaceStore.activeHandle = { kind: 'local', path: '/workspace-notebook-create' }
+    workspaceStore.manifest = buildManifest()
+    const refreshManifest = vi.spyOn(workspaceStore, 'refreshManifest').mockResolvedValue(undefined)
+    const treeStore = useTreeStore()
+
+    const created = await treeStore.createNotebook(null, 'Journal', '📓', 'ruled')
+
+    expect(mockBackend.createNotebook).toHaveBeenCalledWith(null, 'Journal', '📓', 'ruled')
+    expect(refreshManifest).toHaveBeenCalledOnce()
+    expect(created?.documentKind).toBe('notebook')
   })
 
   it('replaces note metadata so a renamed title invalidates the tree view', () => {

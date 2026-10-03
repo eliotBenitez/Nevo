@@ -1,0 +1,15 @@
+/* src/app/components/home/HomeQuickActions.vue */
+/* Layout, typography, idle/hover colors (including the former `:first-child`
+   primary-button treatment, now expressed directly on that literal button
+   element instead of a structural selector) all live as `tw:` utilities on
+   the template. Only the reduced-motion override remains, since the
+   transition and active-state translate are still present as utilities. */
+@media (prefers-reduced-motion: reduce) {
+  .workspace-home__action {
+    transition-duration: 0.01ms;
+  }
+
+  .workspace-home__action:active {
+    transform: none;
+  }
+}

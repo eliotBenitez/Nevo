@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "skills": {
+    "brainstorming": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/brainstorming/SKILL.md",
+      "computedHash": "b58d55b64742ecd37923985ec7bdfbe678ffbcb9895562abd28c0a32dcacd7fb"
+    },
+    "pinia": {
+      "source": "antfu/skills",
+      "sourceType": "github",
+      "skillPath": "skills/pinia/SKILL.md",
+      "computedHash": "897b6b0982956f41f5cc85128ca638b625e1b3c8bc619e303cd1e7661c95b7de"
+    },
+    "self-reflection": {
+      "source": "rolandbrecht/agent-skills",
+      "sourceType": "github",
+      "skillPath": "self-reflection/SKILL.md",
+      "computedHash": "fa9e5cde956582a138adbfb4440991528e8bec83d79f129f312aef87ece1b117"
+    },
+    "systematic-debugging": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/systematic-debugging/SKILL.md",
+      "computedHash": "a2750dfbaed1690da73b120254892c4f926b4576cb82eb16fc877783941fe39b"
+    },
+    "tauri-architecture": {
+      "source": "fxckcode/tauri-skills",
+      "sourceType": "github",
+      "skillPath": "skills/tauri-architecture/SKILL.md",
+      "computedHash": "a2d4e9f0a1b86e2755a4388575bf9bcd9fddcbe2a8cc8fcafa3901d6732368e0"
+    },
+    "tauri-frontend": {
+      "source": "fxckcode/tauri-skills",
+      "sourceType": "github",
+      "skillPath": "skills/tauri-frontend/SKILL.md",
+      "computedHash": "52bef1e5034e52645a3382ac3bd3646da7a95ea543093f5c51c186b41802cbeb"
+    },
+    "tauri-rust": {
+      "source": "fxckcode/tauri-skills",
+      "sourceType": "github",
+      "skillPath": "skills/tauri-rust/SKILL.md",
+      "computedHash": "59903ba38892066a80f0ca1d0c5b626854c1add5678202d651520eda3fe00553"
+    },
+    "tauri-security": {
+      "source": "fxckcode/tauri-skills",
+      "sourceType": "github",
+      "skillPath": "skills/tauri-security/SKILL.md",
+      "computedHash": "fe4dc27bf6f34845ac32f70ebe3b819c30dd3211c4080291ac1d0efcd102f91b"
+    },
+    "tauri-testing": {
+      "source": "fxckcode/tauri-skills",
+      "sourceType": "github",
+      "skillPath": "skills/tauri-testing/SKILL.md",
+      "computedHash": "d08f9d1ffc4d19bd02ee59d93e7c2dd13c3292fcc077f131a5d1bde610c677b5"
+    },
+    "verification-before-completion": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/verification-before-completion/SKILL.md",
+      "computedHash": "b529822bdac4b197b180fe12225cff86b930b65910435103c10622df7f041651"
+    },
+    "vite": {
+      "source": "antfu/skills",
+      "sourceType": "github",
+      "skillPath": "skills/vite/SKILL.md",
+      "computedHash": "867ff66238f3152e9c494339ad08dc432dd0df5bcf5cc7a00b61a72b580eb908"
+    },
+    "vitest": {
+      "source": "antfu/skills",
+      "sourceType": "github",
+      "skillPath": "skills/vitest/SKILL.md",
+      "computedHash": "943d436114c677802426741980146c07560bf375297666b03062444f4b98a785"
+    },
+    "vue": {
+      "source": "antfu/skills",
+      "sourceType": "github",
+      "skillPath": "skills/vue/SKILL.md",
+      "computedHash": "9c241141e07e836e4f0537c63e8f929fba3767c2997250be38e699f19b75e3f2"
+    },
+    "vue-best-practices": {
+      "source": "antfu/skills",
+      "sourceType": "github",
+      "skillPath": "skills/vue-best-practices/SKILL.md",
+      "computedHash": "d7d22c8cb343583c3904692c4d1d7b50382945e433e4f6e053f4aabb9846cbc3"
+    },
+    "vue-testing-best-practices": {
+      "source": "antfu/skills",
+      "sourceType": "github",
+      "skillPath": "skills/vue-testing-best-practices/SKILL.md",
+      "computedHash": "18c7d8f42f350f927e37de055e34c97b8cfb9f79c12cf942f7f3d2a0821057b5"
+    },
+    "writing-plans": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/writing-plans/SKILL.md",
+      "computedHash": "27c75044e444a4fc68798c3f799dc23eaff3a6bfabff32e6ad75bb20f881c094"
+    }
+  }
+}

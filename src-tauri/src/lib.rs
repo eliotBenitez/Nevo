@@ -1,12 +1,15 @@
-mod collab;
 mod commands;
 mod logging;
 mod mcp_bridge;
+#[cfg(desktop)]
+pub mod mcp_stdio;
 mod media_server;
+mod mobile_lifecycle;
 
 use commands::{
     ai, auth, config, database, folder, fonts, github_sync, graph, kanban, kanban_ops, mcp, note,
-    note_index, notion_import, system, templates, typst_export, workspace, workspace_transfer,
+    note_index, notebook_export, notion_import, system, templates, typst_export, voice_recording,
+    workspace, workspace_transfer,
 };
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{Emitter, Manager, WindowEvent};
@@ -14,7 +17,7 @@ use tauri::{Emitter, Manager, WindowEvent};
 /// Emitted to the frontend when the OS/user requests a window close. The default
 /// close is prevented until the frontend flushes pending writes and calls
 /// `allow_app_close`, so quitting can never drop the last edits sitting in an
-/// autosave / Y.Doc debounce window.
+/// autosave debounce window.
 const CLOSE_REQUESTED_EVENT: &str = "nevo://close-requested";
 
 /// Gate that lets the app distinguish a user-initiated close (must flush first)
@@ -162,16 +165,17 @@ pub fn run() {
         .register_uri_scheme_protocol("nevoplugin-asset", |_context, request| {
             workspace::plugin_asset_response(&request.uri().to_string())
         })
-        .manage(collab::server::CollabAppState::new())
         .manage(mcp_bridge::McpBridgeState::new())
         .manage(mcp_bridge::WebviewChannel::new())
         .manage(github_sync::GithubSyncState::default())
         .manage(typst_export::PdfPreviewCache::default())
         .manage(notion_import::NotionImportState::default())
+        .manage(voice_recording::VoiceRecordingState::default())
         .manage(CloseGuard {
             allowed: AtomicBool::new(false),
         })
         .on_window_event(|window, event| {
+            mobile_lifecycle::on_window_event(window, event);
             if let WindowEvent::CloseRequested { api, .. } = event {
                 if window.state::<CloseGuard>().allowed.load(Ordering::SeqCst) {
                     return;
@@ -230,6 +234,7 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
@@ -238,7 +243,6 @@ pub fn run() {
             ai::ai_list_models,
             ai::ai_complete,
             ai::ai_complete_stream,
-            auth::oauth::start_oauth_loopback,
             auth::secure_store::secure_store_set,
             auth::secure_store::secure_store_get,
             auth::secure_store::secure_store_delete,
@@ -261,7 +265,6 @@ pub fn run() {
             workspace::load_custom_css,
             workspace::save_custom_css,
             workspace::list_plugins,
-            workspace::cloud_plugin_root,
             workspace::validate_plugin_manifest,
             workspace::set_plugin_enabled,
             workspace::plugin_create_code_session,
@@ -304,8 +307,10 @@ pub fn run() {
             folder::rename_folder,
             folder::delete_folder,
             note::create_note,
+            note::create_notebook,
             note::load_note,
             note::save_note,
+            note::save_notebook_note,
             note::delete_note,
             note::move_note,
             note::list_sidebar_note_previews,
@@ -341,24 +346,31 @@ pub fn run() {
             note::export_note_html,
             note::export_note_docx,
             typst_export::export_note_pdf,
+            notebook_export::export_notebook_pdf,
+            notebook_export::export_note_source,
             typst_export::export_note_typst_archive,
             typst_export::prepare_note_pdf_preview,
             typst_export::render_note_pdf_preview_pages,
             note::pick_and_read_text_file,
             note::export_draw_file,
-            note::save_yjs_state,
             note::load_yjs_state,
-            note::delete_yjs_state,
-            note::touch_note_updated_at,
+            note::archive_legacy_collab_dir,
+            note::has_legacy_collab_dir,
             note_index::query_notes,
             note_index::reindex_notes,
-            collab::server::start_collab_server,
-            collab::server::stop_collab_server,
-            collab::server::get_collab_server_info,
+            voice_recording::voice_recording_start,
+            voice_recording::voice_recording_stop,
+            voice_recording::voice_recording_cancel,
             mcp::apply_mcp_mode,
             mcp::get_mcp_bridge_info,
             mcp::stop_mcp_bridge,
             mcp::mcp_respond,
+            #[cfg(desktop)]
+            mcp::get_mcp_agent_status,
+            #[cfg(desktop)]
+            mcp::connect_mcp_agent,
+            #[cfg(desktop)]
+            mcp::disconnect_mcp_agent,
             graph::graph_update_note_edges,
             graph::graph_get_backlinks,
             graph::graph_get_outlinks,

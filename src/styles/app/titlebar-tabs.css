@@ -1,45 +1,21 @@
 /* src/app/components/TitleBarTabs.vue */
-.tabs-strip {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  flex: 1;
-  min-width: 0;
-  padding: 0 4px;
-  overflow: hidden;
-}
-
-.title-tab-wrap {
-  position: relative;
-  max-width: 180px;
-  min-width: 0;
-  flex: 0 1 auto;
-}
-
-.title-tab {
-  appearance: none;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 6px;
-  height: 28px;
-  padding: 0 30px 0 10px;
-  border-radius: calc(7px * var(--radius-scale, 1));
-  font-size: 12.5px;
-  font-weight: 450;
-  color: var(--text-4);
-  background: transparent;
-  border: 1px solid transparent;
-  cursor: pointer;
-  user-select: none;
-  transition: background 150ms, color 150ms, border-color 150ms, box-shadow 150ms;
-}
+/* Base layout, typography, and default (inactive) appearance for
+   `.tabs-strip`, `.title-tab-wrap`, `.title-tab`, `.tab-icon`, `.tab-title`
+   and `.tab-close` now live as `tw:` utilities on the template. Every rule
+   below is a *state override* (active/hovered/dirty/dragging/drag-over tab,
+   pinned tab, hover/focus-visible on the buttons) kept in CSS: they stay
+   unlayered, and unlayered CSS always beats `@layer utilities` regardless of
+   declaration order, so they continue to override the new base utilities
+   exactly as they overrode the old base rules. This state matrix combines
+   color/background/box-shadow across several ancestor-class combinations
+   (e.g. active+dirty) — expressing it as mutually exclusive `tw:` literals
+   without a browser to verify every combination visually would risk a
+   regression, so it is left untouched rather than translated. */
 
 .title-tab:hover,
 .title-tab:focus-visible {
   background: var(--hover);
-  color: var(--text-2);
+  color: var(--text-secondary);
 }
 
 .title-tab:focus-visible,
@@ -49,97 +25,46 @@
 }
 
 .title-tab-wrap.title-tab--active .title-tab {
-  color: var(--text-1);
-  background: var(--glass-3);
-  border-color: color-mix(in oklab, var(--accent) 46%, var(--line-2));
-  box-shadow: var(--shadow-1), 0 0 18px -12px var(--accent-glow);
+  color: var(--text-primary);
+  background: var(--island-bg);
+  box-shadow: var(--shadow-raised);
 }
 
 .title-tab-wrap.title-tab--active .tab-icon,
 .title-tab-wrap.title-tab--active .tab-close {
-  color: var(--text-2);
-}
-
-.title-tab-wrap.title-tab--active::after {
-  content: '';
-  position: absolute;
-  left: 10px;
-  right: 30px;
-  bottom: -1px;
-  height: 1px;
-  border-radius: 999px;
-  background: var(--accent);
-  box-shadow: 0 0 10px var(--accent-glow);
+  color: var(--text-secondary);
 }
 
 .title-tab-wrap.title-tab--hovered .title-tab {
-  color: var(--text-2);
-  background: var(--glass-3);
-  border-color: var(--line-2);
-  box-shadow: var(--shadow-1);
+  color: var(--text-secondary);
+  background: var(--island-bg);
+  box-shadow: var(--shadow-raised);
 }
 
 .title-tab-wrap.title-tab--dirty .title-tab {
-  border-color: var(--accent-soft);
-  box-shadow: 0 0 0 1px var(--accent-soft), inset 0 1px 0 oklch(from var(--accent) l c h / 0.08);
+  box-shadow: 0 0 0 1px var(--accent-soft);
 }
 
-.title-tab-wrap.title-tab--active.title-tab--dirty .title-tab {
-  background: var(--glass-3);
-  border-color: color-mix(in oklab, var(--accent) 58%, var(--line-2));
-  box-shadow: var(--shadow-1), 0 0 0 1px var(--accent-soft);
-}
-
-.title-tab-wrap.title-tab--pinned {
-  max-width: 32px;
-  flex: 0 0 auto;
-}
-
+/* Pinned tabs collapse to an icon-only square; the wrap's own max-width/flex
+   are expressed as mutually exclusive `tw:` literals directly on the
+   template (only one of the pinned/unpinned pair is ever rendered), but this
+   nested override still needs the unlayered-CSS escape hatch because the
+   base `.title-tab` padding/justify-content are static `tw:` utilities that
+   are always present — an unlayered rule is the only way to reliably beat
+   them for this one nested case. */
 .title-tab-wrap.title-tab--pinned .title-tab {
   padding: 0 8px;
   justify-content: center;
 }
 
-.tab-icon {
-  font-size: 13px;
-  line-height: 1;
-  flex: 0 0 auto;
-  display: flex;
-  transition: color 150ms;
-}
-
-.tab-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-  flex: 0 1 auto;
-}
-
-.tab-close {
-  appearance: none;
-  border: 0;
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: calc(4px * var(--radius-scale, 1));
-  color: var(--text-4);
-  background: transparent;
-  position: absolute;
-  right: 5px;
-  top: 50%;
-  margin-top: -10px;
-  opacity: 0;
-  transform: scale(0.92);
-  pointer-events: none;
-  cursor: pointer;
-  transition: opacity 150ms ease, transform 150ms ease, background 100ms, color 100ms;
+.title-tab-wrap.title-tab--active.title-tab--dirty .title-tab {
+  background: var(--island-bg);
+  box-shadow: var(--shadow-raised), 0 0 0 1px var(--accent-soft);
 }
 
 .tab-close:hover {
   background: var(--hover);
-  color: var(--text-2);
+  color: var(--text-secondary);
 }
 
 .title-tab-wrap.title-tab--active .tab-close,
@@ -153,7 +78,7 @@
 
 .title-tab-wrap.title-tab--active .tab-close:hover {
   background: var(--hover-strong);
-  color: var(--text-1);
+  color: var(--text-primary);
 }
 
 .title-tab-wrap.title-tab--dragging .title-tab {

@@ -19,6 +19,7 @@ fn remap_note_meta(note: &NoteMeta, new_folder_id: Option<String>, maps: &IdMaps
         icon: note.icon.clone(),
         folder_id: new_folder_id,
         updated_at: note.updated_at.clone(),
+        extra: note.extra.clone(),
     }
 }
 
@@ -44,6 +45,7 @@ fn remap_folder(folder: &FolderMeta, new_parent_id: Option<String>, maps: &IdMap
             .iter()
             .map(|note| remap_note_meta(note, Some(new_id.clone()), maps))
             .collect(),
+        extra: folder.extra.clone(),
     }
 }
 
@@ -77,6 +79,7 @@ pub(super) fn merge_manifest_tree(
         order: manifest.tree.len() as i32,
         children: Vec::new(),
         notes: Vec::new(),
+        extra: Default::default(),
     };
 
     for folder in &imported.tree {

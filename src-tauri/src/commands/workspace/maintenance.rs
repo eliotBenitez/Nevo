@@ -139,15 +139,38 @@ fn collect_asset_refs_recursive(path: &Path, refs: &mut HashSet<String>) {
     }
 }
 
-/// Collect all referenced assets across every content source. The editor's live
-/// content lives in the Yjs CRDT state (`.nevo/collab`), which can be ahead of the
-/// serialized `.nevo` note JSON — scanning only the notes dir wrongly treats
-/// Yjs-only assets (e.g. freshly added video/audio) as orphaned and deletes them.
+/// Scans `.nevo/collab` (a not-yet-migrated workspace's legacy Y.Doc state)
+/// and every `.nevo/collab-legacy-*` directory (a migrated workspace's
+/// archived backup — see `note/collab.rs`'s `archive_legacy_collab_dir`) for
+/// asset references. Neither is note content's source of truth any more, but
+/// an asset referenced only from one of them must survive until the legacy
+/// migration folds it into `note.json` (or the user deletes the backup
+/// themselves) — so GC keeps scanning both for as long as they exist on disk.
+fn collect_legacy_collab_asset_refs(nevo_dir: &Path, refs: &mut HashSet<String>) {
+    collect_asset_refs_recursive(&nevo_dir.join("collab"), refs);
+    let Ok(entries) = std::fs::read_dir(nevo_dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let is_legacy_backup = entry
+            .file_name()
+            .to_str()
+            .map(|name| name.starts_with("collab-legacy-"))
+            .unwrap_or(false);
+        if is_legacy_backup {
+            collect_asset_refs_recursive(&entry.path(), refs);
+        }
+    }
+}
+
+/// Collect all referenced assets across every content source: the notes
+/// themselves, version snapshots, kanban boards, and — best-effort, while
+/// they exist — any legacy Y.Doc state (see `collect_legacy_collab_asset_refs`).
 fn collect_referenced_assets(workspace_path: &str) -> Result<HashSet<String>, String> {
     let mut refs = HashSet::new();
     collect_asset_refs_recursive(&notes_dir_path(workspace_path), &mut refs);
     let nevo_dir = Path::new(workspace_path).join(".nevo");
-    collect_asset_refs_recursive(&nevo_dir.join("collab"), &mut refs);
+    collect_legacy_collab_asset_refs(&nevo_dir, &mut refs);
     collect_asset_refs_recursive(&nevo_dir.join("snapshots"), &mut refs);
     collect_asset_refs_recursive(&nevo_dir.join("boards"), &mut refs);
     // Drawings keep their image references inside `.draw.json` payloads, which
@@ -511,6 +534,47 @@ mod tests {
         assert!(
             assets_dir.join(draw_name).exists(),
             "drawing payload must survive"
+        );
+    }
+
+    #[test]
+    fn cleanup_keeps_assets_referenced_only_from_legacy_collab_state() {
+        let workspace = TestWorkspace::new();
+        let workspace_path = workspace.path_string();
+        let assets_dir = assets_dir_path(&workspace_path);
+        std::fs::create_dir_all(&assets_dir).expect("create assets dir");
+
+        // Not-yet-migrated: `.nevo/collab/<id>.yjs`.
+        let pending_image = assets_dir.join("pending-migration.png");
+        std::fs::write(&pending_image, b"png-bytes").expect("write image");
+        let collab_dir = Path::new(&workspace_path).join(".nevo/collab");
+        std::fs::create_dir_all(&collab_dir).expect("collab dir");
+        std::fs::write(
+            collab_dir.join("note-1.yjs"),
+            b".nevo/assets/pending-migration.png",
+        )
+        .expect("write legacy yjs state");
+
+        // Already migrated and archived: `.nevo/collab-legacy-<ts>/<id>.yjs`.
+        let archived_image = assets_dir.join("archived-migration.png");
+        std::fs::write(&archived_image, b"png-bytes").expect("write image");
+        let archived_collab_dir = Path::new(&workspace_path).join(".nevo/collab-legacy-1234567890");
+        std::fs::create_dir_all(&archived_collab_dir).expect("archived collab dir");
+        std::fs::write(
+            archived_collab_dir.join("note-2.yjs"),
+            b".nevo/assets/archived-migration.png",
+        )
+        .expect("write archived legacy yjs state");
+
+        cleanup_orphaned_assets_sync(workspace_path).expect("cleanup");
+
+        assert!(
+            pending_image.exists(),
+            "an asset referenced only from a not-yet-migrated .nevo/collab must survive GC"
+        );
+        assert!(
+            archived_image.exists(),
+            "an asset referenced only from a .nevo/collab-legacy-* backup must survive GC"
         );
     }
 }

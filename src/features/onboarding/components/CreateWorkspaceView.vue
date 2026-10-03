@@ -1,47 +1,52 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
-import { Check, ArrowRight, ArrowLeft, Folder } from 'lucide-vue-next'
-import AmbientBackdrop from '../../../ui/glass/AmbientBackdrop.vue'
-import NevoMark from './NevoMark.vue'
 import MobileCreateWorkspaceFlow from './MobileCreateWorkspaceFlow.vue'
+import CreateWorkspaceSteps from './CreateWorkspaceSteps.vue'
+import CreateWorkspacePreview from './CreateWorkspacePreview.vue'
+import CreateWorkspaceNameStep from './CreateWorkspaceNameStep.vue'
+import CreateWorkspaceLocationStep from './CreateWorkspaceLocationStep.vue'
+import CreateWorkspaceTemplateStep from './CreateWorkspaceTemplateStep.vue'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { useTreeStore } from '../../../stores/tree'
-import { useAuthStore } from '../../../stores/auth'
-import { useSharedStorageStore } from '../../../stores/sharedStorage'
-import { useServerConfigStore } from '../../../stores/serverConfig'
+import { useOnboardingStore } from '../../../stores/onboarding'
 import type { WorkspaceConfig } from '../../../types/workspace'
 import { appLogger } from '../../../utils/logger'
 import { resolveRuntimeCapabilities } from '../../../utils/runtime'
 import { WORKSPACE_GRADIENTS } from '../../../utils/workspaceGradients'
 import { formatWorkspacePath } from '../../../utils/workspacePath'
 import { systemCommands } from '../../../tauri/commands'
+import { WORKSPACE_TEMPLATES, WORKSPACE_TEMPLATE_STARTERS } from '../workspaceTemplates'
+import { buildStarterNoteContent, STARTER_NOTE_ICON } from '../starterNote'
 
 const emit = defineEmits<{ back: []; done: [] }>()
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
-const serverConfigStore = useServerConfigStore()
+const onboardingStore = useOnboardingStore()
 const { appMetadata } = storeToRefs(workspaceStore)
 const runtime = computed(() => resolveRuntimeCapabilities(appMetadata.value))
 
 const GRADIENTS = WORKSPACE_GRADIENTS
+// Accessible names for WORKSPACE_GRADIENTS, index-aligned.
+const COLOUR_NAMES = ['violet', 'coral', 'sage', 'amber', 'slate', 'sky'] as const
 const GLYPHS = ['N', '◐', '✦', '◇', '◑', '⌘']
-const TEMPLATES = ['empty', 'researcher', 'pm', 'writer'] as const
+// Passed through to the (unmodified) mobile flow, which owns its own steps.
+const TEMPLATES = WORKSPACE_TEMPLATES
 
-const storageType = ref<'local' | 'cloud'>('local')
 const name = ref('Atelier')
+const nameStepEl = ref<{ focus: () => void } | null>(null)
+const nameError = ref('')
 const selectedGlyph = ref(0)
 const selectedGradient = ref(0)
-const selectedTemplate = ref<typeof TEMPLATES[number]>('empty')
+const selectedTemplate = ref<typeof WORKSPACE_TEMPLATES[number]>('empty')
 const hasInteractedWithTemplates = ref(false)
 const location = ref('~/Documents/Nevo/')
-const serverUrl = ref(serverConfigStore.serverUrl)
-const healthState = ref<'idle' | 'checking' | 'ok' | 'fail'>('idle')
 const creationError = ref('')
+const isCreating = ref(false)
 
-const isValidServerUrl = computed(() => /^https?:\/\/.+/.test(serverUrl.value.trim()))
+watch(name, () => { nameError.value = '' })
 
 const selectedGlyphValue = computed(() => {
   if (runtime.value.isMobileRuntime && selectedGlyph.value === 0) {
@@ -58,17 +63,59 @@ const locationBaseWithSeparator = computed(() => {
 })
 
 const workspaceFullPath = computed(() => locationBaseWithSeparator.value + name.value.trim())
+const displayName = computed(() => name.value.trim() || t('onboarding.create.namePlaceholder'))
 
-const steps = computed(() => {
-  const items = [
-    { key: 'name', done: name.value.length > 0 },
-    { key: 'template', done: hasInteractedWithTemplates.value },
-  ]
-  if (!runtime.value.isMobileRuntime && storageType.value === 'local') {
-    items.splice(1, 0, { key: 'location', done: location.value.length > 0 })
+// --- Step wizard -------------------------------------------------------
+
+const STEP_KEYS = ['name', 'location', 'template'] as const
+const currentStep = ref(0)
+const activePanelEl = ref<HTMLElement | null>(null)
+
+const steps = computed(() => STEP_KEYS.map(key => ({ key, label: t(`onboarding.create.steps.${key}`) })))
+// Steps beyond the first require a name; once there is one, the rest of the
+// wizard is optional and can be jumped to directly from the tablist.
+const reachableStep = computed(() => (name.value.trim() ? STEP_KEYS.length - 1 : 0))
+
+function setStep(index: number) {
+  currentStep.value = Math.min(STEP_KEYS.length - 1, Math.max(0, index))
+}
+
+function next() {
+  if (currentStep.value === 0 && !name.value.trim()) {
+    creationError.value = ''
+    nameError.value = t('onboarding.create.nameRequired')
+    nameStepEl.value?.focus()
+    return
   }
-  return items
+  if (currentStep.value >= STEP_KEYS.length - 1) {
+    create()
+    return
+  }
+  setStep(currentStep.value + 1)
+}
+
+function back() {
+  setStep(currentStep.value - 1)
+}
+
+// Moves focus into the newly visible panel so tab/keyboard navigation lands
+// on a real control instead of on a now-hidden one.
+watch(currentStep, () => {
+  nextTick(() => {
+    const panel = activePanelEl.value
+    if (!panel) return
+    // A plain input (name, location) wins if present; otherwise the roving
+    // radiogroup's current item (tabindex 0) — whichever comes first in the
+    // panel's DOM order, so the wizard never focuses a non-current radio.
+    const target = panel.querySelector<HTMLElement>('input, [tabindex="0"]')
+    target?.focus()
+  })
 })
+
+function selectTemplate(template: typeof WORKSPACE_TEMPLATES[number]) {
+  selectedTemplate.value = template
+  hasInteractedWithTemplates.value = true
+}
 
 // Mobile sandboxes block raw file I/O to shared storage (~/Documents), so the
 // default workspace location must live inside the app's writable data dir.
@@ -105,45 +152,18 @@ async function browsePath() {
   }
 }
 
-const isCreating = ref(false)
-
-async function checkConnection() {
-  if (!isValidServerUrl.value) {
-    healthState.value = 'fail'
+async function create() {
+  if (isCreating.value) return
+  if (!name.value.trim()) {
+    creationError.value = ''
+    nameError.value = t('onboarding.create.nameRequired')
+    setStep(0)
+    nameStepEl.value?.focus()
     return
   }
-  healthState.value = 'checking'
-  const ok = await serverConfigStore.checkServerHealth(serverUrl.value)
-  healthState.value = ok ? 'ok' : 'fail'
-}
-
-async function createCloud() {
-  serverConfigStore.setServerUrl(serverUrl.value)
-  const auth = useAuthStore()
-  if (!auth.isAuthenticated || auth.sessionServerUrl !== serverConfigStore.serverUrl) {
-    await auth.login('github')
-  }
-  const shared = useSharedStorageStore()
-  await shared.loadStorages()
-  const storage = await shared.createStorage(
-    name.value.trim(),
-    selectedGlyphValue.value,
-    GRADIENTS[selectedGradient.value],
-  )
-  await workspaceStore.openCloudWorkspace(storage.id, serverConfigStore.serverUrl)
-}
-
-async function create() {
-  if (!name.value.trim() || isCreating.value) return
   creationError.value = ''
   isCreating.value = true
   try {
-    if (storageType.value === 'cloud') {
-      await createCloud()
-      emit('done')
-      return
-    }
-
     const path = await resolveWorkspacePath()
     const config: WorkspaceConfig = {
       name: name.value.trim(),
@@ -154,23 +174,40 @@ async function create() {
     }
     await workspaceStore.createWorkspace(config)
 
+    const treeStore = useTreeStore()
+
+    // "Getting started" note, created first so it sits above any template
+    // starters in the sidebar and on Home. Failure here must not block
+    // workspace creation — the workspace is already usable without it.
+    try {
+      const starterNote = await treeStore.createNote(null, t('onboarding.starterNote.title'), STARTER_NOTE_ICON)
+      if (starterNote && workspaceStore.backend) {
+        await workspaceStore.backend.saveNote({
+          ...starterNote,
+          content: buildStarterNoteContent(t),
+          updatedAt: new Date().toISOString(),
+        })
+        onboardingStore.setStarterNoteId(starterNote.id)
+      }
+    } catch (error) {
+      await appLogger.warn({
+        source: 'frontend.onboarding',
+        event: 'create_starter_note',
+        message: 'Failed to create the starter note; continuing workspace creation',
+        error,
+      })
+    }
+
     // Populate templates
-    if (selectedTemplate.value !== 'empty') {
-      const treeStore = useTreeStore()
+    const starters = WORKSPACE_TEMPLATE_STARTERS[selectedTemplate.value]
+    if (starters.length) {
       const tPath = `onboarding.create.templates.${selectedTemplate.value}.starter`
-      
-      if (selectedTemplate.value === 'researcher') {
-        await treeStore.createFolder(null, t(`${tPath}.litReview`), '📚')
-        await treeStore.createFolder(null, t(`${tPath}.journals`), '📖')
-        await treeStore.createNote(null, t(`${tPath}.ideas`), '💡')
-      } else if (selectedTemplate.value === 'pm') {
-        await treeStore.createFolder(null, t(`${tPath}.roadmaps`), '🗺️')
-        await treeStore.createFolder(null, t(`${tPath}.specs`), '📝')
-        await treeStore.createNote(null, t(`${tPath}.notes`), '📋')
-      } else if (selectedTemplate.value === 'writer') {
-        await treeStore.createFolder(null, t(`${tPath}.drafts`), '✍️')
-        await treeStore.createFolder(null, t(`${tPath}.characters`), '🎭')
-        await treeStore.createNote(null, t(`${tPath}.ideas`), '💡')
+      for (const item of starters) {
+        if (item.kind === 'folder') {
+          await treeStore.createFolder(null, t(`${tPath}.${item.key}`), item.emoji)
+        } else {
+          await treeStore.createNote(null, t(`${tPath}.${item.key}`), item.emoji)
+        }
       }
     }
 
@@ -210,236 +247,118 @@ async function create() {
     @create="create"
   />
 
-  <div v-else class="create-root">
-    <AmbientBackdrop />
+  <div v-else class="cw-root tw:flex tw:min-h-0 tw:flex-1 tw:overflow-hidden tw:bg-[var(--frame-bg)] tw:pt-0 tw:px-[var(--island-inset)] tw:pb-[var(--island-inset)] tw:max-[959px]:flex-col tw:max-[959px]:overflow-y-auto tw:max-[959px]:pb-[var(--island-inset)]">
+    <div class="cw-island tw:flex tw:min-h-0 tw:min-w-0 tw:flex-1 tw:overflow-hidden tw:rounded-[var(--island-radius)] tw:border tw:border-transparent tw:bg-[var(--island-bg)] tw:max-[959px]:flex-none">
+      <div class="cw-main tw:flex tw:min-h-0 tw:max-w-[620px] tw:flex-1 tw:flex-col tw:gap-5 tw:overflow-y-auto tw:pt-8 tw:px-11 tw:pb-7 tw:min-[1200px]:max-w-[780px] tw:min-[1200px]:gap-7 tw:min-[1200px]:px-16 tw:min-[1200px]:pt-12 tw:min-[1200px]:pb-10 tw:min-[1600px]:max-w-[900px] tw:min-[1600px]:gap-8 tw:min-[1600px]:px-20 tw:min-[1600px]:pt-14 tw:min-[1600px]:pb-12 tw:max-[719px]:px-5 tw:max-[719px]:pt-[max(var(--safe-area-top),20px)] tw:max-[719px]:pb-[calc(20px+max(var(--safe-area-bottom),0px))]">
+        <CreateWorkspaceSteps
+          :steps="steps"
+          :current="currentStep"
+          :reachable="reachableStep"
+          :tablist-label="t('onboarding.create.stepsLabel')"
+          @select="setStep"
+        />
 
-    <!-- Left rail -->
-    <div class="side-rail">
-      <NevoMark :size="36" />
-      <div>
-        <div class="side-title"><em>{{ t('onboarding.create.sideTitle') }}</em></div>
-        <div class="side-body">{{ t('onboarding.create.sideBody') }}</div>
-      </div>
+        <div class="cw-heading tw:flex tw:flex-col tw:gap-1 tw:min-[1200px]:gap-1.5">
+          <h1 class="cw-title tw:m-0 tw:font-nv-ui tw:text-[22px] tw:font-semibold tw:tracking-[-0.02em] tw:text-content-primary tw:min-[1200px]:text-[30px] tw:min-[1600px]:text-[34px]">{{ t('onboarding.create.title') }}</h1>
+          <p class="cw-subtitle tw:m-0 tw:text-[13px] tw:text-content-muted tw:min-[1200px]:text-[15px] tw:min-[1600px]:text-base">{{ t('onboarding.create.subtitle') }}</p>
+        </div>
 
-      <div class="spacer" />
-
-      <div class="steps-list">
         <div
-          v-for="(step, i) in steps"
-          :key="step.key"
-          class="step-item"
+          v-if="currentStep === 0"
+          id="cw-panel-name"
+          ref="activePanelEl"
+          class="cw-panel tw:flex tw:min-h-[190px] tw:flex-col tw:gap-[18px] tw:min-[1200px]:gap-6 tw:min-[1600px]:gap-7"
+          role="tabpanel"
+          aria-labelledby="cw-tab-name"
         >
-          <div class="step-dot" :class="{ 'step-dot--done': step.done }">
-            <Check v-if="step.done" :size="10" :stroke-width="2.8" />
-            <span v-else>{{ i + 1 }}</span>
-          </div>
-          <span :class="step.done ? 'step-text--done' : 'step-text'">
-            {{ t(`onboarding.create.steps.${step.key}`) }}
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Right form -->
-    <div class="form-area">
-      <div class="form-inner">
-        <div class="step-label">{{ t('onboarding.create.step', { n: steps.length, total: steps.length }) }}</div>
-        <h1 class="form-title">{{ t('onboarding.create.title') }}</h1>
-        <p class="form-sub">{{ t('onboarding.create.subtitle') }}</p>
-
-        <!-- Storage type -->
-        <div class="form-group">
-          <div
-            class="storage-type"
-            role="group"
-            :aria-label="t('onboarding.create.mobile.storageTitle')"
-          >
-            <button
-              type="button"
-              class="storage-type__btn"
-              :class="{ 'storage-type__btn--active': storageType === 'local' }"
-              :aria-pressed="storageType === 'local'"
-              @click="storageType = 'local'"
-            >
-              {{ t('workspace.localWorkspace') }}
-            </button>
-            <button
-              type="button"
-              class="storage-type__btn"
-              :class="{ 'storage-type__btn--active': storageType === 'cloud' }"
-              :aria-pressed="storageType === 'cloud'"
-              @click="storageType = 'cloud'"
-            >
-              {{ t('workspace.cloudWorkspace') }}
-            </button>
-          </div>
+          <CreateWorkspaceNameStep
+            ref="nameStepEl"
+            :name="name"
+            :error="nameError"
+            :glyphs="GLYPHS"
+            :gradients="GRADIENTS"
+            :colour-names="COLOUR_NAMES"
+            :selected-glyph="selectedGlyph"
+            :selected-gradient="selectedGradient"
+            @update:name="name = $event"
+            @update:selected-glyph="selectedGlyph = $event"
+            @update:selected-gradient="selectedGradient = $event"
+            @submit="next"
+          />
         </div>
 
-        <!-- Server URL (cloud only) -->
-        <div v-if="storageType === 'cloud'" class="form-group">
-          <div class="form-label-row">
-            <label class="form-label" for="workspace-server-url">
-              {{ t('onboarding.create.serverLabel') }}
-            </label>
-            <span class="form-hint">{{ t('onboarding.create.serverHint') }}</span>
-          </div>
-          <div class="location-field">
-            <input
-              id="workspace-server-url"
-              v-model="serverUrl"
-              class="server-url-input"
-              :placeholder="t('onboarding.create.serverPlaceholder')"
-              @input="healthState = 'idle'"
-            />
-            <button
-              type="button"
-              class="nv-btn nv-btn--ghost browse-btn"
-              :disabled="healthState === 'checking'"
-              @click="checkConnection"
-            >
-              {{ healthState === 'checking'
-                ? t('onboarding.create.serverChecking')
-                : t('onboarding.create.serverCheck') }}
-            </button>
-          </div>
-          <div
-            v-if="healthState !== 'idle'"
-            class="server-health-status"
-            :class="{
-              'server-health-status--ok': healthState === 'ok',
-              'server-health-status--fail': healthState === 'fail',
-              'server-health-status--checking': healthState === 'checking',
-            }"
-            role="status"
-            aria-live="polite"
-          >
-            <span v-if="healthState === 'checking'">{{ t('onboarding.create.serverChecking') }}</span>
-            <span v-else-if="healthState === 'ok'">{{ t('onboarding.create.serverOk') }}</span>
-            <span v-else>{{ t('onboarding.create.serverFail') }}</span>
-          </div>
+        <div
+          v-else-if="currentStep === 1"
+          id="cw-panel-location"
+          ref="activePanelEl"
+          class="cw-panel tw:flex tw:min-h-[190px] tw:flex-col tw:gap-[18px] tw:min-[1200px]:gap-6 tw:min-[1600px]:gap-7"
+          role="tabpanel"
+          aria-labelledby="cw-tab-location"
+        >
+          <CreateWorkspaceLocationStep
+            :path="workspaceFullPath"
+            :display-name="displayName"
+            @browse="browsePath"
+          />
         </div>
 
-        <!-- Name -->
-        <div class="form-group">
-          <div class="form-label-row">
-            <span class="form-label">{{ t('onboarding.create.nameLabel') }}</span>
-            <span class="form-hint">{{ t('onboarding.create.nameHint') }}</span>
-          </div>
-          <div class="name-field">
-            <div class="name-icon" :style="{ background: GRADIENTS[selectedGradient] }">
-              {{ GLYPHS[selectedGlyph] }}
-            </div>
-            <input
-              v-model="name"
-              class="name-input"
-              :placeholder="t('onboarding.create.namePlaceholder')"
-              autofocus
-            />
-          </div>
+        <div
+          v-else
+          id="cw-panel-template"
+          ref="activePanelEl"
+          class="cw-panel tw:flex tw:min-h-[190px] tw:flex-col tw:gap-[18px] tw:min-[1200px]:gap-6 tw:min-[1600px]:gap-7"
+          role="tabpanel"
+          aria-labelledby="cw-tab-template"
+        >
+          <CreateWorkspaceTemplateStep
+            :templates="WORKSPACE_TEMPLATES"
+            :selected="selectedTemplate"
+            @select="selectTemplate"
+          />
         </div>
 
-        <!-- Icon & colour -->
-        <div class="form-group">
-          <div class="form-label-row">
-            <span class="form-label">{{ t('onboarding.create.iconLabel') }}</span>
-            <span class="form-hint">{{ t('onboarding.create.iconHint') }}</span>
-          </div>
-          <div class="icon-colour-row">
-            <div>
-              <div class="sub-label">{{ t('onboarding.create.glyphLabel') }}</div>
-              <div class="glyph-list">
-                <button
-                  v-for="(g, i) in GLYPHS"
-                  :key="i"
-                  class="glyph-btn"
-                  :class="{ 'glyph-btn--active': selectedGlyph === i }"
-                  :aria-label="g"
-                  :aria-pressed="selectedGlyph === i"
-                  @click="selectedGlyph = i"
-                >{{ g }}</button>
-              </div>
-            </div>
-            <div>
-              <div class="sub-label">{{ t('onboarding.create.colourLabel') }}</div>
-              <div class="gradient-list">
-                <button
-                  v-for="(g, i) in GRADIENTS"
-                  :key="i"
-                  class="gradient-swatch"
-                  :class="{ 'gradient-swatch--active': selectedGradient === i }"
-                  :style="{ background: g }"
-                  :aria-label="`${t('onboarding.create.iconLabel')} ${i + 1}`"
-                  :aria-pressed="selectedGradient === i"
-                  @click="selectedGradient = i"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        <p v-if="creationError" class="form-error form-error--footer" role="alert">
+          {{ creationError }}
+        </p>
 
-        <!-- Location -->
-        <div v-if="storageType === 'local'" class="form-group">
-          <div class="form-label-row">
-            <span class="form-label">{{ t('onboarding.create.locationLabel') }}</span>
-            <span class="form-hint">{{ t('onboarding.create.locationHint') }}</span>
-          </div>
-          <div class="location-field">
-            <Folder :size="14" class="location-icon" />
-            <span class="location-base">{{ locationBaseWithSeparator }}</span>
-            <span class="location-name">{{ name || t('onboarding.create.namePlaceholder') }}</span>
-            <div class="spacer" />
-            <button class="nv-btn nv-btn--ghost browse-btn" @click="browsePath">
-              {{ t('onboarding.create.locationBrowse') }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Templates -->
-        <div class="form-group">
-          <div class="form-label-row">
-            <span class="form-label">{{ t('onboarding.create.templateLabel') }}</span>
-            <span class="form-hint">{{ t('onboarding.create.templateHint') }}</span>
-          </div>
-          <div class="templates-grid">
-            <button
-              v-for="tpl in TEMPLATES"
-              :key="tpl"
-              class="template-card"
-              :class="{ 'template-card--selected': selectedTemplate === tpl }"
-              :aria-pressed="selectedTemplate === tpl"
-              @click="selectedTemplate = tpl; hasInteractedWithTemplates = true"
-            >
-              <div class="template-icon" :class="{ 'template-icon--selected': selectedTemplate === tpl }">
-                {{ tpl === 'empty' ? '◯' : tpl === 'researcher' ? '✦' : tpl === 'pm' ? '◐' : '◇' }}
-              </div>
-              <div class="template-name">{{ t(`onboarding.create.templates.${tpl}.name`) }}</div>
-              <div class="template-sub">{{ t(`onboarding.create.templates.${tpl}.sub`) }}</div>
-              <div v-if="selectedTemplate === tpl" class="template-check">
-                <Check :size="9" :stroke-width="3" class="template-check-icon" />
-              </div>
-            </button>
-          </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="form-footer">
-          <button class="nv-btn nv-btn--ghost footer-btn-back" @click="emit('back')">
-            <ArrowLeft :size="12" /> {{ t('onboarding.create.back') }}
-          </button>
-          <div class="spacer" />
-          <span class="encryption-label">{{ t('onboarding.create.encryption') }}</span>
+        <div class="cw-foot tw:mt-auto tw:flex tw:items-center tw:gap-2 tw:min-[1200px]:gap-2.5 tw:max-[719px]:flex-wrap">
+          <span class="cw-mono cw-foot-count tw:mr-auto tw:text-[11.5px] tw:text-content-muted tw:font-nv-mono tw:tabular-nums tw:min-[1200px]:text-[13px] tw:min-[1600px]:text-sm tw:max-[719px]:order-[-1] tw:max-[719px]:mb-1 tw:max-[719px]:w-full">{{ t('onboarding.create.step', { n: currentStep + 1, total: STEP_KEYS.length }) }}</span>
           <button
-            class="nv-btn nv-btn--primary footer-btn-create"
+            type="button"
+            class="nv-btn nv-btn--ghost footer-btn-back tw:min-[1200px]:h-[42px] tw:min-[1200px]:px-5 tw:min-[1200px]:text-[14.5px] tw:min-[1600px]:h-[46px] tw:min-[1600px]:px-6 tw:min-[1600px]:text-[15.5px] tw:max-[719px]:min-h-11 tw:max-[719px]:flex-1 tw:max-[719px]:justify-center"
+            :disabled="currentStep === 0"
+            @click="back"
+          >
+            {{ t('onboarding.create.back') }}
+          </button>
+          <button
+            v-if="currentStep < STEP_KEYS.length - 1"
+            type="button"
+            class="nv-btn nv-btn--primary footer-btn-next tw:min-[1200px]:h-[42px] tw:min-[1200px]:px-5 tw:min-[1200px]:text-[14.5px] tw:min-[1600px]:h-[46px] tw:min-[1600px]:px-6 tw:min-[1600px]:text-[15.5px] tw:max-[719px]:min-h-11 tw:max-[719px]:flex-1 tw:max-[719px]:justify-center"
+            @click="next"
+          >
+            {{ t('onboarding.create.next') }}
+          </button>
+          <button
+            v-else
+            type="button"
+            class="nv-btn nv-btn--primary footer-btn-create tw:min-[1200px]:h-[42px] tw:min-[1200px]:px-5 tw:min-[1200px]:text-[14.5px] tw:min-[1600px]:h-[46px] tw:min-[1600px]:px-6 tw:min-[1600px]:text-[15.5px] tw:max-[719px]:min-h-11 tw:max-[719px]:flex-1 tw:max-[719px]:justify-center"
             :class="{ 'nv-btn--loading': isCreating }"
-            :disabled="isCreating || (storageType === 'cloud' && !isValidServerUrl)"
+            :disabled="isCreating"
             @click="create"
           >
             <span v-if="isCreating" class="nv-btn__spinner" aria-hidden="true" />
             {{ t('onboarding.create.create') }}
-            <ArrowRight v-if="!isCreating" :size="12" />
           </button>
         </div>
       </div>
     </div>
+
+    <CreateWorkspacePreview
+      :name="name"
+      :glyph="selectedGlyphValue"
+      :gradient="GRADIENTS[selectedGradient]"
+      :template="selectedTemplate"
+    />
   </div>
 </template>

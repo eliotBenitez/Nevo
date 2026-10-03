@@ -17,12 +17,10 @@ export function applyWorkspaceStyle(appearance: AppearanceSettings): void {
   const accent = resolveAccentTokens(appearance.accentPreset)
 
   el.style.setProperty('--accent', accent.accent)
-  el.style.setProperty('--accent-hover', `color-mix(in oklab, ${accent.accent} 88%, white)`)
+  el.style.setProperty('--accent-hover', `color-mix(in oklab, ${accent.accent} 88%, var(--accent-hover-toward))`)
   el.style.setProperty('--accent-soft', accent.soft)
-  el.style.setProperty('--accent-glow', accent.glow)
   el.style.setProperty('--selection', `color-mix(in oklab, ${accent.accent} 25%, transparent)`)
-  el.setAttribute('data-scene', appearance.backgroundScene)
-  el.setAttribute('data-surface', appearance.surfaceStyle)
+  // Borderless is the only style now; surfaceStyle/backgroundScene/sidebarStyle are
+  // preserved in persisted settings but ignored for rendering — see the redesign spec §9.
   el.setAttribute('data-contrast', appearance.contrastMode)
-  el.setAttribute('data-sidebar', appearance.sidebarStyle)
 }

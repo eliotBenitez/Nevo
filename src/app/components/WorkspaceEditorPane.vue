@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+// This shell also renders the folder-empty state and owns the hidden upload
+// inputs, so the editor bundle must be loaded before EditorSurface mounts.
+import '../../styles/editor.css'
 import type { SaveStatus } from '../../stores/note'
 import type { NoteDocument } from '../../types/note'
 import type { CanvasSnapshotV1 } from '../../core/canvas'
@@ -8,10 +11,12 @@ import type { NoteViewMode } from '../../features/canvas/canvasPreferences'
 import type { PluginManifest, WorkspaceSettings } from '../../types/workspace'
 import type { NevoSandboxUiContributionSnapshot } from '../../types/editor-plugin'
 import NvNoteIcon from '../../ui/primitives/NvNoteIcon.vue'
+import { focusEditorFirstBlock } from '../../editor-core'
 import { createEditorCore } from '../composables/editor/useEditorCore'
 import { useGraphStore } from '../../stores/graph'
 import { useTreeStore } from '../../stores/tree'
 import { useWorkspaceStore } from '../../stores/workspace'
+import { useFirstUseHint } from '../../features/onboarding/hints/useFirstUseHint'
 import { useEditorOverlays } from '../composables/editor/useEditorOverlays'
 import { useMathEditor } from '../composables/editor/useMathEditor'
 import { useFormulaEditor } from '../composables/editor/useFormulaEditor'
@@ -22,6 +27,7 @@ import { useMarkmapEditor } from '../composables/editor/useMarkmapEditor'
 import { useVegaEditor } from '../composables/editor/useVegaEditor'
 import { useLinkEditor } from '../composables/editor/useLinkEditor'
 import { useImageContextMenu } from '../composables/editor/useImageContextMenu'
+import { useEditorContextMenu } from '../composables/editor/useEditorContextMenu'
 import { useEmbedUrlPopover } from '../composables/editor/useEmbedUrlPopover'
 import { useNoteEmbedPicker } from '../composables/editor/useNoteEmbedPicker'
 import { useCalloutIconPicker } from '../composables/editor/useCalloutIconPicker'
@@ -29,6 +35,8 @@ import { useEditorDocStats } from '../composables/editor/useEditorDocStats'
 import { useImageUpload } from '../composables/editor/useImageUpload'
 import { useFileUpload } from '../composables/editor/useFileUpload'
 import { useMediaUpload } from '../composables/editor/useMediaUpload'
+import { useVoiceRecording } from '../composables/editor/useVoiceRecording'
+import { isVoiceRecordingSupported } from '../../tauri/voiceRecording'
 import { useBlockHandle } from '../composables/editor/useBlockHandle'
 import { useDeviceLayout } from '../../composables/useDeviceLayout'
 import { useEditorScrollbar } from '../composables/editor/useEditorScrollbar'
@@ -44,19 +52,21 @@ import {
 import { useWorkspaceEditorPresentation } from '../composables/editor/useWorkspaceEditorPresentation'
 import { useEditorToolbarActions } from '../composables/editor/useEditorToolbarActions'
 import { useWorkspaceEditorCore } from '../composables/editor/useWorkspaceEditorCore'
+import { useFindInNote } from '../composables/editor/useFindInNote'
 import { createWorkspaceEditorOverlayHandlers } from '../composables/editor/createWorkspaceEditorOverlayHandlers'
+import { createMobileBlockMenuTransaction } from '../composables/editor/mobileBlockInsertion'
 import NvPopupMenu from '../../ui/primitives/NvPopupMenu.vue'
 import DocAppearance from './editor/DocAppearance.vue'
 import AiAskModal from './editor/AiAskModal.vue'
 import NoteEmbedPicker from './editor/NoteEmbedPicker.vue'
 import EditorOverlayContainer from './editor/EditorOverlayContainer.vue'
+import EditorFindBar from './editor/EditorFindBar.vue'
 import MobileEditorTabBar from './editor/MobileEditorTabBar.vue'
 import type { WorkspaceBlockNavigationTarget } from '../../types/search'
 import LocalGraphPanel from '../../features/graph/LocalGraphPanel.vue'
 import { ChevronRight, EllipsisVertical } from 'lucide-vue-next'
 import type { TreeNode } from '../../types/note'
 import NoteBreadcrumb from './NoteBreadcrumb.vue'
-import { useCollabStore } from '../../stores/collab'
 import EdgelessCanvasView from '../../features/canvas/EdgelessCanvasView.vue'
 
 const TemplatePickerModal = defineAsyncComponent(() => import('./templates/TemplatePickerModal.vue'))
@@ -151,7 +161,10 @@ const titleInputRef = ref<HTMLTextAreaElement | null>(null)
 
 const localGraphOpen = ref(false)
 const breadcrumbMenuOpen = ref(false)
-const collabStore = useCollabStore()
+// Local workspace asset URLs resolve synchronously (workspaceAssetUrl), so
+// this never needs to increment; it only exists to satisfy the asset-src
+// re-resolution hook shared with a future async-resolving backend.
+const assetRefreshToken = ref(0)
 
 // Core mutable state (non-reactive intentionally)
 const core = createEditorCore()
@@ -163,6 +176,7 @@ const canvasNoteOptions = computed(() => Array.from(treeStore.noteById.values())
   icon: note.icon,
 })))
 const workspaceStore = useWorkspaceStore()
+useFirstUseHint('editorCanvas', { enabled: computed(() => !!props.note) })
 const assetActions = useEditorAssetActions({
   getWorkspacePath: () => props.workspacePath,
   getBackend: () => workspaceStore.backend,
@@ -171,7 +185,6 @@ const assetActions = useEditorAssetActions({
   clickCoverInput: () => coverImageInputRef.value?.click(),
 })
 const {
-  cloudAssetRefreshToken,
   resolveWorkspaceAssetSrc,
   resolveEditorAssetSrc,
   resolveMediaAssetSrc,
@@ -195,6 +208,14 @@ const showMobileEditorTabBar = computed(() =>
   && Boolean(props.note),
 )
 
+const findInNote = useFindInNote({
+  getView: () => core.editorView,
+  getScrollEl: () => editorScrollEl.value,
+  isAvailable: () => Boolean(props.note) && props.viewMode === 'document' && Boolean(core.editorView),
+})
+
+watch(() => [props.note?.id, props.viewMode], () => findInNote.reset())
+
 // Overlays
 const overlays = useEditorOverlays(core, {
   getSlashMenuEl: () => overlayContainerRef.value?.slashMenuEl ?? null,
@@ -205,6 +226,7 @@ const overlays = useEditorOverlays(core, {
 const { slashOverlay, toolbarOverlay, tableMenuOverlay, linkPopover, highlightPicker, textColorPicker, mathPopover, formulaPopover, mermaidPopover, queryPopover, markmapPopover, vegaPopover, pluginNodePopover, linkPickerOverlay, activeMarkNames } = overlays
 
 const { imageCtxMenu, imageMenuItems, openImageContextMenu } = useImageContextMenu(() => props.workspacePath)
+const { ctxMenu: editorCtxMenu, menuItems: editorMenuItems, openContextMenu: openEditorContextMenu } = useEditorContextMenu(core, () => props.note?.id ?? null)
 
 const {
   embedUrlPopover,
@@ -345,7 +367,8 @@ const linkEditor = useLinkEditor(
 
 const imageUpload = useImageUpload(core, () => props.workspacePath, overlays.updateOverlays)
 const fileUpload = useFileUpload(core, () => props.workspacePath, overlays.updateOverlays)
-const mediaUpload = useMediaUpload(core, () => props.workspacePath, overlays.updateOverlays, () => workspaceStore.backend)
+const mediaUpload = useMediaUpload(core, () => props.workspacePath, overlays.updateOverlays)
+const voiceRecording = useVoiceRecording(core, () => props.workspacePath, overlays.updateOverlays)
 const notePreload = useNotePreload()
 
 const insertTemplatePickerOpen = ref(false)
@@ -404,7 +427,10 @@ const {
   closeEmbedUrlPopover,
   emitContentUpdate: (content) => emit('update:content', content),
   emitContentDirty: () => emit('content-dirty'),
-  onTransactionDoc,
+  onTransactionDoc: (doc) => {
+    onTransactionDoc(doc)
+    findInNote.onEditorTransaction()
+  },
   scheduleGraphUpdate,
   markRemovedEditorAssets: assetActions.markRemovedEditorAssets,
   openInternalLink: (noteId, anchor) => {
@@ -420,10 +446,12 @@ const {
   requestImageInput: () => imageInputRef.value?.click(),
   onImagePaste: imageUpload.onEditorPaste,
   openImageContextMenu,
+  onContextMenuRequest: openEditorContextMenu,
   pickAndInsertFile: fileUpload.pickAndInsertFile,
   requestFileInput: () => fileInputRef.value?.click(),
   openFileAsset,
   requestMediaPicker: mediaUpload.requestMediaPicker,
+  voiceRecording: isVoiceRecordingSupported() ? voiceRecording.bindings : undefined,
   openNoteEmbedPicker,
   openEmbedUrlPopover,
   openNoteEmbed: openNoteById,
@@ -449,8 +477,9 @@ const {
 function openMobileBlockMenu() {
   const view = core.editorView
   if (!view) return
-  const { from, to } = view.state.selection
-  view.dispatch(view.state.tr.insertText('/', from, to).scrollIntoView())
+  const tr = createMobileBlockMenuTransaction(view.state)
+  if (!tr) return
+  view.dispatch(tr)
   view.focus()
   overlays.updateOverlays()
 }
@@ -563,6 +592,7 @@ const {
     { isActive: () => markmapPopover.open, reposition: markmapEditor.repositionMarkmapPopover },
     { isActive: () => vegaPopover.open, reposition: vegaEditor.repositionVegaPopover },
     { isActive: () => pluginNodePopover.open, reposition: pluginNodeEditor.reposition },
+    { isActive: () => blockHandle.visible, reposition: blockHandleComposable.reposition },
   ],
 })
 
@@ -617,13 +647,14 @@ const {
   breadcrumbMenuItems,
   resizeTitle,
   onTitleInput,
+  onTitleKeyDown,
 } = useWorkspaceEditorPresentation({
   getNote: () => props.note,
   getSettings: () => props.settings,
   getContainerKind: () => props.containerKind,
   getContainerItems: () => props.containerItems,
   getScrollbarDragging: () => scrollbarDragging.value,
-  workspaceAssetRefreshToken: cloudAssetRefreshToken,
+  workspaceAssetRefreshToken: assetRefreshToken,
   resolveWorkspaceAssetSrc,
   titleInputRef,
   localGraphOpen,
@@ -631,7 +662,17 @@ const {
   emitTitle: (title) => emit('update:title', title),
   requestExport: (format) => emit('request-export', format),
   requestMarkdownImport: () => emit('request-import-md'),
+  openFindInNote: () => { openFindInNote() },
+  onTitleEnter: () => {
+    if (core.editorView) {
+      focusEditorFirstBlock(core.editorView)
+    }
+  },
 })
+
+function openFindInNote(withReplace?: boolean): boolean {
+  return findInNote.openFind({ withReplace })
+}
 
 function closeEditorUi() {
   closeSlashEmojiPicker()
@@ -659,7 +700,6 @@ const editorLifecycle = useWorkspaceEditorLifecycle({
     ? `${props.pendingDrawUpdate.drawId}:${props.pendingDrawUpdate.src}`
     : null,
   getTreeSize: () => treeStore.noteById.size,
-  getCollabSessionNoteId: () => collabStore.sessionNoteId,
   isPluginRuntimeReady: () => pluginRuntime?.initialized.value ?? false,
   isPluginRuntimePaused: () => pluginRuntime?.paused.value ?? false,
   mountBlockHandle: blockHandleComposable.mount,
@@ -679,7 +719,6 @@ const editorLifecycle = useWorkspaceEditorLifecycle({
   applyPendingDrawUpdate: documentActions.applyPendingDrawUpdateIfReady,
   afterSuccessfulSave: assetActions.afterSuccessfulSave,
   flushPendingContent,
-  leaveCollabSession: collabStore.leaveSession,
   loadNoteGraph: graphStore.loadNoteGraph,
   clearGraph: graphStore.clear,
   onDocumentMouseDown,
@@ -703,12 +742,12 @@ pluginRuntime = useEditorPluginRuntime({
 })
 const { dispatchPluginUiEvent } = pluginRuntime
 
-defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup.flushYjsPersistenceNow, updateDrawBlock, dispatchPluginUiEvent })
+defineExpose({ editorRoot, flushPendingContent, updateDrawBlock, dispatchPluginUiEvent, openFindInNote })
 </script>
 
 <template>
   <main
-    class="editor-pane"
+    class="editor-pane tw:relative tw:z-1 tw:flex tw:min-h-0 tw:min-w-0 tw:flex-1 tw:flex-col tw:overflow-hidden"
     :class="{
       'editor-pane--with-graph': localGraphOpen && note,
       'editor-pane--focus-soft': props.settings.editor.focusMode === 'soft',
@@ -716,58 +755,60 @@ defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup
       'editor-pane--mobile-tab-bar': showMobileEditorTabBar,
     }"
   >
-    <section v-if="showContainerOverview" class="container-overview">
-      <header class="container-overview__header">
-        <p class="container-overview__eyebrow">
+    <section v-if="showContainerOverview" class="container-overview tw:min-h-0 tw:flex-1 tw:overflow-y-auto tw:px-6 tw:pt-8 tw:pb-10 tw:max-[900px]:px-4 tw:max-[900px]:pt-6 tw:max-[900px]:pb-7">
+      <header class="container-overview__header tw:mx-auto tw:mb-6 tw:w-[min(100%,960px)] tw:px-2">
+        <p class="container-overview__eyebrow tw:mt-0 tw:mb-2 tw:font-nv-mono tw:text-xs tw:tracking-[0.08em] tw:text-content-muted tw:uppercase">
           {{ props.containerKind === 'folder' ? t('workspace.emptyFolderTitle', { folder: props.containerTitle }) : t('workspace.localWorkspace') }}
         </p>
-        <h2 class="container-overview__title">{{ props.containerTitle }}</h2>
+        <h2 class="container-overview__title tw:m-0 tw:[font-family:var(--font-serif)] tw:text-[clamp(30px,4vw,44px)] tw:leading-[1.08] tw:font-normal tw:text-content-primary">{{ props.containerTitle }}</h2>
       </header>
 
-      <div class="container-overview__list">
+      <div class="container-overview__list tw:mx-auto tw:flex tw:w-[min(100%,960px)] tw:flex-col tw:gap-2.5">
         <button
           v-for="item in props.containerItems"
           :key="item.meta.id"
           type="button"
-          class="container-overview__item"
+          class="container-overview__item tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-3.5 tw:rounded-[calc(18px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle tw:px-[18px] tw:py-4 tw:text-left tw:text-content-primary tw:transition-[transform,border-color,background] tw:duration-120 tw:hover:-translate-y-px tw:hover:bg-[color-mix(in_oklab,var(--hover)_78%,transparent)] tw:max-[900px]:rounded-[calc(16px*var(--radius-scale,1))] tw:max-[900px]:px-4 tw:max-[900px]:py-3.5"
           :class="`container-overview__item--${item.kind}`"
           @click="item.kind === 'folder' ? emit('open-folder', item.meta.id) : emit('open-note', item.meta.id)"
         >
-          <span class="container-overview__item-icon" aria-hidden="true">
+          <span class="container-overview__item-icon tw:inline-flex tw:h-[38px] tw:w-[38px] tw:shrink-0 tw:items-center tw:justify-center tw:gap-1 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:bg-[color-mix(in_oklab,var(--accent-soft)_68%,transparent)] tw:text-content-secondary" aria-hidden="true">
             <NvNoteIcon v-if="item.kind === 'folder'" :value="item.meta.icon || '📁'" :size="18" />
             <NvNoteIcon v-else :value="item.meta.icon || '📄'" :size="18" />
           </span>
-          <span class="container-overview__item-copy">
-            <span class="container-overview__item-title">{{ item.kind === 'folder' ? item.meta.title : item.meta.title }}</span>
-            <span class="container-overview__item-kind">
+          <span class="container-overview__item-copy tw:flex tw:min-w-0 tw:flex-1 tw:flex-col tw:gap-0.5">
+            <span class="container-overview__item-title tw:min-w-0 tw:truncate tw:text-[15px] tw:font-semibold">{{ item.kind === 'folder' ? item.meta.title : item.meta.title }}</span>
+            <span class="container-overview__item-kind tw:text-xs tw:text-content-muted">
               {{ item.kind === 'folder' ? t('workspace.createFolder') : t('workspace.createNote') }}
             </span>
           </span>
-          <ChevronRight :size="14" class="container-overview__item-arrow" aria-hidden="true" />
+          <ChevronRight :size="14" class="container-overview__item-arrow tw:shrink-0 tw:text-content-muted" aria-hidden="true" />
         </button>
       </div>
     </section>
 
-    <div v-else-if="!note" class="editor-empty">
-      <h2>{{ isFolderEmptyState ? t('workspace.emptyFolderTitle', { folder: props.containerTitle }) : t('workspace.emptyTitle') }}</h2>
-      <p>{{ isFolderEmptyState ? t('workspace.emptyFolderSubtitle') : t('workspace.emptySubtitle') }}</p>
+    <div v-else-if="!note" class="editor-empty tw:m-auto tw:max-w-[520px] tw:p-5 tw:text-center">
+      <h2 class="tw:m-0 tw:[font-family:var(--font-serif)] tw:text-[38px] tw:font-normal tw:text-content-primary">{{ isFolderEmptyState ? t('workspace.emptyFolderTitle', { folder: props.containerTitle }) : t('workspace.emptyTitle') }}</h2>
+      <p class="tw:mt-2.5 tw:mb-5 tw:text-sm tw:leading-[1.6] tw:text-content-muted">{{ isFolderEmptyState ? t('workspace.emptyFolderSubtitle') : t('workspace.emptySubtitle') }}</p>
       <button class="nv-btn nv-btn--primary" @click="emit('create-note')">{{ t('workspace.createNote') }}</button>
     </div>
 
-    <div v-else class="editor-doc">
+    <div v-else class="editor-doc tw:flex tw:min-h-0 tw:flex-1 tw:flex-col tw:overflow-hidden tw:bg-(--workspace-editor-surface)">
       <NoteBreadcrumb :note="note">
         <template #actions>
-          <div class="note-view-switcher" role="group" :aria-label="t('workspace.canvas.viewSwitcher')">
+          <div data-hint="editorCanvas" class="note-view-switcher tw:inline-flex tw:min-h-8 tw:items-center tw:gap-0.5 tw:rounded-[10px] tw:border tw:border-solid tw:border-(--border-subtle) tw:bg-surface-subtle tw:p-[3px]" role="group" :aria-label="t('workspace.canvas.viewSwitcher')">
             <button
               type="button"
-              :class="{ 'note-view-switcher__button--active': props.viewMode === 'document' }"
+              class="tw:min-h-[26px] tw:rounded-[7px] tw:border-0 tw:px-[9px] tw:font-nv-ui tw:text-xs tw:hover:text-content-primary tw:focus-visible:outline-2 tw:focus-visible:outline-offset-1 tw:focus-visible:outline-accent tw:max-[719px]:min-h-[34px] tw:max-[719px]:min-w-[42px] tw:max-[719px]:px-2"
+              :class="props.viewMode === 'document' ? 'note-view-switcher__button--active tw:bg-(--surface-elevated) tw:text-content-primary tw:shadow-(--shadow-sm)' : 'tw:bg-transparent tw:text-(--text-tertiary)'"
               @click="emit('change-view', 'document')"
             >
               {{ t('workspace.canvas.document') }}
             </button>
             <button
               type="button"
-              :class="{ 'note-view-switcher__button--active': props.viewMode === 'canvas' }"
+              class="tw:min-h-[26px] tw:rounded-[7px] tw:border-0 tw:px-[9px] tw:font-nv-ui tw:text-xs tw:hover:text-content-primary tw:focus-visible:outline-2 tw:focus-visible:outline-offset-1 tw:focus-visible:outline-accent tw:max-[719px]:min-h-[34px] tw:max-[719px]:min-w-[42px] tw:max-[719px]:px-2"
+              :class="props.viewMode === 'canvas' ? 'note-view-switcher__button--active tw:bg-(--surface-elevated) tw:text-content-primary tw:shadow-(--shadow-sm)' : 'tw:bg-transparent tw:text-(--text-tertiary)'"
               @click="emit('change-view', 'canvas')"
             >
               {{ t('workspace.canvas.canvas') }}
@@ -782,8 +823,8 @@ defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup
             <template #trigger>
               <button
                 type="button"
-                class="breadcrumb-action-btn"
-                :class="{ 'breadcrumb-action-btn--active': breadcrumbMenuOpen }"
+                class="breadcrumb-action-btn tw:grid tw:size-7 tw:cursor-pointer tw:place-items-center tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border-0 tw:transition-[background,color] tw:duration-120"
+                :class="breadcrumbMenuOpen ? 'breadcrumb-action-btn--active tw:bg-[color-mix(in_oklab,var(--accent)_12%,transparent)] tw:text-accent' : 'tw:bg-transparent tw:text-content-muted tw:hover:bg-(--hover) tw:hover:text-content-secondary'"
                 :aria-label="t('onboarding.open.moreOptions')"
                 :title="t('onboarding.open.moreOptions')"
               >
@@ -794,22 +835,44 @@ defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup
         </template>
       </NoteBreadcrumb>
 
-      <div class="editor-doc-body">
+      <div class="editor-doc-body tw:flex tw:min-h-0 tw:flex-1 tw:overflow-hidden">
         <div
           ref="editorWrapEl"
-          class="doc-body-wrap"
+          class="doc-body-wrap tw:relative tw:flex tw:min-h-0 tw:min-w-0 tw:flex-1 tw:flex-col tw:overflow-hidden"
           @mouseenter="onEditorMouseEnter"
           @mouseleave="onEditorMouseLeave"
         >
+          <EditorFindBar
+            v-if="props.viewMode === 'document'"
+            v-model:query="findInNote.query.value"
+            v-model:replacement="findInNote.replacement.value"
+            v-model:case-sensitive="findInNote.caseSensitive.value"
+            v-model:whole-word="findInNote.wholeWord.value"
+            v-model:regex="findInNote.regex.value"
+            :open="findInNote.open.value"
+            :replace-open="findInNote.replaceOpen.value"
+            :match-count="findInNote.matchCount.value"
+            :active-index="findInNote.activeIndex.value"
+            :has-error="findInNote.hasError.value"
+            :error-reason="findInNote.errorReason.value"
+            :truncated="findInNote.truncated.value"
+            :focus-token="findInNote.focusToken.value"
+            @next="findInNote.next"
+            @prev="findInNote.prev"
+            @replace="findInNote.replaceOne"
+            @replace-all="findInNote.replaceAll"
+            @toggle-replace="findInNote.replaceOpen.value = !findInNote.replaceOpen.value"
+            @close="findInNote.close()"
+          />
           <section
             ref="editorScrollEl"
-            class="doc-body"
+            class="doc-body tw:m-0 tw:flex tw:min-h-0 tw:min-w-0 tw:w-full tw:flex-1 tw:flex-col tw:gap-3.5 tw:overflow-x-hidden tw:overflow-y-auto tw:overscroll-contain tw:pt-3.5 tw:pb-12 tw:max-[900px]:pt-4 tw:max-[900px]:pb-8"
             :class="editorBodyClasses"
             @scroll="handleEditorScroll"
           >
-            <!-- Keyed per note: the canvas binds to one note's Y.Doc and editor
-                 view, so reusing the instance across a note switch would leave
-                 it driving the previous note's document. -->
+            <!-- Keyed per note: the canvas binds to one note's editor view, so
+                 reusing the instance across a note switch would leave it
+                 driving the previous note's editor. -->
             <EdgelessCanvasView
               v-if="props.viewMode === 'canvas' && props.note && props.workspaceId"
               :key="props.note.id"
@@ -817,12 +880,10 @@ defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup
               :workspace-id="props.workspaceId"
               :title="props.note.title"
               :mirror="props.note.canvas"
-              :asset-refresh-token="cloudAssetRefreshToken"
+              :asset-refresh-token="assetRefreshToken"
               :resolve-asset-src="resolveWorkspaceAssetSrc"
               :get-workspace-backend="() => workspaceStore.backend"
               :get-editor-view="() => core.editorView"
-              :get-y-doc="() => core.ydoc"
-              :get-awareness="() => core.awareness"
               :notes="canvasNoteOptions"
               @update:mirror="emit('update:canvas', $event)"
               @open-note="emit('open-note', $event)"
@@ -838,11 +899,11 @@ defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup
               @remove-cover="updateCover(null)"
               @request-cover-image="onRequestCoverImage"
             />
-            <div class="doc-content" :style="editorContentStyle">
-              <div class="doc-title-row">
+            <div class="doc-content tw:mx-auto tw:flex tw:w-[min(100%,var(--workspace-editor-line-width,760px))] tw:flex-col tw:gap-3.5 tw:px-16 tw:[font-family:var(--workspace-editor-font-family,var(--font-ui))] tw:max-[900px]:px-5" :style="editorContentStyle">
+              <div class="doc-title-row tw:flex tw:flex-col tw:items-start tw:gap-3">
                 <button
                   type="button"
-                  class="doc-title-emoji"
+                  class="doc-title-emoji tw:inline-flex tw:h-[58px] tw:w-[58px] tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-[calc(18px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-(--workspace-control-border) tw:bg-(--workspace-sidebar-header-surface) tw:text-content-primary tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-accent tw:max-[900px]:h-10 tw:max-[900px]:w-10"
                   :aria-label="noteIconButtonLabel"
                   @click="docAppearanceRef?.openIconPicker()"
                 >
@@ -850,16 +911,17 @@ defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup
                 </button>
                 <textarea
                   ref="titleInputRef"
-                  class="doc-title"
+                  class="doc-title tw:min-w-0 tw:w-full tw:resize-none tw:overflow-hidden tw:border-0 tw:bg-transparent tw:px-0 tw:py-1 tw:font-nv-ui tw:text-[clamp(34px,3vw,44px)] tw:leading-[1.12] tw:font-[650] tw:tracking-[-0.035em] tw:text-content-primary tw:outline-none tw:placeholder:text-content-muted"
                   rows="1"
                   :value="note.title"
                   :placeholder="t('workspace.titlePlaceholder')"
                   @input="onTitleInput"
+                  @keydown="onTitleKeyDown"
                 />
               </div>
               <div
                 ref="editorRoot"
-                class="doc-editor"
+                class="doc-editor tw:min-h-[280px] tw:w-full tw:flex-1"
                 :class="{ 'colored-headings': props.settings.appearance.accentColoredHeadings }"
                 :aria-label="t('workspace.contentPlaceholder')"
                 @dragover="imageUpload.onEditorDragOver"
@@ -868,15 +930,15 @@ defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup
             </div>
           </section>
 
-          <div v-if="editorWordCount" class="editor-stats-corner" aria-hidden="true">
+          <div v-if="editorWordCount" class="editor-stats-corner tw:pointer-events-none tw:absolute tw:right-[18px] tw:bottom-3 tw:z-2 tw:flex tw:select-none tw:items-center tw:gap-1 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle tw:px-2 tw:py-[3px] tw:font-nv-mono tw:text-[11px] tw:text-content-muted" aria-hidden="true">
             <span>{{ editorWordCount.words }} w</span>
-            <span class="editor-stats-sep">·</span>
+            <span class="editor-stats-sep tw:opacity-50">·</span>
             <span>{{ editorWordCount.chars }} ch</span>
           </div>
 
           <div
             v-show="!isTouch && scrollbarScrollable"
-            class="editor-scrollbar"
+            class="editor-scrollbar tw:absolute tw:top-2 tw:right-[3px] tw:bottom-3 tw:w-1.5 tw:opacity-0 tw:transition-opacity tw:duration-140 tw:max-[900px]:right-0.5 tw:motion-reduce:transition-none"
             :class="{
               'editor-scrollbar--visible': scrollbarVisible,
               'editor-scrollbar--dragging': scrollbarDragging,
@@ -885,12 +947,12 @@ defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup
           >
             <div
               ref="scrollbarTrackEl"
-              class="editor-scrollbar__track"
+              class="editor-scrollbar__track tw:relative tw:h-full tw:w-full tw:rounded-full tw:bg-[color-mix(in_oklab,var(--text-secondary)_5%,transparent)]"
               aria-hidden="true"
               @mousedown="onScrollbarTrackMouseDown"
             >
               <div
-                class="editor-scrollbar__thumb"
+                class="editor-scrollbar__thumb tw:absolute tw:top-0 tw:left-0 tw:w-full tw:cursor-grab tw:rounded-full tw:border-0 tw:bg-[color-mix(in_oklab,var(--text-secondary)_35%,transparent)] tw:p-0 tw:transition-colors tw:duration-120 tw:hover:bg-[color-mix(in_oklab,var(--text-secondary)_55%,transparent)] tw:motion-reduce:transition-none"
                 :style="scrollbarStyle"
                 aria-hidden="true"
                 @mousedown="onScrollbarThumbMouseDown"
@@ -910,21 +972,21 @@ defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup
 
     <input
       ref="imageInputRef"
-      class="image-file-input"
+      class="image-file-input tw:hidden"
       type="file"
       accept="image/*"
       @change="imageUpload.onImageInputChange"
     />
     <input
       ref="coverImageInputRef"
-      class="image-file-input"
+      class="image-file-input tw:hidden"
       type="file"
       accept="image/*"
       @change="onCoverImageInputChange"
     />
     <input
       ref="fileInputRef"
-      class="image-file-input"
+      class="image-file-input tw:hidden"
       type="file"
       @change="fileUpload.onFileInputChange"
     />
@@ -935,6 +997,13 @@ defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup
       :open="aiAskOpen"
       @confirm="confirmAiAsk"
       @cancel="cancelAiAsk"
+    />
+
+    <NvPopupMenu
+      v-model:open="editorCtxMenu.open"
+      :position="editorCtxMenu.pos"
+      :items="editorMenuItems"
+      width="192px"
     />
 
     <NvPopupMenu
@@ -985,6 +1054,7 @@ defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup
     :plugin-actions="core.toolbarPluginActions"
     :current-note-id="props.note?.id"
     :slash-emoji-picker-open="slashEmojiPickerOpen"
+    :slash-menu-layout="props.settings.editor.slashMenuLayout"
     :handlers="overlayHandlers"
   />
 
@@ -1000,43 +1070,6 @@ defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup
 </template>
 
 <style scoped>
-.note-view-switcher {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  min-height: 32px;
-  padding: 3px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  background: var(--surface-subtle);
-}
-
-.note-view-switcher button {
-  min-height: 26px;
-  padding: 0 9px;
-  border: 0;
-  border-radius: 7px;
-  color: var(--text-tertiary);
-  font: inherit;
-  font-size: 12px;
-  background: transparent;
-}
-
-.note-view-switcher button:hover {
-  color: var(--text-primary);
-}
-
-.note-view-switcher button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-.note-view-switcher__button--active {
-  color: var(--text-primary) !important;
-  background: var(--surface-elevated) !important;
-  box-shadow: var(--shadow-sm);
-}
-
 @media (max-width: 719px) {
   .editor-pane--mobile-tab-bar .doc-body {
     padding-bottom:
@@ -1062,10 +1095,5 @@ defineExpose({ editorRoot, flushPendingContent, flushYjsPersistence: editorSetup
       );
   }
 
-  .note-view-switcher button {
-    min-width: 42px;
-    min-height: 34px;
-    padding: 0 8px;
-  }
 }
 </style>

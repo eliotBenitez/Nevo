@@ -1,0 +1,31 @@
+/* NvModal keeps global hooks for dialog-specific overrides and transitions. */
+.nv-modal {
+  padding:
+    max(var(--safe-area-top), 16px)
+    max(var(--safe-area-right), 16px)
+    max(var(--safe-area-bottom), 16px)
+    max(var(--safe-area-left), 16px);
+}
+
+.nv-modal-enter-active,
+.nv-modal-leave-active { transition: opacity var(--dur-base) var(--ease-out); }
+.nv-modal-enter-active .nv-modal__panel,
+.nv-modal-leave-active .nv-modal__panel { transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out); }
+.nv-modal-enter-from,
+.nv-modal-leave-to { opacity: 0; }
+.nv-modal-enter-from .nv-modal__panel,
+.nv-modal-leave-to .nv-modal__panel { opacity: 0; transform: translateY(8px) scale(0.985); }
+
+@media (prefers-reduced-motion: reduce) {
+  .nv-modal-enter-active,
+  .nv-modal-leave-active,
+  .nv-modal-enter-active .nv-modal__panel,
+  .nv-modal-leave-active .nv-modal__panel { transition-duration: 0.01ms; }
+  .nv-modal-enter-from .nv-modal__panel,
+  .nv-modal-leave-to .nv-modal__panel { transform: none; }
+}
+
+@media (max-width: 560px) {
+  .nv-modal { place-items: end stretch; padding: 0; }
+  .nv-modal__panel { border-radius: 0; }
+}

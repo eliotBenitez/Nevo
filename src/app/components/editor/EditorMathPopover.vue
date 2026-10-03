@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { editorPopupInputClass } from './editorPopupClasses'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import EditorPopupPanel from './EditorPopupPanel.vue'
@@ -154,7 +155,7 @@ function onKeyDown(event: KeyboardEvent) {
     <textarea
       id="math-input"
       ref="textareaRef"
-      class="editor-popup-panel__input"
+      class="editor-popup-panel__input" :class="editorPopupInputClass"
       :value="latex"
       :rows="isInline ? 3 : 6"
       :placeholder="t('workspace.mathPlaceholder')"
@@ -165,18 +166,18 @@ function onKeyDown(event: KeyboardEvent) {
       @keyup="syncSelection"
       @select="syncSelection"
     />
-    <div v-if="suggestions.length > 0" class="math-popover__suggestions">
+    <div v-if="suggestions.length > 0" class="math-popover__suggestions tw:grid tw:max-h-[min(240px,38vh)] tw:gap-1.5 tw:overflow-y-auto tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle tw:p-1.5">
       <button
         v-for="(item, index) in suggestions"
         :key="item.command"
         type="button"
-        class="math-popover__suggestion"
-        :class="{ 'is-active': index === activeSuggestionIndex }"
+        class="math-popover__suggestion tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:justify-between tw:gap-4 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border-0 tw:px-2.5 tw:py-2 tw:text-left tw:font-nv-ui tw:text-content-primary"
+        :class="index === activeSuggestionIndex ? 'is-active tw:bg-[color-mix(in_oklab,var(--accent-soft)_72%,transparent)]' : 'tw:bg-transparent'"
         @mousedown.prevent
         @click="selectSuggestion(index)"
       >
-        <span class="math-popover__suggestion-command">{{ item.command }}</span>
-        <span v-if="item.insertText !== item.command" class="math-popover__suggestion-preview">{{ item.insertText }}</span>
+        <span class="math-popover__suggestion-command tw:font-nv-mono tw:text-xs tw:leading-[1.4]">{{ item.command }}</span>
+        <span v-if="item.insertText !== item.command" class="math-popover__suggestion-preview tw:font-nv-mono tw:text-xs tw:leading-[1.4] tw:text-content-muted">{{ item.insertText }}</span>
       </button>
     </div>
   </EditorPopupPanel>

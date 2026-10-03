@@ -14,6 +14,8 @@ import {
 } from '../../utils/colorConversion'
 import { usePopupPosition } from '../composables/usePopupPosition'
 import type { Placement } from './menu-types'
+import ColorSwatchGrid from './color-picker/ColorSwatchGrid.vue'
+import ColorCustomEditor from './color-picker/ColorCustomEditor.vue'
 
 type DisplayMode = 'popover' | 'inline'
 
@@ -27,11 +29,19 @@ const props = withDefaults(
     variant?: 'default' | 'inline'
     display?: DisplayMode
     hideCustom?: boolean
+    /** `swatch` renders a compact square color button; pair it with `triggerLabel`. */
+    trigger?: 'default' | 'swatch'
+    triggerLabel?: string
+    /** Disables the `swatch` trigger. */
+    disabled?: boolean
   }>(),
   {
     allowNone: false,
     variant: 'default',
     hideCustom: false,
+    trigger: 'default',
+    triggerLabel: undefined,
+    disabled: false,
     modelValue: undefined,
     colors: undefined,
     display: undefined,
@@ -40,6 +50,11 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   'update:modelValue': [value: string | null]
+}>()
+
+defineSlots<{
+  /** Extra popover sections rendered between the swatch grid and the custom editor. */
+  sections?: (props: { select: (color: string) => void }) => unknown
 }>()
 
 const { t } = useI18n()
@@ -87,7 +102,7 @@ const selectedOption = computed(() => {
 
 const selectedSolidHex = computed(() => normalizeHex(props.modelValue))
 const activeHex = computed(() => selectedSolidHex.value ?? customHex.value)
-const triggerLabel = computed(() => {
+const defaultTriggerLabel = computed(() => {
   if (!props.modelValue) return props.allowNone ? t('editor.colorPicker.none') : t('editor.colorPicker.color')
   if (selectedOption.value?.label) return selectedOption.value.label
   return selectedSolidHex.value?.toUpperCase() ?? t('editor.colorPicker.presets')
@@ -332,28 +347,54 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="nv-color-picker" :class="[`nv-color-picker--${effectiveDisplay}`, `nv-color-picker--variant-${variant}`]">
+  <div
+    class="nv-color-picker tw:min-w-0"
+    :class="[`nv-color-picker--${effectiveDisplay}`, `nv-color-picker--variant-${variant}`, effectiveDisplay === 'inline' && 'tw:w-full']"
+  >
     <button
-      v-if="effectiveDisplay === 'popover'"
+      v-if="effectiveDisplay === 'popover' && trigger === 'swatch'"
       ref="triggerRef"
       type="button"
-      class="nv-color-picker__trigger"
-      :class="{ 'is-open': isOpen, 'is-empty': !modelValue }"
+      class="nv-color-picker__trigger nv-color-picker__trigger--swatch tw:cursor-pointer tw:rounded-[calc(7px*var(--radius-scale,1))] tw:border tw:border-solid tw:p-0 tw:transition-[border-color,box-shadow] tw:duration-[120ms] tw:hover:border-[color-mix(in_oklab,var(--accent)_42%,var(--border-default))] tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-2"
+      :class="[{ 'is-open': isOpen, 'is-empty': !modelValue }, isOpen ? 'tw:border-[color-mix(in_oklab,var(--accent)_42%,var(--border-default))]' : 'tw:border-line-default']"
+      :style="previewStyle"
+      :aria-label="triggerLabel ?? defaultTriggerLabel"
+      :title="triggerLabel ?? defaultTriggerLabel"
+      aria-haspopup="dialog"
+      :aria-expanded="isOpen"
+      :disabled="disabled"
+      @click="togglePopover"
+    />
+    <button
+      v-else-if="effectiveDisplay === 'popover'"
+      ref="triggerRef"
+      type="button"
+      class="nv-color-picker__trigger tw:inline-flex tw:h-8 tw:min-w-[156px] tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:px-[9px] tw:font-nv-ui tw:text-xs tw:font-medium tw:text-content-primary tw:transition-[border-color,background-color,box-shadow] tw:duration-[120ms] tw:hover:border-[color-mix(in_oklab,var(--accent)_42%,var(--border-default))] tw:hover:bg-(--surface-overlay) tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-2"
+      :class="[
+        { 'is-open': isOpen, 'is-empty': !modelValue },
+        isOpen
+          ? 'tw:border-[color-mix(in_oklab,var(--accent)_42%,var(--border-default))] tw:bg-(--surface-overlay)'
+          : 'tw:border-line-default tw:bg-(--hover)',
+      ]"
       aria-haspopup="dialog"
       :aria-expanded="isOpen"
       @click="togglePopover"
     >
-      <span class="nv-color-picker__trigger-swatch" :style="previewStyle" />
-      <span class="nv-color-picker__trigger-label">{{ triggerLabel }}</span>
-      <ChevronDown :size="13" class="nv-color-picker__trigger-caret" />
+      <span class="nv-color-picker__trigger-swatch tw:h-[18px] tw:w-[18px] tw:shrink-0 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-[color-mix(in_oklab,var(--border-default)_70%,transparent)] tw:shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--shadow)_12%,transparent)]" :style="previewStyle" />
+      <span class="nv-color-picker__trigger-label tw:min-w-0 tw:flex-1 tw:overflow-hidden tw:text-left tw:text-ellipsis tw:whitespace-nowrap">{{ defaultTriggerLabel }}</span>
+      <ChevronDown :size="13" class="nv-color-picker__trigger-caret tw:shrink-0 tw:text-content-muted" />
     </button>
 
     <Teleport to="body" :disabled="effectiveDisplay === 'inline'">
       <div
         v-if="effectiveDisplay === 'inline' || isOpen"
         ref="panelRef"
-        class="nv-color-picker__panel"
-        :class="{ 'nv-color-picker__panel--popover': effectiveDisplay === 'popover' }"
+        class="nv-color-picker__panel tw:w-full tw:max-w-full tw:min-w-0 tw:focus:outline-none"
+        :class="[
+          { 'nv-color-picker__panel--popover': effectiveDisplay === 'popover' },
+          effectiveDisplay === 'inline' && 'tw:grid tw:grid-cols-[minmax(0,1fr)_auto] tw:items-start tw:gap-2 tw:max-[560px]:grid-cols-1',
+          effectiveDisplay === 'popover' && 'tw:fixed tw:z-[420] tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--menu-bg) tw:p-2.5 tw:shadow-(--menu-shadow)',
+        ]"
         :style="effectiveDisplay === 'popover'
           ? {
             top: `${popoverPos.top}px`,
@@ -366,83 +407,60 @@ onBeforeUnmount(() => {
         :aria-label="t('editor.colorPicker.picker')"
         tabindex="-1"
       >
-        <div class="nv-color-picker__grid" :aria-label="t('editor.colorPicker.presets')">
-          <button
-            v-for="opt in resolvedColors"
-            :key="opt.color"
-            type="button"
-            class="nv-color-picker__swatch"
-            :class="{ 'is-selected': colorsMatch(opt.color, modelValue ?? null) }"
-            :style="{ background: opt.color }"
-            :aria-label="opt.label ?? opt.color"
-            :title="opt.label ?? opt.color"
-            @click="selectPreset(opt.color)"
-          />
-        </div>
+        <ColorSwatchGrid
+          :colors="resolvedColors"
+          :model-value="modelValue ?? null"
+          :popover="effectiveDisplay === 'popover'"
+          :grid-label="t('editor.colorPicker.presets')"
+          @select="selectPreset"
+        />
 
-        <div v-if="!hideCustom && effectiveDisplay === 'popover'" class="nv-color-picker__custom">
-          <div class="nv-color-picker__custom-head">
-            <span class="nv-color-picker__preview" :style="{ background: activeHex }" aria-hidden="true" />
-            <input
-              v-model="hexInput"
-              type="text"
-              class="nv-color-picker__hex"
-              :class="{ 'is-invalid': isHexInvalid }"
-              maxlength="7"
-              placeholder="#000000"
-              spellcheck="false"
-              :aria-label="t('editor.colorPicker.hex')"
-              @input="markHexDirty"
-              @blur="commitHex"
-              @keydown="onHexKeydown"
-            >
-          </div>
+        <slot name="sections" :select="selectPreset" />
 
-          <div
-            class="nv-color-picker__sv"
-            :style="svBackground"
-            role="slider"
-            tabindex="0"
-            :aria-label="t('editor.colorPicker.sv')"
-            :aria-valuetext="activeHex"
-            @pointerdown="onSvPointerDown"
-            @pointermove="onSvPointerMove"
-            @pointerup="onSvPointerUp"
-            @pointercancel="onSvPointerUp"
-          >
-            <span class="nv-color-picker__sv-thumb" :style="svThumbStyle" />
-          </div>
-
-          <label class="nv-color-picker__hue">
-            <span class="nv-color-picker__hue-label">{{ t('editor.colorPicker.hue') }}</span>
-            <input
-              type="range"
-              min="0"
-              max="360"
-              step="1"
-              :value="hue"
-              :aria-label="t('editor.colorPicker.hue')"
-              @input="onHueInput"
-            >
-          </label>
-        </div>
+        <ColorCustomEditor
+          v-if="!hideCustom && effectiveDisplay === 'popover'"
+          v-model:hex-input="hexInput"
+          :active-hex="activeHex"
+          :hex-invalid="isHexInvalid"
+          :sv-background="svBackground"
+          :sv-thumb-style="svThumbStyle"
+          :hue="hue"
+          @hex-input="markHexDirty"
+          @hex-blur="commitHex"
+          @hex-keydown="onHexKeydown"
+          @sv-pointerdown="onSvPointerDown"
+          @sv-pointermove="onSvPointerMove"
+          @sv-pointerup="onSvPointerUp"
+          @hue-input="onHueInput"
+        />
 
         <button
           v-else-if="!hideCustom"
           ref="customTriggerRef"
           type="button"
-          class="nv-color-picker__custom-trigger"
-          :class="{ 'is-open': isCustomOpen, 'is-selected': selectedSolidHex && !selectedOption }"
+          class="nv-color-picker__custom-trigger tw:inline-flex tw:h-7 tw:min-w-[118px] tw:max-w-[138px] tw:max-[560px]:w-full tw:max-[560px]:max-w-none tw:max-[560px]:justify-start tw:cursor-pointer tw:items-center tw:gap-[7px] tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:px-2 tw:font-nv-mono tw:text-[11px] tw:font-semibold tw:tracking-normal tw:transition-[border-color,background-color,color] tw:duration-[120ms] tw:hover:border-[color-mix(in_oklab,var(--accent)_42%,var(--border-default))] tw:hover:bg-(--surface-overlay) tw:hover:text-content-primary tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-2"
+          :class="[
+            { 'is-open': isCustomOpen, 'is-selected': selectedSolidHex && !selectedOption },
+            (isCustomOpen || (selectedSolidHex && !selectedOption))
+              ? 'tw:border-[color-mix(in_oklab,var(--accent)_42%,var(--border-default))] tw:bg-(--surface-overlay) tw:text-content-primary'
+              : 'tw:border-line-default tw:bg-(--hover) tw:text-content-secondary',
+            selectedSolidHex && !selectedOption && 'tw:shadow-[0_0_0_2px_var(--accent-soft)]',
+          ]"
           aria-haspopup="dialog"
           :aria-expanded="isCustomOpen"
           @click="toggleCustomPopover"
         >
-          <span class="nv-color-picker__custom-trigger-swatch" :style="{ background: activeHex }" />
-          <span class="nv-color-picker__custom-trigger-label">{{ activeHex.toUpperCase() }}</span>
-          <ChevronDown :size="13" class="nv-color-picker__trigger-caret" />
+          <span class="nv-color-picker__custom-trigger-swatch tw:h-4 tw:w-4 tw:shrink-0 tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-[color-mix(in_oklab,var(--border-default)_70%,transparent)] tw:shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--shadow)_10%,transparent)]" :style="{ background: activeHex }" />
+          <span class="nv-color-picker__custom-trigger-label tw:min-w-0 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap">{{ activeHex.toUpperCase() }}</span>
+          <ChevronDown :size="13" class="nv-color-picker__trigger-caret tw:shrink-0 tw:text-content-muted" />
         </button>
 
-        <button v-if="allowNone" type="button" class="nv-color-picker__none" @click="clearValue">
+        <button
+          v-if="allowNone"
+          type="button"
+          class="nv-color-picker__none tw:mt-2 tw:cursor-pointer tw:justify-self-start tw:rounded-[calc(7px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-transparent tw:px-2 tw:py-1 tw:font-nv-ui tw:text-[11.5px] tw:font-semibold tw:text-content-muted tw:transition-[background-color,color,border-color] tw:duration-[120ms] tw:hover:border-line-default tw:hover:bg-(--hover) tw:hover:text-content-primary tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-2"
+          @click="clearValue"
+        >
           {{ t('editor.colorPicker.none') }}
         </button>
       </div>
@@ -452,7 +470,7 @@ onBeforeUnmount(() => {
       <div
         v-if="effectiveDisplay === 'inline' && isCustomOpen"
         ref="customPanelRef"
-        class="nv-color-picker__custom-popover"
+        class="nv-color-picker__custom-popover tw:fixed tw:z-[430] tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--menu-bg) tw:p-2.5 tw:shadow-(--menu-shadow)"
         :style="{
           top: `${customPopoverPos.top}px`,
           left: `${customPopoverPos.left}px`,
@@ -463,407 +481,55 @@ onBeforeUnmount(() => {
         :aria-label="t('editor.colorPicker.custom')"
         tabindex="-1"
       >
-        <div class="nv-color-picker__custom nv-color-picker__custom--popup">
-          <div class="nv-color-picker__custom-head">
-            <span class="nv-color-picker__preview" :style="{ background: activeHex }" aria-hidden="true" />
-            <input
-              v-model="hexInput"
-              type="text"
-              class="nv-color-picker__hex"
-              :class="{ 'is-invalid': isHexInvalid }"
-              maxlength="7"
-              placeholder="#000000"
-              spellcheck="false"
-              :aria-label="t('editor.colorPicker.hex')"
-              @input="markHexDirty"
-              @blur="commitHex"
-              @keydown="onHexKeydown"
-            >
-          </div>
-
-          <div
-            class="nv-color-picker__sv"
-            :style="svBackground"
-            role="slider"
-            tabindex="0"
-            :aria-label="t('editor.colorPicker.sv')"
-            :aria-valuetext="activeHex"
-            @pointerdown="onSvPointerDown"
-            @pointermove="onSvPointerMove"
-            @pointerup="onSvPointerUp"
-            @pointercancel="onSvPointerUp"
-          >
-            <span class="nv-color-picker__sv-thumb" :style="svThumbStyle" />
-          </div>
-
-          <label class="nv-color-picker__hue">
-            <span class="nv-color-picker__hue-label">{{ t('editor.colorPicker.hue') }}</span>
-            <input
-              type="range"
-              min="0"
-              max="360"
-              step="1"
-              :value="hue"
-              :aria-label="t('editor.colorPicker.hue')"
-              @input="onHueInput"
-            >
-          </label>
-        </div>
+        <ColorCustomEditor
+          v-model:hex-input="hexInput"
+          popup
+          :active-hex="activeHex"
+          :hex-invalid="isHexInvalid"
+          :sv-background="svBackground"
+          :sv-thumb-style="svThumbStyle"
+          :hue="hue"
+          @hex-input="markHexDirty"
+          @hex-blur="commitHex"
+          @hex-keydown="onHexKeydown"
+          @sv-pointerdown="onSvPointerDown"
+          @sv-pointermove="onSvPointerMove"
+          @sv-pointerup="onSvPointerUp"
+          @hue-input="onHueInput"
+        />
       </div>
     </Teleport>
   </div>
 </template>
 
 <style scoped>
-.nv-color-picker {
-  min-width: 0;
+.nv-color-picker__trigger--swatch:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
-.nv-color-picker--inline {
-  width: 100%;
+.nv-color-picker__trigger--swatch {
+  width: 28px;
+  height: 28px;
+  box-shadow: inset 0 0 0 2px var(--menu-bg, transparent);
 }
 
-.nv-color-picker__trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 156px;
-  height: 32px;
-  padding: 0 9px;
-  border: 1px solid var(--line-2);
-  border-radius: calc(8px * var(--radius-scale, 1));
-  background: var(--hover);
-  color: var(--text-1);
-  font: 500 12px var(--font-ui);
-  cursor: pointer;
-  transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+@media (pointer: coarse) {
+  .nv-color-picker__trigger--swatch {
+    width: 44px;
+    height: 44px;
+  }
 }
 
-.nv-color-picker__trigger:hover,
-.nv-color-picker__trigger.is-open {
-  border-color: color-mix(in oklab, var(--accent) 42%, var(--line-2));
-  background: var(--glass-3);
-}
-
-.nv-color-picker__trigger:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
+/* Transparency checkerboard behind the trigger swatch when no color is selected;
+   the dynamic preview color is applied as an inline style that overrides this. */
 .nv-color-picker__trigger-swatch {
-  width: 18px;
-  height: 18px;
-  flex: 0 0 auto;
-  border: 1px solid color-mix(in oklab, var(--line-2) 70%, transparent);
-  border-radius: calc(6px * var(--radius-scale, 1));
   background:
-    linear-gradient(45deg, var(--line-1) 25%, transparent 25%),
-    linear-gradient(-45deg, var(--line-1) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, var(--line-1) 75%),
-    linear-gradient(-45deg, transparent 75%, var(--line-1) 75%);
+    linear-gradient(45deg, var(--border-subtle) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--border-subtle) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--border-subtle) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--border-subtle) 75%);
   background-size: 8px 8px;
   background-position: 0 0, 0 4px, 4px -4px, -4px 0;
-  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--shadow) 12%, transparent);
-}
-
-.nv-color-picker__trigger-label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: left;
-}
-
-.nv-color-picker__trigger-caret {
-  flex: 0 0 auto;
-  color: var(--text-4);
-}
-
-.nv-color-picker__panel {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-}
-
-.nv-color-picker--inline .nv-color-picker__panel {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: start;
-}
-
-.nv-color-picker__panel--popover {
-  position: fixed;
-  z-index: 420;
-  padding: 10px;
-  border: 1px solid var(--line-2);
-  border-radius: calc(10px * var(--radius-scale, 1));
-  background: var(--glass-3);
-  backdrop-filter: blur(32px) saturate(160%);
-  -webkit-backdrop-filter: blur(32px) saturate(160%);
-  box-shadow: 0 18px 44px color-mix(in oklab, var(--shadow) 24%, transparent);
-}
-
-.nv-color-picker__custom-popover {
-  position: fixed;
-  z-index: 430;
-  padding: 10px;
-  border: 1px solid var(--line-2);
-  border-radius: calc(10px * var(--radius-scale, 1));
-  background: var(--glass-3);
-  backdrop-filter: blur(32px) saturate(160%);
-  -webkit-backdrop-filter: blur(32px) saturate(160%);
-  box-shadow: 0 18px 44px color-mix(in oklab, var(--shadow) 24%, transparent);
-}
-
-.nv-color-picker__panel:focus {
-  outline: none;
-}
-
-.nv-color-picker__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(28px, 1fr));
-  gap: 8px;
-  width: 100%;
-}
-
-.nv-color-picker__panel--popover .nv-color-picker__grid {
-  grid-template-columns: repeat(6, 1fr);
-}
-
-.nv-color-picker__swatch {
-  width: 100%;
-  min-width: 0;
-  aspect-ratio: 1;
-  border: 1px solid color-mix(in oklab, var(--line-2) 70%, transparent);
-  border-radius: calc(8px * var(--radius-scale, 1));
-  padding: 0;
-  cursor: pointer;
-  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--shadow) 10%, transparent);
-  transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
-}
-
-.nv-color-picker__swatch:hover {
-  border-color: var(--line-strong);
-  transform: translateY(-1px);
-}
-
-.nv-color-picker__swatch:focus-visible,
-.nv-color-picker__custom-trigger:focus-visible,
-.nv-color-picker__none:focus-visible,
-.nv-color-picker__hex:focus-visible,
-.nv-color-picker__sv:focus-visible,
-.nv-color-picker__hue input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.nv-color-picker__swatch.is-selected {
-  border-color: color-mix(in oklab, var(--accent) 70%, white);
-  box-shadow:
-    inset 0 0 0 1px color-mix(in oklab, var(--shadow) 12%, transparent),
-    0 0 0 2px var(--accent-soft);
-}
-
-.nv-color-picker__custom {
-  display: grid;
-  gap: 9px;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line-1);
-}
-
-.nv-color-picker__custom--popup {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: none;
-}
-
-.nv-color-picker__custom-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 28px;
-  min-width: 118px;
-  max-width: 138px;
-  padding: 0 8px;
-  border: 1px solid var(--line-2);
-  border-radius: calc(8px * var(--radius-scale, 1));
-  background: var(--hover);
-  color: var(--text-2);
-  font: 600 11px var(--font-mono);
-  letter-spacing: 0;
-  cursor: pointer;
-  transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
-}
-
-.nv-color-picker__custom-trigger:hover,
-.nv-color-picker__custom-trigger.is-open,
-.nv-color-picker__custom-trigger.is-selected {
-  border-color: color-mix(in oklab, var(--accent) 42%, var(--line-2));
-  background: var(--glass-3);
-  color: var(--text-1);
-}
-
-.nv-color-picker__custom-trigger.is-selected {
-  box-shadow: 0 0 0 2px var(--accent-soft);
-}
-
-.nv-color-picker__custom-trigger-swatch {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
-  border: 1px solid color-mix(in oklab, var(--line-2) 70%, transparent);
-  border-radius: calc(5px * var(--radius-scale, 1));
-  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--shadow) 10%, transparent);
-}
-
-.nv-color-picker__custom-trigger-label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.nv-color-picker__custom-head {
-  display: grid;
-  grid-template-columns: 30px minmax(0, 1fr);
-  gap: 8px;
-  align-items: center;
-}
-
-.nv-color-picker__preview {
-  width: 30px;
-  height: 30px;
-  border: 1px solid var(--line-2);
-  border-radius: calc(8px * var(--radius-scale, 1));
-  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--shadow) 10%, transparent);
-}
-
-.nv-color-picker__hex {
-  height: 30px;
-  min-width: 0;
-  padding: 0 9px;
-  border: 1px solid var(--line-2);
-  border-radius: calc(8px * var(--radius-scale, 1));
-  background: var(--hover);
-  color: var(--text-1);
-  font: 600 12px var(--font-mono);
-  letter-spacing: 0;
-  text-transform: lowercase;
-  transition: border-color 0.12s ease, background 0.12s ease;
-}
-
-.nv-color-picker__hex:focus {
-  border-color: var(--accent);
-}
-
-.nv-color-picker__hex.is-invalid {
-  border-color: color-mix(in oklab, #ef4444 70%, var(--line-2));
-  background: color-mix(in oklab, #ef4444 10%, var(--hover));
-}
-
-.nv-color-picker__sv {
-  position: relative;
-  height: 92px;
-  border: 1px solid var(--line-2);
-  border-radius: calc(8px * var(--radius-scale, 1));
-  overflow: hidden;
-  cursor: crosshair;
-  touch-action: none;
-}
-
-.nv-color-picker__sv-thumb {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  border: 2px solid white;
-  border-radius: 999px;
-  box-shadow: 0 0 0 1px color-mix(in oklab, black 45%, transparent), 0 2px 8px color-mix(in oklab, black 24%, transparent);
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}
-
-.nv-color-picker__hue {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  gap: 8px;
-  align-items: center;
-}
-
-.nv-color-picker__hue-label {
-  color: var(--text-4);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.nv-color-picker__hue input {
-  width: 100%;
-  height: 16px;
-  margin: 0;
-  border-radius: 999px;
-  background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
-  cursor: pointer;
-  appearance: none;
-}
-
-.nv-color-picker__hue input::-webkit-slider-thumb {
-  width: 14px;
-  height: 14px;
-  border: 2px solid white;
-  border-radius: 999px;
-  background: transparent;
-  box-shadow: 0 0 0 1px color-mix(in oklab, black 45%, transparent);
-  appearance: none;
-}
-
-.nv-color-picker__hue input::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border: 2px solid white;
-  border-radius: 999px;
-  background: transparent;
-  box-shadow: 0 0 0 1px color-mix(in oklab, black 45%, transparent);
-}
-
-.nv-color-picker__none {
-  justify-self: start;
-  margin-top: 8px;
-  padding: 4px 8px;
-  border: 1px solid transparent;
-  border-radius: calc(7px * var(--radius-scale, 1));
-  background: transparent;
-  color: var(--text-3);
-  font: 600 11.5px var(--font-ui);
-  cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
-}
-
-.nv-color-picker__none:hover {
-  border-color: var(--line-2);
-  background: var(--hover);
-  color: var(--text-1);
-}
-
-@media (max-width: 560px) {
-  .nv-color-picker--inline .nv-color-picker__panel {
-    grid-template-columns: 1fr;
-  }
-
-  .nv-color-picker__custom-trigger {
-    width: 100%;
-    max-width: none;
-    justify-content: flex-start;
-  }
-
-  .nv-color-picker__grid {
-    grid-template-columns: repeat(auto-fill, minmax(24px, 1fr));
-    gap: 7px;
-  }
-
-  .nv-color-picker__sv {
-    height: 88px;
-  }
 }
 </style>

@@ -309,9 +309,11 @@ mod tests {
                 tags: vec!["alpha".to_string(), "beta".to_string()],
                 date: Some("2024-01-15".to_string()),
                 status: Some(NoteStatus::Active),
+                extra: Default::default(),
             }),
             content: serde_json::json!({ "type": "doc", "content": [] }),
             canvas: None,
+            extra: Default::default(),
         }
     }
 
@@ -366,6 +368,7 @@ mod tests {
             tags: vec!["gamma".to_string()],
             date: None,
             status: Some(NoteStatus::Done),
+            extra: Default::default(),
         });
         upsert_note_document(&workspace.to_string_lossy(), &note, "Folder").expect("second upsert");
 
@@ -440,8 +443,10 @@ mod tests {
                 order: 0,
                 children: vec![],
                 notes: vec![],
+                extra: Default::default(),
             }],
             notes: vec![],
+            extra: Default::default(),
         }];
 
         assert_eq!(folder_path_for_id(&tree, None), "");

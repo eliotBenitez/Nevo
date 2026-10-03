@@ -4,6 +4,12 @@
     "delete": "Supprimer",
     "discard": "Annuler les modifications"
   },
+  "closeGuard": {
+    "saveFailedTitle": "Impossible d'enregistrer vos modifications",
+    "saveFailedMessage": "Nevo n'a pas pu confirmer que vos dernières modifications ont été enregistrées. Fermer maintenant risque de perdre des modifications récentes.",
+    "closeAnyway": "Fermer quand même",
+    "stay": "Rester"
+  },
   "updater": {
     "availableTitle": "Version {version} disponible",
     "whatsNew": "Nouveautés",
@@ -22,23 +28,26 @@
     "checking": "Vérification…"
   },
   "onboarding": {
+    "noteCount": "{count} note | {count} notes",
     "welcome": {
       "title": "Bienvenue dans",
       "brand": "Nevo",
-      "subtitle": "Un espace de travail calme et local-first pour penser, écrire et relier vos idées. Vos notes restent sur votre appareil — toujours.",
+      "subtitle": "Un espace de travail calme et local-first pour penser, écrire et relier vos idées. Vos notes restent dans un dossier sur votre appareil.",
       "createWorkspace": "Créer un espace de travail",
       "createSub": "Commencez de zéro — choisissez un dossier, puis un modèle.",
       "openExisting": "Ouvrir un existant",
       "openSub": "Pointez Nevo vers n'importe quel dossier du disque.",
       "recent": "Récents",
-      "pages": "pages",
-      "localFirst": "Local-first · rien ne quitte cet appareil"
+      "localFirst": "Local-first · stocké sur cet appareil par défaut",
+      "language": "Langue : {language}"
     },
     "create": {
       "titlebar": "Créer un espace",
       "title": "Créez votre espace de travail",
       "subtitle": "Choisissez un nom, une couleur et son emplacement. Vous pourrez le renommer ou le déplacer plus tard.",
       "step": "Étape {n} sur {total}",
+      "next": "Suivant",
+      "stepsLabel": "Étapes de création",
       "steps": {
         "name": "Nom & icône",
         "location": "Choisir l'emplacement",
@@ -46,6 +55,8 @@
       },
       "sideTitle": "Un espace pour votre réflexion.",
       "sideBody": "Les espaces de travail sont de simples dossiers sur le disque. Vous pouvez les copier, les synchroniser via iCloud ou Dropbox, et les ouvrir dans n'importe quel éditeur de texte.",
+      "previewLabel": "Aperçu",
+      "previewMeta": "{template} · local",
       "nameLabel": "Nom",
       "nameHint": "Affiché dans la barre latérale et partout dans l'application",
       "namePlaceholder": "Mon espace",
@@ -54,8 +65,12 @@
       "glyphLabel": "Symbole",
       "colourLabel": "Couleur",
       "locationLabel": "Emplacement",
-      "locationHint": "Où les fichiers sont stockés sur votre machine",
+      "locationHint": "Où les fichiers sont stockés sur votre appareil. Un espace de travail est un simple dossier : vous pouvez le copier et le synchroniser.",
       "locationBrowse": "Parcourir…",
+      "locationNote": {
+        "lead": "Sera créé :",
+        "and": "et le dossier système"
+      },
       "templateLabel": "Modèle",
       "templateHint": "Optionnel — ajoute quelques pages de départ",
       "templates": {
@@ -100,10 +115,6 @@
         "storageSubtitle": "Commencez en local. La synchronisation pourra être activée plus tard.",
         "deviceTitle": "Sur cet appareil",
         "deviceSubtitle": "Recommandé · sans compte",
-        "cloudTitle": "Nevo Cloud",
-        "cloudSubtitle": "Accès sur tous vos appareils",
-        "signIn": "Se connecter",
-        "cloudUnavailable": "La connexion au cloud n'est pas encore disponible pendant la configuration mobile",
         "privacyTitle": "Vos notes vous appartiennent",
         "privacyBody": "Un espace local fonctionne hors ligne et reste dans le stockage protégé de l'application.",
         "storageInfoAction": "Comment fonctionne le stockage ?",
@@ -118,15 +129,18 @@
         "createNamed": "Créer {name}",
         "createError": "Impossible de créer l'espace. Réessayez."
       },
-      "serverLabel": "URL du serveur",
-      "serverHint": "URL de base de votre relais auto-hébergé",
-      "serverPlaceholder": "http://localhost:8080",
-      "serverCheck": "Tester la connexion",
-      "serverChecking": "Vérification…",
-      "serverOk": "Connecté",
-      "serverFail": "Inaccessible",
       "back": "Retour",
-      "encryption": "Chiffré au repos",
+      "nameRequired": "Saisissez un nom d'espace",
+      "storageLocalHint": "Local : les notes sont stockées dans le dossier choisi sur cet appareil.",
+      "glyphOption": "Symbole {n}",
+      "colourNames": {
+        "violet": "Violet",
+        "coral": "Corail",
+        "sage": "Sauge",
+        "amber": "Ambre",
+        "slate": "Ardoise",
+        "sky": "Ciel"
+      },
       "create": "Créer l'espace"
     },
     "open": {
@@ -139,24 +153,146 @@
       "new": "Nouvel espace",
       "filter": "Filtrer les espaces…",
       "recent": "Récents",
+      "sortName": "Nom",
+      "sortBy": "Tri : {order}",
       "dropHint": "Déposez un dossier n'importe où dans cette fenêtre pour l'ouvrir.",
       "open": "Ouvrir",
-      "pages": "pages",
       "unread": "non lu",
       "dropTitle": "Déposer pour ouvrir en espace de travail",
       "moreOptions": "Plus d'options",
       "removeRecent": "Retirer des récents",
       "removeRecentConfirm": "Retirer « {name} » des récents ? Les fichiers restent sur le disque.",
-      "deleteStorage": "Supprimer le stockage",
-      "deleteStorageConfirm": "Supprimer « {name} » ? Cette action est irréversible.",
       "deleteFailed": "Impossible de supprimer le stockage. Veuillez réessayer.",
       "emptyTitle": "Aucun espace récent",
       "emptySubtitle": "Sélectionnez le dossier d’un espace pour l’ouvrir sur cet appareil."
+    },
+    "starterNote": {
+      "title": "Bien démarrer",
+      "intro": "Ceci est une note ordinaire : vous pouvez la modifier, la déplacer ou la supprimer. Essayez ici même.",
+      "callout": "Tapez / sur une ligne vide pour insérer une tâche, un tableau, une base de données, un diagramme ou une formule.",
+      "checklistCheck": "Cochez cette tâche",
+      "checklistLink": "Tapez [[ et le nom d'une note pour lier des notes",
+      "checklistGraph": "Ouvrez le graphe des connexions dans la barre latérale",
+      "closing": "Vous pouvez refaire cette visite guidée à tout moment dans Paramètres → Général."
+    },
+    "tour": {
+      "step": "Étape {n} sur {total}",
+      "closeAria": "Fermer la visite guidée",
+      "back": "Retour",
+      "next": "Suivant",
+      "finish": "Terminer",
+      "liveStep": "Étape {n} sur {total}. {title}",
+      "welcome": {
+        "eyebrow": "Première visite",
+        "titleLead": "Votre espace est prêt.",
+        "titleEmphasis": "On fait le tour ?",
+        "text": "Cinq astuces rapides, environ une minute. Vous pouvez les passer et les rouvrir depuis les paramètres.",
+        "listNewNote": "Notes, dossiers et recherche",
+        "listBlocks": "Blocs et liens entre les notes",
+        "listGraph": "Le graphe des connexions",
+        "keysHint": "Les flèches font défiler les étapes, Échap quitte.",
+        "later": "Plus tard",
+        "start": "Commencer"
+      },
+      "done": {
+        "eyebrow": "Terminé",
+        "titleLead": "Et maintenant —",
+        "titleEmphasis": "à votre rythme",
+        "text": "« Premiers pas » reste sur l'accueil jusqu'à ce que vous le terminiez ou le masquiez. Vous pouvez refaire cette visite à tout moment dans Paramètres → Général.",
+        "close": "Fermer",
+        "openStarter": "Ouvrir « Bien démarrer »"
+      },
+      "steps": {
+        "newNote": {
+          "title": "Nouvelle note",
+          "text": "Crée une note dans le dossier actuel. Identique à Ctrl+N. Tout s'enregistre seul dans un dossier sur le disque."
+        },
+        "tree": {
+          "title": "Pages et dossiers",
+          "text": "Glissez pour réordonner ou imbriquer. Clic droit pour renommer, déplacer ou archiver."
+        },
+        "search": {
+          "title": "Recherche dans tout l'espace",
+          "text": "Ctrl+P trouve les notes, dossiers et paramètres. S'ouvre depuis n'importe où."
+        },
+        "starter": {
+          "title": "Essayez dans « Bien démarrer »",
+          "text": "Tapez / sur une ligne vide pour insérer un bloc, et [[ pour lier des notes."
+        },
+        "graph": {
+          "title": "Les connexions apparaissent sur le graphe",
+          "text": "Chaque lien entre notes devient une arête. Le graphe local d'une note est dans le panneau de droite."
+        },
+        "mobileNotes": {
+          "title": "Les notes toujours à portée de main",
+          "text": "Toutes les pages et dossiers de l'espace se trouvent ici."
+        },
+        "mobileSearch": {
+          "title": "La recherche toujours en bas",
+          "text": "Trouve les notes, dossiers et paramètres de l'espace."
+        },
+        "mobileBoards": {
+          "title": "Les tableaux à proximité",
+          "text": "Ouvrez les tableaux Kanban d'un simple toucher."
+        }
+      }
+    },
+    "firstSteps": {
+      "title": "Premiers pas",
+      "progress": "{done} sur {total}",
+      "progressAria": "{done} sur {total} terminés",
+      "hide": "Masquer « Premiers pas »",
+      "items": {
+        "createWorkspace": {
+          "label": "Créer un espace de travail"
+        },
+        "takeTour": {
+          "label": "Faire la visite guidée",
+          "hint": "Environ une minute"
+        },
+        "insertBlock": {
+          "label": "Insérer un bloc via /",
+          "hint": "Tâches, tableau, base de données"
+        },
+        "openGraph": {
+          "label": "Ouvrir le graphe des connexions",
+          "hint": "Liens entre les notes"
+        },
+        "chooseAppearance": {
+          "label": "Choisir un thème et un accent",
+          "hint": "Paramètres → Apparence"
+        }
+      }
+    },
+    "hints": {
+      "gotIt": "Compris",
+      "disable": "Ne plus afficher les astuces",
+      "editorCanvas": {
+        "title": "Une note peut devenir un canvas",
+        "text": "Passez en mode « Canvas » pour disposer blocs, formes et connexions sur une surface infinie. Le texte de la note ne change pas."
+      },
+      "kanbanViews": {
+        "title": "Un tableau, trois vues",
+        "text": "Retrouvez les mêmes cartes sous forme de tableau ou de calendrier par date. Les filtres et le tri fonctionnent dans toutes les vues."
+      },
+      "graphFilters": {
+        "title": "Ne gardez que les liens utiles",
+        "text": "Les filtres affichent séparément les liens, les intégrations et les mentions. Cliquer sur un nœud recentre le graphe dessus."
+      },
+      "historyRestore": {
+        "title": "Restaurer ou copier",
+        "text": "La restauration remplace le texte actuel de la note par cette version. Pour ne rien perdre, choisissez « Copier » : la version s'ouvre dans une note distincte."
+      },
+      "canvasPresent": {
+        "title": "Le canvas comme présentation",
+        "text": "Ajoutez des cadres, puis cliquez ici pour les afficher les uns après les autres, comme des diapositives."
+      }
     }
   },
   "common": {
+    "close": "Fermer",
     "back": "Retour",
-    "loading": "Chargement...",
+    "loading": "Chargement…",
     "keyboard": {
       "esc": "Échap",
       "ctrlCmdEnter": "Ctrl/Cmd + Entrée"
@@ -165,7 +301,7 @@
   "workspace": {
     "back": "Espaces",
     "localWorkspace": "Espace local",
-    "cloudWorkspace": "Stockage cloud",
+    "sidebarSubtitle": "{notes} note · en local | {notes} notes · en local",
     "canvas": {
       "document": "Document",
       "canvas": "Canvas",
@@ -293,11 +429,16 @@
       "title": "Importer un export Notion",
       "description": "Choisissez un export ZIP Notion au format Markdown & CSV. Les pages, sous-pages, bases, pièces jointes et liens internes sont copiés dans un nouveau dossier.",
       "localOnly": "Disponible uniquement pour les espaces locaux sur ordinateur. Les notes existantes ne sont jamais remplacées.",
-      "localOnlyShort": "Importer un ZIP Notion (local uniquement)",
       "selectZip": "Choisir le ZIP Notion…",
       "cancel": "Annuler",
       "close": "Fermer",
-      "phase": { "scanning": "Vérification de l’archive…", "folders": "Création des dossiers…", "creating": "Création des notes…", "assets": "Copie des pièces jointes…", "writing": "Import des pages et des bases…" },
+      "phase": {
+        "scanning": "Vérification de l’archive…",
+        "folders": "Création des dossiers…",
+        "creating": "Création des notes…",
+        "assets": "Copie des pièces jointes…",
+        "writing": "Import des pages et des bases…"
+      },
       "progressCount": "{processed} éléments sur {total}",
       "doneTitle": "Import Notion terminé",
       "notesCreated": "Notes créées",
@@ -337,13 +478,24 @@
     "home": {
       "eyebrow": "Accueil de l’espace",
       "subtitle": "Un endroit calme pour reprendre votre travail.",
-      "search": "Rechercher des notes, dossiers et réglages",
+      "meta": "{notes} note · {size} | {notes} notes · {size}",
+      "search": "Rechercher",
       "searchShortcut": "Ctrl P",
       "quickActions": "Actions rapides",
       "addToHome": "Ajouter à l’accueil",
       "removeFromHome": "Retirer de l’accueil",
-      "types": { "note": "Note", "folder": "Dossier", "board": "Tableau", "graph": "Graphe", "pluginView": "Vue de plugin" },
-      "empty": { "title": "Votre espace est prêt", "subtitle": "Créez la première note, puis rassemblez ici l’essentiel.", "action": "Créer la première note" },
+      "types": {
+        "note": "Note",
+        "folder": "Dossier",
+        "board": "Tableau",
+        "graph": "Graphe",
+        "pluginView": "Vue de plugin"
+      },
+      "empty": {
+        "title": "Votre espace est prêt",
+        "subtitle": "Créez la première note, puis rassemblez ici l’essentiel.",
+        "action": "Créer la première note"
+      },
       "favorites": {
         "kicker": "L’essentiel à portée de main",
         "title": "Favoris",
@@ -353,7 +505,10 @@
         "choose": "Choisir les favoris",
         "loadingPlugin": "Chargement de la vue du plugin…"
       },
-      "recent": { "kicker": "Dans tout l’espace", "title": "Modifiés récemment" },
+      "recent": {
+        "kicker": "Dans tout l’espace",
+        "title": "Récents"
+      },
       "manager": {
         "title": "Gérer les favoris",
         "subtitle": "Choisissez jusqu’à huit destinations et organisez-les.",
@@ -361,7 +516,14 @@
         "library": "Éléments disponibles",
         "search": "Rechercher…",
         "filters": "Filtrer les types",
-        "filter": { "all": "Tous", "note": "Notes", "folder": "Dossiers", "board": "Tableaux", "graph": "Graphe", "pluginView": "Plugins" },
+        "filter": {
+          "all": "Tous",
+          "note": "Notes",
+          "folder": "Dossiers",
+          "board": "Tableaux",
+          "graph": "Graphe",
+          "pluginView": "Plugins"
+        },
         "unavailable": "Indisponible — retirez manuellement",
         "noFavorites": "Aucun favori.",
         "noResults": "Aucun résultat.",
@@ -428,7 +590,6 @@
         "title": "Plus",
         "workspace": "Espace",
         "management": "Gestion",
-        "cloud": "Espace cloud",
         "onDevice": "Stocké sur cet appareil",
         "import": "Importer",
         "switchWorkspace": "Changer d’espace"
@@ -454,6 +615,13 @@
       "sortUpdated": "Récemment modifié"
     },
     "rightPanel": {
+      "tabs": {
+        "label": "Sections du panneau contextuel",
+        "document": "Document",
+        "links": "Liens",
+        "graph": "Graphe"
+      },
+      "graphHint": "Voyez comment cette note est reliée au reste de l’espace.",
       "outline": "Plan",
       "noHeadings": "Aucun titre pour l'instant",
       "backlinks": "Liens retour",
@@ -467,7 +635,7 @@
         "datePlaceholder": "Aucune date",
         "tags": "Étiquettes",
         "addTag": "Ajouter une étiquette",
-        "tagsPlaceholder": "Étiquettes...",
+        "tagsPlaceholder": "Étiquettes…",
         "removeTag": "Retirer l'étiquette {tag}",
         "types": {
           "note": "Note",
@@ -519,6 +687,16 @@
         }
       }
     },
+    "statusBar": {
+      "saved": "Enregistré",
+      "saving": "Enregistrement…",
+      "unsaved": "Modifications non enregistrées",
+      "error": "Échec de l'enregistrement"
+    },
+    "tagsSection": {
+      "title": "Étiquettes",
+      "showAll": "Voir toutes les étiquettes"
+    },
     "boards": {
       "title": "Tableaux",
       "new": "Nouveau tableau",
@@ -565,7 +743,7 @@
       }
     },
     "titlePlaceholder": "Sans titre",
-    "contentPlaceholder": "Écrivez vos pensées ici...",
+    "contentPlaceholder": "Écrivez vos pensées ici…",
     "linkUrlLabel": "URL du lien",
     "linkPlaceholder": "https://exemple.com",
     "linkApply": "Appliquer le lien",
@@ -606,21 +784,37 @@
       "home": "Accueil",
       "graph": "Graphe",
       "history": "Historique",
-      "trash": "Corbeille",
+      "trash": "Archives",
       "plugins": "Plugins",
       "settings": "Réglages"
     },
+    "systemView": {
+      "backToWorkspace": "Retour à l’espace"
+    },
     "trash": {
-      "title": "Corbeille",
+      "title": "Archives",
       "description": "Restaurez les éléments supprimés ou supprimez-les définitivement.",
-      "countLabel": "Éléments dans la corbeille : {count}",
-      "searchLabel": "Rechercher dans la corbeille",
-      "emptyAction": "Vider la corbeille",
-      "emptyTitle": "La corbeille est vide",
+      "countLabel": "Éléments archivés : {count}",
+      "searchLabel": "Rechercher dans les archives",
+      "emptyAction": "Vider les archives",
+      "emptyTitle": "Aucune archive",
       "emptyState": "Les notes et dossiers supprimés apparaîtront ici.",
       "noResultsTitle": "Rien trouvé",
       "noResultsDescription": "Essayez un autre titre ou effacez le champ de recherche.",
-      "deletedAt": "Supprimé le : {date}",
+      "groups": {
+        "today": "Aujourd’hui",
+        "thisWeek": "Cette semaine",
+        "earlier": "Plus tôt"
+      },
+      "deletedAt": "Supprimé le {date}",
+      "purgeIn": "Suppression définitive dans {days} j",
+      "from": "Provenance : {place}",
+      "noUndoHint": "Irréversible",
+      "previewLabel": "Aperçu · lecture seule",
+      "previewMore": "{count} blocs de plus",
+      "previewUnavailable": "Aperçu indisponible",
+      "folderPreview": "Le dossier sera restauré avec son contenu.",
+      "selectPrompt": "Sélectionnez un élément pour l’afficher",
       "folderType": "Dossier",
       "noteType": "Note",
       "itemActions": "Actions pour {title}",
@@ -628,16 +822,21 @@
       "restoreItem": "Restaurer {title}",
       "deletePermanently": "Supprimer définitivement",
       "deleteItem": "Supprimer {title} définitivement",
-      "actionHint": "La suppression définitive est irréversible.",
       "deletePermanentlyConfirm": "Voulez-vous vraiment supprimer définitivement cette note ? Cette action est irréversible.",
-      "emptyConfirm": "Voulez-vous vraiment vider la corbeille ? Tous les éléments seront définitivement supprimés."
+      "emptyConfirm": "Vider les archives ? Tous les éléments seront définitivement supprimés.",
+      "retentionDays": "Conservés {days} jours, puis supprimés définitivement.",
+      "retentionForever": "Conservés jusqu’à suppression manuelle.",
+      "daysLeft": "{days} j",
+      "deletedRelative": "supprimé {time}",
+      "rootFolder": "Racine de l’espace",
+      "emptyConfirmCount": "Vider les archives ? {count} éléments seront définitivement supprimés."
     },
     "titlebarSearch": {
-      "placeholder": "Rechercher notes, blocs, réglages...",
+      "placeholder": "Rechercher",
       "rootLabel": "Racine de l'espace",
-      "loading": "Recherche dans le contenu des notes de l'espace...",
-      "loadingShort": "Recherche dans le contenu des notes...",
-      "loadingTitle": "Recherche...",
+      "loading": "Recherche dans le contenu des notes de l'espace…",
+      "loadingShort": "Recherche dans le contenu des notes…",
+      "loadingTitle": "Recherche…",
       "idleTitle": "Recherche globale de l'espace",
       "idleDescription": "Recherchez notes, dossiers, blocs de notes et réglages depuis un seul champ.",
       "emptyTitle": "Aucune correspondance",
@@ -653,68 +852,102 @@
       "close": "Fermer la recherche"
     },
     "history": {
-      "title": "Historique du fichier",
-      "description": "Consultez les instantanés enregistrés, comparez les changements et restaurez une version précédente.",
-      "files": "Fichiers",
-      "filesHint": "Notes avec instantanés enregistrés",
-      "versions": "Versions",
-      "versionsHint": "Instantanés de la note sélectionnée",
-      "previewCompare": "Aperçu / Comparer",
-      "previewCompareHint": "Inspectez l'instantané ou comparez-le à la note courante",
-      "preview": "Aperçu",
-      "compare": "Comparer",
-      "searchLabel": "Rechercher dans l'historique",
-      "searchPlaceholder": "Rechercher des notes...",
-      "snapshotCount": "{count} instantanés",
-      "latestSnapshotAt": "Dernier {value}",
-      "noteUpdatedAt": "Note modifiée {value}",
-      "updatedAt": "Mis à jour {value}",
-      "snapshotCreatedAt": "Instantané du {value}",
-      "noSnapshotSelection": "Aucune version sélectionnée",
-      "restore": "Restaurer l'instantané",
-      "restoreSelectionHint": "La restauration remplace la note courante par l'instantané sélectionné.",
-      "restoreConfirm": "Restaurer cet instantané sur la note courante ?",
+      "emptyWorkspace": "Aucune note n'a encore de version enregistrée.",
+      "pickerTitle": "Historique des versions",
+      "pickerSubtitle": "Choisissez une note pour consulter ses versions enregistrées.",
+      "pickerLoading": "Chargement des notes avec des versions enregistrées…",
+      "pickerRailLabel": "Versions enregistrées",
+      "pickerRailDescription": "Chaque note conserve ses versions enregistrées récentes. Choisissez-en une pour comparer ou restaurer une version précédente.",
+      "pickerSearchLabel": "Rechercher des notes",
+      "pickerSearchPlaceholder": "Rechercher par titre",
+      "pickerClearSearch": "Effacer la recherche",
+      "pickerListLabel": "Notes",
+      "pickerResultCount": "{count} notes",
+      "pickerNoSearchResults": "Aucune note ne correspond à votre recherche.",
+      "pickerEmptyTitle": "Aucune version enregistrée",
+      "pickerEmpty": "Aucune note ne possède encore de version enregistrée.",
+      "pickerErrorTitle": "Impossible de charger l’historique",
+      "pickerError": "Impossible de charger les notes avec des versions enregistrées.",
+      "pickerVersionCount": "{count} versions",
+      "backToHistoryList": "Retour à la liste de l’historique",
+      "saveBeforeHistoryError": "Impossible d’enregistrer la note. L’historique n’a pas été ouvert. Réessayez.",
+      "currentNoteError": "Impossible de charger la note actuelle pour la comparaison.",
+      "subtitle": "Historique des versions",
+      "copy": "Copier cette version",
+      "copyShort": "Copier",
+      "copying": "Copie…",
+      "copyTitle": "{title} — copie",
+      "copyErrorGeneric": "Impossible de copier cette version.",
+      "copyErrorWithMessage": "Impossible de copier cette version : {message}",
+      "restore": "Restaurer cette version",
+      "restoreShort": "Restaurer",
+      "restoreConfirm": "Restaurer cette version sur la note courante ?",
       "restoring": "Restauration…",
-      "coverValue": "Couverture : {value}",
-      "snapshotVersion": "Instantané",
-      "currentVersion": "Note courante",
+      "restoreErrorGeneric": "Échec de la restauration de cette version.",
+      "restoreErrorWithMessage": "Échec de la restauration de cette version : {message}",
+      "timeline": {
+        "versions": "Versions",
+        "today": "Aujourd’hui",
+        "yesterday": "Hier",
+        "comparingWithCurrent": "Comparée à la note courante",
+        "footnote": "Les versions sont stockées dans le dossier de données de cet espace de travail. Les {count} derniers instantanés par note sont conservés — modifiable dans Paramètres → Fichiers.",
+        "empty": "Cette note n'a pas encore de version enregistrée.",
+        "loading": "Chargement des versions…",
+        "error": "Échec du chargement des versions."
+      },
+      "tabs": {
+        "inline": "Modifications",
+        "sideBySide": "Côte à côte",
+        "asNote": "Comme une note"
+      },
+      "diffStat": {
+        "added": "{count} ajoutés",
+        "removed": "{count} supprimés",
+        "changed": "{count} modifiés",
+        "totalBlocks": "{count} blocs au total"
+      },
+      "row": {
+        "added": "ajouté",
+        "removed": "supprimé",
+        "changed": "modifié"
+      },
       "fields": {
         "title": "Titre",
         "icon": "Icône",
-        "cover": "Couverture"
+        "cover": "Couverture",
+        "propertiesType": "Type",
+        "propertiesTags": "Étiquettes",
+        "propertiesDate": "Date",
+        "propertiesStatus": "Statut",
+        "canvas": "Canevas"
       },
-      "rowKinds": {
-        "added": "Ajouté",
-        "removed": "Supprimé",
-        "changed": "Modifié"
+      "canvasSummary": "{elements} éléments, {connectors} connecteurs",
+      "canvasNone": "Aucun canevas",
+      "canvasLayoutChanged": "disposition modifiée",
+      "change": {
+        "marks": "Mise en forme modifiée",
+        "type": "Type de bloc modifié : {from} → {to}",
+        "attrs": "Paramètres modifiés : {attrs}",
+        "structure": "Contenu imbriqué modifié"
       },
-      "states": {
-        "loadingFilesTitle": "Chargement de l'historique",
-        "loadingFiles": "Chargement de l'historique des notes…",
-        "noFilesTitle": "Pas encore d'historique",
-        "noFiles": "Aucune note courante avec historique pour l'instant.",
-        "noSearchResultsTitle": "Aucune correspondance",
-        "noSearchResults": "Aucune note ne correspond à cette recherche.",
-        "noFileSelectedTitle": "Choisissez une note",
-        "noFileSelected": "Sélectionnez une note pour parcourir son historique.",
-        "noSnapshotsTitle": "Aucune version",
-        "noSnapshots": "Cette note n'a pas d'instantané.",
-        "noSnapshotSelectedTitle": "Choisissez une version",
-        "noSnapshotSelected": "Sélectionnez une version pour la prévisualiser.",
-        "loadingPreviewTitle": "Chargement de l'instantané",
-        "loadingPreview": "Chargement de l'instantané…",
-        "emptySnapshotTitle": "Instantané vide",
-        "emptySnapshot": "Cet instantané est vide.",
-        "noDiffTitle": "Aucune différence",
-        "noDiff": "Aucune différence visible entre la note courante et cet instantané."
+      "preview": {
+        "unsupported": "Bloc {type} — aperçu indisponible",
+        "externalImage": "Image externe (non chargée)",
+        "checklistItem": "Élément de liste de contrôle"
       },
-      "errors": {
-        "noWorkspace": "Ouvrez un espace de travail pour parcourir l'historique.",
-        "loadFiles": "Échec du chargement de l'historique des notes.",
-        "loadSnapshot": "Échec du chargement de cet instantané.",
-        "loadCurrent": "Échec du chargement de la note courante pour la comparaison.",
-        "restore": "Échec de la restauration de cet instantané."
-      }
+      "snapshotColumn": "Version",
+      "currentColumn": "Actuelle",
+      "noSnapshotSelected": "Sélectionnez une version pour la comparer à la note courante.",
+      "noDiff": "Aucune différence entre la note courante et cette version.",
+      "emptySnapshot": "Cette version est vide.",
+      "loadingSnapshot": "Chargement de la version…",
+      "errorLoadingSnapshot": "Échec du chargement de cette version.",
+      "restoreWarning": "Restauré. Certaines opérations de nettoyage ne se sont pas terminées et seront retentées à la réouverture de l'espace de travail.",
+      "restoreSucceeded": "Version restaurée. L'état précédent a été enregistré comme version.",
+      "copyRollbackFailed": "Échec de la copie de cette version. Une copie incomplète subsiste : {noteId}",
+      "recoveryBadge": "Avant restauration",
+      "retry": "Réessayer",
+      "restoreConfirmAt": "Restaurer la version du {time} ? La note actuelle sera d'abord enregistrée comme version."
     },
     "status": {
       "saved": "Enregistré",
@@ -748,6 +981,13 @@
       "insertBelow": "Insérer un bloc en dessous",
       "copyRef": "Copier la référence du bloc",
       "delete": "Supprimer"
+    },
+    "legacyMigration": {
+      "noticeTitle": "Migration des anciennes données de notes",
+      "noticeMessage": "{migrated} notes migrées vers le nouveau format. Ignorées : {skipped}, échouées : {failed} — voir le journal de l'application pour plus de détails."
+    },
+    "errors": {
+      "schemaTooNew": "Cet espace de travail a été créé par une version plus récente de Nevo. Mettez à jour Nevo pour l'ouvrir."
     }
   },
   "templates": {
@@ -755,7 +995,7 @@
     "createTitle": "Nouvelle note depuis un modèle",
     "insertTitle": "Insérer un modèle",
     "subtitle": "Choisissez un modèle prédéfini ou de l'espace, puis remplissez les champs.",
-    "search": "Rechercher des modèles...",
+    "search": "Rechercher des modèles…",
     "newTemplate": "Nouveau modèle",
     "builtIn": "Intégré",
     "empty": "Aucun modèle trouvé.",
@@ -776,7 +1016,7 @@
     "icon": "Icône",
     "description": "Description",
     "content": "Contenu",
-    "contentPlaceholder": "Écrivez le contenu du modèle...",
+    "contentPlaceholder": "Écrivez le contenu du modèle…",
     "fields": "Champs",
     "addField": "Ajouter un champ",
     "fieldLabel": "Étiquette",
@@ -840,7 +1080,7 @@
     },
     "search": {
       "label": "Rechercher dans les réglages",
-      "placeholder": "Rechercher dans les réglages...",
+      "placeholder": "Rechercher dans les réglages…",
       "resultsTitle": "Résultats pour « {query} »",
       "resultsCount": "{count} réglages correspondants dans le catalogue.",
       "openResult": "Ouvrir {title} dans {section}",
@@ -849,7 +1089,6 @@
     },
     "common": {
       "desktop": "bureau",
-
       "resetToDefaults": "Réinitialiser",
       "on": "Activé",
       "off": "Désactivé",
@@ -873,6 +1112,8 @@
         "mono": "Mono"
       },
       "accent": {
+        "mineral": "Minéral",
+        "azure": "Azur",
         "violet": "Violet discret",
         "ember": "Braise",
         "sage": "Sauge",
@@ -927,6 +1168,11 @@
         "smart": "Intelligent",
         "plain-text": "Texte brut"
       },
+      "slashMenuLayout": {
+        "list": "Liste",
+        "grid": "Tuiles",
+        "preview": "Aperçus"
+      },
       "editorStats": {
         "off": "Désactivé",
         "corner": "Coin"
@@ -941,44 +1187,15 @@
         "thin": "Fine",
         "system": "Système"
       },
-      "focusRingStyle": {
-        "accent": "Accentuation",
-        "high-contrast": "Contraste élevé"
-      },
-      "windowChromeStyle": {
-        "default": "Par défaut",
-        "immersive": "Immersif",
-        "minimal": "Minimal"
-      },
       "roundness": {
         "sharp": "Anguleux",
         "default": "Par défaut",
         "soft": "Doux"
       },
-      "backgroundScene": {
-        "aurora": "Aurore",
-        "paper": "Papier",
-        "studio": "Studio",
-        "plain": "Uni"
-      },
-      "surfaceStyle": {
-        "glass": "Verre",
-        "solid": "Plein",
-        "tinted": "Teinté"
-      },
       "contrastMode": {
         "soft": "Doux",
         "balanced": "Équilibré",
         "high": "Élevé"
-      },
-      "sidebarStyle": {
-        "floating": "Flottante",
-        "solid": "Pleine",
-        "minimal": "Minimale"
-      },
-      "sidebarContentMode": {
-        "tree": "Arborescence",
-        "tag-preview": "Étiquettes & aperçus"
       },
       "sidebarLayout": {
         "docked": "Ancrée",
@@ -1047,7 +1264,8 @@
       "description": "Valeurs par défaut de l'espace et comportement au quotidien.",
       "groups": {
         "application": "Application",
-        "startup": "Démarrage"
+        "startup": "Démarrage",
+        "onboarding": "Découverte"
       },
       "language": {
         "title": "Langue de l'application",
@@ -1060,7 +1278,7 @@
       "startupNote": {
         "title": "Document au démarrage",
         "description": "Sélectionnez le document à ouvrir au lancement de l'application",
-        "placeholder": "Choisir un document..."
+        "placeholder": "Choisir un document…"
       },
       "restoreLastContext": {
         "title": "Restaurer le dernier contexte",
@@ -1070,6 +1288,19 @@
         "title": "Confirmations de suppression",
         "description": "Demander une confirmation pour les actions destructives",
         "panelDescription": "Demander une confirmation avant les actions destructives de l'arborescence"
+      },
+      "productTour": {
+        "title": "Visite guidée de l'interface",
+        "description": "Cinq astuces, environ une minute",
+        "takeAgain": "Refaire la visite"
+      },
+      "firstStepsOnHome": {
+        "title": "« Premiers pas » sur l'accueil",
+        "description": "Se masque automatiquement après 5 sur 5"
+      },
+      "firstUseHints": {
+        "title": "Astuces à la première utilisation",
+        "description": "Canvas, tableaux, graphe, historique"
       }
     },
     "appearance": {
@@ -1105,29 +1336,9 @@
         "title": "Barres de défilement",
         "description": "Affichage des barres de défilement dans l'application"
       },
-      "focusRingStyle": {
-        "title": "Anneau de focus",
-        "description": "Style de l'indicateur de focus clavier"
-      },
-      "windowChromeStyle": {
-        "title": "Habillage de la fenêtre",
-        "description": "Style de présentation de la barre de titre et des surfaces"
-      },
-      "backgroundScene": {
-        "title": "Scène d'arrière-plan",
-        "description": "Fond ambiant de cet espace"
-      },
-      "surfaceStyle": {
-        "title": "Style de surface",
-        "description": "Aspect vitré ou plein des panneaux"
-      },
       "contrastMode": {
         "title": "Contraste",
         "description": "Force de séparation des panneaux et du texte"
-      },
-      "sidebarStyle": {
-        "title": "Style de barre latérale",
-        "description": "Poids visuel de l'habillage de navigation"
       },
       "editorFont": {
         "title": "Police de l'éditeur",
@@ -1136,10 +1347,6 @@
       "interfaceZoom": {
         "title": "Zoom d'interface",
         "description": "Mettre à l'échelle toute l'interface"
-      },
-      "reduceTransparency": {
-        "title": "Réduire la transparence",
-        "description": "Désactiver le flou d'arrière-plan pour la clarté et les performances"
       },
       "interfaceRoundness": {
         "title": "Arrondi des angles",
@@ -1219,6 +1426,10 @@
         "title": "Comportement du collage",
         "description": "Intelligent : conserver la mise en forme riche. Texte brut : retirer la mise en forme, garder les sauts de ligne"
       },
+      "slashMenuLayout": {
+        "title": "Affichage du menu slash",
+        "description": "Liste détaillée, tuiles ou aperçus des blocs"
+      },
       "slashMenuHints": {
         "title": "Indices du menu slash",
         "description": "Afficher les indices de catégorie et de raccourci dans le menu de commandes slash"
@@ -1241,7 +1452,6 @@
       },
       "groups": {
         "identity": "Identité",
-        "sidebarMode": "Mode de la barre latérale",
         "sidebarLayout": "Placement de la barre latérale",
         "navigation": "Navigation",
         "structure": "Structure",
@@ -1257,12 +1467,6 @@
         "glyphLabel": "Choisir un glyphe",
         "glyphPickerTitle": "Glyphe de l'espace",
         "save": "Enregistrer l'identité"
-      },
-      "sidebarContentMode": {
-        "title": "Contenu de la barre latérale",
-        "description": "Choisissez l'arborescence classique ou un flux d'aperçus basé sur les étiquettes.",
-        "treeDescription": "Les dossiers et notes restent dans l'arborescence classique.",
-        "tagPreviewDescription": "Étiquettes à gauche, aperçus de notes correspondantes à droite."
       },
       "sidebarLayout": {
         "title": "Placement de la barre latérale",
@@ -1556,7 +1760,10 @@
     },
     "mcp": {
       "description": "Autorisez des agents de code externes à lire et modifier cet espace via le pont MCP local.",
-      "groups": { "access": "Accès", "connect": "Connecter un agent" },
+      "groups": {
+        "access": "Accès",
+        "connect": "Connecter un agent"
+      },
       "modes": {
         "off": "Désactivé",
         "readOnly": "Lecture seule",
@@ -1579,10 +1786,28 @@
         "unsupported": "Disponible uniquement pour les espaces locaux."
       },
       "connect": {
-        "title": "Enregistrer le serveur MCP",
-        "description": "Compilez le serveur avec pnpm --filter {'@'}nevo/mcp-server build, puis enregistrez-le auprès de votre agent avec le chemin absolu vers dist/index.js. Aucun port ni jeton dans la configuration.",
-        "copy": "Copier la commande",
-        "copied": "Copié"
+        "title": "Connecter un agent local",
+        "description": "Enregistrez Nevo dans l’agent installé. La connexion n’active pas l’accès à l’espace ; choisissez ci-dessus un mode d’accès si nécessaire."
+      },
+      "agents": {
+        "codex": "Codex",
+        "claudeCode": "Claude Code",
+        "desktopOnly": "Disponible uniquement dans l’application de bureau.",
+        "loading": "Vérification de la connexion…",
+        "connect": "Connecter",
+        "reconnect": "Reconnecter",
+        "disconnect": "Déconnecter",
+        "confirmReplace": "Remplacer l’entrée existante ?",
+        "replace": "Remplacer l’entrée",
+        "cancel": "Annuler",
+        "restartHint": "Redémarrez l’agent pour appliquer ce changement.",
+        "status": {
+          "notConfigured": "Non connecté",
+          "connected": "Connecté",
+          "needsReconnect": "Reconnexion nécessaire",
+          "conflict": "Une autre entrée Nevo existe",
+          "error": "Connexion non vérifiée"
+        }
       }
     },
     "hotkeys": {
@@ -1592,7 +1817,7 @@
       "editable": "Modifiable",
       "conflictSummary": "Conflits",
       "searchLabel": "Rechercher des raccourcis",
-      "searchPlaceholder": "Rechercher des raccourcis...",
+      "searchPlaceholder": "Rechercher des raccourcis…",
       "matches": "{count} correspondances",
       "conflicts": "Conflit avec {count} raccourci(s)",
       "pressKeys": "Appuyez sur les touches…",
@@ -1628,6 +1853,8 @@
         "bulletList": "Liste à puces",
         "blockquote": "Citation",
         "inlineMath": "Math en ligne",
+        "findInNote": "Rechercher dans la note",
+        "replaceInNote": "Rechercher et remplacer",
         "newNote": "Créer une note",
         "newFolder": "Créer un dossier",
         "saveNote": "Enregistrer la note",
@@ -1636,7 +1863,7 @@
         "toggleRightPanel": "Basculer le panneau droit",
         "openGraph": "Ouvrir le graphe",
         "openHistory": "Ouvrir l'historique",
-        "openTrash": "Ouvrir la corbeille",
+        "openTrash": "Ouvrir les archives",
         "openSettings": "Ouvrir les réglages"
       }
     },
@@ -1662,8 +1889,8 @@
         "pruneNow": "Élaguer"
       },
       "trashRetention": {
-        "title": "Rétention de la corbeille",
-        "description": "Combien de temps conserver les notes supprimées avant suppression définitive",
+        "title": "Conservation des archives",
+        "description": "Combien de jours conserver les éléments supprimés avant de les supprimer définitivement",
         "7days": "7 jours",
         "30days": "30 jours",
         "90days": "90 jours",
@@ -1830,6 +2057,12 @@
         "actions": "Actions"
       }
     },
+    "assets": {
+      "tooLarge": "« {fileName} » dépasse la limite de {limit} et n'a pas été ajouté"
+    },
+    "embeds": {
+      "sourceTooLarge": "Le contenu de ce bloc est trop volumineux pour être affiché — réduisez-le pour continuer à l'éditer"
+    },
     "mermaid": {
       "label": "Diagramme Mermaid",
       "placeholder": "graph TD\n  A --> B",
@@ -1928,7 +2161,7 @@
         "transparent": "Fond transparent",
         "button": "Exporter",
         "errorSelectionEmpty": "Rien de sélectionné !",
-        "exporting": "Exportation..."
+        "exporting": "Exportation…"
       },
       "props": {
         "stroke": "Trait",
@@ -2018,6 +2251,37 @@
       "placeholder": "Décrivez ce que vous voulez…",
       "confirm": "Générer",
       "cancel": "Annuler"
+    },
+    "findBar": {
+      "ariaLabel": "Rechercher et remplacer",
+      "findPlaceholder": "Rechercher",
+      "replacePlaceholder": "Remplacer",
+      "matchCase": "Respecter la casse",
+      "wholeWord": "Mot entier",
+      "useRegex": "Expression régulière",
+      "previous": "Occurrence précédente",
+      "next": "Occurrence suivante",
+      "close": "Fermer",
+      "toggleReplace": "Afficher le remplacement",
+      "replace": "Remplacer",
+      "replaceAll": "Tout remplacer",
+      "noResults": "Aucun résultat",
+      "invalidRegex": "Expression régulière invalide",
+      "unsafeRegex": "Ce motif est trop coûteux pour être exécuté en toute sécurité — simplifiez-le",
+      "regexTimedOut": "La recherche a pris trop de temps et a été arrêtée — essayez un motif plus simple",
+      "counter": "{current} / {total}",
+      "tooMany": "{limit}+",
+      "menuItem": "Rechercher dans la note"
+    },
+    "yjsRecovery": {
+      "degradedTitle": "Une partie de cette note ne peut pas être affichée",
+      "degradedMessage": "Une partie de cette note contient un contenu que cette version ne peut pas lire. Il est affiché en texte brut et ne sera pas enregistré tant que ce problème n'est pas résolu."
+    },
+    "menu": {
+      "copy": "Copier",
+      "cut": "Couper",
+      "paste": "Coller",
+      "delete": "Supprimer"
     }
   },
   "version": "v{version} · Tauri",
@@ -2134,6 +2398,23 @@
     "play": "Lire",
     "pause": "Pause"
   },
+  "voiceRecording": {
+    "recording": "Enregistrement",
+    "saving": "Sauvegarde…",
+    "stop": "Arrêter",
+    "cancel": "Annuler",
+    "fileLabel": "Enregistrement",
+    "savedNotInserted": "L'enregistrement a été sauvegardé dans les ressources de l'espace de travail, mais n'a pas pu être inséré dans la note.",
+    "errors": {
+      "permissionDenied": "Accès au microphone refusé. Autorisez-le dans les paramètres système et réessayez.",
+      "noDevice": "Aucun microphone détecté.",
+      "alreadyRecording": "Un enregistrement est déjà en cours.",
+      "startFailed": "Impossible de démarrer l'enregistrement.",
+      "stopFailed": "Impossible d'arrêter l'enregistrement.",
+      "saveFailed": "L'enregistrement n'a pas pu être sauvegardé. Le fichier audio a été conservé dans le cache de l'application.",
+      "unsupported": "L'enregistrement vocal n'est pas encore disponible sur cet appareil."
+    }
+  },
   "slashMenu": {
     "categories": {
       "text": "Texte",
@@ -2161,6 +2442,7 @@
       "image": "Image",
       "video": "Vidéo",
       "audio": "Audio",
+      "voice_recording": "Enregistrement vocal",
       "file": "Fichier joint",
       "table": "Tableau",
       "mermaid": "Diagramme Mermaid",
@@ -2187,7 +2469,7 @@
     "remove": "Retirer",
     "noNoteSelected": "Aucune note sélectionnée",
     "untitled": "(sans titre)",
-    "searchPlaceholder": "Rechercher des notes...",
+    "searchPlaceholder": "Rechercher des notes…",
     "noNotesFound": "Aucune note trouvée"
   },
   "embed": {
@@ -2388,8 +2670,10 @@
       "clear": "Effacer",
       "save": "Enregistrer",
       "saving": "Enregistrement…",
+      "saved": "Enregistré",
       "retry": "Réessayer",
-      "delete": "Supprimer"
+      "delete": "Supprimer",
+      "moreActions": "Autres actions"
     },
     "defaultTags": {
       "fieldName": "Étiquettes",
@@ -2472,6 +2756,7 @@
       "createdAt": "Créé",
       "updatedAt": "Dernière modification",
       "saveHint": "Ctrl/Cmd + Entrée pour enregistrer",
+      "saveFailed": "Impossible d’enregistrer les modifications.",
       "progress": "Progression",
       "progressTasks": "{done} / {total} tâches ({pct}%)",
       "progressNoTasks": "Aucune tâche",
@@ -2693,53 +2978,6 @@
       "openFooter": "Ouvrir la vue complète ↗"
     }
   },
-  "cloud": {
-    "signIn": {
-      "title": "Se connecter à Nevo",
-      "subtitle": "Connectez-vous pour créer et rejoindre des stockages partagés avec votre équipe. Vos espaces personnels restent locaux.",
-      "google": "Continuer avec Google",
-      "github": "Continuer avec GitHub",
-      "serverLabel": "URL du serveur",
-      "authenticating": "En attente du navigateur…",
-      "back": "Retour"
-    },
-    "account": {
-      "signedInAs": "Connecté en tant que {name}",
-      "signOut": "Se déconnecter",
-      "signIn": "Se connecter"
-    },
-    "storages": {
-      "title": "Stockages partagés",
-      "empty": "Aucun stockage partagé. Créez-en un pour collaborer avec votre équipe.",
-      "create": "Nouveau stockage partagé",
-      "namePlaceholder": "Nom du stockage",
-      "createAction": "Créer",
-      "open": "Ouvrir",
-      "documents": "{n} documents"
-    },
-    "roles": {
-      "owner": "Propriétaire",
-      "admin": "Admin",
-      "editor": "Éditeur",
-      "viewer": "Lecteur"
-    },
-    "members": {
-      "title": "Membres",
-      "you": "Vous",
-      "pending": "Clé en attente",
-      "approve": "Accorder l'accès",
-      "remove": "Retirer",
-      "invite": "Inviter",
-      "invitePlaceholder": "email{'@'}exemple.com",
-      "inviteAction": "Envoyer l'invitation",
-      "pendingInvites": "Invitations en attente",
-      "approveHint": "Ce membre attend la clé de chiffrement. Accordez-lui l'accès pour le laisser entrer."
-    },
-    "errors": {
-      "noKey": "Vous n'avez pas encore la clé de ce stockage — demandez à un propriétaire ou un admin de vous accorder l'accès.",
-      "generic": "Une erreur s'est produite. Veuillez réessayer."
-    }
-  },
   "workspaceTransfer": {
     "panelTitle": "Sauvegarde & Restauration",
     "panelDescription": "Exportez cet espace de travail dans un seul fichier, ou restaurez-en un depuis une archive.",
@@ -2799,6 +3037,7 @@
       "passwordRequired": "Cette archive est protégée par un mot de passe. Entrez-le pour continuer.",
       "notNevoArchive": "Le fichier sélectionné n'est pas une archive d'espace de travail Nevo valide.",
       "unsupportedVersion": "Cette archive Nevo a été créée par une version de l'application incompatible.",
+      "workspaceSchemaTooNew": "Cette archive a été créée par une version plus récente de Nevo. Mettez à jour Nevo pour l'importer.",
       "destinationNotEmpty": "Choisissez un dossier vide pour le nouvel espace de travail.",
       "localOnly": "Cette action est réservée aux espaces de travail locaux."
     }
@@ -2810,5 +3049,19 @@
       "allow": "Autoriser",
       "deny": "Refuser"
     }
+  },
+  "app": { "notebook": { "createTitle": "Créer un carnet", "titleLabel": "Titre", "paperLabel": "Papier", "create": "Créer le carnet", "cancel": "Annuler", "createError": "Impossible de créer le carnet.", "readOnlyTitle": "Ce carnet ne peut pas être modifié", "readOnlyDescription": "Cette version de Nevo ne peut pas modifier ce format ou ces données en toute sécurité.", "exportJson": "Exporter le carnet en JSON", "exportJsonError": "Impossible d'exporter le carnet JSON.", "exportingJson": "Export du carnet…", "unsupportedTextExport": "Ce format de carnet ne peut pas être exporté en document texte.", "loadErrorTitle": "Impossible d'ouvrir le carnet", "loadErrorDescription": "Les données du carnet n'ont pas pu être lues sans risque. Exportez le fichier source pour le récupérer." } },
+  "notebook": {
+    "toolbar": "Outils du carnet", "title": "Titre du carnet", "readOnlyTitle": "Ce carnet est en lecture seule", "readOnlyDescription": "Cette version de Nevo ne peut pas modifier ce format ou ces données en toute sécurité.", "exportPaper": "Inclure le papier", "exportSource": "Exporter la source du carnet…",
+    "selection": {"label": "Sélection", "count": "Sélection : {count}", "scale": "Échelle", "rotate": "Rotation", "move": "Déplacer la sélection", "copy": "Copier la sélection", "color": "Couleur de la sélection", "clear": "Désélectionner", "flipHorizontal": "Retourner horizontalement", "flipVertical": "Retourner verticalement", "handleHint": "Faites glisser ou utilisez les flèches. Maj limite la rotation à des pas de 15 degrés. Échap annule le déplacement.", "align": {"label": "Alignement", "left": "Aligner à gauche", "center": "Centrer horizontalement", "right": "Aligner à droite", "top": "Aligner en haut", "middle": "Centrer verticalement", "bottom": "Aligner en bas", "distributeHorizontal": "Répartir horizontalement", "distributeVertical": "Répartir verticalement", "distributeHint": "Sélectionnez au moins 3 éléments"}},
+    "tools": { "label": "Outils de dessin", "pen": "Stylo", "marker": "Surligneur", "eraser": "Gomme", "lasso": "Sélection au lasso", "laser": "Pointeur laser", "arrow": "Flèche", "line": "Ligne", "shapes": "Formes", "rectangle": "Rectangle", "ellipse": "Ellipse", "circle": "Cercle", "triangle": "Triangle", "move": "Déplacer la sélection", "hand": "Outil main", "color": "Couleur de l'encre", "width": "Taille de l'outil", "lineStyle": "Style de ligne", "lineSolid": "Continue", "lineDashed": "Tirets", "lineDotted": "Pointillés", "eraserMode": "Mode gomme", "eraserPartial": "Effacer une partie du trait", "eraserStroke": "Effacer le trait entier", "image": "Insérer une image" },
+    "ruler": {"label": "Règle", "move": "Déplacer la règle", "rotate": "Tourner la règle", "moveHint": "Faites glisser pour déplacer. Les flèches déplacent ; Maj accélère.", "rotateHint": "Faites glisser pour tourner. Les flèches changent l’angle ; Maj utilise un pas de 15 degrés. Début remet l’angle à zéro."},
+    "paper": { "label": "Papier de la page", "plain": "Blanc", "grid": "Quadrillage", "ruled": "Ligné" },
+    "pages": { "label": "Pages", "open": "Ouvrir la liste des pages", "close": "Fermer la liste des pages", "add": "Ajouter une page", "order": "Ordre des pages du carnet", "pageSummary": "Page {page}, {marks} traits", "accessibleSummary": "Page {page}, {marks} traits, papier {paper}", "actions": "Actions pour la page {page}", "moveUp": "Déplacer la page vers le haut", "moveDown": "Déplacer la page vers le bas", "duplicate": "Dupliquer la page", "remove": "Supprimer la page", "ghost": "Nouvelle page — commencez à écrire pour l’ajouter" },
+    "undo": "Annuler", "redo": "Rétablir", "zoomIn": "Agrandir", "zoomOut": "Réduire", "export": "Exporter en PDF",
+    "saveStatus": { "saved": "Enregistré", "saving": "Enregistrement…", "unsaved": "Modifications non enregistrées", "error": "Échec de l'enregistrement" },
+    "errors": { "pageLimit": "Le nombre maximal de pages est atteint.", "objectLimit": "Le nombre maximal de traits est atteint.", "pointLimit": "La limite de détails du dessin est atteinte.", "serializedLimit": "La taille maximale du carnet est atteinte.", "unsupported": "Ce carnet ne peut pas être modifié dans cette version.", "invalid": "Les données du carnet n'ont pas pu être ouvertes sans risque de perte.", "export": "L'export PDF a échoué.", "imageType": "Seules les images PNG, JPEG, WebP et GIF sont prises en charge.", "imageImport": "Impossible d'insérer l'image." },
+    "deletePage": { "title": "Supprimer cette page ?", "message": "Cette page contient de l'encre. Vous pourrez la restaurer avec Annuler.", "confirm": "Supprimer la page", "cancel": "Garder la page" },
+    "palette": {"open": "Palette de couleurs", "builtin": "Palette", "custom": "Mes couleurs", "recent": "Récentes", "addCurrent": "Ajouter la couleur actuelle", "edit": "Modifier", "done": "Terminé", "remove": "Supprimer la couleur {color}", "quick": "Choix rapide de couleur", "colors": {"black": "Noir", "graphite": "Graphite", "blue": "Bleu", "sky": "Bleu ciel", "red": "Rouge", "orange": "Orange", "yellow": "Jaune", "green": "Vert", "teal": "Turquoise", "purple": "Violet", "pink": "Rose", "brown": "Marron"}}
   }
 }

@@ -2,17 +2,31 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
+import { useRouter } from 'vue-router'
+import { RotateCcw } from 'lucide-vue-next'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import NvToggle from '../../../ui/primitives/NvToggle.vue'
+import SettingsSectionHeader from './ui/SettingsSectionHeader.vue'
+import SettingsGroup from './ui/SettingsGroup.vue'
+import SettingsRow from './ui/SettingsRow.vue'
 import { useWorkspaceStore } from '../../../stores/workspace'
+import { useOnboardingStore } from '../../../stores/onboarding'
 import type { AppLocale, WorkspaceView } from '../../../types/workspace'
-
 import { useTreeStore } from '../../../stores/tree'
 
 const { t } = useI18n()
+const router = useRouter()
 const workspaceStore = useWorkspaceStore()
 const treeStore = useTreeStore()
+const onboardingStore = useOnboardingStore()
 const { settings, appConfig } = storeToRefs(workspaceStore)
+
+// Leaves the settings screen first so the tour's sidebar/Home targets are on
+// screen by the time the welcome card's "Start" button reveals a spotlight step.
+async function takeTourAgain() {
+  await router.push('/workspace')
+  onboardingStore.startTour()
+}
 
 const languageOptions = computed<Array<{ value: AppLocale; label: string }>>(() => [
   { value: 'ru', label: t('settings.options.language.ru') },
@@ -43,86 +57,111 @@ const noteOptions = computed(() => {
 </script>
 
 <template>
-  <section class="panel settings-general-panel">
-    <header class="panel-header">
-      <div>
-        <h2 class="panel-title">{{ t('settings.sections.general') }}</h2>
-        <p class="panel-sub">{{ t('settings.general.description') }}</p>
-      </div>
-    </header>
+  <section class="panel tw:flex tw:h-full tw:min-h-0 tw:flex-col settings-general-panel">
+    <SettingsSectionHeader
+      :title="t('settings.sections.general')"
+      :description="t('settings.general.description')"
+    />
 
-    <div class="panel-body">
-      <div class="group">
-        <div class="group-label">{{ t('settings.general.groups.application') }}</div>
-        <div class="settings-card">
-          <div class="settings-row">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.general.language.title') }}</div>
-              <div class="row-sub">{{ t('settings.general.language.description') }}</div>
-            </div>
-            <NvSelect
-              :model-value="appConfig.locale"
-              :options="languageOptions"
-              :min-width="140"
-              @update:model-value="workspaceStore.setAppLocale($event as AppLocale)"
-            />
-          </div>
-        </div>
-      </div>
+    <div class="panel-body tw:flex tw:min-h-0 tw:flex-1 tw:flex-col tw:gap-5 tw:overflow-auto tw:overscroll-contain tw:px-[30px] tw:pt-[18px] tw:pb-[30px]">
+      <SettingsGroup :title="t('settings.general.groups.application')">
+        <SettingsRow
+          :title="t('settings.general.language.title')"
+          :description="t('settings.general.language.description')"
+        >
+          <NvSelect
+            :model-value="appConfig.locale"
+            :options="languageOptions"
+            :min-width="140"
+            @update:model-value="workspaceStore.setAppLocale($event as AppLocale)"
+          />
+        </SettingsRow>
 
-      <div class="group">
-        <div class="group-label">{{ t('settings.general.groups.startup') }}</div>
-        <div class="settings-card">
-          <div class="settings-row">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.general.startupView.title') }}</div>
-              <div class="row-sub">{{ t('settings.general.startupView.description') }}</div>
-            </div>
-            <NvSelect
-              :model-value="settings.general.defaultStartupView"
-              :options="startupViewOptions"
-              :min-width="140"
-              @update:model-value="v => workspaceStore.updateSettings(draft => { draft.general.defaultStartupView = v as WorkspaceView })"
-            />
-          </div>
+        <SettingsRow
+          :title="t('settings.general.deleteConfirmations.title')"
+          :description="t('settings.general.deleteConfirmations.panelDescription')"
+        >
+          <NvToggle
+            :aria-label="t('settings.general.deleteConfirmations.title')"
+            :model-value="settings.general.confirmBeforeDelete"
+            @update:model-value="v => workspaceStore.updateSettings(draft => { draft.general.confirmBeforeDelete = v })"
+          />
+        </SettingsRow>
+      </SettingsGroup>
 
-          <div v-if="settings.general.defaultStartupView === 'specific-note'" class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.general.startupNote.title') }}</div>
-              <div class="row-sub">{{ t('settings.general.startupNote.description') }}</div>
-            </div>
-            <NvSelect
-              :model-value="settings.general.startupNoteId || ''"
-              :options="noteOptions"
-              :min-width="140"
-              :placeholder="t('settings.general.startupNote.placeholder')"
-              @update:model-value="v => workspaceStore.updateSettings(draft => { draft.general.startupNoteId = v as string || null })"
-            />
-          </div>
+      <SettingsGroup :title="t('settings.general.groups.startup')">
+        <SettingsRow
+          :title="t('settings.general.startupView.title')"
+          :description="t('settings.general.startupView.description')"
+        >
+          <NvSelect
+            :model-value="settings.general.defaultStartupView"
+            :options="startupViewOptions"
+            :min-width="140"
+            @update:model-value="v => workspaceStore.updateSettings(draft => { draft.general.defaultStartupView = v as WorkspaceView })"
+          />
+        </SettingsRow>
 
-          <div class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.general.restoreLastContext.title') }}</div>
-              <div class="row-sub">{{ t('settings.general.restoreLastContext.description') }}</div>
-            </div>
-            <NvToggle
-              :model-value="settings.general.restoreLastContext"
-              @update:model-value="v => workspaceStore.updateSettings(draft => { draft.general.restoreLastContext = v })"
-            />
-          </div>
+        <SettingsRow
+          :title="t('settings.general.restoreLastContext.title')"
+          :description="t('settings.general.restoreLastContext.description')"
+        >
+          <NvToggle
+            :aria-label="t('settings.general.restoreLastContext.title')"
+            :model-value="settings.general.restoreLastContext"
+            @update:model-value="v => workspaceStore.updateSettings(draft => { draft.general.restoreLastContext = v })"
+          />
+        </SettingsRow>
 
-          <div class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.general.deleteConfirmations.title') }}</div>
-              <div class="row-sub">{{ t('settings.general.deleteConfirmations.panelDescription') }}</div>
-            </div>
-            <NvToggle
-              :model-value="settings.general.confirmBeforeDelete"
-              @update:model-value="v => workspaceStore.updateSettings(draft => { draft.general.confirmBeforeDelete = v })"
-            />
-          </div>
-        </div>
-      </div>
+        <SettingsRow
+          :title="t('settings.general.startupNote.title')"
+          :description="t('settings.general.startupNote.description')"
+          :disabled="settings.general.defaultStartupView !== 'specific-note'"
+        >
+          <NvSelect
+            :model-value="settings.general.startupNoteId || ''"
+            :options="noteOptions"
+            :min-width="140"
+            :disabled="settings.general.defaultStartupView !== 'specific-note'"
+            :placeholder="t('settings.general.startupNote.placeholder')"
+            @update:model-value="v => workspaceStore.updateSettings(draft => { draft.general.startupNoteId = v as string || null })"
+          />
+        </SettingsRow>
+      </SettingsGroup>
+
+      <SettingsGroup :title="t('settings.general.groups.onboarding')">
+        <SettingsRow
+          :title="t('settings.general.productTour.title')"
+          :description="t('settings.general.productTour.description')"
+        >
+          <button type="button" class="nv-btn nv-btn--ghost" @click="takeTourAgain">
+            <RotateCcw :size="14" aria-hidden="true" />
+            {{ t('settings.general.productTour.takeAgain') }}
+          </button>
+        </SettingsRow>
+
+        <SettingsRow
+          :title="t('settings.general.firstStepsOnHome.title')"
+          :description="t('settings.general.firstStepsOnHome.description')"
+        >
+          <NvToggle
+            :aria-label="t('settings.general.firstStepsOnHome.title')"
+            :model-value="!appConfig.onboarding.firstStepsHidden"
+            @update:model-value="v => onboardingStore.setFirstStepsHidden(!v)"
+          />
+        </SettingsRow>
+
+        <SettingsRow
+          :title="t('settings.general.firstUseHints.title')"
+          :description="t('settings.general.firstUseHints.description')"
+        >
+          <NvToggle
+            :aria-label="t('settings.general.firstUseHints.title')"
+            :model-value="appConfig.onboarding.hintsEnabled"
+            @update:model-value="v => onboardingStore.setHintsEnabled(v)"
+          />
+        </SettingsRow>
+      </SettingsGroup>
     </div>
   </section>
 </template>

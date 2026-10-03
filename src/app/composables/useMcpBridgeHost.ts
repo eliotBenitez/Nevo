@@ -3,9 +3,10 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { useI18n } from 'vue-i18n'
 import { respondToMcpRequest } from '../../tauri/mcp'
 import { useConfirmDialog } from '../../ui/composables/useConfirmDialog'
-import { applyEditorEdit, readEditorSnapshot } from './editor/mcpEditorOperations'
+import { applyEditorEdit, assertEditorFormatSupportsEdit, readEditorSnapshot } from './editor/mcpEditorOperations'
 import { appLogger } from '../../utils/logger'
 import { useWorkspaceStore } from '../../stores/workspace'
+import { useNoteStore } from '../../stores/note'
 
 interface McpBridgeRequest {
   requestId: string
@@ -35,6 +36,7 @@ export function useMcpBridgeHost(): void {
   const { t } = useI18n()
   const { confirm } = useConfirmDialog()
   const workspaceStore = useWorkspaceStore()
+  const noteStore = useNoteStore()
   let unlistenRequests: UnlistenFn | null = null
   let unlistenWorkspaceChanges: UnlistenFn | null = null
   let manifestRefreshQueue = Promise.resolve()
@@ -43,12 +45,14 @@ export function useMcpBridgeHost(): void {
     switch (request.kind) {
       case 'editor.snapshot':
         return readEditorSnapshot(request.payload.noteId as string | null)
-      case 'editor.applyEdit':
+      case 'editor.applyEdit': {
+        assertEditorFormatSupportsEdit(noteStore.getActiveNoteFormat(request.payload.noteId as string))
         return applyEditorEdit({
           noteId: request.payload.noteId as string,
           revision: request.payload.revision as number,
           operations: request.payload.operations as unknown[],
         })
+      }
       case 'confirm': {
         const approved = await confirm({
           title: t('mcp.confirm.title'),

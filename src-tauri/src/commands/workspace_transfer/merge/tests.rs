@@ -8,6 +8,7 @@ use super::run_merge;
 use crate::commands::database::open_database;
 use crate::commands::folder::{create_folder_sync, load_manifest};
 use crate::commands::note::create_note_impl;
+use crate::commands::note::notebook::create_notebook_impl;
 use crate::commands::note::save_note_impl;
 use crate::commands::workspace::create_workspace;
 use crate::commands::workspace_transfer::archive_read::extract_archive;
@@ -68,6 +69,91 @@ fn count_db_rows(workspace: &std::path::Path, database_id: &str) -> i64 {
             |row| row.get(0),
         )
         .expect("count rows")
+}
+
+#[test]
+fn merge_preserves_notebook_unknown_fields_and_upgrades_destination_gate_first() {
+    let temp = TempDir::new("nevo-merge-notebook");
+    let source = new_workspace(&temp, "source", "Source");
+    let destination = new_workspace(&temp, "destination", "Destination");
+    let source_string = source.to_string_lossy().into_owned();
+    let notebook = create_notebook_impl(
+        source_string.clone(),
+        None,
+        "Notebook".to_string(),
+        "📓".to_string(),
+        "grid".to_string(),
+    )
+    .expect("create notebook");
+    let note_file = source
+        .join("notes")
+        .join(format!("note-{}.nevo", notebook.id));
+    let mut note_json: serde_json::Value =
+        serde_json::from_slice(&fs::read(&note_file).unwrap()).unwrap();
+    note_json["notebook"]["futureField"] = serde_json::json!({ "kept": [1, 2] });
+    note_json["notebook"]["pages"][0]["paper"]["futurePaperField"] = serde_json::json!("kept");
+    fs::write(&note_file, serde_json::to_vec_pretty(&note_json).unwrap()).unwrap();
+
+    // run_merge treats temp_dir as the complete imported workspace root.
+    let result = run_merge(&source, &destination, &noop_channel()).expect("merge notebook");
+    assert_eq!(result.imported_notes, 1);
+    let imported_manifest = load_manifest(&destination.to_string_lossy()).expect("manifest");
+    assert_eq!(imported_manifest.schema_version, 2);
+    let imported_meta = imported_manifest
+        .tree
+        .iter()
+        .find_map(|folder| folder.notes.first())
+        .expect("imported note metadata");
+    let imported_note: serde_json::Value = serde_json::from_slice(
+        &fs::read(
+            destination
+                .join("notes")
+                .join(format!("note-{}.nevo", imported_meta.id)),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(imported_note["documentKind"], "notebook");
+    assert_eq!(imported_note["notebook"]["futureField"]["kept"][0], 1);
+    assert_eq!(
+        imported_note["notebook"]["pages"][0]["paper"]["futurePaperField"],
+        "kept"
+    );
+}
+
+#[test]
+fn merge_rejects_schema_one_archive_with_notebook_before_destination_note_writes() {
+    let temp = TempDir::new("nevo-merge-notebook-schema");
+    let source = new_workspace(&temp, "source", "Source");
+    let destination = new_workspace(&temp, "destination", "Destination");
+    let notebook = create_notebook_impl(
+        source.to_string_lossy().into_owned(),
+        None,
+        "Notebook".to_string(),
+        "📓".to_string(),
+        "plain".to_string(),
+    )
+    .expect("create notebook");
+    let manifest_path = source.join(".nevo/workspace.json");
+    let mut manifest_json: serde_json::Value =
+        serde_json::from_slice(&fs::read(&manifest_path).unwrap()).unwrap();
+    manifest_json["schemaVersion"] = serde_json::json!(1);
+    fs::write(
+        &manifest_path,
+        serde_json::to_vec_pretty(&manifest_json).unwrap(),
+    )
+    .unwrap();
+
+    let result = run_merge(&source, &destination, &noop_channel());
+    assert!(result
+        .unwrap_err()
+        .contains("inconsistent workspace schema"));
+    let destination_manifest = load_manifest(&destination.to_string_lossy()).unwrap();
+    assert_eq!(destination_manifest.schema_version, 1);
+    assert!(!destination
+        .join("notes")
+        .join(format!("note-{}.nevo", notebook.id))
+        .exists());
 }
 
 /// Round-trip: build a source workspace with an internal link, a note_embed,

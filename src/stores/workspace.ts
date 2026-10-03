@@ -16,13 +16,8 @@ import type {
   WorkspaceSettings,
 } from '../types/workspace'
 import type { SidebarNotePreview } from '../types/note'
-import { configCommands, githubSyncCommands, workspaceCommands } from '../tauri/commands'
-import { resolveBackend, CloudBackend, resolveOfflineCache, type WorkspaceBackend, type WorkspaceHandle } from '../core/workspace-backend'
-import { useSharedStorageStore } from './sharedStorage'
-import { useAuthStore } from './auth'
-import { useServerConfigStore } from './serverConfig'
-import { useApiClient, type ApiError } from '../app/composables/useApiClient'
-import type { CloudDocument, SharedStorage } from '../types/cloud'
+import { collabCommands, configCommands, githubSyncCommands, workspaceCommands } from '../tauri/commands'
+import { resolveBackend, type WorkspaceBackend, type WorkspaceHandle } from '../core/workspace-backend'
 import {
   cloneWorkspaceSettings,
   createDefaultAppConfig,
@@ -33,8 +28,9 @@ import {
 import { appLogger } from '../utils/logger'
 import { applyWorkspaceStyle } from '../utils/apply-workspace-style'
 import { expandHomePath } from '../utils/workspacePath'
-import { runMarketplacePluginTransaction } from '../core/plugins/marketplaceMigration'
+import { workspaceNoteCount } from '../utils/workspace-note-count'
 import { pauseMarketplaceRuntime } from '../core/plugins/marketplaceRuntime'
+import { useToast } from '../ui/composables/useToast'
 
 export function getRestoreCandidates(recents: RecentWorkspace[]): RecentWorkspace[] {
   return [...recents]
@@ -64,22 +60,18 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const marketplaceCatalog = ref<MarketplaceCatalog | null>(null)
   const recents = ref<RecentWorkspace[]>([])
   const activeHandle = ref<WorkspaceHandle | null>(null)
-  // Cloud backends need async setup (DEK fetch + live Yjs), so they are built by
-  // openCloudWorkspace and stored here; local backends are resolved on the fly.
-  const _cloudBackend = ref<WorkspaceBackend | null>(null)
   // The backend follows the handle (memoized; identity changes only when the
   // handle changes, which stores use to detect workspace switches).
-  const backend = computed<WorkspaceBackend | null>(() => {
-    if (!activeHandle.value) return null
-    if (activeHandle.value.kind === 'local') return resolveBackend(activeHandle.value)
-    return _cloudBackend.value
-  })
-  // Compatibility getter: most shell/UI code reads `activePath`. It resolves to
-  // the filesystem path for local workspaces and null for cloud ones.
-  const activePath = computed(() =>
-    activeHandle.value?.kind === 'local' ? activeHandle.value.path : null)
+  const backend = computed<WorkspaceBackend | null>(() =>
+    activeHandle.value ? resolveBackend(activeHandle.value) : null)
+  const activePath = computed(() => activeHandle.value?.path ?? null)
   const backendKind = computed(() => activeHandle.value?.kind ?? null)
   const isOnboarded = ref(false)
+  // True while the one-time legacy `.nevo/collab` -> `note.json` migration
+  // (see `migrateLegacyYjsState`) is running for the workspace currently
+  // being opened. Exposed so onboarding UI can show a blocking state instead
+  // of appearing to hang on a slow/large workspace.
+  const legacyMigrationActive = ref(false)
   const customCss = ref('')
   // Keeps the injected custom-CSS <style> as the last node so it always wins the
   // cascade, even when SFC scoped styles are appended later (dev-mode lazy inject).
@@ -97,12 +89,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const LAST_CONTEXT_PERSIST_DEBOUNCE_MS = 700
 
   function _setHandle(handle: WorkspaceHandle | null) {
-    // Tear down a previous cloud backend (closes its live Yjs sessions) when
-    // switching to a different workspace.
-    if (_cloudBackend.value && handle?.kind !== 'cloud') {
-      ;(_cloudBackend.value as CloudBackend).destroy()
-      _cloudBackend.value = null
-    }
     applyCustomCssStyle('', false)
     customCss.value = ''
     sidebarNotePreviews.value = []
@@ -110,6 +96,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
   const appConfig = ref<AppConfig>(createDefaultAppConfig())
   const diagnostics = ref<WorkspaceDiagnostics | null>(null)
+  // Live count from the manifest (same rule as Rust `get_workspace_diagnostics`);
+  // `diagnostics.noteCount` is a snapshot taken on open and goes stale on create/delete.
+  const noteCount = computed(() => (manifest.value ? workspaceNoteCount(manifest.value) : undefined))
   const appMetadata = ref<AppMetadata | null>(null)
 
   async function init() {
@@ -139,9 +128,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   async function restoreLastWorkspace(): Promise<boolean> {
     const candidates = getRestoreCandidates(recents.value)
     for (const workspace of candidates) {
-      // Cloud workspaces require auth + network; they are opened explicitly from
-      // the recents UI, never auto-restored on launch.
-      if (workspace.kind === 'cloud') continue
       try {
         await openWorkspace(workspace.path)
         return true
@@ -154,7 +140,12 @@ export const useWorkspaceStore = defineStore('workspace', () => {
           workspaceId: workspace.id,
           error,
         })
-        // workspace no longer available or invalid — try the next recent entry
+        // Workspace no longer available or invalid — try the next recent
+        // entry. This also covers a `workspace-schema-too-new` rejection (see
+        // `isWorkspaceSchemaTooNewError`): a workspace created by a newer
+        // Nevo build is skipped here exactly like any other unopenable
+        // candidate, never retried, and the loop always terminates once
+        // every candidate has been tried once.
       }
     }
 
@@ -162,6 +153,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   async function createWorkspace(config: WorkspaceConfig) {
+    if (backend.value) await (await import('./workspaceSwitchGuard')).flushBeforeWorkspaceSwitch()
     // Store an absolute path so asset:// URLs stay within the protocol scope.
     const path = await expandHomePath(config.path)
     try {
@@ -189,13 +181,98 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     }
   }
 
+  /**
+   * Folds every note's legacy per-note Y.Doc (`.nevo/collab/<id>.yjs`) into
+   * `note.json` — the note's sole source of truth now that the editor's own
+   * Yjs plumbing is gone. Runs once per local workspace open, right after
+   * the manifest loads and before `hydrateWorkspaceState`/any note load, so
+   * nothing can read a stale `.yjs` file out from under it.
+   *
+   * `hasLegacyCollabDir` is a cheap Rust-side existence check, so a
+   * workspace that has already been migrated (the common case after the
+   * first open, once `archiveLegacyCollabDir` has renamed `.nevo/collab`
+   * away) returns here before doing any per-note work — no dynamic `yjs`
+   * import, no per-note `load_yjs_state` IPC call. A failed check is treated
+   * as "legacy state might exist" so a filesystem hiccup here can't silently
+   * skip a real migration.
+   *
+   * Never throws: a failure here must not block opening the workspace — it
+   * is logged, and the user is told via a toast only when a note was
+   * actually skipped or failed. A routine, fully-clean migration (including
+   * the common "nothing to migrate" case) is silent.
+   */
+  async function migrateLegacyYjsState(workspacePath: string, workspaceManifest: WorkspaceManifest): Promise<void> {
+    const currentBackend = backend.value
+    if (!currentBackend) return
+
+    let hasLegacyDir = true
+    try {
+      hasLegacyDir = await collabCommands.hasLegacyCollabDir(workspacePath)
+    } catch {
+      // Treat a failed check as "legacy state might exist" and fall through
+      // to the full migration pass below instead of silently skipping it.
+    }
+    if (!hasLegacyDir) return
+
+    legacyMigrationActive.value = true
+    try {
+      // Dynamic imports keep `yjs` (pulled in by migrateWorkspaceYjs) out of
+      // the startup chunk — this runs once per workspace open, not on every
+      // app boot.
+      const [{ migrateWorkspaceYjs }, { collectWorkspaceNoteIds }] = await Promise.all([
+        import('../core/legacy-yjs/migrateWorkspaceYjs'),
+        import('../core/plugins/marketplaceMigration'),
+      ])
+      const result = await migrateWorkspaceYjs({
+        workspacePath,
+        noteIds: collectWorkspaceNoteIds(workspaceManifest),
+        loadNote: (noteId) => currentBackend.loadNoteWithContent(noteId),
+        saveNote: (note) => currentBackend.saveNote(note),
+        loadYjsState: collabCommands.loadYjsState,
+        archiveLegacyCollabDir: collabCommands.archiveLegacyCollabDir,
+      })
+
+      // A `missing` Y.Doc is the normal case (note never opened, or the
+      // workspace was already migrated), so only unreadable/unsupported files
+      // and outright failures are worth telling the user about.
+      const unreadable = result.skipped.filter(skip => skip.reason !== 'missing')
+      if (unreadable.length > 0 || result.failed.length > 0) {
+        useToast().showToast({
+          variant: result.failed.length > 0 ? 'error' : 'info',
+          duration: 0,
+          title: i18n.global.t('workspace.legacyMigration.noticeTitle'),
+          message: i18n.global.t('workspace.legacyMigration.noticeMessage', {
+            migrated: result.migrated,
+            skipped: unreadable.length,
+            failed: result.failed.length,
+          }),
+        })
+      }
+    } catch (error) {
+      await appLogger.error({
+        source: 'frontend.workspace',
+        event: 'legacy_yjs_migration',
+        message: 'Failed to migrate legacy per-note Y.Doc state into note.json',
+        workspacePath,
+        error,
+      })
+      // Never rethrown — opening the workspace must proceed regardless.
+    } finally {
+      legacyMigrationActive.value = false
+    }
+  }
+
   async function openWorkspace(rawPath: string) {
     // Store an absolute path so asset:// URLs stay within the protocol scope.
     const path = await expandHomePath(rawPath)
     try {
+      if (backend.value && activePath.value !== path) {
+        await (await import('./workspaceSwitchGuard')).flushBeforeWorkspaceSwitch()
+      }
       _setHandle({ kind: 'local', path })
       const loadedManifest = await backend.value!.open()
       manifest.value = loadedManifest
+      await migrateLegacyYjsState(path, loadedManifest)
       await hydrateWorkspaceState()
       await syncGithubAutoState()
       await _persistRecent(path, loadedManifest)
@@ -238,156 +315,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     }
   }
 
-  /** Open a server-hosted shared storage as a workspace (cloud backend). */
-  async function openCloudWorkspace(storageId: string, serverUrl?: string) {
-    const shared = useSharedStorageStore()
-    const auth = useAuthStore()
-    const server = useServerConfigStore()
-    const api = useApiClient()
-    try {
-      const target = serverUrl ?? recents.value.find(r => r.storageId === storageId)?.serverUrl ?? server.serverUrl
-      if (target !== server.serverUrl) {
-        server.setServerUrl(target)
-        shared.reset()
-      }
-      if (!auth.isAuthenticated || auth.sessionServerUrl !== server.serverUrl) {
-        await auth.login('github')
-      }
-      if (!shared.storages.length) await shared.loadStorages()
-      const storage = shared.storages.find(s => s.id === storageId)
-      if (!storage) throw new Error('shared storage not found')
-
-      const key = await shared.getDekKey(storageId)
-      const cloud = new CloudBackend({
-        storageId,
-        name: storage.name,
-        glyph: storage.glyph,
-        gradient: storage.gradient,
-        manifestRoom: storage.manifestRoom,
-        key,
-        // A getter, not a snapshot: the relay's access token expires in 15
-        // minutes, and every WS (re)connect must present a fresh one.
-        getToken: () => auth.getValidAccessToken(),
-        wsBase: server.wsBase,
-        listDocuments: (id) => api.get<CloudDocument[]>(`/api/v1/storages/${id}/documents`),
-        createDocument: (id) => api.post<CloudDocument>(`/api/v1/storages/${id}/documents`),
-        updateStorageMeta: async (meta) => {
-          try {
-            await shared.updateStorage(storageId, meta)
-          } catch (error) {
-            // Renaming the storage record is admin+, while editors may still
-            // rename the workspace in its manifest. Swallow the refusal so the
-            // backend stops retrying it on every later manifest write — the
-            // name reached every member through the manifest either way, only
-            // the pre-open listing keeps the old one. Anything else (offline,
-            // server error) is transient and worth retrying.
-            if ((error as ApiError)?.status !== 403) throw error
-            await appLogger.warn({
-              source: 'frontend.workspace',
-              event: 'update_storage_meta',
-              message: 'Renamed the workspace, but this member may not rename the storage record',
-              payload: { storageId },
-            })
-          }
-        },
-        onStorageMetaError: (error) => {
-          void appLogger.error({
-            source: 'frontend.workspace',
-            event: 'update_storage_meta',
-            message: 'Renamed the workspace locally but could not update the storage record',
-            error,
-            payload: { storageId },
-          })
-        },
-        deleteDocument: (docId) =>
-          api.del(`/api/v1/storages/${storageId}/documents/${docId}`),
-        listSnapshots: (docId) =>
-          api.get<Array<{ id: string; label: string; createdAt: string }>>(`/api/v1/storages/${storageId}/documents/${docId}/snapshots`),
-        createSnapshot: (docId, blob, label) =>
-          api.postBinary(`/api/v1/storages/${storageId}/documents/${docId}/snapshots?label=${encodeURIComponent(label)}`, blob),
-        getSnapshot: (snapshotId) =>
-          api.getBinary(`/api/v1/storages/${storageId}/snapshots/${snapshotId}`),
-        pruneSnapshots: (docId, keep) =>
-          api.del<{ deleted: number }>(`/api/v1/storages/${storageId}/documents/${docId}/snapshots?keep=${keep}`),
-        uploadAsset: (blob, contentType) =>
-          api.postBinary<{ id: string }>(`/api/v1/storages/${storageId}/assets`, blob, contentType),
-        fetchAsset: (assetId) =>
-          api.getBinaryTyped(`/api/v1/storages/${storageId}/assets/${assetId}`),
-        deleteAsset: (assetId) =>
-          api.del(`/api/v1/storages/${storageId}/assets/${assetId}`),
-        onManifest: (m) => { manifest.value = m },
-        cache: resolveOfflineCache(),
-        onIntegrityError: (roomCode) => {
-          void appLogger.error({
-            source: 'frontend.workspace',
-            event: 'cloud_decrypt_failed',
-            message: 'A relay message could not be decrypted; this session will not compact the document',
-            payload: { storageId, roomCode },
-          })
-        },
-      })
-
-      _setHandle(null) // tear down any previous workspace
-      _cloudBackend.value = cloud
-      activeHandle.value = { kind: 'cloud', storageId }
-
-      manifest.value = await cloud.open()
-      marketplaceCatalog.value = null
-      await hydrateWorkspaceState()
-      isOnboarded.value = true
-      await _persistCloudRecent(storage)
-    } catch (error) {
-      await appLogger.error({
-        source: 'frontend.workspace',
-        event: 'open_cloud_workspace',
-        message: 'Failed to open cloud workspace',
-        error,
-        payload: { storageId },
-      })
-      throw error
-    }
-  }
-
-  async function _persistCloudRecent(storage: SharedStorage) {
-    const server = useServerConfigStore()
-    const now = new Date().toISOString()
-    const existing = recents.value.find(r => r.storageId === storage.id)
-    const recent: RecentWorkspace = existing
-      ? { ...existing, name: storage.name, glyph: storage.glyph, gradient: storage.gradient, lastOpened: now, serverUrl: server.serverUrl }
-      : {
-          id: storage.id,
-          name: storage.name,
-          glyph: storage.glyph,
-          gradient: storage.gradient,
-          path: `cloud:${storage.id}`,
-          lastOpened: now,
-          pageCount: 0,
-          kind: 'cloud',
-          storageId: storage.id,
-          serverUrl: server.serverUrl,
-        }
-    recents.value = [recent, ...recents.value.filter(r => r.storageId !== storage.id)]
-    await saveAppConfig({ recents: recents.value })
-  }
-
-  /**
-   * Keeps a cloud workspace's recents entry in step with a rename. Unlike
-   * _persistCloudRecent this does not touch `lastOpened` or reorder the list —
-   * renaming a workspace is not opening it.
-   */
-  async function _updateCloudRecentIdentity(storageId: string, meta: { name: string; glyph: string; gradient: string }) {
-    const existing = recents.value.find(r => r.storageId === storageId)
-    if (!existing) return
-    recents.value = recents.value.map(r => r.storageId === storageId
-      ? { ...r, name: meta.name, glyph: meta.glyph, gradient: meta.gradient }
-      : r)
-    await saveAppConfig({ recents: recents.value })
-  }
-
-  async function removeRecentWorkspace(workspace: Pick<RecentWorkspace, 'path' | 'storageId'>) {
-    const nextRecents = workspace.storageId
-      ? recents.value.filter(r => r.storageId !== workspace.storageId)
-      : recents.value.filter(r => r.path !== workspace.path)
+  async function removeRecentWorkspace(workspace: Pick<RecentWorkspace, 'path'>) {
+    const nextRecents = recents.value.filter(r => r.path !== workspace.path)
     await saveAppConfig({ recents: nextRecents })
   }
 
@@ -423,7 +352,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     const now = new Date().toISOString()
     const existing = recents.value.find(r => r.path === path)
     const recent: RecentWorkspace = existing
-      ? { ...existing, lastOpened: now }
+      ? { ...existing, lastOpened: now, pageCount: workspaceNoteCount(ws) }
       : {
           id: ws.id,
           name: ws.name,
@@ -431,7 +360,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
           gradient: ws.gradient,
           path,
           lastOpened: now,
-          pageCount: (ws.rootNotes?.length ?? 0),
+          pageCount: workspaceNoteCount(ws),
         }
     recents.value = [recent, ...recents.value.filter(r => r.path !== path)]
     await saveAppConfig({ recents: recents.value })
@@ -614,9 +543,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       manifest.value = nextManifest
       await backend.value.saveManifest(nextManifest)
       if (activePath.value) await _persistRecent(activePath.value, nextManifest)
-      else if (activeHandle.value?.kind === 'cloud') {
-        await _updateCloudRecentIdentity(activeHandle.value.storageId, nextManifest)
-      }
       await loadDiagnostics()
     } catch (error) {
       await appLogger.error({
@@ -679,7 +605,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
    * `nevo.github-sync` plugin's enabled state and its `autoSync`/
    * `intervalMinutes` settings. Safe to call repeatedly (e.g. after toggling
    * the plugin or editing its settings) — the backend command replaces any
-   * previously running timer. No-op for cloud workspaces (no `activePath`).
+   * previously running timer.
    */
   async function syncGithubAutoState(): Promise<void> {
     if (!activePath.value) return
@@ -739,6 +665,11 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (activePath.value && manifest.value) {
       const resumeRuntime = await pauseMarketplaceRuntime()
       try {
+        // Loaded lazily (pulls in the sandboxed-plugin runtime and the editor
+        // schema for the plugin-doc migration) so installing/updating a
+        // plugin — a rare, user-initiated action — never adds that weight to
+        // app startup.
+        const { runMarketplacePluginTransaction } = await import('../core/plugins/marketplaceMigration')
         await runMarketplacePluginTransaction({
           workspacePath: activePath.value,
           pluginId,
@@ -765,6 +696,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (activePath.value && manifest.value) {
       const resumeRuntime = await pauseMarketplaceRuntime()
       try {
+        const { runMarketplacePluginTransaction } = await import('../core/plugins/marketplaceMigration')
         await runMarketplacePluginTransaction({
           workspacePath: activePath.value,
           pluginId,
@@ -856,16 +788,17 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     backend,
     backendKind,
     isOnboarded,
+    legacyMigrationActive,
     customCss,
     appConfig,
     diagnostics,
+    noteCount,
     appMetadata,
     init,
     restoreLastWorkspace,
     createWorkspace,
     openWorkspace,
     refreshManifest,
-    openCloudWorkspace,
     removeRecentWorkspace,
     saveAppConfig,
     setAppTheme,

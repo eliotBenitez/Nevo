@@ -61,13 +61,13 @@ describe('GraphView mobile header', () => {
     wrapper.unmount()
   })
 
-  it('loads a cloud graph without a filesystem workspace path', async () => {
+  it('loads the graph when a manifest is present without a filesystem workspace path', async () => {
     const wrapper = shallowMount(GraphView, {
       props: {
         workspacePath: null,
         manifest: {
-          id: 'cloud-workspace',
-          name: 'Cloud',
+          id: 'pathless-workspace',
+          name: 'Pathless',
           glyph: 'C',
           gradient: 'violet',
           schemaVersion: 1,

@@ -19,6 +19,8 @@ export const DEFAULT_HOTKEY_BINDINGS: HotkeyBinding[] = [
   { commandId: 'core.bulletList', label: 'core.bulletList', defaultChord: 'Ctrl+Shift+8', customChord: null, scope: 'workspace' },
   { commandId: 'core.blockquote', label: 'core.blockquote', defaultChord: 'Ctrl+Shift+9', customChord: null, scope: 'workspace' },
   { commandId: 'core.math.inline.insert', label: 'core.math.inline.insert', defaultChord: 'Ctrl+M', customChord: null, scope: 'workspace' },
+  { commandId: 'editor.find-in-note', label: 'editor.find-in-note', defaultChord: 'Ctrl+F', customChord: null, scope: 'workspace' },
+  { commandId: 'editor.replace-in-note', label: 'editor.replace-in-note', defaultChord: 'Ctrl+H', customChord: null, scope: 'workspace' },
   { commandId: 'workspace.new-note', label: 'workspace.new-note', defaultChord: 'Ctrl+N', customChord: null, scope: 'workspace' },
   { commandId: 'workspace.new-folder', label: 'workspace.new-folder', defaultChord: 'Ctrl+Shift+N', customChord: null, scope: 'workspace' },
   { commandId: 'workspace.save-note', label: 'workspace.save-note', defaultChord: 'Ctrl+S', customChord: null, scope: 'workspace' },
@@ -31,12 +33,18 @@ export const DEFAULT_HOTKEY_BINDINGS: HotkeyBinding[] = [
   { commandId: 'app.open-settings', label: 'app.open-settings', defaultChord: 'Ctrl+,', customChord: null, scope: 'app' },
 ]
 
+// Accent presets store hue and chroma only; lightness is fixed per theme via the
+// --accent-l token (src/styles/tokens.css: 0.50 light / 0.76 dark) so every
+// preset keeps button, link, and focus contrast in both themes. Chroma is
+// capped at 0.11 to stay within the muted, non-neon redesign palette.
 export const ACCENT_PRESETS: Record<string, { accent: string; soft: string; glow: string }> = {
-  violet: { accent: 'oklch(0.66 0.10 258)', soft: 'oklch(0.66 0.10 258 / 0.14)', glow: 'oklch(0.66 0.10 258 / 0.32)' },
-  ember: { accent: 'oklch(0.68 0.16 34)', soft: 'oklch(0.68 0.16 34 / 0.14)', glow: 'oklch(0.68 0.16 34 / 0.32)' },
-  sage: { accent: 'oklch(0.68 0.09 160)', soft: 'oklch(0.68 0.09 160 / 0.14)', glow: 'oklch(0.68 0.09 160 / 0.30)' },
-  ocean: { accent: 'oklch(0.69 0.10 220)', soft: 'oklch(0.69 0.10 220 / 0.15)', glow: 'oklch(0.69 0.10 220 / 0.30)' },
-  rose: { accent: 'oklch(0.69 0.12 12)', soft: 'oklch(0.69 0.12 12 / 0.15)', glow: 'oklch(0.69 0.12 12 / 0.30)' },
+  mineral: { accent: 'oklch(var(--accent-l) 0.075 185)', soft: 'oklch(var(--accent-l) 0.075 185 / 0.14)', glow: 'oklch(var(--accent-l) 0.075 185 / 0.30)' },
+  azure: { accent: 'oklch(var(--accent-l) 0.10 248)', soft: 'oklch(var(--accent-l) 0.10 248 / 0.14)', glow: 'oklch(var(--accent-l) 0.10 248 / 0.30)' },
+  violet: { accent: 'oklch(var(--accent-l) 0.09 272)', soft: 'oklch(var(--accent-l) 0.09 272 / 0.14)', glow: 'oklch(var(--accent-l) 0.09 272 / 0.30)' },
+  ember: { accent: 'oklch(var(--accent-l) 0.11 34)', soft: 'oklch(var(--accent-l) 0.11 34 / 0.14)', glow: 'oklch(var(--accent-l) 0.11 34 / 0.30)' },
+  sage: { accent: 'oklch(var(--accent-l) 0.09 160)', soft: 'oklch(var(--accent-l) 0.09 160 / 0.14)', glow: 'oklch(var(--accent-l) 0.09 160 / 0.30)' },
+  ocean: { accent: 'oklch(var(--accent-l) 0.10 220)', soft: 'oklch(var(--accent-l) 0.10 220 / 0.15)', glow: 'oklch(var(--accent-l) 0.10 220 / 0.30)' },
+  rose: { accent: 'oklch(var(--accent-l) 0.11 12)', soft: 'oklch(var(--accent-l) 0.11 12 / 0.15)', glow: 'oklch(var(--accent-l) 0.11 12 / 0.30)' },
 }
 
 const EDITOR_FONT_PRESETS: Record<string, string> = {
@@ -74,6 +82,7 @@ export function createDefaultAppConfig(): AppConfig {
     reduceTransparency: undefined,
     interfaceRoundness: 'default',
     themeSchedule: { enabled: false, lightTime: '07:00', darkTime: '20:00' },
+    onboarding: { tourStatus: 'pending', firstSteps: [], firstStepsHidden: false, seenHints: [], hintsEnabled: true },
   }
 }
 
@@ -89,9 +98,9 @@ export function createDefaultWorkspaceSettings(): WorkspaceSettings {
       homeFavorites: [],
     },
     appearance: {
-      accentPreset: 'violet',
+      accentPreset: 'mineral',
       backgroundScene: 'aurora',
-      surfaceStyle: 'glass',
+      surfaceStyle: 'solid',
       contrastMode: 'balanced',
       sidebarStyle: 'floating',
       editorFontFamily: 'ui',
@@ -114,6 +123,7 @@ export function createDefaultWorkspaceSettings(): WorkspaceSettings {
       activeBlockEmphasis: false,
       pasteBehavior: 'smart',
       slashMenuHints: true,
+      slashMenuLayout: 'list',
       editorStatsVisibility: 'off',
       typewriterPosition: 'lower',
     },

@@ -3,9 +3,9 @@
 
 .doc-editor .nv-prosemirror .nv-math-inline,
 .doc-editor .nv-prosemirror .nv-math-block {
-  border: 1px solid var(--line-2);
+  border: 1px solid transparent;
   border-radius: calc(8px * var(--radius-scale, 1));
-  background: color-mix(in oklab, var(--hover) 70%, transparent);
+  background: var(--surface-panel);
 }
 
 .doc-editor .nv-prosemirror .nv-math-inline {
@@ -42,7 +42,7 @@
 
 .doc-editor .nv-prosemirror .nv-math-inline[data-error='true'],
 .doc-editor .nv-prosemirror .nv-math-block[data-error='true'] {
-  border-color: color-mix(in oklab, #c84e4e 55%, var(--line-2));
+  border-color: color-mix(in oklab, #c84e4e 55%, var(--border-default));
 }
 
 .doc-editor .nv-prosemirror .nv-math-error {
@@ -58,7 +58,7 @@
   width: 100%;
   text-align: left;
   padding-top: 6px;
-  border-top: 1px dashed color-mix(in oklab, #c84e4e 35%, var(--line-2));
+  border-top: 1px dashed color-mix(in oklab, #c84e4e 35%, var(--border-default));
 }
 
 .doc-editor .nv-prosemirror .nv-math-inline .nv-math-error {
@@ -71,17 +71,16 @@
   align-items: stretch;
   gap: 0;
   margin: 12px 0;
-  border: 1px solid var(--line-2);
+  border: 1px solid transparent;
   border-radius: calc(12px * var(--radius-scale, 1));
   background: color-mix(in oklab, var(--surface) 55%, transparent);
-  backdrop-filter: blur(8px);
   cursor: pointer;
   overflow: hidden;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .doc-editor .nv-prosemirror .nv-mermaid-block:hover {
-  border-color: var(--line-1);
+  border-color: var(--border-subtle);
   box-shadow: 0 4px 20px color-mix(in oklab, var(--accent) 6%, transparent),
               0 1px 4px rgb(0 0 0 / 0.06);
 }
@@ -91,7 +90,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 7px 12px;
-  border-bottom: 1px solid var(--line-2);
+  border-bottom: 0;
   background: color-mix(in oklab, var(--hover) 55%, transparent);
 }
 
@@ -99,7 +98,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--text-3);
+  color: var(--text-muted);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -141,17 +140,17 @@
 
 .doc-editor .nv-prosemirror .nv-mermaid-block[data-empty='true'] .nv-mermaid-render,
 .doc-editor .nv-prosemirror .nv-mermaid-block[data-error='true'] .nv-mermaid-render {
-  color: var(--text-4);
+  color: var(--text-muted);
   font-size: 13px;
   font-style: italic;
 }
 
 /* --- Draw block (hand-drawn diagrams) --- */
 .doc-editor .nv-prosemirror .nv-draw-block {
-  border: 1px solid var(--border-2);
+  border: 1px solid var(--border-default);
   border-radius: 12px;
   overflow: hidden;
-  background: var(--bg-1);
+  background: var(--surface-navigation);
   cursor: pointer;
   transition: border-color 0.12s ease;
 }
@@ -168,9 +167,9 @@
   justify-content: space-between;
   padding: 8px 14px;
   font-size: 12px;
-  color: var(--text-3);
-  background: var(--bg-2);
-  border-bottom: 1px solid var(--border-2);
+  color: var(--text-muted);
+  background: var(--surface-canvas);
+  border-bottom: 1px solid var(--border-default);
 }
 .doc-editor .nv-prosemirror .nv-draw-header-left {
   display: flex;
@@ -180,7 +179,7 @@
 .doc-editor .nv-prosemirror .nv-draw-header-icon {
   width: 14px;
   height: 14px;
-  color: var(--text-3);
+  color: var(--text-muted);
 }
 .doc-editor .nv-prosemirror .nv-draw-open-hint {
   opacity: 0;
@@ -202,92 +201,22 @@
   height: auto;
 }
 .doc-editor .nv-prosemirror .nv-draw-empty {
-  color: var(--text-4);
+  color: var(--text-muted);
   font-size: 13px;
   font-style: italic;
 }
 .doc-editor .nv-prosemirror .nv-draw-caption {
   padding: 6px 14px 10px;
   font-size: 13px;
-  color: var(--text-3);
+  color: var(--text-muted);
   text-align: center;
 }
 .doc-editor .nv-prosemirror .nv-draw-caption[data-visible='false'] {
   display: none;
 }
 
-/* --- Visual mind map block (Vue Flow maps) --- */
-.doc-editor .nv-prosemirror .nv-mindmap-block {
-  border: 1px solid var(--border-2);
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--bg-1);
-  cursor: pointer;
-  transition: border-color 0.12s ease;
-}
-.doc-editor .nv-prosemirror .nv-mindmap-block:hover {
-  border-color: var(--accent);
-}
-.doc-editor .nv-prosemirror .nv-mindmap-block.ProseMirror-selectednode {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 35%, transparent);
-}
-.doc-editor .nv-prosemirror .nv-mindmap-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 14px;
-  font-size: 12px;
-  color: var(--text-3);
-  background: var(--bg-2);
-  border-bottom: 1px solid var(--border-2);
-}
-.doc-editor .nv-prosemirror .nv-mindmap-header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.doc-editor .nv-prosemirror .nv-mindmap-header-icon {
-  width: 14px;
-  height: 14px;
-  color: var(--text-3);
-}
-.doc-editor .nv-prosemirror .nv-mindmap-open-hint {
-  opacity: 0;
-  transition: opacity 0.12s ease;
-}
-.doc-editor .nv-prosemirror .nv-mindmap-block:hover .nv-mindmap-open-hint {
-  opacity: 1;
-}
-.doc-editor .nv-prosemirror .nv-mindmap-render {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 110px;
-  padding: 16px 20px;
-}
-.doc-editor .nv-prosemirror .nv-mindmap-render svg {
-  max-width: 100%;
-  height: auto;
-}
-.doc-editor .nv-prosemirror .nv-mindmap-empty {
-  color: var(--text-4);
-  font-size: 13px;
-  font-style: italic;
-}
-.doc-editor .nv-prosemirror .nv-mindmap-caption {
-  padding: 6px 14px 10px;
-  font-size: 13px;
-  color: var(--text-3);
-  text-align: center;
-}
-.doc-editor .nv-prosemirror .nv-mindmap-caption[data-visible='false'] {
-  display: none;
-}
-
 .doc-editor .nv-prosemirror .nv-mermaid-block[data-error='true'] {
-  border-color: color-mix(in oklab, #c84e4e 45%, var(--line-2));
+  border-color: color-mix(in oklab, #c84e4e 45%, var(--border-default));
 }
 
 .doc-editor .nv-prosemirror .nv-mermaid-block[data-error='true'] .nv-mermaid-header {
@@ -306,17 +235,16 @@
   align-items: stretch;
   gap: 0;
   margin: 12px 0;
-  border: 1px solid var(--line-2);
+  border: 1px solid transparent;
   border-radius: calc(12px * var(--radius-scale, 1));
   background: color-mix(in oklab, var(--surface) 55%, transparent);
-  backdrop-filter: blur(8px);
   cursor: pointer;
   overflow: hidden;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .doc-editor .nv-prosemirror .nv-vega-block:hover {
-  border-color: var(--line-1);
+  border-color: var(--border-subtle);
   box-shadow: 0 4px 20px color-mix(in oklab, var(--accent) 6%, transparent),
               0 1px 4px rgb(0 0 0 / 0.06);
 }
@@ -326,7 +254,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 7px 12px;
-  border-bottom: 1px solid var(--line-2);
+  border-bottom: 0;
   background: color-mix(in oklab, var(--hover) 55%, transparent);
 }
 
@@ -334,7 +262,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--text-3);
+  color: var(--text-muted);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -380,13 +308,13 @@
 
 .doc-editor .nv-prosemirror .nv-vega-block[data-empty='true'] .nv-vega-render,
 .doc-editor .nv-prosemirror .nv-vega-block[data-error='true'] .nv-vega-render {
-  color: var(--text-4);
+  color: var(--text-muted);
   font-size: 13px;
   font-style: italic;
 }
 
 .doc-editor .nv-prosemirror .nv-vega-block[data-error='true'] {
-  border-color: color-mix(in oklab, #c84e4e 45%, var(--line-2));
+  border-color: color-mix(in oklab, #c84e4e 45%, var(--border-default));
 }
 
 .doc-editor .nv-prosemirror .nv-vega-block[data-error='true'] .nv-vega-header {
@@ -406,10 +334,9 @@
   align-items: stretch;
   gap: 0;
   margin: 12px 0;
-  border: 1px solid var(--line-2);
+  border: 1px solid transparent;
   border-radius: calc(12px * var(--radius-scale, 1));
   background: color-mix(in oklab, var(--surface) 55%, transparent);
-  backdrop-filter: blur(8px);
   overflow: hidden;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
   /* Atom node edited via popover, not inline. Suppress native selection so the
@@ -419,7 +346,7 @@
 }
 
 .doc-editor .nv-prosemirror .nv-markmap-block:hover {
-  border-color: var(--line-1);
+  border-color: var(--border-subtle);
   box-shadow: 0 4px 20px color-mix(in oklab, var(--accent) 6%, transparent),
               0 1px 4px rgb(0 0 0 / 0.06);
 }
@@ -429,7 +356,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 7px 12px;
-  border-bottom: 1px solid var(--line-2);
+  border-bottom: 0;
   background: color-mix(in oklab, var(--hover) 55%, transparent);
   cursor: pointer;
 }
@@ -438,7 +365,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--text-3);
+  color: var(--text-muted);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -473,11 +400,11 @@
   display: block;
   width: 100%;
   height: 100%;
-  color: var(--text-2);
+  color: var(--text-secondary);
 }
 
 .doc-editor .nv-prosemirror .nv-markmap-svg .markmap-foreign {
-  color: var(--text-2);
+  color: var(--text-secondary);
 }
 
 .doc-editor .nv-prosemirror .nv-markmap-placeholder {
@@ -486,7 +413,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-4);
+  color: var(--text-muted);
   font-size: 13px;
   font-style: italic;
 }
@@ -496,7 +423,7 @@
 }
 
 .doc-editor .nv-prosemirror .nv-markmap-block[data-error='true'] {
-  border-color: color-mix(in oklab, #c84e4e 45%, var(--line-2));
+  border-color: color-mix(in oklab, #c84e4e 45%, var(--border-default));
 }
 
 .doc-editor .nv-prosemirror .nv-markmap-block[data-error='true'] .nv-markmap-header {

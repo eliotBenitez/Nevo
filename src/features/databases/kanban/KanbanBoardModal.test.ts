@@ -41,7 +41,7 @@ describe('KanbanBoardModal', () => {
     const wrapper = mountModal()
     await wrapper.vm.$nextTick()
 
-    const dialog = wrapper.get('.kb-bm')
+    const dialog = wrapper.get('.nv-modal__panel')
     const input = wrapper.get<HTMLInputElement>('#kb-bm-title-input')
 
     expect(dialog.attributes('role')).toBe('dialog')

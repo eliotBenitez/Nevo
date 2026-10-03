@@ -16,11 +16,12 @@
         "title": "Nevo",
         "width": 800,
         "height": 800,
+        "maximized": true,
         "decorations": false
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' nevoasset: nevoplugin: http://nevoasset.localhost http://nevoplugin.localhost; style-src 'self' 'unsafe-inline' nevoasset: http://nevoasset.localhost; img-src 'self' data: blob: nevoasset: nevoplugin-asset: http://nevoasset.localhost http://nevoplugin-asset.localhost http://127.0.0.1:* https:; font-src 'self' data: nevoasset: http://nevoasset.localhost; media-src 'self' blob: data: nevoasset: http://nevoasset.localhost http://127.0.0.1:* https:; connect-src 'self' ipc: http://ipc.localhost nevoasset: nevoplugin: http://nevoasset.localhost http://nevoplugin.localhost http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:* https: wss:; frame-src 'self' https: http://127.0.0.1:*; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'"
+      "csp": "default-src 'self'; script-src 'self' nevoasset: nevoplugin: http://nevoasset.localhost http://nevoplugin.localhost; style-src 'self' 'unsafe-inline' nevoasset: http://nevoasset.localhost; img-src 'self' data: blob: nevoasset: nevoplugin-asset: http://nevoasset.localhost http://nevoplugin-asset.localhost http://127.0.0.1:* https:; font-src 'self' data: nevoasset: http://nevoasset.localhost; media-src 'self' blob: data: nevoasset: http://nevoasset.localhost http://127.0.0.1:* https:; connect-src 'self' ipc: http://ipc.localhost nevoasset: nevoplugin: http://nevoasset.localhost http://nevoplugin.localhost http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:* https:; frame-src 'self' https: http://127.0.0.1:*; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'"
     }
   },
   "plugins": {
@@ -43,7 +44,8 @@
       "icons/icon.ico"
     ],
     "macOS": {
-      "signingIdentity": "-"
+      "signingIdentity": "-",
+      "entitlements": "Entitlements.plist"
     },
     "linux": {
       "appimage": {

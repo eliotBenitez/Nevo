@@ -63,9 +63,8 @@ There is no bug bounty program.
   Mermaid/KaTeX rendering, or embedded previews.
 - **Import and export paths** — Markdown, Notion, Obsidian, DOCX, and Typst/PDF handling of
   hostile archives or filenames (zip-slip, symlink escapes, resource exhaustion).
-- **Collaboration** (`src-tauri/src/collab`) and the **local media server**
-  (`src-tauri/src/media_server`) — unintended exposure of workspace content.
-- **Shared storages** — authentication, session handling, and encryption of synced data.
+- **The local media server** (`src-tauri/src/media_server`) — unintended exposure of
+  workspace content.
 - **The updater** — signature verification bypass or downgrade attacks.
 - **Workspace data integrity** — silent corruption or loss of notes, manifests, or SQLite data.
 
@@ -76,15 +75,14 @@ There is no bug bounty program.
 - Third-party plugins acting *within* the capabilities the user explicitly granted them.
   Installing a plugin is a trust decision; see [docs/plugin-security.md](docs/plugin-security.md)
   and [docs/plugin-capabilities.md](docs/plugin-capabilities.md).
-- Self-hosted or user-operated relay servers configured insecurely.
 - Vulnerability-scanner output for dependencies without a working exploit path in Nevo.
 - Missing hardening flags, best-practice deviations, or version disclosure with no demonstrated impact.
 - Social engineering, physical access, and denial of service achieved by the user against their own device.
 
 ## Security Model
 
-- **Local-first by default.** A local workspace makes no network requests for your content.
-  Networking is opt-in: update checks, collaboration, and shared storages.
+- **Local-first by default.** Nevo makes no network requests for your content. The only
+  networking is opt-in update checks.
 - **Untrusted input.** Filesystem paths, imported documents, rendered HTML/SVG, URLs, and Tauri
   IPC payloads are treated as untrusted and validated at each boundary.
 - **Least privilege.** Backend access is gated by Tauri v2 capabilities
@@ -103,11 +101,10 @@ There is no bug bounty program.
 - Keep Nevo updated — only the latest release receives security fixes.
 - Install plugins only from sources you trust, and review the capabilities requested at
   install time.
-- Keep collaboration and shared storages disabled if you do not use them.
 - Back up your workspace directory; it is plain files on your disk.
 
 ## Security-Sensitive Contributions
 
-Changes to `src-tauri/src/commands`, `src-tauri/src/collab`, `src-tauri/src/media_server`,
+Changes to `src-tauri/src/commands`, `src-tauri/src/media_server`,
 `src-tauri/capabilities`, or `src/tauri` require explicit review of their filesystem, network,
 and permission impact. See [AGENTS.md](AGENTS.md) for the full contributor requirements.

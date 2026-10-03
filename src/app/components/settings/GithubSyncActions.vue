@@ -85,13 +85,13 @@ onMounted(loadStatus)
 
 <template>
   <div class="github-sync-actions">
-    <div class="settings-row settings-row--border">
-      <div class="row-copy">
-        <div class="row-title">{{ t('settings.plugins.githubSync.actions.test') }}</div>
-        <div class="row-sub">
+    <div class="settings-row settings-row--border tw:grid tw:min-w-0 tw:grid-cols-[minmax(0,1fr)_auto] tw:items-center tw:gap-5 tw:py-[11px] tw:max-[980px]:grid-cols-[minmax(0,1fr)] tw:max-[980px]:items-stretch tw:max-[980px]:gap-2 tw:max-[719px]:p-[13px]">
+      <div class="row-copy tw:min-w-0">
+        <div class="row-title tw:text-content-primary tw:text-[13.5px] tw:font-[550] tw:[overflow-wrap:anywhere]">{{ t('settings.plugins.githubSync.actions.test') }}</div>
+        <div class="row-sub tw:mt-0.5 tw:text-content-muted tw:text-xs tw:leading-[1.45] tw:[overflow-wrap:anywhere]">
           <span v-if="testState === 'busy'">{{ t('settings.plugins.githubSync.status.testing') }}</span>
-          <span v-else-if="testState === 'ok'" class="github-sync-actions__ok">{{ t('settings.plugins.githubSync.status.connectionOk') }}</span>
-          <span v-else-if="testState === 'error'" class="github-sync-actions__error">{{ t('settings.plugins.githubSync.status.failed', { message: testMessage }) }}</span>
+          <span v-else-if="testState === 'ok'" class="github-sync-actions__ok tw:text-success">{{ t('settings.plugins.githubSync.status.connectionOk') }}</span>
+          <span v-else-if="testState === 'error'" class="github-sync-actions__error tw:text-danger">{{ t('settings.plugins.githubSync.status.failed', { message: testMessage }) }}</span>
         </div>
       </div>
       <NvButton
@@ -104,17 +104,17 @@ onMounted(loadStatus)
       </NvButton>
     </div>
 
-    <div class="settings-row settings-row--border">
-      <div class="row-copy">
-        <div class="row-title">{{ t('settings.plugins.githubSync.actions.syncNow') }}</div>
-        <div class="row-sub">
+    <div class="settings-row settings-row--border tw:grid tw:min-w-0 tw:grid-cols-[minmax(0,1fr)_auto] tw:items-center tw:gap-5 tw:py-[11px] tw:max-[980px]:grid-cols-[minmax(0,1fr)] tw:max-[980px]:items-stretch tw:max-[980px]:gap-2 tw:max-[719px]:p-[13px]">
+      <div class="row-copy tw:min-w-0">
+        <div class="row-title tw:text-content-primary tw:text-[13.5px] tw:font-[550] tw:[overflow-wrap:anywhere]">{{ t('settings.plugins.githubSync.actions.syncNow') }}</div>
+        <div class="row-sub tw:mt-0.5 tw:text-content-muted tw:text-xs tw:leading-[1.45] tw:[overflow-wrap:anywhere]">
           <span v-if="syncState === 'busy'">{{ t('settings.plugins.githubSync.status.syncing') }}</span>
-          <span v-else-if="syncState === 'error'" class="github-sync-actions__error">{{ t('settings.plugins.githubSync.status.failed', { message: syncMessage }) }}</span>
+          <span v-else-if="syncState === 'error'" class="github-sync-actions__error tw:text-danger">{{ t('settings.plugins.githubSync.status.failed', { message: syncMessage }) }}</span>
           <template v-else-if="lastResult">
             {{ t('settings.plugins.githubSync.status.lastSynced', { time: lastSyncedTime }) }}
             · {{ t('settings.plugins.githubSync.status.filesCount', { count: lastResult.filesCount }) }}
           </template>
-          <span v-else-if="lastError" class="github-sync-actions__error">{{ t('settings.plugins.githubSync.status.failed', { message: lastError }) }}</span>
+          <span v-else-if="lastError" class="github-sync-actions__error tw:text-danger">{{ t('settings.plugins.githubSync.status.failed', { message: lastError }) }}</span>
           <span v-else>{{ t('settings.plugins.githubSync.status.never') }}</span>
         </div>
       </div>
@@ -129,13 +129,3 @@ onMounted(loadStatus)
     </div>
   </div>
 </template>
-
-<style scoped>
-.github-sync-actions__ok {
-  color: var(--color-success, oklch(0.68 0.09 160));
-}
-
-.github-sync-actions__error {
-  color: var(--color-danger, oklch(0.65 0.16 25));
-}
-</style>

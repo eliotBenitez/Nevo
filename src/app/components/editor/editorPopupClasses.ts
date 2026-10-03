@@ -1,0 +1,1 @@
+export const editorPopupInputClass = 'tw:w-full tw:resize-y tw:rounded-[calc(10px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--input-bg) tw:px-3 tw:py-2.5 tw:font-nv-mono tw:text-[13px] tw:leading-[1.6] tw:text-content-primary tw:outline-none tw:focus:bg-(--surface-raised) tw:focus:shadow-[0_0_0_2px_var(--input-ring)]'

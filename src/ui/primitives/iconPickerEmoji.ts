@@ -137,12 +137,13 @@ function initCanvas() {
     ctx.clearRect(0, 0, 32, 32)
     ctx.fillText('\u{FFFF}\u{FFFF}', 0, 0)
     doubleTofuData = ctx.getImageData(0, 0, 32, 32).data
-  } catch (e) {
+  } catch {
     ctx = null
   }
 }
 
 const supportCache = new Map<string, boolean>()
+const filteredCategoriesCache = new WeakMap<EmojiCategory[], Promise<EmojiCategory[]>>()
 
 export function isEmojiSupported(emoji: string): boolean {
   if (typeof document === 'undefined') return true
@@ -211,7 +212,7 @@ export function isEmojiSupported(emoji: string): boolean {
 
     supportCache.set(emoji, true)
     return true
-  } catch (e) {
+  } catch {
     return true
   }
 }
@@ -222,7 +223,10 @@ export function isEmojiSupported(emoji: string): boolean {
 export function filterUnsupportedEmojisAsync(
   categories: EmojiCategory[]
 ): Promise<EmojiCategory[]> {
-  return new Promise((resolve) => {
+  const cachedResult = filteredCategoriesCache.get(categories)
+  if (cachedResult) return cachedResult
+
+  const resultPromise = new Promise<EmojiCategory[]>((resolve) => {
     const result: EmojiCategory[] = categories.map((cat) => ({
       ...cat,
       items: [],
@@ -230,24 +234,40 @@ export function filterUnsupportedEmojisAsync(
 
     let categoryIndex = 0
     let itemIndex = 0
-    const batchSize = 150
+    const maxItemsPerBatch = 80
+    const batchTimeBudgetMs = 5
+
+    function scheduleBatch(callback: () => void) {
+      if (typeof requestIdleCallback === 'function') {
+        requestIdleCallback(() => callback(), { timeout: 100 })
+      } else {
+        setTimeout(callback, 0)
+      }
+    }
 
     function processBatch() {
+      const startedAt = typeof performance !== 'undefined' ? performance.now() : Date.now()
       let processed = 0
 
-      while (categoryIndex < categories.length && processed < batchSize) {
+      while (categoryIndex < categories.length && processed < maxItemsPerBatch) {
+        const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
+        if (processed > 0 && now - startedAt >= batchTimeBudgetMs) break
+
         const sourceCat = categories[categoryIndex]
         const destCat = result[categoryIndex]
-
-        const itemsToProcess = sourceCat.items.slice(itemIndex, itemIndex + (batchSize - processed))
-        for (const item of itemsToProcess) {
-          if (isEmojiSupported(item.value)) {
-            destCat.items.push(item)
-          }
+        if (itemIndex >= sourceCat.items.length) {
+          categoryIndex++
+          itemIndex = 0
+          continue
         }
 
-        processed += itemsToProcess.length
-        itemIndex += itemsToProcess.length
+        const item = sourceCat.items[itemIndex]
+        if (isEmojiSupported(item.value)) {
+          destCat.items.push(item)
+        }
+
+        processed++
+        itemIndex++
 
         if (itemIndex >= sourceCat.items.length) {
           categoryIndex++
@@ -256,17 +276,16 @@ export function filterUnsupportedEmojisAsync(
       }
 
       if (categoryIndex < categories.length) {
-        if (typeof requestIdleCallback === 'function') {
-          requestIdleCallback(() => processBatch())
-        } else {
-          setTimeout(processBatch, 0)
-        }
+        scheduleBatch(processBatch)
       } else {
         const finalResult = result.filter((cat) => cat.items.length > 0)
         resolve(finalResult)
       }
     }
 
-    processBatch()
+    scheduleBatch(processBatch)
   })
+
+  filteredCategoriesCache.set(categories, resultPromise)
+  return resultPromise
 }

@@ -8,7 +8,7 @@ import en from '../../locales/en.json'
 
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
-async function notionMenuButton(backendKind: 'local' | 'cloud') {
+async function notionMenuButton(backendKind: 'local' | null) {
   const wrapper = mount(SidebarActionBar, {
     props: { backendKind, kanbanEnabled: false, collapseState: 'collapsed', sortMode: 'manual' },
     global: { plugins: [i18n, createPinia()] },
@@ -29,6 +29,18 @@ async function notionMenuButton(backendKind: 'local' | 'cloud') {
 describe('SidebarActionBar Notion import', () => {
   afterEach(() => { document.body.innerHTML = '' })
 
+  it('names icon-only sidebar controls for assistive technology', () => {
+    const wrapper = mount(SidebarActionBar, {
+      props: { backendKind: 'local', kanbanEnabled: false, collapseState: 'collapsed', sortMode: 'manual' },
+      global: { plugins: [i18n, createPinia()] },
+    })
+
+    const iconButtons = wrapper.findAll('.sidebar-actionbar__icon')
+    expect(iconButtons).toHaveLength(2)
+    expect(iconButtons.every(button => Boolean(button.attributes('aria-label')))).toBe(true)
+    wrapper.unmount()
+  })
+
   it('offers Notion ZIP import in a local workspace', async () => {
     const { wrapper, notionButton } = await notionMenuButton('local')
     expect(notionButton?.disabled).toBe(false)
@@ -36,9 +48,8 @@ describe('SidebarActionBar Notion import', () => {
     expect(wrapper.emitted('import-notion')).toHaveLength(1)
   })
 
-  it('explains and disables Notion import in a cloud workspace', async () => {
-    const { wrapper, notionButton } = await notionMenuButton('cloud')
-    expect(notionButton?.textContent).toContain('local only')
+  it('disables Notion import when no local workspace is open', async () => {
+    const { wrapper, notionButton } = await notionMenuButton(null)
     expect(notionButton?.disabled).toBe(true)
     notionButton?.click()
     expect(wrapper.emitted('import-notion')).toBeFalsy()

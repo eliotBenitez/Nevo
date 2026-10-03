@@ -17,12 +17,16 @@ defineEmits<{
 </script>
 
 <template>
-  <div class="edgeless-canvas__selection" :class="{ 'is-locked': locked }" :style="chromeStyle">
-    <LockKeyhole v-if="locked" class="canvas-selection__lock" :size="14" aria-hidden="true" />
+  <div
+    class="edgeless-canvas__selection tw:absolute tw:z-15 tw:rounded-[14px] tw:border-2 tw:border-solid tw:border-accent tw:pointer-events-none"
+    :class="{ 'is-locked': locked }"
+    :style="chromeStyle"
+  >
+    <LockKeyhole v-if="locked" class="canvas-selection__lock tw:absolute tw:-top-2 tw:-right-2 tw:rounded-full tw:bg-surface-canvas tw:p-[3px] tw:text-content-secondary" :size="14" aria-hidden="true" />
     <button
       v-if="rotatable && !locked"
       type="button"
-      class="canvas-selection__rotate"
+      class="canvas-selection__rotate tw:pointer-events-auto tw:absolute tw:-top-8 tw:left-1/2 tw:grid tw:size-6 tw:-translate-x-1/2 tw:cursor-grab tw:place-items-center tw:rounded-full tw:border tw:border-solid tw:border-accent tw:bg-surface-canvas tw:p-0 tw:text-accent"
       :aria-label="rotateLabel"
       :title="rotateLabel"
       @pointerdown.stop="$emit('rotate', $event)"
@@ -31,44 +35,14 @@ defineEmits<{
     </button>
     <span
       v-if="resizable && !locked"
-      class="edgeless-canvas__resize-handle"
+      class="edgeless-canvas__resize-handle tw:absolute tw:-right-1.5 tw:-bottom-1.5 tw:pointer-events-auto tw:size-3 tw:cursor-nwse-resize tw:rounded-full tw:border-2 tw:border-solid tw:border-(--island-bg) tw:bg-accent"
       @pointerdown="$emit('resize', $event)"
     />
   </div>
 </template>
 
 <style scoped>
-.canvas-selection__rotate {
-  position: absolute;
-  top: -32px;
-  left: 50%;
-  /* `.edgeless-canvas__selection` is `pointer-events: none` so the chrome never
-   * blocks clicks on what it outlines; the handles inside it have to opt back
-   * in, exactly as `.edgeless-canvas__resize-handle` does. */
-  pointer-events: auto;
-  display: grid;
-  width: 24px;
-  height: 24px;
-  place-items: center;
-  padding: 0;
-  border: 1px solid var(--accent);
-  border-radius: 50%;
-  color: var(--accent);
-  background: var(--canvas-1);
-  transform: translateX(-50%);
-  cursor: grab;
-}
-
-.canvas-selection__lock {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  padding: 3px;
-  border-radius: 50%;
-  color: var(--text-secondary);
-  background: var(--canvas-1);
-}
-
+/* This unlayered selector must override the canvas outline in canvas.css. */
 .is-locked {
   border-style: dashed;
 }

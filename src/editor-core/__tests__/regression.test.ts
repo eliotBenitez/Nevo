@@ -6,7 +6,6 @@ import type { Node as PMNode } from 'prosemirror-model'
 import { createNevoEditorState } from '../state'
 import { nevoBaseSchema } from '../schema'
 import { parseNoteContentToDoc, serializeDocToNoteContent, stripNullBlockIds } from '../serialization'
-import { createYDocFromContent, Y_FRAGMENT_NAME } from '../collaboration'
 import { createCoreKeymap } from '../keymap'
 import type { BlockNode } from '../../types/note'
 
@@ -295,55 +294,6 @@ describe('editor regression', () => {
       expect(serializeDocToNoteContent(view.state.doc).type).toBe('doc')
     } finally {
       view.destroy()
-      mount.remove()
-    }
-  })
-
-  it('uses Yjs undo and redo commands when collaborative state is enabled', () => {
-    const content: BlockNode = {
-      type: 'doc',
-      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'hello' }] }],
-    }
-    const ydoc = createYDocFromContent(nevoBaseSchema, content)
-    const setup = createNevoEditorState({
-      schema: nevoBaseSchema,
-      content,
-      yFragment: ydoc.getXmlFragment(Y_FRAGMENT_NAME),
-    })
-    const mount = document.createElement('div')
-    document.body.appendChild(mount)
-
-    let view: EditorView
-    // eslint-disable-next-line prefer-const -- must stay `let`: collab plugins dispatch synchronously during construction, so `view` is read while still undefined (see `?? this` fallback below)
-    view = new EditorView(mount, {
-      state: setup.state,
-      dispatchTransaction(transaction) {
-        const editorView: EditorView = view ?? (this as unknown as EditorView)
-        editorView.updateState(editorView.state.apply(transaction))
-      },
-    })
-
-    try {
-      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 6)))
-      view.dispatch(view.state.tr.insertText('!'))
-      expect(view.state.doc.textContent).toBe('hello!')
-
-      const undoHandled = dispatchEditorKey(
-        view,
-        new KeyboardEvent('keydown', { key: 'я', code: 'KeyZ', ctrlKey: true, bubbles: true, cancelable: true }),
-      )
-      expect(undoHandled).toBe(true)
-      expect(view.state.doc.textContent).toBe('hello')
-
-      const redoHandled = dispatchEditorKey(
-        view,
-        new KeyboardEvent('keydown', { key: 'Я', code: 'KeyZ', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }),
-      )
-      expect(redoHandled).toBe(true)
-      expect(view.state.doc.textContent).toBe('hello!')
-    } finally {
-      view.destroy()
-      ydoc.destroy()
       mount.remove()
     }
   })

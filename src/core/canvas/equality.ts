@@ -4,11 +4,12 @@ import type { CanvasConnector, CanvasElement, CanvasSnapshotV1 } from './types'
  * Structural equality for plain JSON-like values (objects, arrays, primitives).
  * Snapshots are small (one frame plus a handful of elements/connectors), so a
  * naive recursive walk is cheap here and avoids the key-order false negatives
- * a `JSON.stringify` comparison would produce — `readCanvasSnapshot` (Yjs) and
- * `normalizeCanvasSnapshot` (plain object) build their fields in different
- * insertion order even when the resulting values are identical.
+ * a `JSON.stringify` comparison would produce — `normalizeCanvasSnapshot`
+ * output can build its fields in different insertion order between two
+ * otherwise-identical snapshots (e.g. depending on which optional keys were
+ * present in the source object).
  */
-function jsonEqual(a: unknown, b: unknown): boolean {
+export function jsonEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true
   if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false
 

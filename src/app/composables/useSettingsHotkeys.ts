@@ -26,6 +26,8 @@ const HOTKEY_LABEL_KEYS: Record<string, string> = {
   'core.bulletList': 'settings.hotkeys.commands.bulletList',
   'core.blockquote': 'settings.hotkeys.commands.blockquote',
   'core.math.inline.insert': 'settings.hotkeys.commands.inlineMath',
+  'editor.find-in-note': 'settings.hotkeys.commands.findInNote',
+  'editor.replace-in-note': 'settings.hotkeys.commands.replaceInNote',
   'workspace.new-note': 'settings.hotkeys.commands.newNote',
   'workspace.new-folder': 'settings.hotkeys.commands.newFolder',
   'workspace.save-note': 'settings.hotkeys.commands.saveNote',

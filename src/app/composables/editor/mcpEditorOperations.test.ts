@@ -8,7 +8,7 @@ import {
   notifyActiveEditorTransaction,
   registerActiveEditor,
 } from './activeEditorRegistry'
-import { applyEditorEdit, EditorUnavailableError, readEditorSnapshot } from './mcpEditorOperations'
+import { applyEditorEdit, assertEditorFormatSupportsEdit, EditorUnavailableError, readEditorSnapshot } from './mcpEditorOperations'
 
 function mountEditor(text = 'Hello'): EditorView {
   const state = EditorState.create({
@@ -42,6 +42,12 @@ describe('mcpEditorOperations', () => {
 
   it('refuses to read a snapshot when no note is open', () => {
     expect(() => readEditorSnapshot()).toThrow(EditorUnavailableError)
+  })
+
+  it('refuses MCP edits for notebook and unsupported note formats', () => {
+    expect(() => assertEditorFormatSupportsEdit({ status: 'notebook', editable: true, snapshot: { version: 1, pages: [] }, diagnostics: [] })).toThrow(EditorUnavailableError)
+    expect(() => assertEditorFormatSupportsEdit({ status: 'unsupported', editable: false, diagnostics: [] })).toThrow(/not supported/)
+    expect(() => assertEditorFormatSupportsEdit({ status: 'document', editable: true })).not.toThrow()
   })
 
   it('returns the open note id, revision, and document', () => {

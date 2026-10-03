@@ -5,8 +5,8 @@
 // `commands/blockId.ts` `ensureBlockId`). Resolving one means: load the
 // target note's current content and walk it for the block carrying that id.
 //
-// `note.content` (not the disk-backed Y.Doc) is the correct read target here:
-// a note's live editor content is periodically flushed into `note.content`
+// `note.content` is the correct read target here: it is a note's source of
+// truth, and a note's live editor content is periodically flushed into it
 // via `serializeDocToNoteContent` (see `src/editor-core/serialization.ts`),
 // and `backend.loadNote` is the only read path available outside a live
 // EditorView. Assigned block ids are never null, so they always survive the

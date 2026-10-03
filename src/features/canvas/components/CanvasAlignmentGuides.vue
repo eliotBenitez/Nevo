@@ -11,32 +11,13 @@ defineProps<{
   <div
     v-for="(guide, index) in guides"
     :key="`${guide.axis}:${guide.value}:${index}`"
-    class="canvas-alignment-guide"
-    :class="`canvas-alignment-guide--${guide.axis}`"
+    class="canvas-alignment-guide tw:pointer-events-none tw:absolute tw:z-18 tw:bg-accent tw:opacity-75"
+    :class="{
+      'canvas-alignment-guide--x tw:inset-y-0 tw:w-px': guide.axis === 'x',
+      'canvas-alignment-guide--y tw:inset-x-0 tw:h-px': guide.axis === 'y',
+    }"
     :style="guide.axis === 'x'
       ? { left: `${(guide.value - camera.x) * camera.zoom}px` }
       : { top: `${(guide.value - camera.y) * camera.zoom}px` }"
   />
 </template>
-
-<style scoped>
-.canvas-alignment-guide {
-  position: absolute;
-  z-index: 18;
-  pointer-events: none;
-  background: var(--accent);
-  opacity: 0.75;
-}
-
-.canvas-alignment-guide--x {
-  top: 0;
-  bottom: 0;
-  width: 1px;
-}
-
-.canvas-alignment-guide--y {
-  right: 0;
-  left: 0;
-  height: 1px;
-}
-</style>

@@ -6,8 +6,8 @@
   overflow-x: clip;
   margin: 12px 0;
   border-radius: calc(11px * var(--radius-scale, 1));
-  border: 1px solid var(--line-2);
-  background: var(--glass-2);
+  border: 1px solid var(--border-default);
+  background: var(--surface-panel);
 }
 
 .doc-editor .nv-prosemirror table {
@@ -22,8 +22,8 @@
 
 .doc-editor .nv-prosemirror td,
 .doc-editor .nv-prosemirror th {
-  border-right: 1px solid var(--line-1);
-  border-bottom: 1px solid var(--line-1);
+  border-right: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
   padding: 7px 10px;
   vertical-align: top;
   min-width: 0;
@@ -37,13 +37,13 @@
 
 .doc-editor .nv-prosemirror th {
   background: var(--hover);
-  color: var(--text-4);
+  color: var(--text-muted);
   text-transform: none;
   letter-spacing: 0;
   font-size: inherit;
   line-height: inherit;
   font-weight: 600;
-  border-bottom: 1px solid var(--line-2);
+  border-bottom: 1px solid var(--border-default);
 }
 
 .doc-editor .nv-prosemirror td > p,
@@ -107,7 +107,7 @@
   outline: 1.5px solid var(--accent);
   outline-offset: -1px;
   z-index: 1;
-  border-color: color-mix(in oklab, var(--accent) 34%, var(--line-1));
+  border-color: color-mix(in oklab, var(--accent) 34%, var(--border-subtle));
 }
 
 .doc-editor .nv-prosemirror th.selectedCell {
@@ -130,5 +130,5 @@
 .doc-editor .nv-prosemirror .nv-block-selection-range::selection,
 .doc-editor .nv-prosemirror .nv-block-selection-range *::selection {
   background: color-mix(in oklab, var(--accent) 25%, transparent);
-  color: var(--text-1);
+  color: var(--text-primary);
 }

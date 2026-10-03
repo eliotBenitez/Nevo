@@ -6,6 +6,8 @@ import { createDefaultWorkspaceSettings } from '../../../../utils/workspace-sett
 import NvButton from '../../../../ui/primitives/NvButton.vue'
 import NvToggle from '../../../../ui/primitives/NvToggle.vue'
 import NvSelect from '../../../../ui/primitives/NvSelect.vue'
+import SettingsGroup from '../ui/SettingsGroup.vue'
+import SettingsRow from '../ui/SettingsRow.vue'
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
@@ -32,59 +34,53 @@ const sidebarStateOptions = ['expanded', 'collapsed'].map(v => ({
 </script>
 
 <template>
-  <div class="group">
-    <div class="group-header">
-      <div class="group-label">{{ t('settings.workspace.groups.navigation') }}</div>
+  <SettingsGroup :title="t('settings.workspace.groups.navigation')">
+    <template #header-actions>
       <NvButton variant="ghost" size="xs" @click="resetNavigation">{{ t('settings.common.resetToDefaults') }}</NvButton>
-    </div>
-    <div class="settings-card">
-      <div class="settings-row">
-        <div class="row-copy">
-          <div class="row-title">{{ t('settings.workspace.rememberExpandedFolders.title') }}</div>
-          <div class="row-sub">{{ t('settings.workspace.rememberExpandedFolders.description') }}</div>
-        </div>
-        <NvToggle
-          :model-value="settings.workspace.rememberExpandedFolders"
-          @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.rememberExpandedFolders = v })"
-        />
-      </div>
+    </template>
 
-      <div class="settings-row settings-row--border">
-        <div class="row-copy">
-          <div class="row-title">{{ t('settings.workspace.sidebarDefaultState.title') }}</div>
-          <div class="row-sub">{{ t('settings.workspace.sidebarDefaultState.description') }}</div>
-        </div>
-        <div class="inline-actions">
-          <NvSelect
-            :model-value="settings.workspace.sidebarDefaultState"
-            :options="sidebarStateOptions"
-            @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.sidebarDefaultState = v as any })"
-          />
-        </div>
-      </div>
+    <SettingsRow
+      :title="t('settings.workspace.rememberExpandedFolders.title')"
+      :description="t('settings.workspace.rememberExpandedFolders.description')"
+    >
+      <NvToggle
+        :aria-label="t('settings.workspace.rememberExpandedFolders.title')"
+        :model-value="settings.workspace.rememberExpandedFolders"
+        @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.rememberExpandedFolders = v })"
+      />
+    </SettingsRow>
 
-      <div class="settings-row settings-row--border">
-        <div class="row-copy">
-          <div class="row-title">{{ t('settings.workspace.rootNotesVisible.title') }}</div>
-          <div class="row-sub">{{ t('settings.workspace.rootNotesVisible.description') }}</div>
-        </div>
-        <NvToggle
-          :model-value="settings.workspace.rootNotesVisible"
-          @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.rootNotesVisible = v })"
-        />
-      </div>
+    <SettingsRow
+      :title="t('settings.workspace.sidebarDefaultState.title')"
+      :description="t('settings.workspace.sidebarDefaultState.description')"
+    >
+      <NvSelect
+        :model-value="settings.workspace.sidebarDefaultState"
+        :options="sidebarStateOptions"
+        @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.sidebarDefaultState = v as any })"
+      />
+    </SettingsRow>
 
+    <SettingsRow
+      :title="t('settings.workspace.rootNotesVisible.title')"
+      :description="t('settings.workspace.rootNotesVisible.description')"
+    >
+      <NvToggle
+        :aria-label="t('settings.workspace.rootNotesVisible.title')"
+        :model-value="settings.workspace.rootNotesVisible"
+        @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.rootNotesVisible = v })"
+      />
+    </SettingsRow>
 
-      <div class="settings-row settings-row--border">
-        <div class="row-copy">
-          <div class="row-title">{{ t('settings.workspace.graphLabels.title') }}</div>
-          <div class="row-sub">{{ t('settings.workspace.graphLabels.description') }}</div>
-        </div>
-        <NvToggle
-          :model-value="settings.workspace.showGraphLabels"
-          @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.showGraphLabels = v })"
-        />
-      </div>
-    </div>
-  </div>
+    <SettingsRow
+      :title="t('settings.workspace.graphLabels.title')"
+      :description="t('settings.workspace.graphLabels.description')"
+    >
+      <NvToggle
+        :aria-label="t('settings.workspace.graphLabels.title')"
+        :model-value="settings.workspace.showGraphLabels"
+        @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.showGraphLabels = v })"
+      />
+    </SettingsRow>
+  </SettingsGroup>
 </template>

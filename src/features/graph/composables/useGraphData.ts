@@ -55,6 +55,7 @@ export function buildLocalSnapshot(
   centerFolderId: string | null,
   backlinks: { sourceId: string; sourceTitle: string; sourceIcon: string }[],
   outlinks: GraphEdge[],
+  noteById?: ReadonlyMap<string, NoteMeta>,
 ): GraphSnapshot {
   const nodeMap = new Map<string, GraphNode>()
 
@@ -62,15 +63,30 @@ export function buildLocalSnapshot(
 
   for (const bl of backlinks) {
     if (!nodeMap.has(bl.sourceId)) {
-      nodeMap.set(bl.sourceId, { id: bl.sourceId, title: bl.sourceTitle, icon: bl.sourceIcon, folderId: null, degree: 0 })
+      const meta = noteById?.get(bl.sourceId)
+      nodeMap.set(bl.sourceId, {
+        id: bl.sourceId,
+        title: bl.sourceTitle || meta?.title || bl.sourceId,
+        icon: bl.sourceIcon || meta?.icon || '📄',
+        folderId: meta?.folderId ?? null,
+        degree: 0,
+      })
     }
   }
 
   const edges: GraphEdge[] = []
 
   for (const ol of outlinks) {
+    if (ol.source !== centerId) continue
     if (!nodeMap.has(ol.target)) {
-      nodeMap.set(ol.target, { id: ol.target, title: ol.target, icon: '📄', folderId: null, degree: 0 })
+      const meta = noteById?.get(ol.target)
+      nodeMap.set(ol.target, {
+        id: ol.target,
+        title: meta?.title ?? ol.target,
+        icon: meta?.icon ?? '📄',
+        folderId: meta?.folderId ?? null,
+        degree: 0,
+      })
     }
     edges.push(ol)
   }

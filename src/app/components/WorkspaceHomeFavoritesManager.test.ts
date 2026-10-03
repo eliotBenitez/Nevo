@@ -105,6 +105,27 @@ describe('WorkspaceHomeFavoritesManager', () => {
     wrapper.unmount()
   })
 
+  it('announces an already selected candidate and does not add it again', async () => {
+    const selected = note('selected', 'Selected note')
+    const wrapper = mountManager([selected], [selected])
+    const action = wrapper.get('.home-manager__candidate button')
+
+    expect(action.attributes('aria-label')).toContain('On Home')
+    expect(action.find('svg.lucide-check').exists()).toBe(true)
+    await action.trigger('click')
+    expect(wrapper.emitted('add')).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it('exposes the full title and unavailable status on an unavailable favorite', () => {
+    const item = note('missing', 'A very long missing note title', false)
+    const wrapper = mountManager([item])
+
+    expect(wrapper.get('.home-manager__favorite').attributes('title'))
+      .toBe('A very long missing note title — Unavailable — remove manually')
+    wrapper.unmount()
+  })
+
   it('removes unavailable favorites and supports pointer and keyboard reorder', async () => {
     const unavailable = note('missing', 'Missing note', false)
     const wrapper = mountManager([unavailable, note('second', 'Second')])

@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import { createI18n } from 'vue-i18n'
 import { describe, expect, it, vi } from 'vitest'
 import EditorQueryPopover from './EditorQueryPopover.vue'
@@ -11,17 +12,21 @@ import en from '../../../locales/en.json'
 
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
-function mountPopover(onUpdateData?: (value: ReturnType<typeof emptyQueryBlockData>) => void) {
+function mountPopover(
+  onUpdateData?: (value: ReturnType<typeof emptyQueryBlockData>) => void,
+  options: { teleport?: boolean; data?: ReturnType<typeof emptyQueryBlockData> } = {},
+) {
   return mount(EditorQueryPopover, {
+    attachTo: document.body,
     props: {
       open: true,
-      data: emptyQueryBlockData(),
+      data: options.data ?? emptyQueryBlockData(),
       popoverStyle: { top: '100px', left: '200px' },
       'onUpdate:data': onUpdateData,
     },
     global: {
       plugins: [i18n],
-      stubs: { teleport: true },
+      stubs: { teleport: options.teleport ?? true },
     },
   })
 }
@@ -47,5 +52,27 @@ describe('EditorQueryPopover', () => {
 
     expect(onUpdateData.mock.calls[0]?.[0]).toMatchObject({ filters: { tagsAny: ['red', 'urgent'] } })
     expect(onUpdateData.mock.calls[1]?.[0]).toMatchObject({ filters: { includeSubtree: true } })
+  })
+
+  it('opens the date picker and maps a selected day back to the query filters', async () => {
+    const onUpdateData = vi.fn()
+    const data = emptyQueryBlockData()
+    data.filters.dateFrom = '2026-08-06'
+    const wrapper = mountPopover(onUpdateData, { teleport: false, data })
+    const datePicker = wrapper.findAllComponents(NvDatePicker)[0]
+
+    await datePicker.get('.ndp-trigger').trigger('click')
+    expect(datePicker.get('.ndp-trigger').classes()).toContain('ndp-trigger--open')
+    const calendar = document.body.querySelector<HTMLElement>('.ndp-popover')
+    expect(calendar).not.toBeNull()
+
+    const selectedDay = Array.from(calendar?.querySelectorAll<HTMLButtonElement>('.ndp-day') ?? [])
+      .find((day) => day.textContent?.trim() === '6' && !day.classList.contains('ndp-day--muted'))
+    selectedDay?.click()
+    await nextTick()
+
+    expect(onUpdateData).toHaveBeenCalledOnce()
+    expect(onUpdateData.mock.calls[0]?.[0].filters.dateFrom).toBe('2026-08-06')
+    wrapper.unmount()
   })
 })

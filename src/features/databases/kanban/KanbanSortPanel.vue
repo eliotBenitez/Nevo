@@ -52,18 +52,18 @@ function clearAll() {
 </script>
 
 <template>
-  <div class="kb-sort">
-    <div v-if="!modelValue.length" class="kb-sort__empty">
+  <div class="kb-sort tw:flex tw:flex-col">
+    <div v-if="!modelValue.length" class="kb-sort__empty tw:flex tw:items-center tw:gap-2 tw:px-3 tw:py-3.5 tw:text-xs tw:text-content-muted">
       <ArrowUpDown :size="14" />
       <span>{{ t('kanban.sort.empty') }}</span>
     </div>
 
-    <div v-else class="kb-sort__rules">
-      <div v-for="(rule, index) in modelValue" :key="rule.id" class="kb-sort__rule">
-        <span class="kb-sort__conj">{{ index === 0 ? t('kanban.sort.sortBy') : t('kanban.sort.then') }}</span>
+    <div v-else class="kb-sort__rules tw:flex tw:max-h-[280px] tw:flex-col tw:gap-1.5 tw:overflow-y-auto tw:p-2">
+      <div v-for="(rule, index) in modelValue" :key="rule.id" class="kb-sort__rule tw:flex tw:items-center tw:gap-[5px]">
+        <span class="kb-sort__conj tw:min-w-[46px] tw:text-[11px] tw:text-content-muted">{{ index === 0 ? t('kanban.sort.sortBy') : t('kanban.sort.then') }}</span>
 
         <NvSelect
-          class="kb-sort__select"
+          class="kb-sort__select tw:flex-1"
           :model-value="rule.fieldId"
           :options="fieldOptionsFor(rule)"
           :min-width="140"
@@ -72,7 +72,7 @@ function clearAll() {
 
         <button
           type="button"
-          class="kb-sort__dir"
+          class="kb-sort__dir tw:inline-flex tw:h-[26px] tw:items-center tw:gap-1 tw:whitespace-nowrap tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-[var(--hover,var(--surface-raised))] tw:px-2 tw:text-[11px] tw:text-content-secondary tw:cursor-pointer tw:hover:text-content-primary"
           :title="rule.direction === 'asc' ? t('kanban.sort.asc') : t('kanban.sort.desc')"
           @click="toggleDirection(index)"
         >
@@ -83,7 +83,7 @@ function clearAll() {
 
         <button
           type="button"
-          class="kb-sort__remove"
+          class="kb-sort__remove tw:inline-flex tw:size-[26px] tw:shrink-0 tw:items-center tw:justify-center tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border-none tw:bg-transparent tw:text-content-muted tw:cursor-pointer tw:hover:bg-[var(--hover,var(--surface-raised))] tw:hover:text-danger"
           :aria-label="t('kanban.sort.removeRule')"
           @click="removeRule(index)"
         >
@@ -92,145 +92,19 @@ function clearAll() {
       </div>
     </div>
 
-    <div class="kb-sort__footer">
+    <div class="kb-sort__footer tw:flex tw:items-center tw:justify-between tw:gap-2 tw:px-2 tw:py-[7px]">
       <button
         type="button"
-        class="kb-sort__add"
+        class="kb-sort__add tw:inline-flex tw:h-[26px] tw:items-center tw:gap-[5px] tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border-none tw:bg-transparent tw:px-2.5 tw:text-[11.5px] tw:font-[550] tw:text-accent tw:cursor-pointer tw:enabled:hover:bg-[var(--accent-soft,rgb(161_98_7/0.12))] tw:disabled:cursor-not-allowed tw:disabled:text-content-muted"
         :disabled="!availableFields.length"
         @click="addRule"
       >
         <Plus :size="13" />
         {{ t('kanban.sort.addRule') }}
       </button>
-      <button v-if="modelValue.length" type="button" class="kb-sort__clear" @click="clearAll">
+      <button v-if="modelValue.length" type="button" class="kb-sort__clear tw:h-[26px] tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border-none tw:bg-transparent tw:px-2.5 tw:text-[11.5px] tw:text-[var(--text-muted,var(--text-secondary))] tw:cursor-pointer tw:hover:bg-[var(--hover,var(--surface-raised))] tw:hover:text-content-primary" @click="clearAll">
         {{ t('kanban.sort.clearAll') }}
       </button>
     </div>
   </div>
 </template>
-
-<style scoped>
-.kb-sort {
-  display: flex;
-  flex-direction: column;
-}
-
-.kb-sort__empty {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 12px;
-  color: var(--text-4, var(--text-muted));
-  font-size: 12px;
-}
-
-.kb-sort__rules {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px;
-  max-height: 280px;
-  overflow-y: auto;
-}
-
-.kb-sort__rule {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.kb-sort__conj {
-  font-size: 11px;
-  color: var(--text-4, var(--text-muted));
-  min-width: 46px;
-}
-
-.kb-sort__select {
-  flex: 1;
-}
-
-.kb-sort__dir {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 26px;
-  padding: 0 8px;
-  border-radius: calc(6px * var(--radius-scale, 1));
-  border: 1px solid var(--line-1, var(--border-subtle));
-  background: var(--hover, var(--surface-1));
-  color: var(--text-2, var(--text-secondary));
-  font-size: 11px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.kb-sort__dir:hover { color: var(--text-1, var(--text-primary)); }
-
-.kb-sort__remove {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: calc(6px * var(--radius-scale, 1));
-  border: none;
-  background: none;
-  color: var(--text-4, var(--text-muted));
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.kb-sort__remove:hover {
-  background: var(--hover, var(--surface-1));
-  color: oklch(0.6 0.18 25);
-}
-
-.kb-sort__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 7px 8px;
-  border-top: 1px solid var(--line-1, var(--border-subtle));
-}
-
-.kb-sort__add {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 9px;
-  border-radius: calc(6px * var(--radius-scale, 1));
-  border: none;
-  background: none;
-  color: var(--accent);
-  font-size: 11.5px;
-  font-weight: 550;
-  cursor: pointer;
-}
-
-.kb-sort__add:disabled {
-  color: var(--text-4, var(--text-muted));
-  cursor: not-allowed;
-}
-
-.kb-sort__add:not(:disabled):hover {
-  background: var(--accent-soft, rgb(161 98 7 / 0.12));
-}
-
-.kb-sort__clear {
-  height: 26px;
-  padding: 0 9px;
-  border-radius: calc(6px * var(--radius-scale, 1));
-  border: none;
-  background: none;
-  color: var(--text-3, var(--text-secondary));
-  font-size: 11.5px;
-  cursor: pointer;
-}
-
-.kb-sort__clear:hover {
-  background: var(--hover, var(--surface-1));
-  color: var(--text-1, var(--text-primary));
-}
-</style>

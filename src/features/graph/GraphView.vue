@@ -2,7 +2,10 @@
 import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { ArrowLeft, Search, SlidersHorizontal } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
+// Loaded here (not main.ts) so the graph feature's CSS ships only when it's opened.
+import '../../styles/graph.css'
 import { useWorkspaceStore } from '../../stores/workspace'
+import { useOnboardingStore } from '../../stores/onboarding'
 import { getActivePinia } from 'pinia'
 import type { WorkspaceManifest } from '../../types/workspace'
 import type { EdgeKind, GraphSnapshot } from '../../types/graph'
@@ -66,6 +69,7 @@ onMounted(() => {
   try {
     if (getActivePinia()) {
       showLabels.value = useWorkspaceStore().settings.workspace.showGraphLabels
+      void useOnboardingStore().markFirstStep('openGraph')
     }
   } catch {
     // The workspace store is unavailable in isolated graph renders.
@@ -164,30 +168,30 @@ watch(simNodes, (nodes) => {
 </script>
 
 <template>
-  <div class="graph-view">
-    <header class="graph-header">
-      <button class="nv-btn" @click="emit('back')">
+  <div class="graph-view tw:flex tw:min-h-0 tw:flex-1 tw:flex-col tw:overflow-hidden tw:max-[719px]:relative">
+    <header class="graph-header tw:z-2 tw:flex tw:h-12 tw:shrink-0 tw:items-center tw:gap-2.5 tw:border-b-0 tw:bg-(--island-bg) tw:px-3 tw:max-[719px]:pointer-events-none tw:max-[719px]:absolute tw:max-[719px]:inset-x-0 tw:max-[719px]:top-0 tw:max-[719px]:z-20 tw:max-[719px]:grid tw:max-[719px]:h-auto tw:max-[719px]:min-h-[calc(58px_+_max(var(--safe-area-top),0px))] tw:max-[719px]:grid-cols-[44px_minmax(0,1fr)_44px] tw:max-[719px]:gap-2 tw:max-[719px]:bg-transparent tw:max-[719px]:pt-[max(var(--safe-area-top),0px)] tw:max-[719px]:pr-[calc(14px_+_max(var(--safe-area-right),0px))] tw:max-[719px]:pb-[7px] tw:max-[719px]:pl-[calc(12px_+_max(var(--safe-area-left),0px))]">
+      <button class="nv-btn tw:max-[719px]:pointer-events-auto tw:max-[719px]:grid tw:max-[719px]:size-11 tw:max-[719px]:min-w-11 tw:max-[719px]:place-items-center tw:max-[719px]:rounded-[calc(14px*var(--radius-scale,1))] tw:max-[719px]:border tw:max-[719px]:border-solid tw:max-[719px]:border-transparent tw:max-[719px]:bg-(--input-bg) tw:max-[719px]:p-0 tw:max-[719px]:shadow-[0_12px_30px_-22px_var(--shadow)]" @click="emit('back')">
         <ArrowLeft :size="12" />
-        <span>{{ t('graph.backToEditor') }}</span>
+        <span class="tw:max-[719px]:hidden">{{ t('graph.backToEditor') }}</span>
       </button>
 
-      <div class="graph-header__search">
-        <Search :size="13" class="graph-header__search-icon" />
+      <div class="graph-header__search tw:flex tw:h-[30px] tw:max-w-80 tw:flex-1 tw:items-center tw:gap-[7px] tw:rounded-[calc(9px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--input-bg) tw:px-2.5 tw:transition-[border-color,box-shadow] tw:duration-150 tw:focus-within:border-accent tw:focus-within:shadow-[0_0_0_2px_var(--accent-soft)] tw:max-[719px]:pointer-events-auto tw:max-[719px]:h-11 tw:max-[719px]:w-full tw:max-[719px]:min-w-0 tw:max-[719px]:max-w-none tw:max-[719px]:rounded-[calc(14px*var(--radius-scale,1))] tw:max-[719px]:bg-(--island-bg) tw:max-[719px]:shadow-[0_12px_30px_-22px_var(--shadow)]">
+        <Search :size="13" class="graph-header__search-icon tw:shrink-0 tw:text-content-muted" />
         <input
           v-model="searchQuery"
-          class="graph-header__search-input"
+          class="graph-header__search-input tw:min-w-0 tw:flex-1 tw:border-none tw:bg-transparent tw:text-[12.5px] tw:text-content-primary tw:outline-none tw:placeholder:text-content-muted tw:max-[719px]:text-sm"
           :placeholder="t('graph.searchPlaceholder')"
         />
       </div>
 
-      <div class="graph-header__meta">
-        <span class="graph-meta-pill">{{ simNodes.length }} {{ t('graph.nodes') }}</span>
-        <span class="graph-meta-pill">{{ filteredEdges.length }} {{ t('graph.edges') }}</span>
+      <div class="graph-header__meta tw:ml-auto tw:flex tw:items-center tw:gap-1.5 tw:max-[719px]:hidden">
+        <span class="graph-meta-pill tw:inline-flex tw:h-[22px] tw:items-center tw:rounded-[calc(20px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle tw:px-2 tw:font-nv-mono tw:text-[11px] tw:text-content-muted">{{ simNodes.length }} {{ t('graph.nodes') }}</span>
+        <span class="graph-meta-pill tw:inline-flex tw:h-[22px] tw:items-center tw:rounded-[calc(20px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle tw:px-2 tw:font-nv-mono tw:text-[11px] tw:text-content-muted">{{ filteredEdges.length }} {{ t('graph.edges') }}</span>
       </div>
 
       <button
         type="button"
-        class="graph-header__filter"
+        class="graph-header__filter tw:hidden tw:max-[719px]:pointer-events-auto tw:max-[719px]:grid tw:max-[719px]:size-11 tw:max-[719px]:place-items-center tw:max-[719px]:rounded-[calc(14px*var(--radius-scale,1))] tw:max-[719px]:border tw:max-[719px]:border-solid tw:max-[719px]:border-transparent tw:max-[719px]:bg-surface-subtle tw:max-[719px]:p-0 tw:max-[719px]:text-content-secondary tw:max-[719px]:shadow-[0_12px_30px_-22px_var(--shadow)] tw:max-[719px]:aria-pressed:bg-(--accent-soft) tw:max-[719px]:aria-pressed:text-accent"
         :class="{ 'is-active': mobileFiltersOpen }"
         :aria-label="t('graph.filters')"
         :aria-pressed="mobileFiltersOpen"
@@ -197,21 +201,21 @@ watch(simNodes, (nodes) => {
       </button>
     </header>
 
-    <div ref="containerRef" class="graph-body">
+    <div ref="containerRef" class="graph-body tw:relative tw:min-h-0 tw:flex-1 tw:overflow-hidden tw:bg-(--island-bg) tw:bg-[radial-gradient(circle,var(--border-default)_1px,transparent_1px)] tw:bg-[length:28px_28px]">
       <!-- Loading -->
       <Transition name="graph-fade">
-        <div v-if="loading" class="graph-state">
-          <div class="graph-spinner" />
-          <span class="graph-state__text">{{ t('graph.loading') }}</span>
+        <div v-if="loading" class="graph-state tw:pointer-events-none tw:absolute tw:inset-0 tw:flex tw:flex-col tw:items-center tw:justify-center tw:gap-3.5">
+          <div class="graph-spinner tw:size-7 tw:rounded-full tw:border-2 tw:border-solid tw:border-line-default tw:border-t-accent" />
+          <span class="graph-state__text tw:text-[13px] tw:text-content-muted">{{ t('graph.loading') }}</span>
         </div>
       </Transition>
 
       <!-- Empty state -->
       <Transition name="graph-fade">
-        <div v-if="isEmpty" class="graph-state">
-          <div class="graph-empty-icon">🕸</div>
-          <p class="graph-state__title">{{ t('graph.emptyTitle') }}</p>
-          <p class="graph-state__sub">{{ t('graph.emptySub') }}</p>
+        <div v-if="isEmpty" class="graph-state tw:pointer-events-none tw:absolute tw:inset-0 tw:flex tw:flex-col tw:items-center tw:justify-center tw:gap-3.5">
+          <div class="graph-empty-icon tw:text-5xl tw:leading-none tw:opacity-50 tw:grayscale-[0.4]">🕸</div>
+          <p class="graph-state__title tw:m-0 tw:text-[17px] tw:font-medium tw:text-content-secondary">{{ t('graph.emptyTitle') }}</p>
+          <p class="graph-state__sub tw:m-0 tw:max-w-80 tw:text-center tw:text-[13px] tw:leading-[1.6] tw:text-content-muted">{{ t('graph.emptySub') }}</p>
         </div>
       </Transition>
 

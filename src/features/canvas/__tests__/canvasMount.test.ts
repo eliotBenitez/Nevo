@@ -3,10 +3,8 @@ import { mount, type VueWrapper } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { createI18n } from 'vue-i18n'
 import { EditorView } from 'prosemirror-view'
-import { Awareness } from 'y-protocols/awareness'
 import EdgelessCanvasView from '../EdgelessCanvasView.vue'
 import { CANVAS_DOCUMENT_FRAME_ID, type CanvasSnapshotV1 } from '../../../core/canvas'
-import { createYDocFromContent, Y_FRAGMENT_NAME } from '../../../editor-core/collaboration'
 import { nevoBaseSchema } from '../../../editor-core/schema'
 import { createNevoEditorState } from '../../../editor-core/state'
 import en from '../../../locales/en.json'
@@ -89,12 +87,9 @@ describe('EdgelessCanvasView bootstrap', () => {
 
   it('finishes a 230k-character mixed document bootstrap and renders it as a single frame card', async () => {
     const content = mixedLargeContent()
-    const ydoc = createYDocFromContent(nevoBaseSchema, content)
-    const awareness = new Awareness(ydoc)
     const setup = createNevoEditorState({
       schema: nevoBaseSchema,
       content,
-      yFragment: ydoc.getXmlFragment(Y_FRAGMENT_NAME),
     })
     const pane = document.createElement('div')
     pane.className = 'editor-pane--canvas'
@@ -121,8 +116,6 @@ describe('EdgelessCanvasView bootstrap', () => {
         noteId: 'large-note',
         workspaceId: 'workspace',
         getEditorView: () => view,
-        getYDoc: () => ydoc,
-        getAwareness: () => awareness,
         notes: [{ id: 'linked-note', title: 'Linked roadmap', icon: '🧭' }],
         'onUpdate:mirror': onMirror,
       },

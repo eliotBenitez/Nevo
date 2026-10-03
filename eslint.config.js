@@ -22,6 +22,11 @@ export default tseslint.config(
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    // Node-only tooling scripts (visual QA driver, build helpers).
+    files: ['tools/**/*.mjs', 'build-tools/**/*.mjs'],
+    languageOptions: { globals: globals.node },
+  },
   ...vue.configs['flat/recommended'],
   {
     files: ['**/*.{ts,vue}'],

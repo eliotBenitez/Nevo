@@ -1,0 +1,15 @@
+The TypeScript files in this directory are a port of ink-stroke-modeler-rs
+(https://github.com/flxzt/ink-stroke-modeler-rs, Copyright (c) 2025 The
+ink-stroke-modeler-rs Authors, licensed MIT OR Apache-2.0), which is an
+unofficial Rust rewrite of Google's ink-stroke-modeler
+(https://github.com/google/ink-stroke-modeler, Copyright 2022 Google LLC,
+licensed Apache-2.0).
+
+Nevo uses the work under the terms of the Apache License, Version 2.0 (full
+text in LICENSE-APACHE-2.0.txt); the MIT license text of the Rust port is kept
+in LICENSE-MIT.txt.
+
+Changes: translated from Rust to TypeScript, restructured into one module per
+concern, the public API (createStrokeModeler) turns upstream errors into
+no-ops, and wobble state is fully cleared on reset. Algorithms, formulas and
+the suggested parameter values are unchanged.

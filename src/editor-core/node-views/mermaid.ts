@@ -12,6 +12,7 @@ import {
   type ViewportRenderController,
 } from './viewportRenderController'
 import { sanitizeSvg } from '../../utils/sanitizeSvg'
+import { MAX_EMBED_SOURCE_CHARS } from './embedLimits'
 
 let renderCounter = 0
 
@@ -107,6 +108,17 @@ export function createMermaidNodeView(node: PMNode, view: EditorView, getPos: No
       rendered.innerHTML = ''
       rendered.textContent = 'Add a diagram — click to edit'
       dom.dataset.error = 'false'
+      lastRenderedCode = code
+      return
+    }
+
+    // Mermaid's parser has no input-size bound of its own; a huge source
+    // string (pasted/imported content) can hang the tab. Skip rendering and
+    // let the user shrink it — the block stays clickable/editable either way.
+    if (code.length > MAX_EMBED_SOURCE_CHARS) {
+      rendered.innerHTML = ''
+      rendered.textContent = options?.t?.('editor.embeds.sourceTooLarge') ?? 'Source is too large to render — shorten it to continue'
+      dom.dataset.error = 'true'
       lastRenderedCode = code
       return
     }

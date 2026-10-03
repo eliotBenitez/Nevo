@@ -44,6 +44,7 @@ import { createInsertToggleCommand, createToggleCollapseCommand } from './toggle
 export type { CoreCommandId, NevoLinkRange, NevoInternalLinkRange, TableCellAlignment, ImageBlockAttrs, FileBlockAttrs, TableInsertOptions, NevoCoreCommands } from './types'
 export { getLinkRange } from './link'
 export { getInternalLinkRange } from './internal-link'
+export { createFocusFirstBlockOrCreateEmptyCommand, focusEditorFirstBlock, isFirstBlockEmpty } from './titleNavigation'
 
 function createCalloutParagraph(paragraph: NodeType, sourceNode: PMNode | null) {
   const content = sourceNode?.content

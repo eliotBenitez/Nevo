@@ -30,6 +30,7 @@ export function placeEditorPopoverNearAnchor(
   clampOverlayPosition: ClampOverlayPosition,
   boundaryRect: DOMRect | null,
   margin = 12,
+  preferAbove = false,
 ): OverlayPosition {
   const bounds = boundaryRect ?? new DOMRect(0, 0, window.innerWidth, window.innerHeight)
   const availableWidth = Math.max(bounds.width - margin * 2, 1)
@@ -46,8 +47,31 @@ export function placeEditorPopoverNearAnchor(
   const fitsBelow = preferredBelowTop + elHeight <= maxBottom
   const fitsAbove = preferredAboveTop >= minTop
 
+  let top: number
+  if (preferAbove) {
+    if (fitsAbove) {
+      top = preferredAboveTop
+    } else if (fitsBelow) {
+      top = preferredBelowTop
+    } else {
+      const roomAbove = anchorRect.top - minTop
+      const roomBelow = maxBottom - anchorRect.bottom
+      top = roomAbove >= roomBelow ? preferredAboveTop : preferredBelowTop
+    }
+  } else {
+    if (fitsBelow) {
+      top = preferredBelowTop
+    } else if (fitsAbove) {
+      top = preferredAboveTop
+    } else {
+      const roomAbove = anchorRect.top - minTop
+      const roomBelow = maxBottom - anchorRect.bottom
+      top = roomBelow >= roomAbove ? preferredBelowTop : preferredAboveTop
+    }
+  }
+
   const preferredPosition = {
-    top: !fitsBelow && fitsAbove ? preferredAboveTop : preferredBelowTop,
+    top,
     left: anchorRect.left + anchorRect.width / 2,
   }
 

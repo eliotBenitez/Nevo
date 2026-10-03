@@ -2,17 +2,30 @@ import { computed, ref } from 'vue'
 import type { Node as ProseMirrorNode } from 'prosemirror-model'
 import type { EditorCore } from './useEditorCore'
 import type { WorkspaceSettings } from '../../../types/workspace'
+import type { ExtractedEdge } from '../../../types/graph'
 import { useGraphStore } from '../../../stores/graph'
 import { extractLinks } from '../../../editor-core/extract-links'
-import { countWordsInText } from '../../../utils/noteWordCount'
+import { computeDocStats, type DocStats } from '../../../editor-core/docStats'
 import { createIdleTaskScheduler } from './idleTaskScheduler'
 
 const STATS_UPDATE_DELAY_MS = 200
 const GRAPH_UPDATE_DELAY_MS = 600
 
+function edgesEqual(a: readonly ExtractedEdge[], b: readonly ExtractedEdge[]): boolean {
+  if (a.length !== b.length) return false
+  return a.every((edge, index) => {
+    const other = b[index]
+    return edge.target === other.target
+      && edge.kind === other.kind
+      && edge.anchor === other.anchor
+      && edge.position === other.position
+  })
+}
+
 /** Word/char count stats + debounced graph-edge extraction, extracted from
- *  WorkspaceEditorPane. Large-doc textContent reads are deferred and disabled
- *  when the stats corner is hidden. */
+ *  WorkspaceEditorPane. Stats are derived in a single doc walk
+ *  (`computeDocStats`) and disabled when the stats corner is hidden, instead
+ *  of materializing the whole document as a string on every update. */
 export function useEditorDocStats(
   core: EditorCore,
   getSettings: () => WorkspaceSettings,
@@ -20,11 +33,14 @@ export function useEditorDocStats(
 ) {
   const graphStore = useGraphStore()
 
-  const editorDocText = ref('')
-  const editorWordText = ref('')
+  const stats = ref<DocStats | null>(null)
   let lastStatsDoc: object | null = null
   let pendingGraphDoc: ProseMirrorNode | null = null
   let pendingGraphNoteId: string | null = null
+  // Edge list last actually sent to the backend, per note, so a transaction
+  // that touched the document but not any link mark (the common case) skips
+  // the `graphUpdateNoteEdges` IPC round trip and its SQLite/manifest write.
+  const lastSentEdgesByNoteId = new Map<string, ExtractedEdge[]>()
 
   function statsVisible() {
     return getSettings().editor.editorStatsVisibility === 'corner'
@@ -32,15 +48,11 @@ export function useEditorDocStats(
 
   function calculateEditorStats() {
     if (!statsVisible()) {
-      if (editorDocText.value) editorDocText.value = ''
-      if (editorWordText.value) editorWordText.value = ''
+      if (stats.value) stats.value = null
       return
     }
     const currentDoc = core.editorView?.state.doc ?? null
-    const nextDocText = currentDoc?.textContent ?? ''
-    const nextWordText = currentDoc?.textBetween(0, currentDoc.content.size, '\n', '\n') ?? ''
-    if (nextDocText !== editorDocText.value) editorDocText.value = nextDocText
-    if (nextWordText !== editorWordText.value) editorWordText.value = nextWordText
+    stats.value = currentDoc ? computeDocStats(currentDoc) : null
     lastStatsDoc = currentDoc
   }
 
@@ -57,8 +69,7 @@ export function useEditorDocStats(
   function scheduleEditorStatsUpdate() {
     if (!statsVisible()) {
       statsUpdateTask.cancel()
-      if (editorDocText.value) editorDocText.value = ''
-      if (editorWordText.value) editorWordText.value = ''
+      if (stats.value) stats.value = null
       return
     }
     statsUpdateTask.schedule()
@@ -69,9 +80,14 @@ export function useEditorDocStats(
     const nextNoteId = pendingGraphNoteId
     pendingGraphDoc = null
     pendingGraphNoteId = null
-    if (nextDoc && nextNoteId) {
-      graphStore.updateNoteEdges(nextNoteId, extractLinks(nextDoc))
-    }
+    if (!nextDoc || !nextNoteId) return
+
+    const edges = extractLinks(nextDoc)
+    const lastEdges = lastSentEdgesByNoteId.get(nextNoteId)
+    if (lastEdges && edgesEqual(lastEdges, edges)) return
+
+    lastSentEdgesByNoteId.set(nextNoteId, edges)
+    graphStore.updateNoteEdges(nextNoteId, edges)
   }
 
   const graphUpdateTask = createIdleTaskScheduler(flushGraphUpdate, {
@@ -109,14 +125,10 @@ export function useEditorDocStats(
 
   const editorWordCount = computed(() => {
     if (getSettings().editor.editorStatsVisibility !== 'corner') return null
-    return {
-      words: countWordsInText(editorWordText.value),
-      chars: editorDocText.value.length,
-    }
+    return stats.value
   })
 
   return {
-    editorDocText,
     editorWordCount,
     updateEditorStatsNow,
     scheduleGraphUpdate,

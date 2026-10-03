@@ -29,15 +29,12 @@ function mountFlow() {
           messages: { en },
         }),
       ],
-      stubs: {
-        AmbientBackdrop: true,
-      },
     },
   })
 }
 
 describe('MobileCreateWorkspaceFlow', () => {
-  it('moves through identity, protected local storage, and template steps', async () => {
+  it('moves through identity and template steps', async () => {
     const wrapper = mountFlow()
 
     expect(wrapper.text()).toContain(en.onboarding.create.mobile.identityTitle)
@@ -48,32 +45,15 @@ describe('MobileCreateWorkspaceFlow', () => {
 
     await wrapper.get('.mobile-create__primary').trigger('click')
 
-    expect(wrapper.text()).toContain(en.onboarding.create.mobile.storageTitle)
-    expect(wrapper.text()).toContain(en.onboarding.create.mobile.deviceTitle)
-    expect(wrapper.text()).toContain(en.onboarding.create.mobile.cloudTitle)
-    expect(wrapper.text()).not.toContain(en.onboarding.create.locationLabel)
-    expect(wrapper.get('.mobile-create__choice[disabled]').attributes('title'))
-      .toBe(en.onboarding.create.mobile.cloudUnavailable)
-
-    await wrapper.get('.mobile-create__primary').trigger('click')
-
     expect(wrapper.text()).toContain(en.onboarding.create.mobile.templateTitle)
     expect(wrapper.text()).toContain(en.onboarding.create.mobile.createNamed.replace('{name}', 'Atelier'))
   })
 
-  it('opens storage information and returns to the previous wizard step', async () => {
+  it('goes back to the previous wizard step', async () => {
     const wrapper = mountFlow()
 
     await wrapper.get('.mobile-create__primary').trigger('click')
-    await wrapper.get('.mobile-create__text-action').trigger('click')
-
-    expect(wrapper.get('[role="dialog"]').text())
-      .toContain(en.onboarding.create.mobile.storageInfoTitle)
-    expect(wrapper.find('.mobile-create__footer').exists()).toBe(false)
-
-    await wrapper.get('.mobile-create__sheet-close').trigger('click')
-    expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
-    expect(wrapper.find('.mobile-create__footer').exists()).toBe(true)
+    expect(wrapper.text()).toContain(en.onboarding.create.mobile.templateTitle)
 
     await wrapper.get('.mobile-create__icon-button').trigger('click')
     expect(wrapper.text()).toContain(en.onboarding.create.mobile.identityTitle)
@@ -84,7 +64,6 @@ describe('MobileCreateWorkspaceFlow', () => {
     const onCreate = vi.fn()
     await wrapper.setProps({ onCreate })
 
-    await wrapper.get('.mobile-create__primary').trigger('click')
     await wrapper.get('.mobile-create__primary').trigger('click')
     await wrapper.get('.mobile-create__primary').trigger('click')
 

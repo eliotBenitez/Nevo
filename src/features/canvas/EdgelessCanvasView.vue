@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, watch } from 'vue'
 import type { EditorView } from 'prosemirror-view'
-import type * as Y from 'yjs'
-import type { Awareness } from 'y-protocols/awareness'
 import { useI18n } from 'vue-i18n'
 import type { WorkspaceBackend } from '../../core/workspace-backend'
 import { CANVAS_DOCUMENT_FRAME_ID, type CanvasElement, type CanvasSnapshotV1 } from '../../core/canvas'
@@ -32,10 +30,10 @@ import { useCanvasKeyboard } from './composables/useCanvasKeyboard'
 import { useCanvasLabels } from './composables/useCanvasLabels'
 import { useCanvasPointerInteraction } from './composables/useCanvasPointerInteraction'
 import { useCanvasP1Features, type CanvasNoteOption } from './composables/useCanvasP1Features'
-import { useCanvasPresence } from './composables/useCanvasPresence'
 import { useCanvasQuickConnect } from './composables/useCanvasQuickConnect'
 import { useCanvasRotationGesture } from './composables/useCanvasRotationGesture'
 import { useCanvasSelectionActions } from './composables/useCanvasSelectionActions'
+import { useFirstUseHint } from '../onboarding/hints/useFirstUseHint'
 import { useCanvasSessionActions } from './composables/useCanvasSessionActions'
 import { useCanvasToolState } from './composables/useCanvasToolState'
 import { useCanvasViewState } from './composables/useCanvasViewState'
@@ -52,8 +50,6 @@ const props = defineProps<{
   resolveAssetSrc?: (src: string) => string | null
   getWorkspaceBackend?: () => WorkspaceBackend | null
   getEditorView: () => EditorView | null
-  getYDoc: () => Y.Doc | null
-  getAwareness: () => Awareness | null
   notes?: readonly CanvasNoteOption[]
 }>()
 
@@ -62,6 +58,8 @@ const emit = defineEmits<{
   'open-note': [noteId: string]
 }>()
 const { t } = useI18n()
+
+useFirstUseHint('canvasPresent')
 const canvasLabels = useCanvasLabels(t)
 
 const { camera, cameraView, panBy, zoomAt, fit, onCameraFrame } = useCanvasCamera(props.workspaceId, props.noteId)
@@ -84,8 +82,6 @@ const { activeTool, style: toolStyle, activate, returnToSelect } = useCanvasTool
 const panMode = computed(() => spacePressed.value || activeTool.value === 'hand')
 const canvas = useCanvasDocument({
   getEditorView: props.getEditorView,
-  getYDoc: props.getYDoc,
-  getAwareness: props.getAwareness,
   getMirror: () => props.mirror,
   onMirrorChange: snapshot => emit('update:mirror', snapshot),
 })
@@ -99,7 +95,6 @@ const { effectiveFrame, frameCollapsed, frameTitle, frameSelected } = useCanvasF
   getTitle: () => props.title,
   t,
 })
-const presence = useCanvasPresence(props.noteId, props.getAwareness)
 const canvasExport = useCanvasExport({
   noteId: props.noteId,
   snapshot: canvas.snapshot,
@@ -138,8 +133,6 @@ const {
   getEditorView: props.getEditorView,
   panBy,
   zoomAt,
-  publishSelection: presence.publish,
-  publishCursor: presence.publishCursor,
 })
 // The pointer composable caches the viewport rect; the view state owns the
 // ResizeObserver that invalidates it.
@@ -363,19 +356,17 @@ useCanvasKeyboard({
 watch(canvas.ready, (ready) => {
   if (!ready) return
   viewportLifecycle.attachEditorListeners()
-  presence.connect()
 })
 
 // The editor can be recreated underneath a mounted canvas (note reload, editor
-// remount). Reading it inside the getter registers the dependency, so both the
-// wheel/world-layer bindings and the Y.Doc binding follow the new view instead
-// of styling a detached node and writing to the previous note's document.
+// remount). Reading it inside the getter registers the dependency, so both
+// the wheel/world-layer bindings and the frame-style binding follow the new
+// view instead of styling a detached node.
 watch(() => props.getEditorView(), () => {
   canvas.syncEditorView()
   viewportLifecycle.attachEditorListeners()
 })
 watch(selectedIds, (ids) => {
-  presence.publish(ids)
   if (!ids.includes(CANVAS_DOCUMENT_FRAME_ID)) finishEditing()
 }, { deep: true })
 
@@ -458,7 +449,6 @@ onBeforeUnmount(() => {
       :editing-rich-id="p1.richEditing.editingId.value"
       :editing-rich-content="p1.richEditing.draft.value"
       :editing-rich-style="p1.richEditing.editingStyle.value"
-      :peers="presence.peers.value"
       :labels="canvasLabels.overlays.value"
       @resize="onResizePointerDown"
       @rotate="selectedItem?.kind === 'element' && rotationGesture.onRotatePointerDown(selectedItem.id, $event)"
@@ -526,7 +516,11 @@ onBeforeUnmount(() => {
       @update:format="canvasExport.format.value = $event"
       @update:scope="canvasExport.scope.value = $event"
     />
-    <input ref="imageInput" class="canvas-image-input" type="file" accept="image/*" @change="onImageInput">
-    <p v-if="imageAssets.errorMessage.value" class="canvas-import-error" role="alert">{{ imageAssets.errorMessage.value }}</p>
+    <input ref="imageInput" class="canvas-image-input tw:sr-only" type="file" accept="image/*" @change="onImageInput">
+    <p
+      v-if="imageAssets.errorMessage.value"
+      class="canvas-import-error tw:absolute tw:z-50 tw:right-4 tw:bottom-4 tw:max-w-[360px] tw:m-0 tw:py-2.5 tw:px-3 tw:rounded-[10px] tw:border tw:border-solid tw:border-danger tw:text-danger tw:bg-surface-raised tw:shadow-(--shadow-raised) tw:text-xs"
+      role="alert"
+    >{{ imageAssets.errorMessage.value }}</p>
   </div>
 </template>

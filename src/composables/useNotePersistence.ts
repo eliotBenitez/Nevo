@@ -7,10 +7,11 @@ import { matchHotkeyCommand } from '../utils/hotkeys'
 const AUTOSAVE_DELAY_MS = 2_000
 // Coarse safety net so a dirty note is never left unsaved indefinitely. In the
 // `window-idle` policy `scheduleSave` only arms on blur/visibility change, so a
-// long focused session would otherwise keep `note.json` stale (widening the
-// note.json ↔ Y.Doc drift). This periodic flush bounds that window regardless
-// of policy; it is a no-op when nothing is dirty.
-const SAFETY_NET_INTERVAL_MS = 3 * 60_000
+// long focused session would otherwise keep `note.json` — now the note's only
+// copy — stale for as long as the window stays focused. This periodic flush
+// bounds that window regardless of policy; it is a no-op when nothing is
+// dirty, so a short interval costs nothing beyond the isDirty check itself.
+const SAFETY_NET_INTERVAL_MS = 15_000
 
 export function useNotePersistence() {
   const noteStore = useNoteStore()
@@ -20,6 +21,16 @@ export function useNotePersistence() {
   let safetyNetTimer: ReturnType<typeof setInterval> | null = null
   let idleSavePending = false
 
+  async function saveInBackground() {
+    // Notebook checkpoints already captured accepted ink. A shell timer must
+    // not finalize the live pointer contact while persisting that snapshot.
+    if (noteStore.activeNote?.documentKind === 'notebook') {
+      await noteStore.flushDurably({ flushEditorSession: false })
+    } else {
+      await noteStore.saveNote()
+    }
+  }
+
   function scheduleSave() {
     if (settings.value.editor.autosavePolicy === 'window-idle') {
       idleSavePending = true
@@ -28,7 +39,7 @@ export function useNotePersistence() {
     if (saveTimer) clearTimeout(saveTimer)
     saveTimer = setTimeout(() => {
       saveTimer = null
-      void noteStore.saveNote()
+      void saveInBackground()
     }, AUTOSAVE_DELAY_MS)
   }
 
@@ -71,7 +82,7 @@ export function useNotePersistence() {
     window.addEventListener('blur', onWindowIdle)
     document.addEventListener('visibilitychange', onVisibilityChange)
     safetyNetTimer = setInterval(() => {
-      if (noteStore.isDirty) void noteStore.saveNote()
+      if (noteStore.isDirty) void saveInBackground()
     }, SAFETY_NET_INTERVAL_MS)
   })
   onUnmounted(() => {

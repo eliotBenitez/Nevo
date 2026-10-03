@@ -220,5 +220,26 @@ describe('useWorkspaceTransfer', () => {
         expect.any(Function),
       )
     })
+
+    it('shows the workspace-schema-too-new message without re-prompting for a password', async () => {
+      const store = useWorkspaceStore()
+      store.activeHandle = { kind: 'local', path: '/workspaces/team' }
+      store.manifest = manifestFixture('Team')
+      workspaceTransferMocks.mergeWorkspaceArchive.mockRejectedValueOnce(
+        'workspace-schema-too-new:3:1',
+      )
+
+      const { transfer } = mountTransfer()
+      const result = await transfer.importMergeIntoCurrent()
+
+      expect(result).toBeNull()
+      expect(promptPasswordMock).not.toHaveBeenCalled()
+      expect(workspaceTransferMocks.mergeWorkspaceArchive).toHaveBeenCalledTimes(1)
+      const { toastState } = useToast()
+      const errorToast = toastState.items.find(item => item.variant === 'error')
+      expect(errorToast?.message).toBe(
+        'This archive was created by a newer version of Nevo. Update Nevo to import it.',
+      )
+    })
   })
 })

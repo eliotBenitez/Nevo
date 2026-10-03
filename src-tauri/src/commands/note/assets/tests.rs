@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 use super::draw::{read_draw_asset_inner, read_latest_draw_asset_inner, save_draw_asset_inner};
 use super::gc::delete_unreferenced_asset_inner;
+use super::import::{import_image_asset_impl, MAX_LOCAL_ASSET_BYTES};
 use super::remote::{
     content_type_matches_extension, derive_download_file_name, is_public_ip, sniff_image_extension,
     validate_remote_asset_url,
@@ -153,6 +154,61 @@ fn delete_unreferenced_asset_keeps_current_note_references() {
     .expect("delete asset");
 
     assert!(!deleted);
+    assert!(asset_path.exists());
+}
+
+#[test]
+fn delete_unreferenced_asset_keeps_assets_referenced_only_from_a_not_yet_migrated_collab_dir() {
+    let workspace = TestWorkspace::new();
+    let workspace_path = workspace.path_string();
+    let asset_path = write_asset(&workspace_path, "legacy-only.jpg");
+
+    let collab_dir = std::path::Path::new(&workspace_path).join(".nevo/collab");
+    std::fs::create_dir_all(&collab_dir).expect("collab dir");
+    std::fs::write(
+        collab_dir.join("note-1.yjs"),
+        b".nevo/assets/legacy-only.jpg",
+    )
+    .expect("write legacy yjs state");
+
+    let deleted = delete_unreferenced_asset_inner(
+        workspace_path,
+        "image:.nevo/assets/legacy-only.jpg".to_string(),
+    )
+    .expect("delete asset");
+
+    assert!(
+        !deleted,
+        "an asset referenced only from a not-yet-migrated .nevo/collab must survive GC"
+    );
+    assert!(asset_path.exists());
+}
+
+#[test]
+fn delete_unreferenced_asset_keeps_assets_referenced_only_from_an_archived_legacy_collab_backup() {
+    let workspace = TestWorkspace::new();
+    let workspace_path = workspace.path_string();
+    let asset_path = write_asset(&workspace_path, "archived-only.jpg");
+
+    let archived_collab_dir =
+        std::path::Path::new(&workspace_path).join(".nevo/collab-legacy-1234567890");
+    std::fs::create_dir_all(&archived_collab_dir).expect("archived collab dir");
+    std::fs::write(
+        archived_collab_dir.join("note-1.yjs"),
+        b".nevo/assets/archived-only.jpg",
+    )
+    .expect("write archived legacy yjs state");
+
+    let deleted = delete_unreferenced_asset_inner(
+        workspace_path,
+        "image:.nevo/assets/archived-only.jpg".to_string(),
+    )
+    .expect("delete asset");
+
+    assert!(
+        !deleted,
+        "an asset referenced only from a .nevo/collab-legacy-* backup must survive GC"
+    );
     assert!(asset_path.exists());
 }
 
@@ -310,4 +366,34 @@ fn read_draw_asset_rejects_non_asset_path() {
     let workspace = TestWorkspace::new();
     let result = read_draw_asset_inner(workspace.path_string(), "/etc/passwd".to_string());
     assert!(result.is_err());
+}
+
+#[test]
+fn import_image_asset_rejects_payload_over_the_size_limit() {
+    let workspace = TestWorkspace::new();
+    let oversized = vec![0u8; (MAX_LOCAL_ASSET_BYTES + 1) as usize];
+
+    let result = import_image_asset_impl(workspace.path_string(), "big.png".to_string(), oversized);
+
+    assert!(result.is_err());
+    let assets_dir = std::path::Path::new(&workspace.path_string())
+        .join(".nevo")
+        .join("assets");
+    let wrote_any = std::fs::read_dir(&assets_dir)
+        .map(|entries| entries.flatten().next().is_some())
+        .unwrap_or(false);
+    assert!(
+        !wrote_any,
+        "an oversized payload must never be written to disk"
+    );
+}
+
+#[test]
+fn import_image_asset_accepts_payload_at_the_size_limit() {
+    let workspace = TestWorkspace::new();
+    let at_limit = vec![7u8; MAX_LOCAL_ASSET_BYTES as usize];
+
+    let result = import_image_asset_impl(workspace.path_string(), "max.png".to_string(), at_limit);
+
+    assert!(result.is_ok());
 }

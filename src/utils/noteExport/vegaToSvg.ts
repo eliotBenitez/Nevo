@@ -48,6 +48,7 @@ export async function renderVegaToSvg(spec: string): Promise<string | null> {
     view = result.view
 
     const svg = container.querySelector('svg')
+    if (svg) svg.style.background = 'transparent'
     return svg ? new XMLSerializer().serializeToString(svg) : null
   } catch {
     return null

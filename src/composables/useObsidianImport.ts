@@ -8,7 +8,7 @@ import { ref, type Ref } from 'vue'
 import { useTreeStore } from '../stores/tree'
 import { useWorkspaceStore } from '../stores/workspace'
 import { useNoteStore } from '../stores/note'
-import { collabCommands, noteCommands, systemCommands } from '../tauri/commands'
+import { noteCommands, systemCommands } from '../tauri/commands'
 import { parseMarkdownToBlockNodeAsync } from '../utils/noteImport/markdownParser'
 import {
   stripNoteExtension,
@@ -125,14 +125,6 @@ export function useObsidianImport(): {
   const importing = ref(false)
   const progress = ref<ObsidianImportProgress>(createIdleProgress())
 
-  // Mirrors useMarkdownImport's persistence pattern: after a local-backend
-  // save, the disk-backed Y.Doc for the note must be dropped so the editor
-  // re-derives it from the freshly saved `note.content` on next open.
-  async function resetLocalEditorState(workspacePath: string, noteId: string) {
-    if (workspaceStore.backendKind !== 'local') return
-    await collabCommands.deleteYjsState(workspacePath, noteId)
-  }
-
   // Pass 0: mirror the vault's folder hierarchy top-down so every note has a
   // parent folder id before any note is created.
   async function createFoldersTopDown(
@@ -232,7 +224,6 @@ export function useObsidianImport(): {
       )
       const updatedAt = new Date().toISOString()
       await noteCommands.saveNote(workspacePath, { ...note, title: basename, content: doc, properties, updatedAt })
-      await resetLocalEditorState(workspacePath, note.id)
       noteStore.invalidateNoteCache(note.id)
       treeStore.syncNoteMeta(note.id, { title: basename, icon: note.icon }, updatedAt)
       progress.value.processedNotes++

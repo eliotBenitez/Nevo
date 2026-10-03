@@ -177,8 +177,13 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
     settings.appearance.accent_preset = appearance
         .get("accentPreset")
         .and_then(|value| value.as_str())
-        .filter(|value| matches!(*value, "violet" | "ember" | "sage" | "ocean" | "rose"))
-        .unwrap_or("violet")
+        .filter(|value| {
+            matches!(
+                *value,
+                "violet" | "ember" | "sage" | "ocean" | "rose" | "azure" | "mineral"
+            )
+        })
+        .unwrap_or("mineral")
         .to_string();
     settings.appearance.background_scene = appearance
         .get("backgroundScene")
@@ -190,7 +195,7 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
         .get("surfaceStyle")
         .and_then(|value| value.as_str())
         .filter(|value| matches!(*value, "glass" | "solid" | "tinted"))
-        .unwrap_or("glass")
+        .unwrap_or("solid")
         .to_string();
     settings.appearance.contrast_mode = appearance
         .get("contrastMode")
@@ -243,6 +248,22 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
         .and_then(|value| value.as_str())
         .unwrap_or("custom.css")
         .to_string();
+    settings.appearance.accent_colored_headings = appearance
+        .get("accentColoredHeadings")
+        .and_then(|value| value.as_bool())
+        .or_else(|| {
+            object
+                .get("editor")
+                .and_then(|v| v.as_object())
+                .and_then(|e| e.get("accentColoredHeadings"))
+                .and_then(|value| value.as_bool())
+        })
+        .or_else(|| {
+            object
+                .get("accentColoredHeadings")
+                .and_then(|value| value.as_bool())
+        })
+        .unwrap_or(false);
 
     let editor = object
         .get("editor")
@@ -283,6 +304,12 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
         .and_then(|value| value.as_str())
         .filter(|value| matches!(*value, "immediate" | "window-idle"))
         .unwrap_or("immediate")
+        .to_string();
+    settings.editor.slash_menu_layout = editor
+        .get("slashMenuLayout")
+        .and_then(|value| value.as_str())
+        .filter(|value| matches!(*value, "list" | "grid" | "preview"))
+        .unwrap_or("list")
         .to_string();
 
     let workspace = object
@@ -979,7 +1006,70 @@ mod tests {
         assert!(settings.editor.markdown_shortcuts);
         assert_eq!(settings.files.snapshot_retention_count, 5);
         assert_eq!(settings.general.default_startup_view, "editor");
-        assert_eq!(settings.appearance.accent_preset, "violet");
+        assert_eq!(settings.appearance.accent_preset, "mineral");
+    }
+
+    #[test]
+    fn normalizes_slash_menu_layout() {
+        let grid = normalize_settings_value(json!({ "editor": { "slashMenuLayout": "grid" } }));
+        assert_eq!(grid.editor.slash_menu_layout, "grid");
+
+        let preview =
+            normalize_settings_value(json!({ "editor": { "slashMenuLayout": "preview" } }));
+        assert_eq!(preview.editor.slash_menu_layout, "preview");
+
+        let missing = normalize_settings_value(json!({}));
+        assert_eq!(missing.editor.slash_menu_layout, "list");
+
+        let invalid = normalize_settings_value(json!({ "editor": { "slashMenuLayout": "tiles" } }));
+        assert_eq!(invalid.editor.slash_menu_layout, "list");
+    }
+
+    #[test]
+    fn defaults_appearance_to_mineral_and_solid_when_missing() {
+        let settings = normalize_settings_value(json!({}));
+
+        assert_eq!(settings.appearance.accent_preset, "mineral");
+        assert_eq!(settings.appearance.surface_style, "solid");
+    }
+
+    #[test]
+    fn falls_back_to_mineral_and_solid_for_invalid_appearance_values() {
+        let settings = normalize_settings_value(json!({
+            "appearance": {
+                "accentPreset": "not-a-real-preset",
+                "surfaceStyle": "not-a-real-style"
+            }
+        }));
+
+        assert_eq!(settings.appearance.accent_preset, "mineral");
+        assert_eq!(settings.appearance.surface_style, "solid");
+    }
+
+    #[test]
+    fn preserves_mineral_and_azure_accent_presets() {
+        let mineral = normalize_settings_value(json!({
+            "appearance": { "accentPreset": "mineral" }
+        }));
+        assert_eq!(mineral.appearance.accent_preset, "mineral");
+
+        let azure = normalize_settings_value(json!({
+            "appearance": { "accentPreset": "azure" }
+        }));
+        assert_eq!(azure.appearance.accent_preset, "azure");
+    }
+
+    #[test]
+    fn preserves_legacy_surface_style_values() {
+        let glass = normalize_settings_value(json!({
+            "appearance": { "surfaceStyle": "glass" }
+        }));
+        assert_eq!(glass.appearance.surface_style, "glass");
+
+        let tinted = normalize_settings_value(json!({
+            "appearance": { "surfaceStyle": "tinted" }
+        }));
+        assert_eq!(tinted.appearance.surface_style, "tinted");
     }
 
     #[test]
@@ -1056,5 +1146,42 @@ mod tests {
         save_workspace_settings_sync(workspace_path.clone(), settings)
             .expect("save settings with logging disabled");
         assert!(!is_extended_diagnostics_enabled(&workspace_path));
+    }
+
+    #[test]
+    fn preserves_accent_colored_headings_setting() {
+        let enabled = normalize_settings_value(json!({
+            "appearance": { "accentColoredHeadings": true }
+        }));
+        assert!(enabled.appearance.accent_colored_headings);
+
+        let enabled_from_editor = normalize_settings_value(json!({
+            "editor": { "accentColoredHeadings": true }
+        }));
+        assert!(enabled_from_editor.appearance.accent_colored_headings);
+
+        let disabled = normalize_settings_value(json!({
+            "appearance": { "accentColoredHeadings": false }
+        }));
+        assert!(!disabled.appearance.accent_colored_headings);
+
+        let default_val = normalize_settings_value(json!({}));
+        assert!(!default_val.appearance.accent_colored_headings);
+    }
+
+    #[test]
+    fn accent_colored_headings_survives_settings_save_and_reload() {
+        let workspace = TestWorkspace::new();
+        let workspace_path = workspace.path_string();
+
+        let mut settings = WorkspaceSettings::default();
+        settings.appearance.accent_colored_headings = true;
+
+        save_workspace_settings_sync(workspace_path.clone(), settings)
+            .expect("save settings with accent colored headings");
+        let reloaded = load_workspace_settings_sync(workspace_path)
+            .expect("reload settings with accent colored headings");
+
+        assert!(reloaded.appearance.accent_colored_headings);
     }
 }

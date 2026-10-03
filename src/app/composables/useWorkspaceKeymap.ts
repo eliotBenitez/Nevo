@@ -14,6 +14,8 @@ interface KeymapHandlers {
   openHistory: () => void
   openTrash: () => void
   openSettings: () => void
+  findInNote: () => void
+  replaceInNote: () => void
 }
 
 export function useWorkspaceKeymap(settings: Ref<WorkspaceSettings>, handlers: KeymapHandlers) {
@@ -29,6 +31,8 @@ export function useWorkspaceKeymap(settings: Ref<WorkspaceSettings>, handlers: K
       case 'workspace.open-history': handlers.openHistory(); break
       case 'workspace.open-trash': handlers.openTrash(); break
       case 'app.open-settings': handlers.openSettings(); break
+      case 'editor.find-in-note': handlers.findInNote(); break
+      case 'editor.replace-in-note': handlers.replaceInNote(); break
     }
   }
 

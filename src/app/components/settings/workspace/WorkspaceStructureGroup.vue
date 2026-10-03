@@ -6,6 +6,8 @@ import { createDefaultWorkspaceSettings } from '../../../../utils/workspace-sett
 import NvButton from '../../../../ui/primitives/NvButton.vue'
 import NvToggle from '../../../../ui/primitives/NvToggle.vue'
 import NvSelect from '../../../../ui/primitives/NvSelect.vue'
+import SettingsGroup from '../ui/SettingsGroup.vue'
+import SettingsRow from '../ui/SettingsRow.vue'
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
@@ -31,46 +33,42 @@ const placementOptions = ['current-folder', 'root'].map(v => ({
 </script>
 
 <template>
-  <div class="group">
-    <div class="group-header">
-      <div class="group-label">{{ t('settings.workspace.groups.structure') }}</div>
+  <SettingsGroup :title="t('settings.workspace.groups.structure')">
+    <template #header-actions>
       <NvButton variant="ghost" size="xs" @click="resetStructure">{{ t('settings.common.resetToDefaults') }}</NvButton>
-    </div>
-    <div class="settings-card">
-      <div class="settings-row">
-        <div class="row-copy">
-          <div class="row-title">{{ t('settings.workspace.newNotePlacement.title') }}</div>
-          <div class="row-sub">{{ t('settings.workspace.newNotePlacement.description') }}</div>
-        </div>
-        <NvSelect
-          :model-value="settings.workspace.newNotePlacement"
-          :options="placementOptions"
-          @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.newNotePlacement = v as any })"
-        />
-      </div>
+    </template>
 
-      <div class="settings-row settings-row--border">
-        <div class="row-copy">
-          <div class="row-title">{{ t('settings.workspace.newFolderPlacement.title') }}</div>
-          <div class="row-sub">{{ t('settings.workspace.newFolderPlacement.description') }}</div>
-        </div>
-        <NvSelect
-          :model-value="settings.workspace.newFolderPlacement"
-          :options="placementOptions"
-          @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.newFolderPlacement = v as any })"
-        />
-      </div>
+    <SettingsRow
+      :title="t('settings.workspace.newNotePlacement.title')"
+      :description="t('settings.workspace.newNotePlacement.description')"
+    >
+      <NvSelect
+        :model-value="settings.workspace.newNotePlacement"
+        :options="placementOptions"
+        @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.newNotePlacement = v as any })"
+      />
+    </SettingsRow>
 
-      <div class="settings-row settings-row--border">
-        <div class="row-copy">
-          <div class="row-title">{{ t('settings.workspace.showEmptyFolders.title') }}</div>
-          <div class="row-sub">{{ t('settings.workspace.showEmptyFolders.description') }}</div>
-        </div>
-        <NvToggle
-          :model-value="settings.workspace.showEmptyFolders"
-          @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.showEmptyFolders = v })"
-        />
-      </div>
-    </div>
-  </div>
+    <SettingsRow
+      :title="t('settings.workspace.newFolderPlacement.title')"
+      :description="t('settings.workspace.newFolderPlacement.description')"
+    >
+      <NvSelect
+        :model-value="settings.workspace.newFolderPlacement"
+        :options="placementOptions"
+        @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.newFolderPlacement = v as any })"
+      />
+    </SettingsRow>
+
+    <SettingsRow
+      :title="t('settings.workspace.showEmptyFolders.title')"
+      :description="t('settings.workspace.showEmptyFolders.description')"
+    >
+      <NvToggle
+        :aria-label="t('settings.workspace.showEmptyFolders.title')"
+        :model-value="settings.workspace.showEmptyFolders"
+        @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.showEmptyFolders = v })"
+      />
+    </SettingsRow>
+  </SettingsGroup>
 </template>

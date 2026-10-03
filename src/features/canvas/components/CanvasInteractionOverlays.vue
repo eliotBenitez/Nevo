@@ -6,7 +6,6 @@ import type {
   CanvasConnector,
   CanvasRichTextDocument,
 } from '../../../core/canvas'
-import type { CanvasPresenceState } from '../composables/useCanvasPresence'
 import CanvasAlignmentGuides from './CanvasAlignmentGuides.vue'
 import CanvasConnectorHandles from './CanvasConnectorHandles.vue'
 import CanvasInlineTextEditor from './CanvasInlineTextEditor.vue'
@@ -33,7 +32,6 @@ defineProps<{
   editingRichId: string | null
   editingRichContent: CanvasRichTextDocument
   editingRichStyle: Record<string, string>
-  peers: readonly { clientId: number; state: CanvasPresenceState }[]
   labels: {
     rotate: string
     connectorFrom: string
@@ -75,7 +73,12 @@ defineEmits<{
       @endpoint="(endpoint, event) => $emit('endpoint', endpoint, event)"
     />
     <CanvasAlignmentGuides :guides="guides" :camera="camera" />
-    <div v-if="marquee" class="edgeless-canvas__marquee" :style="marqueeStyle" aria-hidden="true" />
+    <div
+      v-if="marquee"
+      class="edgeless-canvas__marquee tw:absolute tw:z-22 tw:pointer-events-none tw:border tw:border-solid tw:border-accent tw:bg-(--accent-soft)"
+      :style="marqueeStyle"
+      aria-hidden="true"
+    />
   </template>
   <CanvasInlineTextEditor
     v-if="editingTextId"
@@ -93,13 +96,4 @@ defineEmits<{
     @commit="$emit('commit-rich', $event)"
     @cancel="$emit('cancel-rich')"
   />
-  <div
-    v-for="peer in peers"
-    :key="peer.clientId"
-    class="edgeless-canvas__peer"
-    :style="peer.state.cursor ? {
-      left: `${(peer.state.cursor.x - camera.x) * camera.zoom}px`,
-      top: `${(peer.state.cursor.y - camera.y) * camera.zoom}px`,
-    } : undefined"
-  ><span /></div>
 </template>

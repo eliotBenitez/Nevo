@@ -1,8 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { EditorState } from 'prosemirror-state'
 import type { EditorView } from 'prosemirror-view'
-import * as Y from 'yjs'
-import { prosemirrorJSONToYDoc, yDocToProsemirrorJSON } from 'y-prosemirror'
 import { EditorPluginHost } from '../plugin-host'
 import { createSchemaWithPluginExtensions } from '../buildSchema'
 import { nevoBaseSchema } from '../schema'
@@ -1144,20 +1142,24 @@ describe('sandboxed plugin host', () => {
     expect(host.registries.nodes.get('callout_block')?.content).toBe('block+')
 
     const schema = createSchemaWithPluginExtensions(host)
-    const legacyJson = {
+    const documentJson = {
       type: 'doc',
       content: [{
         type: 'callout_block',
         attrs: { variant: 'warning', icon: '⚠️' },
         content: [{
           type: 'paragraph',
+          // `nevoBaseSchema`'s shared block-id attr (see `blockIdAttr.ts`)
+          // defaults to `null` and round-trips explicitly through `toJSON()`.
+          attrs: { id: null },
           content: [{ type: 'text', text: 'Rich legacy child' }],
         }],
       }],
     }
-    const original = prosemirrorJSONToYDoc(schema, legacyJson, 'prosemirror')
-    const reopened = new Y.Doc()
-    Y.applyUpdate(reopened, Y.encodeStateAsUpdate(original))
-    expect(yDocToProsemirrorJSON(reopened, 'prosemirror')).toEqual(legacyJson)
+    // A cached plugin schema (loaded here without running the plugin's own
+    // code) must still parse and round-trip a document using its node type —
+    // `note.json` is a note's source of truth, so this is a plain
+    // ProseMirror JSON round trip rather than a Y.Doc one.
+    expect(schema.nodeFromJSON(documentJson).toJSON()).toEqual(documentJson)
   })
 })

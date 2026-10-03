@@ -40,8 +40,8 @@ export function migrateLayoutsToFrame(layouts: Record<string, LegacyCanvasLayout
  *  stored frame: a collapsed frame always renders at the fixed mini-card
  *  size, regardless of its stored/auto-height geometry; a manually resized
  *  frame (`autoHeight === false`) uses its stored height; an auto-height
- *  frame uses the measured content height instead, since the Y.Doc never
- *  stores a live-measured height (see `useCanvasFrameMetrics`). */
+ *  frame uses the measured content height instead, since the canvas store
+ *  never stores a live-measured height (see `useCanvasFrameMetrics`). */
 export function effectiveFrameBounds(frame: CanvasDocumentFrame, contentHeight: number): CanvasBounds {
   if (frame.collapsed) {
     return { x: frame.x, y: frame.y, width: COLLAPSED_FRAME_WIDTH, height: COLLAPSED_FRAME_HEIGHT }

@@ -134,6 +134,8 @@ const STYLE_MAP: Record<string, string> = {
   mathrm: 'upright', mathsf: 'sans', mathtt: 'mono', mathit: 'italic', boldsymbol: 'bold',
 }
 
+const BINOM_COMMANDS = new Set(['binom', 'dbinom', 'tbinom'])
+
 function readGroup(src: string, start: number): { content: string; next: number } {
   let depth = 0
   for (let i = start; i < src.length; i++) {
@@ -173,6 +175,16 @@ function readRequiredArg(src: string, start: number): { arg: string; next: numbe
 
   if (i >= src.length) return { arg: '""', next: i }
   return { arg: requiredArg(convert(src[i])), next: i + 1 }
+}
+
+function consumePostfixCommand(src: string, start: number, name: string): number | null {
+  let i = start
+  while (i < src.length && /\s/.test(src[i])) i++
+
+  const command = `\\${name}`
+  if (!src.startsWith(command, i)) return null
+  const next = i + command.length
+  return /[a-zA-Z]/.test(src[next] ?? '') ? null : next
 }
 
 function mapCommand(name: string): string {
@@ -220,6 +232,11 @@ function convert(latex: string): string {
         const denominator = readRequiredArg(src, numerator.next)
         push(`frac(${numerator.arg}, ${denominator.arg})`)
         i = denominator.next
+      } else if (BINOM_COMMANDS.has(name)) {
+        const upper = readRequiredArg(src, i)
+        const lower = readRequiredArg(src, upper.next)
+        push(`binom(${upper.arg}, ${lower.arg})`)
+        i = lower.next
       } else if (name === 'sqrt') {
         if (src[i] === '[') {
           const close = src.indexOf(']', i)
@@ -258,6 +275,12 @@ function convert(latex: string): string {
         push(`"${g.content.replace(/"/g, '')}"`)
         i = g.next
       } else {
+        const limitsEnd = consumePostfixCommand(src, i, 'limits')
+        if (limitsEnd !== null) {
+          push(`limits(${mapCommand(name)}) `)
+          i = limitsEnd
+          continue
+        }
         // Separate from a preceding alphanumeric so e.g. `A\Rightarrow` does not
         // glue into the identifier `Aarrow`. Trailing space separates from what follows.
         if (/[A-Za-z0-9]$/.test(out)) out += ' '

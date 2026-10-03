@@ -119,7 +119,7 @@ pub async fn dispatch(
         // Editor-bound methods talk to the webview and must stay on the async
         // path; everything else is filesystem work moved off the runtime.
         "notes.editorSnapshot" => editor::editor_snapshot(require_app(app)?, params).await,
-        "notes.applyEdit" => editor::apply_edit(require_app(app)?, params).await,
+        "notes.applyEdit" => editor::apply_edit(require_app(app)?, workspace_path, params).await,
         _ => {
             let result =
                 run_blocking(workspace_path.to_string(), method.to_string(), params).await?;
@@ -203,6 +203,22 @@ mod tests {
         }
         for method in WRITE_METHODS {
             assert_eq!(access_for(method), Some(Access::Write), "{method}");
+        }
+    }
+
+    #[test]
+    fn packaged_tool_catalog_matches_bridge_permissions() {
+        let raw = include_str!("../../../../packages/mcp-server/src/tools/catalog.json");
+        let catalog: Vec<serde_json::Value> = serde_json::from_str(raw).expect("tool catalog");
+        assert_eq!(catalog.len(), 9);
+        for tool in catalog {
+            let method = tool["method"].as_str().expect("method");
+            let expected = match tool["access"].as_str().expect("access") {
+                "read" => Access::Read,
+                "write" => Access::Write,
+                other => panic!("unexpected access {other}"),
+            };
+            assert_eq!(access_for(method), Some(expected), "{method}");
         }
     }
 
@@ -336,6 +352,7 @@ mod tests {
         .expect("read note");
         assert_eq!(read["title"], "Roadmap");
         assert_eq!(read["contentSource"], "persisted");
+        assert_eq!(read["format"], "document");
 
         let found = blocking(
             &root,
@@ -350,6 +367,29 @@ mod tests {
         assert_eq!(info["noteCount"], 1);
         assert_eq!(info["folderCount"], 1);
 
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn read_note_reports_notebook_format_and_raw_notebook_data() {
+        let root = temp_workspace("notebook-read");
+        let note_path = root.join("notes/note-note-1.nevo");
+        let mut note: Value = serde_json::from_slice(&std::fs::read(&note_path).unwrap()).unwrap();
+        note["documentKind"] = serde_json::json!("notebook");
+        note["notebook"] = serde_json::json!({
+            "version": 1,
+            "pages": [],
+            "futureField": { "preserve": true }
+        });
+        std::fs::write(&note_path, serde_json::to_vec_pretty(&note).unwrap()).unwrap();
+
+        let result = notes::read_note(
+            &root.to_string_lossy(),
+            serde_json::json!({ "noteId": "note-1" }),
+        )
+        .expect("read notebook");
+        assert_eq!(result["format"], "notebook");
+        assert_eq!(result["notebook"]["futureField"]["preserve"], true);
         let _ = std::fs::remove_dir_all(&root);
     }
 

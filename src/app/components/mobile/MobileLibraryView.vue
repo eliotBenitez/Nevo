@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { mobileWorkspaceViewClass, mobileViewHeaderClass, mobileViewEyebrowClass, mobileViewTitleClass, mobileIconButtonClass, mobileIconButtonStrongClass, mobileIconButtonDefaultClass, mobileLibraryTabClass, mobileLibraryTabBadgeClass, mobileEmptyStateClass } from './mobileChromeClasses'
 import { ChevronRight, FilePlus2, Filter, Folder, Search, Tag } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import type { FolderMeta, NoteMeta, SidebarNotePreview } from '../../../types/note'
+import { folderNoteCount } from '../../../utils/folder-note-count'
 
 type LibraryTab = 'all' | 'folders' | 'tags'
 
@@ -80,10 +82,6 @@ function selectTag(tag: string) {
   activeTab.value = 'all'
 }
 
-function folderNoteCount(folder: FolderMeta): number {
-  return folder.notes.length + folder.children.reduce((total, child) => total + folderNoteCount(child), 0)
-}
-
 function formatDate(value: string): string {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
@@ -108,15 +106,15 @@ function openSearch() {
 </script>
 
 <template>
-  <main class="mobile-workspace-view mobile-library">
-    <header class="mobile-view-header">
+  <main class="mobile-workspace-view mobile-library" :class="mobileWorkspaceViewClass">
+    <header class="mobile-view-header" :class="mobileViewHeaderClass">
       <div>
-        <p class="mobile-view-header__eyebrow">{{ workspaceName }}</p>
-        <h1>{{ t('workspace.mobile.library.title') }}</h1>
+        <p class="mobile-view-header__eyebrow" :class="mobileViewEyebrowClass">{{ workspaceName }}</p>
+        <h1 :class="mobileViewTitleClass">{{ t('workspace.mobile.library.title') }}</h1>
       </div>
       <button
         type="button"
-        class="mobile-icon-button mobile-icon-button--strong"
+        class="mobile-icon-button mobile-icon-button--strong" :class="[mobileIconButtonClass, mobileIconButtonStrongClass]"
         :aria-label="t('workspace.actions.newNote')"
         @click="createNote"
       >
@@ -124,18 +122,19 @@ function openSearch() {
       </button>
     </header>
 
-    <div class="mobile-library__tools">
-      <label class="mobile-search-field">
+    <div class="mobile-library__tools tw:flex tw:items-center tw:gap-2.5">
+      <label class="mobile-search-field tw:flex tw:min-w-0 tw:min-h-12 tw:flex-1 tw:items-center tw:gap-2.5 tw:rounded-[calc(15px*var(--radius-scale,1))] tw:border tw:border-transparent tw:bg-(--input-bg) tw:px-3.5 tw:text-content-muted tw:transition-[border-color,box-shadow,background] tw:duration-[160ms] tw:focus-within:bg-(--surface-raised) tw:focus-within:text-accent tw:focus-within:shadow-[0_0_0_3px_var(--accent-soft)]">
         <Search :size="18" aria-hidden="true" />
         <input
           v-model="query"
+          class="tw:h-[46px] tw:w-full tw:min-w-0 tw:border-0 tw:bg-transparent tw:p-0 tw:[font-family:inherit] tw:text-sm tw:text-content-primary tw:outline-none tw:placeholder:text-content-muted tw:placeholder:opacity-100"
           type="search"
           :placeholder="t('workspace.mobile.library.search')"
         />
       </label>
       <button
         type="button"
-        class="mobile-icon-button"
+        class="mobile-icon-button" :class="[mobileIconButtonClass, mobileIconButtonDefaultClass]"
         :aria-label="t('workspace.mobile.library.filters')"
         @click="openSearch"
       >
@@ -143,107 +142,108 @@ function openSearch() {
       </button>
     </div>
 
-    <div class="mobile-library__tabs" role="tablist" :aria-label="t('workspace.mobile.library.contentType')">
+    <div class="mobile-library__tabs tw:mt-[5px] tw:flex tw:min-h-[54px] tw:items-end tw:gap-[22px] tw:border-b-0" role="tablist" :aria-label="t('workspace.mobile.library.contentType')">
       <button
         type="button"
         role="tab"
         :aria-selected="activeTab === 'all'"
-        :class="{ active: activeTab === 'all' }"
+        :class="[mobileLibraryTabClass, { active: activeTab === 'all' }]"
         @click="selectTab('all')"
       >
-        {{ t('workspace.mobile.library.all') }} <span>{{ allNotes.length }}</span>
+        {{ t('workspace.mobile.library.all') }} <span :class="[mobileLibraryTabBadgeClass, activeTab === 'all' ? 'tw:bg-(--accent-soft) tw:text-[color-mix(in_oklab,var(--accent)_72%,var(--text-primary))]' : 'tw:bg-(--surface-raised) tw:text-content-muted']">{{ allNotes.length }}</span>
       </button>
       <button
         type="button"
         role="tab"
         :aria-selected="activeTab === 'folders'"
-        :class="{ active: activeTab === 'folders' }"
+        :class="[mobileLibraryTabClass, { active: activeTab === 'folders' }]"
         @click="selectTab('folders')"
       >
-        {{ t('workspace.mobile.library.folders') }} <span>{{ allFolders.length }}</span>
+        {{ t('workspace.mobile.library.folders') }} <span :class="[mobileLibraryTabBadgeClass, activeTab === 'folders' ? 'tw:bg-(--accent-soft) tw:text-[color-mix(in_oklab,var(--accent)_72%,var(--text-primary))]' : 'tw:bg-(--surface-raised) tw:text-content-muted']">{{ allFolders.length }}</span>
       </button>
       <button
         type="button"
         role="tab"
         :aria-selected="activeTab === 'tags'"
-        :class="{ active: activeTab === 'tags' }"
+        :class="[mobileLibraryTabClass, { active: activeTab === 'tags' }]"
         @click="selectTab('tags')"
       >
-        {{ t('workspace.mobile.library.tags') }} <span>{{ tags.length }}</span>
+        {{ t('workspace.mobile.library.tags') }} <span :class="[mobileLibraryTabBadgeClass, activeTab === 'tags' ? 'tw:bg-(--accent-soft) tw:text-[color-mix(in_oklab,var(--accent)_72%,var(--text-primary))]' : 'tw:bg-(--surface-raised) tw:text-content-muted']">{{ tags.length }}</span>
       </button>
     </div>
 
-    <section v-if="activeTab === 'tags'" class="mobile-tag-cloud">
+    <section v-if="activeTab === 'tags'" class="mobile-tag-cloud tw:flex tw:flex-wrap tw:gap-2.5 tw:pt-[22px]">
       <button
         v-for="tag in tags"
         :key="tag.name"
         type="button"
+        class="tw:inline-flex tw:min-h-11 tw:items-center tw:gap-[7px] tw:rounded-full tw:border tw:border-transparent tw:bg-surface-subtle tw:px-[13px] tw:[font-family:inherit] tw:text-[13px] tw:text-content-secondary tw:aria-pressed:bg-(--accent-soft) tw:aria-pressed:text-content-primary tw:aria-pressed:shadow-[0_0_0_2px_var(--accent)]"
         :aria-pressed="selectedTag === tag.name"
         @click="selectTag(tag.name)"
       >
         <Tag :size="14" />
         <span>{{ tag.name }}</span>
-        <small>{{ tag.count }}</small>
+        <small class="tw:text-content-muted">{{ tag.count }}</small>
       </button>
-      <div v-if="tags.length === 0" class="mobile-empty-state">
+      <div v-if="tags.length === 0" class="mobile-empty-state" :class="mobileEmptyStateClass">
         <Tag :size="22" />
-        <strong>{{ t('workspace.mobile.library.noTags') }}</strong>
+        <strong class="tw:text-sm tw:text-content-secondary">{{ t('workspace.mobile.library.noTags') }}</strong>
       </div>
     </section>
 
     <template v-else>
-      <section v-if="activeTab !== 'all' || !selectedTag" class="mobile-library__section">
+      <section v-if="activeTab !== 'all' || !selectedTag" class="mobile-library__section tw:mt-[9px]">
         <div
           v-for="folder in visibleFolders"
           :key="folder.id"
-          class="mobile-library-row"
+          class="mobile-library-row tw:flex tw:min-h-[68px] tw:cursor-pointer tw:items-center tw:gap-3 tw:border-b-0 tw:px-0.5 tw:py-2 tw:text-content-primary"
           role="button"
           tabindex="0"
           @click="openFolder(folder.id)"
           @keydown.enter="openFolder(folder.id)"
           @keydown.space.prevent="openFolder(folder.id)"
         >
-          <span class="mobile-library-row__icon mobile-library-row__icon--folder">
+          <span class="mobile-library-row__icon mobile-library-row__icon--folder tw:grid tw:size-[42px] tw:flex-[0_0_42px] tw:place-items-center tw:rounded-[calc(13px*var(--radius-scale,1))] tw:bg-(--accent-soft) tw:text-[color-mix(in_oklab,var(--accent)_80%,var(--text-primary))]">
             <Folder :size="19" />
           </span>
-          <span class="mobile-library-row__copy">
-            <strong>{{ folder.title }}</strong>
-            <small>{{ t('workspace.mobile.library.noteCount', { count: folderNoteCount(folder) }) }}</small>
+          <span class="mobile-library-row__copy tw:flex tw:min-w-0 tw:flex-1 tw:flex-col tw:gap-1">
+            <strong class="tw:truncate tw:text-[15px] tw:font-[630] tw:tracking-[-0.01em]">{{ folder.title }}</strong>
+            <small class="tw:flex tw:min-h-[18px] tw:items-center tw:gap-[5px] tw:truncate tw:text-[10px] tw:text-content-muted">{{ t('workspace.mobile.library.noteCount', { count: folderNoteCount(folder) }) }}</small>
           </span>
           <ChevronRight :size="18" aria-hidden="true" />
         </div>
       </section>
 
-      <section v-if="activeTab === 'all'" class="mobile-library__section">
-        <div class="mobile-section-heading">
-          <h2>{{ selectedTag ? `#${selectedTag}` : t('workspace.mobile.library.allNotes') }}</h2>
-          <span>{{ t('workspace.mobile.library.byDate') }}</span>
+      <section v-if="activeTab === 'all'" class="mobile-library__section tw:mt-[9px]">
+        <div class="mobile-section-heading tw:mt-2.5 tw:flex tw:min-h-[54px] tw:items-center tw:justify-between tw:gap-3">
+          <h2 class="tw:m-0 tw:text-base tw:font-[650] tw:tracking-[-0.015em]">{{ selectedTag ? `#${selectedTag}` : t('workspace.mobile.library.allNotes') }}</h2>
+          <span class="tw:text-[11px] tw:text-[color-mix(in_oklab,var(--accent)_80%,var(--text-secondary))]">{{ t('workspace.mobile.library.byDate') }}</span>
         </div>
         <button
           v-for="note in visibleNotes"
           :key="note.id"
           type="button"
-          class="mobile-note-row"
+          class="mobile-note-row tw:flex tw:min-h-[94px] tw:w-full tw:items-start tw:gap-3 tw:border-0 tw:bg-transparent tw:px-0.5 tw:py-[13px] tw:text-left tw:text-content-primary"
           @click="openNote(note.id)"
         >
-          <span class="mobile-library-row__icon">
+          <span class="mobile-library-row__icon tw:grid tw:size-[42px] tw:flex-[0_0_42px] tw:place-items-center tw:rounded-[calc(13px*var(--radius-scale,1))] tw:bg-(--accent-soft) tw:text-[color-mix(in_oklab,var(--accent)_80%,var(--text-primary))]">
             <NvNoteIcon :value="note.icon" :size="18" />
           </span>
-          <span class="mobile-library-row__copy">
-            <strong>{{ note.title }}</strong>
-            <span>{{ previewByNoteId.get(note.id)?.previewText || t('workspace.mobile.library.noPreview') }}</span>
-            <small>
+          <span class="mobile-library-row__copy tw:flex tw:min-w-0 tw:flex-1 tw:flex-col tw:gap-1">
+            <strong class="tw:truncate tw:text-[15px] tw:font-[630] tw:tracking-[-0.01em]">{{ note.title }}</strong>
+            <span class="tw:line-clamp-2 tw:text-xs tw:leading-[1.4] tw:text-content-muted">{{ previewByNoteId.get(note.id)?.previewText || t('workspace.mobile.library.noPreview') }}</span>
+            <small class="tw:flex tw:min-h-[18px] tw:items-center tw:gap-[5px] tw:truncate tw:text-[10px] tw:text-content-muted">
               <template v-for="tag in previewByNoteId.get(note.id)?.tags.slice(0, 2)" :key="tag">
-                <em>#{{ tag }}</em>
+                <em class="tw:rounded-full tw:border tw:border-transparent tw:bg-surface-subtle tw:px-1.5 tw:py-0.5 tw:not-italic tw:text-content-muted">#{{ tag }}</em>
               </template>
               {{ formatDate(note.updatedAt) }}
             </small>
           </span>
           <ChevronRight :size="17" aria-hidden="true" />
         </button>
-        <div v-if="visibleNotes.length === 0" class="mobile-empty-state">
+        <div v-if="visibleNotes.length === 0" class="mobile-empty-state" :class="mobileEmptyStateClass">
           <Search :size="22" />
-          <strong>{{ t('workspace.mobile.library.noResults') }}</strong>
+          <strong class="tw:text-sm tw:text-content-secondary">{{ t('workspace.mobile.library.noResults') }}</strong>
         </div>
       </section>
     </template>

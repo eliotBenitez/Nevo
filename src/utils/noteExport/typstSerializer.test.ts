@@ -102,6 +102,10 @@ describe('serializeNoteToTypst', () => {
             { type: 'math_inline', attrs: { latex: 'A\\Longrightarrow B' } },
             { type: 'text', text: ' ' },
             { type: 'math_inline', attrs: { latex: '\\bar{x}+\\hat{y}' } },
+            { type: 'text', text: ' ' },
+            { type: 'math_inline', attrs: { latex: '\\binom{n}{k}' } },
+            { type: 'text', text: ' ' },
+            { type: 'math_inline', attrs: { latex: '\\lim\\limits_{x\\to0} f(x)' } },
           ],
         },
       ],
@@ -113,6 +117,8 @@ describe('serializeNoteToTypst', () => {
     expect(source).toContain('$∂ f$')
     expect(source).toContain('$A ⟹ B$')
     expect(source).toContain('$macron(x)+hat(y)$')
+    expect(source).toContain('$binom(n, k)$')
+    expect(source).toContain('$limits(lim) _(x → 0) f(x)$')
   })
 
   it('collects image and mermaid assets', () => {

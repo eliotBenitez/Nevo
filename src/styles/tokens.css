@@ -7,18 +7,56 @@
   --font-serif: 'Instrument Serif', 'Cambria', Georgia, serif;
   --font-mono: 'Geist Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
 
-  --accent: #A16207;
-  --accent-hover: #B45309;
-  --accent-soft: rgb(161 98 7 / 0.16);
-  --accent-glow: rgb(161 98 7 / 0.34);
+  /* ─── Z-index scale ─────────────────────────────────────────── */
+  --z-sticky: 20;
+  --z-dropdown: 300;
+  --z-scrim: 500;
+  --z-modal: 510;
+  --z-popover: 700;
+  --z-toast: 900;
+
+  /* ─── Radius scale ──────────────────────────────────────────── */
+  --radius-xs: calc(4px * var(--radius-scale, 1));
+  --radius-sm: calc(7px * var(--radius-scale, 1));
+  --radius-md: calc(10px * var(--radius-scale, 1));
+  --radius-lg: calc(14px * var(--radius-scale, 1));
+  --radius-xl: calc(18px * var(--radius-scale, 1));
+
+  /* ─── Motion ────────────────────────────────────────────────── */
+  --dur-fast: 100ms;
+  --dur-base: 160ms;
+  --dur-slow: 240ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Static fallback; the workspace's active accent preset is applied at runtime
+     by applyWorkspaceStyle (src/utils/apply-workspace-style.ts) as inline styles
+     on this element, which take precedence over these defaults. */
+  --accent: oklch(var(--accent-l, 0.62) 0.075 185);
+  --accent-hover: color-mix(in oklab, var(--accent) 88%, var(--accent-hover-toward, #fff));
+  --accent-soft: oklch(var(--accent-l, 0.62) 0.075 185 / 0.14);
+  --accent-glow: var(--accent-soft);
+
+  /* State-layer tints derived from the active theme's primary text color, so
+     hover/press feedback stays legible without hardcoding light/dark values. */
 
   --danger: oklch(0.56 0.19 25);
   --danger-hover: oklch(0.50 0.20 25);
   --danger-soft: color-mix(in oklab, var(--danger) 14%, transparent);
   --danger-line: color-mix(in oklab, var(--danger) 34%, transparent);
-  --danger-glow: color-mix(in oklab, var(--danger) 28%, transparent);
+  --danger-glow: var(--danger-soft);
   --status-danger: var(--danger);
   --status-danger-soft: var(--danger-soft);
+
+  /* A dedicated success hue, kept apart from the user-configurable --accent
+     (history diff "added" tint and similar success states must not collide
+     with whatever accent color the workspace is set to). */
+  --success: oklch(0.60 0.17 145);
+  --success-hover: oklch(0.54 0.18 145);
+  --success-soft: color-mix(in oklab, var(--success) 14%, transparent);
+  --success-line: color-mix(in oklab, var(--success) 34%, transparent);
+  --success-glow: var(--success-soft);
+  --status-success: var(--success);
+  --status-success-soft: var(--success-soft);
 
   --hue-rose:  oklch(0.72 0.06 18);
   --hue-amber: oklch(0.78 0.07 78);
@@ -26,57 +64,120 @@
   --hue-mist:  oklch(0.72 0.04 210);
   --hue-plum:  oklch(0.68 0.06 305);
 
-  /* Compatibility aliases for older surface/text token names still used in some views. */
+  /* Compatibility aliases for older surface/border/shadow token names still used
+     in some views. --text-primary/--text-secondary/--text-muted and
+     --border-subtle are NOT aliased here: they are first-class semantic tokens
+     defined per theme below, and are the source of truth (never alias back to
+     a legacy name — that would create a cascade cycle). */
   --surface-0: var(--glass-1, rgba(255, 255, 255, 0.56));
   --surface-1: var(--glass-2, rgba(255, 255, 255, 0.74));
   --surface-2: var(--glass-3, rgba(255, 255, 255, 0.88));
   --surface-3: color-mix(in oklab, var(--surface-2) 88%, var(--text-primary, #111827) 12%);
   --surface-4: color-mix(in oklab, var(--surface-2) 78%, var(--text-primary, #111827) 22%);
-  --text-primary: var(--text-1, #111827);
-  --text-secondary: var(--text-2, #4b5563);
-  --text-muted: var(--text-3, #6b7280);
-  --border-subtle: var(--line-1, rgba(0, 0, 0, 0.08));
   --border-muted: var(--line-2, rgba(0, 0, 0, 0.12));
   --shadow-subtle: var(--shadow-1, 0 1px 2px rgba(0, 0, 0, 0.12));
   --shadow-strong: var(--shadow-2, 0 12px 40px -8px rgba(0, 0, 0, 0.18));
 }
 
 .theme-dark {
-  --canvas-0: #0a0a0c;
-  --canvas-1: #101013;
-  --wash-a: rgb(161 98 7 / 0.085);
-  --wash-b: rgb(255 255 255 / 0.055);
+  color-scheme: dark;
 
-  --glass-1: rgb(17 17 19 / 0.80);
-  --glass-2: rgb(22 22 25 / 0.88);
-  --glass-3: rgb(29 29 31 / 0.94);
-  --glass-titlebar: rgb(13 13 16 / 0.90);
+  /* ─── Semantic tokens (source of truth) ──────────────────────── */
+  --surface-canvas: #161718;
+  --surface-navigation: #1C1D1F;
+  --surface-panel: #1F2022;
+  --surface-subtle: #28292C;
+  --surface-raised: #26272A;
+  --surface-overlay: #2A2B2E;
+  --surface-selected: color-mix(in oklab, var(--accent) 17%, var(--surface-navigation));
 
-  --line-1: rgb(255 255 255 / 0.065);
-  --line-2: rgb(255 255 255 / 0.105);
-  --line-strong: rgb(255 255 255 / 0.17);
+  --text-primary: #EDECE8;
+  --text-secondary: #B5B3AC;
+  --text-muted: #8E8C86;
+  --text-disabled: #6A6964;
+  --text-on-accent: #10191A;
+
+  --border-subtle: #2A2B2E;
+  --border-default: #35363A;
+  --border-strong: #4B4C52;
+
+  --surface-danger: #3A2421;
+  --surface-success: #1E3328;
+  --surface-warning: #362C18;
+  --warning: #D9A646;
+
+  --shadow-raised: 0 1px 2px rgb(0 0 0 / .40), 0 0 0 1px rgb(255 255 255 / .03);
+  --shadow-overlay: 0 18px 44px -12px rgb(0 0 0 / .62), 0 2px 8px rgb(0 0 0 / .34);
+  --scrim: rgb(6 6 7 / .58);
+
+  --focus-ring: color-mix(in oklab, var(--accent) 80%, var(--text-primary));
+
+  --accent-l: 0.76;
+  --accent-hover-toward: #fff;
+  --accent-fill: var(--accent);
+  --accent-on: var(--text-on-accent);
+  --accent-line: color-mix(in oklab, var(--accent) 38%, transparent);
+
+  /* ─── Legacy tokens, re-pointed to the semantic tokens above ────
+     (opaque, no rgba-over-background — unmigrated consumers render
+     the new palette without a rewrite; see the redesign spec §6.4) */
+  /* Deprecated glass-era aliases: kept only so user `.nevo/custom.css` keeps
+     working. Product code must use the semantic tokens above (enforced by
+     the style-contract test in src/styles). */
+  --canvas-0: var(--surface-navigation);
+  --canvas-1: var(--surface-canvas);
+  --wash-a: transparent;
+  --wash-b: transparent;
+
+  --glass-1: var(--surface-panel);
+  --glass-2: var(--surface-raised);
+  --glass-3: var(--surface-overlay);
+  --glass-titlebar: var(--surface-navigation);
+
+  --line-1: var(--border-subtle);
+  --line-2: var(--border-default);
+  --line-strong: var(--border-strong);
   --shadow: oklch(0 0 0);
-  --shadow-1: 0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 1px 2px rgb(0 0 0 / 0.34);
-  --shadow-2: 0 16px 42px -14px rgb(0 0 0 / 0.58), 0 2px 8px rgb(0 0 0 / 0.32);
-  --shadow-pop: 0 26px 64px -18px rgb(0 0 0 / 0.70), 0 4px 16px rgb(0 0 0 / 0.40), inset 0 1px 0 rgb(255 255 255 / 0.06);
+  --shadow-1: var(--shadow-raised);
+  --shadow-2: var(--shadow-raised);
+  --shadow-pop: var(--shadow-overlay);
 
-  --text-1: #f0efed;
-  --text-2: #d0ccc7;
-  --text-3: #aaa39c;
-  --text-4: #817a72;
-  --text-inv: #0c0a09;
+  --text-1: var(--text-primary);
+  --text-2: var(--text-secondary);
+  --text-3: var(--text-muted);
+  --text-4: var(--text-muted);
+  --text-inv: var(--surface-canvas);
 
-  --hover: rgb(255 255 255 / 0.05);
-  --hover-strong: rgb(255 255 255 / 0.085);
-  --press: rgb(255 255 255 / 0.12);
+  --workspace-base-surface: var(--surface-navigation);
+  --workspace-editor-surface: var(--surface-canvas);
+  --workspace-navigation-surface: var(--surface-navigation);
+  --workspace-inspector-surface: var(--surface-navigation);
+  --workspace-titlebar-surface: var(--surface-navigation);
+  --workspace-toolbar-surface: transparent;
+  --workspace-tab-surface: var(--surface-canvas);
+  --workspace-search-surface: var(--surface-subtle);
+  --workspace-sidebar-header-surface: transparent;
+  --workspace-inspector-section-surface: transparent;
+  --workspace-control-border: var(--border-subtle);
+  --workspace-divider: var(--border-subtle);
+
   --selection: color-mix(in oklab, var(--accent) 32%, transparent);
-  --danger: oklch(0.67 0.18 25);
-  --danger-hover: oklch(0.62 0.19 25);
+  --danger: #E47D6B;
+  --danger-hover: color-mix(in oklab, var(--danger) 88%, var(--accent-hover-toward));
   --danger-soft: color-mix(in oklab, var(--danger) 16%, transparent);
   --danger-line: color-mix(in oklab, var(--danger) 38%, transparent);
-  --danger-glow: color-mix(in oklab, var(--danger) 24%, transparent);
+  --danger-glow: var(--danger-soft);
   --status-danger: var(--danger);
   --status-danger-soft: var(--danger-soft);
+  --success: #6EC08F;
+  --success-hover: color-mix(in oklab, var(--success) 88%, var(--accent-hover-toward));
+  --success-soft: color-mix(in oklab, var(--success) 16%, transparent);
+  --success-line: color-mix(in oklab, var(--success) 38%, transparent);
+  --success-glow: var(--success-soft);
+  --status-success: var(--success);
+  --status-success-soft: var(--success-soft);
+
+  --scrim-blur: none;
 
   /* Compatibility aliases for older bg/border variables */
   --bg-1: var(--canvas-0);
@@ -86,45 +187,119 @@
 }
 
 .theme-light {
-  --canvas-0: oklch(0.965 0.006 80);
-  --canvas-1: oklch(0.985 0.005 80);
-  --wash-a: oklch(0.86 0.04 258);
-  --wash-b: oklch(0.92 0.03 30);
+  color-scheme: light;
 
-  --glass-1: oklch(1 0 0 / 0.55);
-  --glass-2: oklch(1 0 0 / 0.72);
-  --glass-3: oklch(1 0 0 / 0.86);
-  --glass-titlebar: oklch(0.98 0.003 80 / 0.75);
+  /* ─── Semantic tokens (source of truth) ──────────────────────── */
+  --surface-canvas: #F6F4EF;
+  --surface-navigation: #EEEBE4;
+  --surface-panel: #FBFAF7;
+  --surface-subtle: #E9E5DC;
+  --surface-raised: #FFFFFF;
+  --surface-overlay: #FFFFFF;
+  --surface-selected: color-mix(in oklab, var(--accent) 12%, var(--surface-navigation));
 
-  --line-1: oklch(0 0 0 / 0.06);
-  --line-2: oklch(0 0 0 / 0.09);
-  --line-strong: oklch(0 0 0 / 0.14);
+  --text-primary: #1F1E1B;
+  --text-secondary: #57544D;
+  --text-muted: #736E66;
+  --text-disabled: #9E988D;
+  --text-on-accent: #FFFFFF;
+
+  --border-subtle: #E5E1D8;
+  --border-default: #D8D2C6;
+  --border-strong: #BDB6A8;
+
+  --surface-danger: #F7E3DE;
+  --surface-success: #E0EEE4;
+  --surface-warning: #F5EAD3;
+  --warning: #93650F;
+
+  --shadow-raised: 0 1px 2px rgb(58 48 30 / .08), 0 2px 6px rgb(58 48 30 / .05);
+  --shadow-overlay: 0 14px 36px -10px rgb(48 38 22 / .24), 0 2px 6px rgb(48 38 22 / .08);
+  --scrim: rgb(30 27 22 / .36);
+
+  --focus-ring: color-mix(in oklab, var(--accent) 80%, var(--text-primary));
+
+  --accent-l: 0.50;
+  --accent-hover-toward: #000;
+  --accent-fill: var(--accent);
+  --accent-on: var(--text-on-accent);
+  --accent-line: color-mix(in oklab, var(--accent) 34%, transparent);
+
+  /* ─── Legacy tokens, re-pointed to the semantic tokens above ────
+     (opaque, no rgba-over-background — unmigrated consumers render
+     the new palette without a rewrite; see the redesign spec §6.4) */
+  /* Deprecated glass-era aliases: kept only so user `.nevo/custom.css` keeps
+     working. Product code must use the semantic tokens above (enforced by
+     the style-contract test in src/styles). */
+  --canvas-0: var(--surface-navigation);
+  --canvas-1: var(--surface-canvas);
+  --wash-a: transparent;
+  --wash-b: transparent;
+
+  --glass-1: var(--surface-panel);
+  --glass-2: var(--surface-raised);
+  --glass-3: var(--surface-overlay);
+  --glass-titlebar: var(--surface-navigation);
+
+  --line-1: var(--border-subtle);
+  --line-2: var(--border-default);
+  --line-strong: var(--border-strong);
   --shadow: oklch(0.3 0.02 268);
-  --shadow-1: 0 1px 0 0 oklch(1 0 0 / 0.8) inset, 0 1px 2px oklch(0 0 0 / 0.05);
-  --shadow-2: 0 12px 40px -8px oklch(0.3 0.02 268 / 0.18), 0 2px 6px oklch(0.3 0.02 268 / 0.08);
-  --shadow-pop: 0 24px 60px -12px oklch(0.3 0.02 268 / 0.25), 0 2px 8px oklch(0 0 0 / 0.08), inset 0 1px 0 oklch(1 0 0 / 0.9);
+  --shadow-1: var(--shadow-raised);
+  --shadow-2: var(--shadow-raised);
+  --shadow-pop: var(--shadow-overlay);
 
-  --text-1: oklch(0.22 0.012 270);
-  --text-2: oklch(0.36 0.012 270);
-  --text-3: oklch(0.50 0.012 270);
-  --text-4: oklch(0.62 0.012 270);
-  --text-inv: oklch(0.98 0 0);
+  --text-1: var(--text-primary);
+  --text-2: var(--text-secondary);
+  --text-3: var(--text-muted);
+  --text-4: var(--text-muted);
+  --text-inv: var(--surface-canvas);
 
-  --hover: oklch(0 0 0 / 0.03);
-  --hover-strong: oklch(0 0 0 / 0.05);
-  --press: oklch(0 0 0 / 0.07);
+  --workspace-base-surface: var(--surface-navigation);
+  --workspace-editor-surface: var(--surface-canvas);
+  --workspace-navigation-surface: var(--surface-navigation);
+  --workspace-inspector-surface: var(--surface-navigation);
+  --workspace-titlebar-surface: var(--surface-navigation);
+  --workspace-toolbar-surface: transparent;
+  --workspace-tab-surface: var(--surface-canvas);
+  --workspace-search-surface: var(--surface-subtle);
+  --workspace-sidebar-header-surface: transparent;
+  --workspace-inspector-section-surface: transparent;
+  --workspace-control-border: var(--border-subtle);
+  --workspace-divider: var(--border-subtle);
+
   --selection: color-mix(in oklab, var(--accent) 20%, transparent);
-  --danger: oklch(0.54 0.19 25);
-  --danger-hover: oklch(0.48 0.20 25);
+  --danger: #B0412F;
+  --danger-hover: color-mix(in oklab, var(--danger) 88%, var(--accent-hover-toward));
   --danger-soft: color-mix(in oklab, var(--danger) 12%, transparent);
   --danger-line: color-mix(in oklab, var(--danger) 30%, transparent);
-  --danger-glow: color-mix(in oklab, var(--danger) 22%, transparent);
+  --danger-glow: var(--danger-soft);
   --status-danger: var(--danger);
   --status-danger-soft: var(--danger-soft);
+  --success: #2D7A4D;
+  --success-hover: color-mix(in oklab, var(--success) 88%, var(--accent-hover-toward));
+  --success-soft: color-mix(in oklab, var(--success) 12%, transparent);
+  --success-line: color-mix(in oklab, var(--success) 30%, transparent);
+  --success-glow: var(--success-soft);
+  --status-success: var(--success);
+  --status-success-soft: var(--success-soft);
+
+  --scrim-blur: none;
 
   /* Compatibility aliases for older bg/border variables */
   --bg-1: var(--canvas-0);
   --bg-2: var(--canvas-1);
   --bg-3: var(--hover-strong);
   --border-2: var(--line-2);
+}
+
+/* Theme-derived state layers. Declared on the theme classes as well as :root
+   because a var()-based custom property resolves where it is declared; a nested
+   theme scope must re-declare it to pick up its own --text-primary. */
+:root,
+.theme-light,
+.theme-dark {
+  --hover: color-mix(in oklab, var(--text-primary) 5%, transparent);
+  --hover-strong: color-mix(in oklab, var(--text-primary) 8%, transparent);
+  --press: color-mix(in oklab, var(--text-primary) 11%, transparent);
 }

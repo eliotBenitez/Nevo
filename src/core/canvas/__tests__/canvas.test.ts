@@ -1,19 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import * as Y from 'yjs'
 import {
   CANVAS_DOCUMENT_FRAME_ID,
-  CANVAS_LOCAL_ORIGIN,
+  CANVAS_UNDO_STACK_LIMIT,
+  CanvasStore,
   COLLAPSED_FRAME_HEIGHT,
   COLLAPSED_FRAME_WIDTH,
   createDefaultCanvasFrame,
   effectiveFrameBounds,
-  getCanvasSharedTypes,
   MIN_FRAME_WIDTH,
   normalizeCanvasSnapshot,
-  readCanvasSnapshot,
   reflowConnectorBinding,
-  replaceCanvasSnapshot,
-  runCanvasGesture,
+  type CanvasSnapshotV1,
 } from '..'
 
 describe('canvas snapshot normalization', () => {
@@ -297,39 +294,96 @@ describe('canvas connector bindings', () => {
   })
 })
 
-describe('canvas Yjs storage', () => {
-  it('converges between clients and groups one gesture into one undo item', () => {
-    const left = new Y.Doc()
-    const right = new Y.Doc()
-    const sync = (update: Uint8Array) => Y.applyUpdate(right, update)
-    left.on('update', sync)
+describe('CanvasStore', () => {
+  it('treats one commit as one undo step', () => {
+    const store = new CanvasStore()
+    store.load(undefined)
 
-    replaceCanvasSnapshot(left, {
+    const changed = store.commit((draft) => {
+      draft.frame = { ...draft.frame, x: 100, y: 80 }
+    })
+
+    expect(changed).toBe(true)
+    expect(store.snapshot.frame).toMatchObject({ x: 100, y: 80 })
+    expect(store.canUndo).toBe(true)
+    store.undo()
+    expect(store.snapshot.frame).toMatchObject({ x: 0, y: 0 })
+    expect(store.canUndo).toBe(false)
+  })
+
+  it('round-trips a commit through undo and redo', () => {
+    const store = new CanvasStore()
+    store.load(undefined)
+    store.commit((draft) => { draft.frame = { ...draft.frame, x: 40 } })
+
+    store.undo()
+    expect(store.snapshot.frame.x).toBe(0)
+    expect(store.canRedo).toBe(true)
+
+    store.redo()
+    expect(store.snapshot.frame.x).toBe(40)
+    expect(store.canRedo).toBe(false)
+  })
+
+  it('clears the redo stack once a new commit is made', () => {
+    const store = new CanvasStore()
+    store.load(undefined)
+    store.commit((draft) => { draft.frame = { ...draft.frame, x: 40 } })
+    store.undo()
+    expect(store.canRedo).toBe(true)
+
+    store.commit((draft) => { draft.frame = { ...draft.frame, x: 99 } })
+
+    expect(store.canRedo).toBe(false)
+    store.undo()
+    expect(store.snapshot.frame.x).toBe(0)
+  })
+
+  it('caps the undo stack, dropping the oldest entries', () => {
+    const store = new CanvasStore()
+    store.load(undefined)
+    const commitCount = CANVAS_UNDO_STACK_LIMIT + 5
+    for (let index = 0; index < commitCount; index += 1) {
+      store.commit((draft) => { draft.frame = { ...draft.frame, x: index + 1 } })
+    }
+
+    let undone = 0
+    while (store.canUndo) {
+      store.undo()
+      undone += 1
+    }
+
+    expect(undone).toBe(CANVAS_UNDO_STACK_LIMIT)
+    // The oldest commits were evicted, so undoing all retained steps lands on
+    // the state right after the dropped commits, not the very first commit.
+    expect(store.snapshot.frame.x).toBe(commitCount - CANVAS_UNDO_STACK_LIMIT)
+  })
+
+  it('does not push history for a commit that produces no structural change', () => {
+    const store = new CanvasStore()
+    store.load(undefined)
+
+    const changed = store.commit((draft) => {
+      draft.frame = { ...draft.frame }
+    })
+
+    expect(changed).toBe(false)
+    expect(store.canUndo).toBe(false)
+  })
+
+  it('migrates a legacy per-block layout map when loading a mirror, with a clean history', () => {
+    const store = new CanvasStore()
+    const legacyMirror = {
       version: 1,
-      frame: { x: 0, y: 0, width: 900, height: 1200, zIndex: 0 },
-      elements: {},
-      connectors: {},
-      order: [],
-    })
-    expect(readCanvasSnapshot(right)).toEqual(readCanvasSnapshot(left))
+      layouts: {
+        'legacy-block': { blockId: 'legacy-block', x: 40, y: 60, width: 480, height: 320, zIndex: 0 },
+      },
+    } as unknown as CanvasSnapshotV1
 
-    const types = getCanvasSharedTypes(left)
-    const undoManager = new Y.UndoManager(types.frame, {
-      trackedOrigins: new Set([CANVAS_LOCAL_ORIGIN]),
-    })
-    runCanvasGesture(left, undoManager, ({ frame }) => {
-      const current = frame.get('value')
-      if (current) frame.set('value', { ...current, x: 100, y: 80 })
-    })
+    store.load(legacyMirror)
 
-    expect(readCanvasSnapshot(right).frame).toMatchObject({ x: 100, y: 80 })
-    expect(undoManager.undoStack).toHaveLength(1)
-    undoManager.undo()
-    expect(readCanvasSnapshot(left).frame).toMatchObject({ x: 0, y: 0 })
-
-    left.off('update', sync)
-    undoManager.destroy()
-    left.destroy()
-    right.destroy()
+    expect(store.snapshot.frame).toMatchObject({ x: 40, y: 60 })
+    expect(store.canUndo).toBe(false)
+    expect(store.canRedo).toBe(false)
   })
 })

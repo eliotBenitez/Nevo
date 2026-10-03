@@ -1,0 +1,7 @@
+.history-diff-pane__spinner {
+  animation: history-diff-pane-spin 0.7s linear infinite;
+}
+
+@keyframes history-diff-pane-spin {
+  to { transform: rotate(360deg); }
+}

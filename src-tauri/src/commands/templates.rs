@@ -944,6 +944,7 @@ fn template_create_note_sync(
             content
         },
         canvas: None,
+        extra: Default::default(),
     };
 
     std::fs::create_dir_all(Path::new(&workspace_path).join("notes"))
@@ -961,6 +962,7 @@ fn template_create_note_sync(
         icon: note.icon.clone(),
         folder_id: folder_id.clone(),
         updated_at: now,
+        extra: Default::default(),
     };
 
     if let Some(folder_id) = &folder_id {

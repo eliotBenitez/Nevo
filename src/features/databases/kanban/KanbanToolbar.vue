@@ -95,15 +95,17 @@ function setDensity(density: KanbanCardDensity) {
 </script>
 
 <template>
-  <div class="kb-toolbar">
+  <div class="kb-toolbar tw:box-border tw:flex tw:min-h-11 tw:w-full tw:max-w-full tw:min-w-0 tw:shrink-0 tw:items-center tw:gap-1.5 tw:px-5 tw:py-[9px]">
     <!-- View switcher -->
-    <div class="kb-toolbar__view-switcher">
+    <div data-hint="kanbanViews" class="kb-toolbar__view-switcher tw:flex tw:gap-px tw:rounded-[calc(7px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-[var(--hover-strong,var(--surface-overlay))] tw:p-0.5">
       <button
         v-for="vid in (['board', 'table', 'calendar'] as KanbanViewMode[])"
         :key="vid"
         type="button"
-        class="kb-toolbar__view-btn"
-        :class="{ 'kb-toolbar__view-btn--active': view === vid }"
+        class="kb-toolbar__view-btn tw:inline-flex tw:items-center tw:gap-1 tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-none tw:px-2.5 tw:py-[3px] tw:text-[11.5px] tw:whitespace-nowrap tw:transition-[background-color,color,box-shadow] tw:duration-100 tw:cursor-pointer"
+        :class="view === vid
+          ? 'kb-toolbar__view-btn--active tw:bg-surface-raised tw:text-content-primary tw:font-[550] tw:shadow-(--shadow-raised)'
+          : 'tw:bg-transparent tw:text-[var(--text-muted,var(--text-secondary))] tw:font-[450]'"
         @click="emit('update:view', vid)"
       >
         <LayoutGrid v-if="vid === 'board'" :size="11" />
@@ -113,11 +115,11 @@ function setDensity(density: KanbanCardDensity) {
       </button>
     </div>
 
-    <div class="kb-toolbar__sep" />
+    <div class="kb-toolbar__sep tw:h-4 tw:w-px tw:shrink-0 tw:bg-transparent" />
 
     <!-- Group by -->
-    <div class="kb-toolbar__group">
-      <Layers :size="11" class="kb-toolbar__icon" />
+    <div class="kb-toolbar__group tw:flex tw:items-center tw:gap-[5px] tw:text-[var(--text-muted,var(--text-secondary))]">
+      <Layers :size="11" class="kb-toolbar__icon tw:shrink-0" />
       <NvSelect
         :model-value="groupBy"
         :options="groupOptions"
@@ -131,8 +133,10 @@ function setDensity(density: KanbanCardDensity) {
       <template #trigger>
         <button
           type="button"
-          class="kb-toolbar__btn"
-          :class="{ 'kb-toolbar__btn--active': filterCount > 0 || filterMenuOpen }"
+          class="kb-toolbar__btn tw:inline-flex tw:h-[26px] tw:items-center tw:gap-1 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:px-2.5 tw:text-[11.5px] tw:whitespace-nowrap tw:transition-[background-color,color,border-color] tw:duration-100 tw:cursor-pointer tw:hover:bg-[var(--hover,var(--surface-raised))] tw:hover:text-content-primary"
+          :class="(filterCount > 0 || filterMenuOpen)
+            ? 'kb-toolbar__btn--active tw:bg-[var(--accent-soft,rgb(161_98_7/0.12))] tw:text-accent tw:border-[color-mix(in_oklab,var(--accent)_28%,transparent)]'
+            : 'tw:bg-transparent tw:text-[var(--text-muted,var(--text-secondary))] tw:border-transparent'"
         >
           <Filter :size="11" />
           {{ filterCount > 0 ? t('kanban.toolbar.filters', { n: filterCount }) : t('kanban.toolbar.filter') }}
@@ -150,8 +154,10 @@ function setDensity(density: KanbanCardDensity) {
       <template #trigger>
         <button
           type="button"
-          class="kb-toolbar__btn"
-          :class="{ 'kb-toolbar__btn--active': sortCount > 0 || sortMenuOpen }"
+          class="kb-toolbar__btn tw:inline-flex tw:h-[26px] tw:items-center tw:gap-1 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:px-2.5 tw:text-[11.5px] tw:whitespace-nowrap tw:transition-[background-color,color,border-color] tw:duration-100 tw:cursor-pointer tw:hover:bg-[var(--hover,var(--surface-raised))] tw:hover:text-content-primary"
+          :class="(sortCount > 0 || sortMenuOpen)
+            ? 'kb-toolbar__btn--active tw:bg-[var(--accent-soft,rgb(161_98_7/0.12))] tw:text-accent tw:border-[color-mix(in_oklab,var(--accent)_28%,transparent)]'
+            : 'tw:bg-transparent tw:text-[var(--text-muted,var(--text-secondary))] tw:border-transparent'"
         >
           <ArrowUpDown :size="11" />
           {{ sortCount > 0 ? t('kanban.toolbar.sorts', { n: sortCount }) : t('kanban.toolbar.sort') }}
@@ -166,16 +172,23 @@ function setDensity(density: KanbanCardDensity) {
 
     <NvPopupMenu v-model:open="displayMenuOpen" placement="bottom-start" width="250px">
       <template #trigger>
-        <button type="button" class="kb-toolbar__btn" :class="{ 'kb-toolbar__btn--active': displayMenuOpen }">
+        <button
+          type="button"
+          class="kb-toolbar__btn kb-toolbar__display-trigger tw:inline-flex tw:h-[26px] tw:items-center tw:gap-1 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:px-2.5 tw:text-[11.5px] tw:whitespace-nowrap tw:transition-[background-color,color,border-color] tw:duration-100 tw:cursor-pointer tw:hover:bg-[var(--hover,var(--surface-raised))] tw:hover:text-content-primary"
+          :class="displayMenuOpen
+            ? 'kb-toolbar__btn--active tw:bg-[var(--accent-soft,rgb(161_98_7/0.12))] tw:text-accent tw:border-[color-mix(in_oklab,var(--accent)_28%,transparent)]'
+            : 'tw:bg-transparent tw:text-[var(--text-muted,var(--text-secondary))] tw:border-transparent'"
+        >
           <Settings2 :size="11" />
           {{ t('kanban.toolbar.display') }}
         </button>
       </template>
-      <div class="kb-toolbar__display-content">
-        <div class="kb-toolbar__menu-section">
-          <label class="kb-toolbar__toggle-row">
+      <div class="kb-toolbar__display-content tw:flex tw:flex-col">
+        <div class="kb-toolbar__menu-section tw:flex tw:flex-col tw:gap-1.5 tw:p-[7px]">
+          <label class="kb-toolbar__toggle-row tw:flex tw:min-h-6 tw:items-center tw:gap-[7px] tw:text-[11.5px] tw:text-content-secondary tw:cursor-pointer">
             <input
               type="checkbox"
+              class="tw:size-[13px] tw:accent-accent"
               :checked="showCardPreview"
               @change="emitSettings({ showCardPreview: ($event.target as HTMLInputElement).checked })"
             />
@@ -184,24 +197,28 @@ function setDensity(density: KanbanCardDensity) {
           </label>
         </div>
 
-        <div class="kb-toolbar__menu-section">
-          <div class="kb-toolbar__menu-label">
+        <div class="kb-toolbar__menu-section tw:flex tw:flex-col tw:gap-1.5 tw:p-[7px]">
+          <div class="kb-toolbar__menu-label tw:flex tw:min-h-6 tw:items-center tw:gap-[7px] tw:text-[11.5px] tw:font-semibold tw:text-content-muted">
             <Rows3 :size="12" />
             {{ t('kanban.toolbar.cardDensity') }}
           </div>
-          <div class="kb-toolbar__density">
+          <div class="kb-toolbar__density tw:grid tw:grid-cols-2 tw:gap-1 tw:rounded-[calc(7px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-[var(--hover,var(--surface-raised))] tw:p-0.5">
             <button
               type="button"
-              class="kb-toolbar__density-btn"
-              :class="{ 'kb-toolbar__density-btn--active': cardDensity === 'comfortable' }"
+              class="kb-toolbar__density-btn tw:h-6 tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-none tw:text-[11px] tw:cursor-pointer"
+              :class="cardDensity === 'comfortable'
+                ? 'kb-toolbar__density-btn--active tw:bg-surface-raised tw:text-content-primary tw:shadow-(--shadow-raised)'
+                : 'tw:bg-transparent tw:text-[var(--text-muted,var(--text-secondary))]'"
               @click="setDensity('comfortable')"
             >
               {{ t('kanban.toolbar.densityComfortable') }}
             </button>
             <button
               type="button"
-              class="kb-toolbar__density-btn"
-              :class="{ 'kb-toolbar__density-btn--active': cardDensity === 'compact' }"
+              class="kb-toolbar__density-btn tw:h-6 tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-none tw:text-[11px] tw:cursor-pointer"
+              :class="cardDensity === 'compact'
+                ? 'kb-toolbar__density-btn--active tw:bg-surface-raised tw:text-content-primary tw:shadow-(--shadow-raised)'
+                : 'tw:bg-transparent tw:text-[var(--text-muted,var(--text-secondary))]'"
               @click="setDensity('compact')"
             >
               {{ t('kanban.toolbar.densityCompact') }}
@@ -209,34 +226,35 @@ function setDensity(density: KanbanCardDensity) {
           </div>
         </div>
 
-        <div class="kb-toolbar__menu-section">
-          <div class="kb-toolbar__menu-label">{{ t('kanban.toolbar.displayProperties') }}</div>
+        <div class="kb-toolbar__menu-section tw:flex tw:flex-col tw:gap-1.5 tw:p-[7px]">
+          <div class="kb-toolbar__menu-label tw:flex tw:min-h-6 tw:items-center tw:gap-[7px] tw:text-[11.5px] tw:font-semibold tw:text-content-muted">{{ t('kanban.toolbar.displayProperties') }}</div>
           <label
             v-for="property in cardPropertyOptions"
             :key="property.id"
-            class="kb-toolbar__toggle-row"
+            class="kb-toolbar__toggle-row tw:flex tw:min-h-6 tw:items-center tw:gap-[7px] tw:text-[11.5px] tw:text-content-secondary tw:cursor-pointer"
           >
             <input
               type="checkbox"
+              class="tw:size-[13px] tw:accent-accent"
               :checked="visiblePropertySet.has(property.id)"
               @change="toggleProperty(property.id, ($event.target as HTMLInputElement).checked)"
             />
             <span>{{ property.name }}</span>
           </label>
-          <div v-if="!cardPropertyOptions.length" class="kb-toolbar__empty-menu">
+          <div v-if="!cardPropertyOptions.length" class="kb-toolbar__empty-menu tw:py-1 tw:text-[11.5px] tw:text-content-muted">
             {{ t('kanban.toolbar.noProperties') }}
           </div>
         </div>
       </div>
     </NvPopupMenu>
 
-    <div class="kb-toolbar__spacer" />
+    <div class="kb-toolbar__spacer tw:flex-1" />
 
     <!-- Search -->
-    <div class="kb-toolbar__search">
-      <Search :size="10" class="kb-toolbar__search-icon" />
+    <div class="kb-toolbar__search tw:flex tw:h-[26px] tw:w-[180px] tw:items-center tw:gap-1.5 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--input-bg) tw:px-2.5 tw:transition-[border-color,width] tw:duration-200 tw:focus-within:border-accent tw:focus-within:w-[220px] tw:max-[760px]:h-11 tw:max-[760px]:w-[156px] tw:max-[760px]:box-border tw:max-[760px]:focus-within:w-[196px]">
+      <Search :size="10" class="kb-toolbar__search-icon tw:shrink-0 tw:text-content-muted" />
       <input
-        class="kb-toolbar__search-input"
+        class="kb-toolbar__search-input tw:min-w-0 tw:flex-1 tw:border-none tw:bg-transparent tw:text-[11.5px] tw:text-content-primary tw:outline-none tw:placeholder:text-content-muted"
         :value="searchQuery"
         :placeholder="t('kanban.toolbar.search')"
         @input="emit('update:searchQuery', ($event.target as HTMLInputElement).value)"
@@ -246,7 +264,7 @@ function setDensity(density: KanbanCardDensity) {
     <!-- New card -->
     <button
       type="button"
-      class="kb-toolbar__btn kb-toolbar__btn--primary"
+      class="kb-toolbar__btn kb-toolbar__btn--primary tw:inline-flex tw:h-[26px] tw:items-center tw:gap-1 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-accent tw:px-2.5 tw:text-[11.5px] tw:font-[550] tw:text-white tw:whitespace-nowrap tw:transition-colors tw:duration-100 tw:cursor-pointer tw:hover:bg-[oklch(from_var(--accent)_calc(l_-_0.05)_c_h)]"
       @click="emit('new-card')"
     >
       <Plus :size="11" />
@@ -256,7 +274,7 @@ function setDensity(density: KanbanCardDensity) {
     <!-- Add column -->
     <button
       type="button"
-      class="kb-toolbar__btn kb-toolbar__btn--icon"
+      class="kb-toolbar__btn kb-toolbar__btn--icon tw:inline-flex tw:h-[26px] tw:w-7 tw:items-center tw:justify-center tw:gap-1 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-transparent tw:text-[11.5px] tw:text-[var(--text-muted,var(--text-secondary))] tw:whitespace-nowrap tw:transition-[background-color,color,border-color] tw:duration-100 tw:cursor-pointer tw:hover:bg-[var(--hover,var(--surface-raised))] tw:hover:text-content-primary tw:max-[760px]:w-11"
       :title="t('kanban.view.addColumn')"
       :aria-label="t('kanban.view.addColumn')"
       @click="emit('add-column')"
@@ -267,235 +285,41 @@ function setDensity(density: KanbanCardDensity) {
 </template>
 
 <style scoped>
-.kb-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 9px 20px;
-  border-bottom: 1px solid var(--line-1, var(--border-subtle));
-  flex-shrink: 0;
-  min-height: 44px;
-}
+/* Restyles many toolbar children at once for the horizontal-scroll mobile
+   layout (universal child selector, touch-target min-heights across three
+   unrelated button classes, and a `:deep()` reach into NvSelect's internal
+   trigger) — kept as one coherent block rather than touching ~8 elements
+   individually. */
+@media (max-width: 760px) {
+  .kb-toolbar {
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding:
+      8px
+      calc(12px + max(var(--safe-area-right), 0px))
+      8px
+      calc(12px + max(var(--safe-area-left), 0px));
+  }
 
-/* View switcher pill */
-.kb-toolbar__view-switcher {
-  display: flex;
-  padding: 2px;
-  background: var(--hover-strong, var(--surface-2));
-  border-radius: calc(7px * var(--radius-scale, 1));
-  border: 1px solid var(--line-1, var(--border-subtle));
-  gap: 1px;
-}
+  .kb-toolbar::-webkit-scrollbar {
+    display: none;
+  }
 
-.kb-toolbar__view-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 9px;
-  border-radius: calc(5px * var(--radius-scale, 1));
-  border: none;
-  background: transparent;
-  font-size: 11.5px;
-  font-weight: 450;
-  color: var(--text-3, var(--text-secondary));
-  cursor: pointer;
-  transition: background 0.1s, color 0.1s, box-shadow 0.1s;
-  white-space: nowrap;
-}
+  .kb-toolbar > * {
+    flex: 0 0 auto;
+  }
 
-.kb-toolbar__view-btn--active {
-  background: var(--glass-3, var(--surface-1));
-  color: var(--text-1, var(--text-primary));
-  font-weight: 550;
-  box-shadow: 0 1px 4px oklch(0 0 0 / 0.10);
-}
+  .kb-toolbar__spacer {
+    display: none;
+  }
 
-/* Separator */
-.kb-toolbar__sep {
-  width: 1px;
-  height: 16px;
-  background: var(--line-2, var(--border-subtle));
-  flex-shrink: 0;
-}
-
-/* Group by */
-.kb-toolbar__group {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--text-3, var(--text-secondary));
-}
-
-.kb-toolbar__icon { flex-shrink: 0; }
-
-.kb-toolbar__select {
-  background: none;
-  border: none;
-  outline: none;
-  font-size: 11.5px;
-  color: var(--text-2, var(--text-secondary));
-  cursor: pointer;
-  padding: 0;
-  appearance: none;
-}
-
-/* Generic toolbar button */
-.kb-toolbar__btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 26px;
-  padding: 0 9px;
-  border-radius: calc(6px * var(--radius-scale, 1));
-  border: 1px solid transparent;
-  background: none;
-  font-size: 11.5px;
-  color: var(--text-3, var(--text-secondary));
-  cursor: pointer;
-  transition: background 0.1s, color 0.1s, border-color 0.1s;
-  white-space: nowrap;
-}
-
-.kb-toolbar__btn:hover {
-  background: var(--hover, var(--surface-1));
-  color: var(--text-1, var(--text-primary));
-}
-
-.kb-toolbar__btn--active {
-  background: var(--accent-soft, rgb(161 98 7 / 0.12));
-  color: var(--accent);
-  border-color: color-mix(in oklab, var(--accent) 28%, transparent);
-}
-
-.kb-toolbar__btn--primary {
-  background: var(--accent);
-  color: white;
-  border-color: transparent;
-  font-weight: 550;
-}
-
-.kb-toolbar__btn--primary:hover {
-  background: oklch(from var(--accent) calc(l - 0.05) c h);
-  color: white;
-}
-
-.kb-toolbar__btn--icon {
-  width: 28px;
-  padding: 0;
-  justify-content: center;
-}
-
-.kb-toolbar__display-content {
-  display: flex;
-  flex-direction: column;
-}
-
-.kb-toolbar__menu-section {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 7px;
-}
-
-.kb-toolbar__menu-section + .kb-toolbar__menu-section {
-  border-top: 1px solid var(--line-1, var(--border-subtle));
-}
-
-.kb-toolbar__menu-label,
-.kb-toolbar__toggle-row {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 24px;
-  font-size: 11.5px;
-  color: var(--text-2, var(--text-secondary));
-}
-
-.kb-toolbar__menu-label {
-  color: var(--text-4, var(--text-muted));
-  font-weight: 600;
-}
-
-.kb-toolbar__toggle-row {
-  cursor: pointer;
-}
-
-.kb-toolbar__toggle-row input {
-  width: 13px;
-  height: 13px;
-  accent-color: var(--accent);
-}
-
-.kb-toolbar__density {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  padding: 2px;
-  border-radius: calc(7px * var(--radius-scale, 1));
-  background: var(--hover, var(--surface-1));
-  border: 1px solid var(--line-1, var(--border-subtle));
-}
-
-.kb-toolbar__density-btn {
-  height: 24px;
-  border: none;
-  border-radius: calc(5px * var(--radius-scale, 1));
-  background: transparent;
-  color: var(--text-3, var(--text-secondary));
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.kb-toolbar__density-btn--active {
-  background: var(--glass-3, var(--surface-1));
-  color: var(--text-1, var(--text-primary));
-  box-shadow: 0 1px 4px oklch(0 0 0 / 0.10);
-}
-
-.kb-toolbar__empty-menu {
-  padding: 4px 0;
-  color: var(--text-4, var(--text-muted));
-  font-size: 11.5px;
-}
-
-/* Spacer */
-.kb-toolbar__spacer { flex: 1; }
-
-/* Search */
-.kb-toolbar__search {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 26px;
-  padding: 0 10px;
-  background: var(--hover, var(--surface-1));
-  border: 1px solid var(--line-1, var(--border-subtle));
-  border-radius: calc(6px * var(--radius-scale, 1));
-  width: 180px;
-  transition: border-color 0.15s, width 0.2s;
-}
-
-.kb-toolbar__search:focus-within {
-  border-color: var(--accent);
-  width: 220px;
-}
-
-.kb-toolbar__search-icon {
-  color: var(--text-4, var(--text-muted));
-  flex-shrink: 0;
-}
-
-.kb-toolbar__search-input {
-  flex: 1;
-  background: none;
-  border: none;
-  outline: none;
-  font-size: 11.5px;
-  color: var(--text-1, var(--text-primary));
-  min-width: 0;
-}
-
-.kb-toolbar__search-input::placeholder {
-  color: var(--text-4, var(--text-muted));
+  .kb-toolbar__view-btn,
+  .kb-toolbar__btn,
+  .kb-toolbar__group :deep(.nv-select__trigger) {
+    min-height: 44px;
+  }
 }
 </style>

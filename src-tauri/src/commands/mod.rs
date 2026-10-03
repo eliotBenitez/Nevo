@@ -9,12 +9,16 @@ pub mod graph;
 pub mod kanban;
 pub mod kanban_ops;
 pub mod mcp;
+#[cfg(desktop)]
+pub mod mcp_registration;
 pub mod note;
 pub mod note_index;
+pub mod notebook_export;
 pub mod notion_import;
 pub mod path_utils;
 pub mod system;
 pub mod templates;
 pub mod typst_export;
+pub mod voice_recording;
 pub mod workspace;
 pub mod workspace_transfer;

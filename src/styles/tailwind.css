@@ -1,0 +1,51 @@
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme) prefix(tw);
+@import 'tailwindcss/utilities.css' layer(utilities) prefix(tw) source(none);
+@source '../';
+@custom-variant coarse (@media (pointer: coarse));
+
+/* Match the native CSS default: migrated `transition: x .12s` rules never set an easing. */
+@theme {
+  --default-transition-timing-function: ease;
+}
+
+@theme inline {
+  --color-surface-canvas: var(--surface-canvas);
+  --color-surface-navigation: var(--surface-navigation);
+  --color-surface-panel: var(--surface-panel);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-danger: var(--surface-danger);
+  --color-input-bg: var(--input-bg);
+  --color-modal: var(--modal-bg);
+  --color-scrim: var(--scrim);
+
+  --color-content-primary: var(--text-primary);
+  --color-content-secondary: var(--text-secondary);
+  --color-content-muted: var(--text-muted);
+  --color-content-on-accent: var(--text-on-accent);
+  --color-line-default: var(--border-default);
+  --color-line-strong: var(--border-strong);
+  /* Used as `border-border-subtle` by migrated templates/settings markup. */
+  --color-border-subtle: var(--border-subtle);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-status-danger: var(--status-danger);
+  --color-success: var(--success);
+  --color-focus-ring: var(--focus-ring);
+
+  --font-nv-ui: var(--font-ui);
+  --font-nv-mono: var(--font-mono);
+  --radius-nv-xs: var(--radius-xs);
+  --radius-nv-sm: var(--radius-sm);
+  --radius-nv-md: var(--radius-md);
+  --radius-nv-lg: var(--radius-lg);
+  --radius-nv-xl: var(--radius-xl);
+  --shadow-nv-modal: var(--modal-shadow);
+  --z-nv-scrim: var(--z-scrim);
+  --z-nv-modal: var(--z-modal);
+  --z-nv-popover: var(--z-popover);
+}

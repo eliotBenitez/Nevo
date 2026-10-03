@@ -53,7 +53,6 @@ describe('useEditorPluginRuntime', () => {
     const setup = {
       initPluginHost,
       destroyEditorView: vi.fn(),
-      flushYjsPersistenceNow: vi.fn(async () => undefined),
     }
     const reinitializeEditor = vi.fn(async () => undefined)
     const scope = effectScope()
@@ -76,7 +75,6 @@ describe('useEditorPluginRuntime', () => {
 
     await runtimeGuardMock.guard?.pause()
     expect(runtime.paused.value).toBe(true)
-    expect(setup.flushYjsPersistenceNow).toHaveBeenCalledOnce()
     expect(core.pluginHost).toBeNull()
 
     await runtimeGuardMock.guard?.resume()
@@ -95,7 +93,6 @@ describe('useEditorPluginRuntime', () => {
       editorSetup: {
         initPluginHost: vi.fn(async () => undefined),
         destroyEditorView: vi.fn(),
-        flushYjsPersistenceNow: vi.fn(async () => undefined),
       },
       getWorkspacePath: () => '/workspace',
       getPluginManifests: () => [],

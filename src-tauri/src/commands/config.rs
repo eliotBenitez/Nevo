@@ -52,6 +52,42 @@ pub struct AppConfig {
     pub focus_ring_style: String,
     #[serde(rename = "windowChromeStyle", default = "default_window_chrome_style")]
     pub window_chrome_style: String,
+    // Onboarding state (tour status, first-steps checklist progress) is owned
+    // and validated entirely by the TypeScript normalizer
+    // (`src/utils/workspace-settings/normalizers.ts`); the Rust side only
+    // needs to round-trip it opaquely without dropping or reshaping it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub onboarding: Option<serde_json::Value>,
+    // Appearance fields validated by the TypeScript normalizer. Declared so a
+    // save does not drop them; values are round-tripped as written.
+    #[serde(
+        rename = "interfaceZoom",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub interface_zoom: Option<f64>,
+    #[serde(
+        rename = "reduceTransparency",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub reduce_transparency: Option<bool>,
+    #[serde(
+        rename = "interfaceRoundness",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub interface_roundness: Option<String>,
+    #[serde(
+        rename = "themeSchedule",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub theme_schedule: Option<serde_json::Value>,
+    // Any field a newer frontend adds before this struct learns about it.
+    // Without this catch-all, serde silently drops unknown keys on save.
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 impl Default for AppConfig {
@@ -66,6 +102,12 @@ impl Default for AppConfig {
             scrollbar_visibility: default_scrollbar_visibility(),
             focus_ring_style: default_focus_ring_style(),
             window_chrome_style: default_window_chrome_style(),
+            onboarding: None,
+            interface_zoom: None,
+            reduce_transparency: None,
+            interface_roundness: None,
+            theme_schedule: None,
+            extra: serde_json::Map::new(),
         }
     }
 }
@@ -90,6 +132,8 @@ pub struct AppMetadata {
     pub supports_reveal_in_file_manager: bool,
     #[serde(rename = "supportsWindowDragRegions")]
     pub supports_window_drag_regions: bool,
+    #[serde(rename = "supportsNotebookLifecycleEvents")]
+    pub supports_notebook_lifecycle_events: bool,
 }
 
 fn default_config_version() -> String {
@@ -263,5 +307,128 @@ pub fn get_app_metadata(app: tauri::AppHandle) -> Result<AppMetadata, String> {
         supports_global_shortcuts: cfg!(desktop),
         supports_reveal_in_file_manager: cfg!(desktop),
         supports_window_drag_regions: cfg!(desktop),
+        supports_notebook_lifecycle_events:
+            crate::mobile_lifecycle::supports_notebook_lifecycle_events(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AppConfig;
+
+    #[test]
+    fn app_config_without_onboarding_still_loads_with_none() {
+        let json = r#"{
+            "version": "1",
+            "theme": "system",
+            "locale": "ru",
+            "recents": [],
+            "interfaceDensity": "comfortable",
+            "reducedMotion": "system",
+            "scrollbarVisibility": "hidden",
+            "focusRingStyle": "accent",
+            "windowChromeStyle": "default"
+        }"#;
+
+        let config: AppConfig =
+            serde_json::from_str(json).expect("config without onboarding should deserialize");
+        assert!(config.onboarding.is_none());
+
+        let serialized = serde_json::to_value(&config).expect("config should serialize");
+        assert!(
+            serialized.get("onboarding").is_none(),
+            "onboarding should be omitted from the serialized output when absent"
+        );
+    }
+
+    #[test]
+    fn app_config_with_onboarding_round_trips_unchanged() {
+        let onboarding = serde_json::json!({
+            "tourStatus": "completed",
+            "firstSteps": ["createWorkspace", "takeTour"],
+            "firstStepsHidden": true
+        });
+        let json = serde_json::json!({
+            "version": "1",
+            "theme": "system",
+            "locale": "ru",
+            "recents": [],
+            "interfaceDensity": "comfortable",
+            "reducedMotion": "system",
+            "scrollbarVisibility": "hidden",
+            "focusRingStyle": "accent",
+            "windowChromeStyle": "default",
+            "onboarding": onboarding.clone(),
+        });
+
+        let config: AppConfig =
+            serde_json::from_value(json).expect("config with onboarding should deserialize");
+        assert_eq!(config.onboarding, Some(onboarding.clone()));
+
+        let serialized = serde_json::to_value(&config).expect("config should serialize");
+        assert_eq!(serialized.get("onboarding"), Some(&onboarding));
+    }
+
+    #[test]
+    fn app_config_round_trips_appearance_and_unknown_fields() {
+        let json = serde_json::json!({
+            "version": "1",
+            "theme": "dark",
+            "locale": "ru",
+            "recents": [],
+            "interfaceDensity": "compact",
+            "reducedMotion": "reduce",
+            "scrollbarVisibility": "thin",
+            "focusRingStyle": "high-contrast",
+            "windowChromeStyle": "minimal",
+            "interfaceZoom": 1.25,
+            "reduceTransparency": true,
+            "interfaceRoundness": "sharp",
+            "themeSchedule": { "enabled": true, "lightTime": "07:00", "darkTime": "20:00" },
+            "futureSetting": { "nested": [1, 2] }
+        });
+
+        let config: AppConfig =
+            serde_json::from_value(json.clone()).expect("full config should deserialize");
+        assert_eq!(config.interface_zoom, Some(1.25));
+        assert_eq!(config.reduce_transparency, Some(true));
+        assert_eq!(config.interface_roundness.as_deref(), Some("sharp"));
+
+        let serialized = serde_json::to_value(&config).expect("config should serialize");
+        assert_eq!(serialized, json);
+    }
+
+    #[test]
+    fn app_config_round_trips_notebook_palette_unchanged() {
+        let json = serde_json::json!({
+            "version": "1",
+            "theme": "system",
+            "locale": "en",
+            "recents": [],
+            "interfaceDensity": "comfortable",
+            "reducedMotion": "system",
+            "scrollbarVisibility": "hidden",
+            "focusRingStyle": "accent",
+            "windowChromeStyle": "default",
+            "notebookPalette": {
+                "presets": ["#abcdef", "#123456"],
+                "recents": ["#dc2626", "#000000"]
+            }
+        });
+
+        let config: AppConfig =
+            serde_json::from_value(json.clone()).expect("config with palette should deserialize");
+        assert_eq!(
+            config.extra.get("notebookPalette"),
+            json.get("notebookPalette")
+        );
+
+        let serialized = serde_json::to_value(&config).expect("config should serialize");
+        assert_eq!(serialized, json);
+    }
+
+    #[test]
+    fn app_config_default_has_no_onboarding() {
+        assert!(AppConfig::default().onboarding.is_none());
+    }
 }

@@ -11,7 +11,7 @@ defineEmits<{ select: [tool: 'rectangle' | 'ellipse' | 'diamond'] }>()
 </script>
 
 <template>
-  <div class="canvas-shape-menu" role="group">
+  <div class="canvas-shape-menu tw:flex tw:gap-0.5" role="group">
     <button
       v-for="item in [
         { tool: 'rectangle', icon: Square },
@@ -30,10 +30,3 @@ defineEmits<{ select: [tool: 'rectangle' | 'ellipse' | 'diamond'] }>()
     </button>
   </div>
 </template>
-
-<style scoped>
-.canvas-shape-menu {
-  display: flex;
-  gap: 2px;
-}
-</style>

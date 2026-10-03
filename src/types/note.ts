@@ -1,4 +1,5 @@
 import type { CanvasSnapshotV1 } from '../core/canvas'
+import type { NotebookSnapshotV1 } from '../core/notebook/types'
 
 export interface BlockNode {
   type: string
@@ -13,6 +14,7 @@ export type NoteType = 'note' | 'task' | 'idea' | 'meeting' | 'project' | 'resea
 export type NoteStatus = 'none' | 'draft' | 'active' | 'waiting' | 'done'
 
 export interface NoteProperties {
+  [key: string]: unknown
   type: NoteType | null
   tags: string[]
   date: string | null
@@ -20,6 +22,7 @@ export interface NoteProperties {
 }
 
 export interface NoteDocument {
+  [key: string]: unknown
   id: string
   title: string
   icon: string
@@ -29,9 +32,12 @@ export interface NoteDocument {
   updatedAt: string
   properties?: NoteProperties
   content: BlockNode
-  /** JSON mirror for local snapshots/import/recovery. The live canvas state is
-   *  stored in Yjs shared types inside the note's authoritative Y.Doc. */
+  /** A note's canvas source of truth, persisted here in `note.json`. */
   canvas?: CanvasSnapshotV1
+  /** Present when the note stores versioned handwritten notebook pages. */
+  documentKind?: 'document' | 'notebook'
+  /** Notebook content is separate from ProseMirror `content` and canvas state. */
+  notebook?: NotebookSnapshotV1
 }
 
 export interface NoteMeta {
@@ -57,6 +63,14 @@ export interface NoteSnapshotMeta {
   noteId: string
   createdAt: string
   updatedAt: string
+}
+
+export type RestoreWarning = 'manifestPending' | 'pruneFailed'
+
+export interface RestoreNoteSnapshotResult {
+  note: NoteDocument
+  recoverySnapshotId: string
+  warnings: RestoreWarning[]
 }
 
 export interface NoteSnapshotsEntry {

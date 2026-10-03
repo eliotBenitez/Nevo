@@ -135,4 +135,42 @@ describe('NvColorPicker', () => {
     expect(wrapper.emitted('update:modelValue')).toEqual([[null]])
     wrapper.unmount()
   })
+
+  it('renders a labelled swatch trigger and a sections slot whose select applies a color', async () => {
+    const wrapper = mount(NvColorPicker, {
+      global: { plugins: [i18n] },
+      attachTo: document.body,
+      props: {
+        modelValue: '#112233',
+        colors: [{ color: '#ff0000', label: 'Red' }],
+        trigger: 'swatch',
+        triggerLabel: 'Palette',
+      },
+      slots: {
+        sections: `<template #sections="{ select }"><button class="extra-section" type="button" @click="select('#00ff00')">extra</button></template>`,
+      },
+    })
+
+    const trigger = wrapper.get('.nv-color-picker__trigger--swatch')
+    expect(trigger.attributes('aria-label')).toBe('Palette')
+    expect(trigger.attributes('aria-haspopup')).toBe('dialog')
+    expect(trigger.attributes('aria-expanded')).toBe('false')
+    expect(wrapper.find('.nv-color-picker__trigger-label').exists()).toBe(false)
+
+    await trigger.trigger('click')
+    await nextTick()
+    expect(trigger.attributes('aria-expanded')).toBe('true')
+
+    const extra = document.body.querySelector<HTMLButtonElement>('.extra-section')
+    expect(extra).not.toBeNull()
+    extra!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    await nextTick()
+    expect(document.body.querySelector('.nv-color-picker__panel--popover')).not.toBeNull()
+
+    extra!.click()
+    await nextTick()
+    expect(wrapper.emitted('update:modelValue')).toEqual([['#00ff00']])
+    expect(document.body.querySelector('.nv-color-picker__panel--popover')).toBeNull()
+    wrapper.unmount()
+  })
 })

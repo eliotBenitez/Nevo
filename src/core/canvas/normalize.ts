@@ -221,7 +221,10 @@ export function emptyCanvasSnapshot(): CanvasSnapshotV1 {
     frame: createDefaultCanvasFrame(),
     elements: {},
     connectors: {},
-    order: [],
+    // Matches what `normalizeCanvasSnapshot` would produce for an empty
+    // snapshot: the document frame is always a member of `order`, even with
+    // no elements/connectors yet.
+    order: [CANVAS_DOCUMENT_FRAME_ID],
   }
 }
 

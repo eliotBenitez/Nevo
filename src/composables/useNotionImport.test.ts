@@ -6,9 +6,9 @@ const mocks = vi.hoisted(() => {
   return {
     createFolder: vi.fn(), createNote: vi.fn(), syncNoteMeta: vi.fn(), invalidateNoteCache: vi.fn(),
     refreshSidebarNotePreviews, pickAndScanNotionExport: vi.fn(), importNotionAssets: vi.fn(),
-    releaseNotionImport: vi.fn(), saveNote: vi.fn(), deleteYjsState: vi.fn(), importRecords: vi.fn(),
+    releaseNotionImport: vi.fn(), saveNote: vi.fn(), importRecords: vi.fn(),
     workspaceStore: {
-      backendKind: 'local' as 'local' | 'cloud',
+      backendKind: 'local' as 'local' | null,
       activePath: '/workspace' as string | null,
       manifest: { tree: [{ title: 'Export (Notion)' }] } as { tree: Array<{ title: string }> } | null,
       refreshSidebarNotePreviews,
@@ -18,7 +18,7 @@ const mocks = vi.hoisted(() => {
 
 const {
   createFolder, createNote,
-  pickAndScanNotionExport, importNotionAssets, releaseNotionImport, saveNote, deleteYjsState,
+  pickAndScanNotionExport, importNotionAssets, releaseNotionImport, saveNote,
   importRecords, workspaceStore,
 } = mocks
 
@@ -32,7 +32,6 @@ vi.mock('../tauri/commands', () => ({
   importNotionAssets: mocks.importNotionAssets,
   releaseNotionImport: mocks.releaseNotionImport,
   noteCommands: { saveNote: mocks.saveNote },
-  collabCommands: { deleteYjsState: mocks.deleteYjsState },
 }))
 vi.mock('../features/database/databaseRepository', () => ({
   createDatabaseRepository: () => ({ importRecords: mocks.importRecords }),
@@ -70,18 +69,16 @@ describe('useNotionImport', () => {
     importNotionAssets.mockResolvedValue([{ relativePath: 'files/manual.pdf', asset: { src: '.nevo/assets/manual.pdf', hash: 'h', deduplicated: false, bytes: 20 }, error: null }])
     releaseNotionImport.mockResolvedValue(true)
     saveNote.mockResolvedValue(undefined)
-    deleteYjsState.mockResolvedValue(true)
     importRecords.mockResolvedValue(1)
   })
 
-  it('creates a unique root, allocates every note before writing, imports database rows, resets Y.Doc and releases the session', async () => {
+  it('creates a unique root, allocates every note before writing, imports database rows, and releases the session', async () => {
     const importer = useNotionImport()
     const result = await importer.importExport()
 
     expect(createFolder).toHaveBeenNthCalledWith(1, null, 'Export (Notion) 2')
     expect(Math.max(...createNote.mock.invocationCallOrder)).toBeLessThan(Math.min(...saveNote.mock.invocationCallOrder))
     expect(importRecords).toHaveBeenCalledOnce()
-    expect(deleteYjsState).toHaveBeenCalledTimes(3)
     expect(releaseNotionImport).toHaveBeenCalledWith('session-1')
     expect(result).toMatchObject({ notesCreated: 3, databasesCreated: 1, rootName: 'Export (Notion) 2' })
     const childSave = saveNote.mock.calls.find(([_, note]) => note.title === 'Child')

@@ -57,7 +57,7 @@ const turnIntoItems: TurnIntoItem[] = [
 <template>
   <div
     v-if="open"
-    class="editor-overlay block-type-menu"
+    class="editor-overlay block-type-menu tw:fixed tw:z-60 tw:flex tw:max-h-[min(420px,calc(100vh-24px))] tw:w-[220px] tw:flex-col tw:gap-px tw:overflow-y-auto tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--menu-bg) tw:p-1.5 tw:shadow-(--shadow-overlay)"
     :style="menuStyle"
     @mouseenter="emit('mouseenter')"
     @mouseleave="emit('mouseleave')"

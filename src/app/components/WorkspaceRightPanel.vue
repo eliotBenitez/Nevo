@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
-import { ChevronRight, ExternalLink, FileText, Hash, X } from 'lucide-vue-next'
+import { computed, defineAsyncComponent, reactive, ref } from 'vue'
+import { ChevronRight, ExternalLink, FileText, X } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
-import { useTimeAgo, useDateFormat, refDebounced } from '@vueuse/core'
+import { refDebounced } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import type { NoteDocument, NoteProperties, NoteStatus, NoteType } from '../../types/note'
 import { extractOutline, countWords, extractExternalLinks } from '../composables/useNoteOutline'
 import { useGraphStore } from '../../stores/graph'
 import { useNoteStore } from '../../stores/note'
+import { useWorkspaceStore } from '../../stores/workspace'
 import NvSelect from '../../ui/primitives/NvSelect.vue'
 import NvDatePicker from '../../ui/primitives/NvDatePicker.vue'
 import { systemCommands } from '../../tauri/commands'
+
+const LocalGraphPanel = defineAsyncComponent(() => import('../../features/graph/LocalGraphPanel.vue'))
 
 interface Props {
   note: NoteDocument | null
@@ -18,11 +21,32 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const emit = defineEmits<{ close: []; 'open-note': [noteId: string] }>()
+const emit = defineEmits<{ close: []; 'open-note': [noteId: string]; 'open-graph': [] }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const graphStore = useGraphStore()
 const noteStore = useNoteStore()
+const workspaceStore = useWorkspaceStore()
+
+type PanelTab = 'document' | 'links' | 'graph'
+const PANEL_TABS: PanelTab[] = ['document', 'links', 'graph']
+const activeTab = ref<PanelTab>('document')
+
+function focusTab(tab: PanelTab) {
+  activeTab.value = tab
+  document.getElementById(`right-panel-tab-${tab}`)?.focus()
+}
+
+// Roving tabindex: arrow keys move between tabs, Home/End jump to the ends.
+function onTabKeydown(event: KeyboardEvent) {
+  const index = PANEL_TABS.indexOf(activeTab.value)
+  if (event.key === 'ArrowRight') focusTab(PANEL_TABS[(index + 1) % PANEL_TABS.length])
+  else if (event.key === 'ArrowLeft') focusTab(PANEL_TABS[(index - 1 + PANEL_TABS.length) % PANEL_TABS.length])
+  else if (event.key === 'Home') focusTab(PANEL_TABS[0])
+  else if (event.key === 'End') focusTab(PANEL_TABS[PANEL_TABS.length - 1])
+  else return
+  event.preventDefault()
+}
 const { backlinks } = storeToRefs(graphStore)
 const tagInput = ref('')
 
@@ -43,10 +67,12 @@ const wordCount = computed(() => debouncedContent.value ? countWords(debouncedCo
 const readMinutes = computed(() => Math.max(1, Math.round(wordCount.value / 200)))
 const externalLinks = computed(() => debouncedContent.value ? extractExternalLinks(debouncedContent.value) : [])
 
-const updatedAt = computed(() => props.note ? new Date(props.note.updatedAt) : new Date())
-const createdAt = computed(() => props.note ? new Date(props.note.createdAt) : new Date())
-const updatedAgo = useTimeAgo(updatedAt)
-const createdFormatted = useDateFormat(createdAt, 'MMM D, YYYY')
+const updatedAgo = computed(() => props.note ? workspaceStore.getRelativeTime(props.note.updatedAt) : '')
+const createdFormatted = computed(() => {
+  if (!props.note) return ''
+  return new Intl.DateTimeFormat(locale.value, { day: 'numeric', month: 'short', year: 'numeric' })
+    .format(new Date(props.note.createdAt))
+})
 const properties = computed<NoteProperties>(() => props.note?.properties ?? emptyProperties)
 const typeValue = computed(() => properties.value.type ?? '')
 const statusValue = computed(() => properties.value.status ?? 'none')
@@ -141,227 +167,202 @@ function onTagKeydown(event: KeyboardEvent) {
 </script>
 
 <template>
-  <aside class="right-panel">
-    <div class="right-panel__head">
-      <Hash :size="13" class="right-panel__head-icon" />
-      <span class="right-panel__head-title">{{ t('workspace.rightPanel.outline') }}</span>
-      <button type="button" class="right-panel__close" :aria-label="t('workspace.context.cancel')" @click="emit('close')">
-        <X :size="14" />
-      </button>
-    </div>
-
-    <!-- TOC -->
-    <div class="right-panel__toc">
-      <div v-if="!outline.length" class="right-panel__empty">{{ t('workspace.rightPanel.noHeadings') }}</div>
-      <div
-        v-for="{ item, hasChildren, collapsed } in visibleOutline"
-        :key="item.index"
-        class="right-panel__toc-item"
-        :class="{ 'is-collapsed': collapsed }"
-        :style="{ paddingLeft: `${10 + (item.level - 1) * 12}px` }"
-      >
-        <button type="button" class="right-panel__toc-chevron" :class="{ 'is-open': !collapsed, 'is-hidden': !hasChildren }" @click.stop="hasChildren && toggleTocCollapse(item.index)">
-          <ChevronRight :size="11" />
-        </button>
-        <span class="right-panel__toc-level">H{{ item.level }}</span>
-        <button type="button" class="right-panel__toc-text" @click="scrollToHeading(item.index)">
-          {{ item.text || t('workspace.untitledNote') }}
+  <aside class="right-panel tw:w-[296px] tw:h-full tw:border-l-0 tw:bg-(--frame-bg) tw:flex tw:flex-col tw:overflow-x-hidden tw:overflow-y-auto tw:[scrollbar-width:thin] tw:[scrollbar-color:var(--border-default)_transparent]">
+    <div class="right-panel__head tw:sticky tw:top-0 tw:z-[1] tw:flex-shrink-0 tw:flex tw:items-center tw:gap-1.5 tw:pt-2 tw:pr-2 tw:pb-1.5 tw:pl-3 tw:bg-(--frame-bg)">
+      <div class="right-panel__tabs tw:flex-1 tw:min-w-0 tw:flex tw:gap-0.5 tw:p-0.5 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:bg-[color-mix(in_oklab,var(--frame-bg)_92%,var(--text-primary))]" role="tablist" :aria-label="t('workspace.rightPanel.tabs.label')">
+        <button
+          v-for="tab in PANEL_TABS"
+          :id="`right-panel-tab-${tab}`"
+          :key="tab"
+          type="button"
+          role="tab"
+          class="right-panel__tab tw:flex-1 tw:min-w-0 tw:h-7 tw:px-2 tw:border-0 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:font-medium tw:text-[12.5px] tw:font-nv-ui tw:cursor-pointer tw:truncate tw:transition-[background-color,color,box-shadow] tw:duration-[120ms] tw:ease-[ease] tw:hover:text-content-primary tw:focus-visible:outline-2 tw:focus-visible:outline-(--focus-ring) tw:focus-visible:outline-offset-2"
+          :class="activeTab === tab ? 'is-active tw:bg-(--island-bg) tw:text-content-primary tw:shadow-raised' : 'tw:bg-transparent tw:text-content-secondary'"
+          :aria-selected="activeTab === tab"
+          :aria-controls="`right-panel-tabpanel-${tab}`"
+          :tabindex="activeTab === tab ? 0 : -1"
+          @click="activeTab = tab"
+          @keydown="onTabKeydown"
+        >
+          {{ t(`workspace.rightPanel.tabs.${tab}`) }}
         </button>
       </div>
-    </div>
-
-    <!-- Properties -->
-    <div class="right-panel__section right-panel__properties">
-      <div class="right-panel__section-label">{{ t('workspace.rightPanel.properties.title') }}</div>
-      <div class="right-panel__property-row">
-        <span class="right-panel__property-label">{{ t('workspace.rightPanel.properties.type') }}</span>
-        <NvSelect
-          class="right-panel__property-control"
-          :model-value="typeValue"
-          :options="typeOptions"
-          :min-width="132"
-          :placeholder="t('workspace.rightPanel.properties.typeNone')"
-          :disabled="!note"
-          @update:model-value="updateType"
-        />
-      </div>
-      <div class="right-panel__property-row">
-        <span class="right-panel__property-label">{{ t('workspace.rightPanel.properties.status') }}</span>
-        <NvSelect
-          class="right-panel__property-control"
-          :model-value="statusValue"
-          :options="statusOptions"
-          :min-width="132"
-          :disabled="!note"
-          @update:model-value="updateStatus"
-        />
-      </div>
-      <div class="right-panel__property-row">
-        <span class="right-panel__property-label">{{ t('workspace.rightPanel.properties.date') }}</span>
-        <NvDatePicker
-          class="right-panel__property-control"
-          :model-value="properties.date"
-          :placeholder="t('workspace.rightPanel.properties.datePlaceholder')"
-          :disabled="!note"
-          @update:model-value="updateDate"
-        />
-      </div>
-      <div class="right-panel__property-tags" :aria-label="t('workspace.rightPanel.properties.tags')">
-        <span
-          v-for="(tag, index) in properties.tags"
-          :key="`${tag}-${index}`"
-          class="right-panel__tag"
-        >
-          <span class="right-panel__tag-text">{{ tag }}</span>
-          <button type="button" class="right-panel__tag-remove" :aria-label="t('workspace.rightPanel.properties.removeTag', { tag })" @click="removeTag(index)">
-            <X :size="10" />
-          </button>
-        </span>
-        <input
-          v-model="tagInput"
-          class="right-panel__tag-input"
-          type="text"
-          :disabled="!note"
-          :placeholder="properties.tags.length ? t('workspace.rightPanel.properties.addTag') : t('workspace.rightPanel.properties.tagsPlaceholder')"
-          @keydown="onTagKeydown"
-          @blur="addTags"
-        >
-      </div>
-    </div>
-
-    <!-- Metadata -->
-    <div class="right-panel__section">
-      <div class="right-panel__section-label">{{ t('workspace.rightPanel.metadata') }}</div>
-      <div class="right-panel__meta-row"><FileText :size="12" /><span>{{ t('workspace.rightPanel.words', { n: wordCount }) }}</span><span class="right-panel__meta-sep">·</span><span>{{ t('workspace.rightPanel.readTime', { n: readMinutes }) }}</span></div>
-      <div class="right-panel__meta-row"><span class="right-panel__meta-key">{{ t('workspace.rightPanel.updated') }}</span><span>{{ updatedAgo }}</span></div>
-      <div class="right-panel__meta-row"><span class="right-panel__meta-key">{{ t('workspace.rightPanel.created') }}</span><span>{{ createdFormatted }}</span></div>
-    </div>
-
-    <!-- External links -->
-    <div class="right-panel__section right-panel__section--scroll">
-      <div class="right-panel__section-label">{{ t('workspace.rightPanel.externalLinks') }}</div>
-      <div v-if="!externalLinks.length" class="right-panel__empty right-panel__empty--sm">{{ t('workspace.rightPanel.noExternalLinks') }}</div>
-      <button v-for="link in externalLinks" :key="link.url" type="button" class="right-panel__link-item" :title="link.url" @click="onOpenLink(link.url)">
-        <ExternalLink :size="11" class="right-panel__link-icon" />
-        <span class="right-panel__link-text">{{ linkDomain(link.url) }}</span>
+      <button type="button" class="right-panel__close tw:size-7 tw:flex-shrink-0 tw:grid tw:place-items-center tw:border-none tw:rounded-[calc(8px*var(--radius-scale,1))] tw:bg-transparent tw:text-content-muted tw:cursor-pointer tw:transition-[background-color,color] tw:duration-[120ms] tw:ease-[ease] tw:hover:bg-(--hover) tw:hover:text-content-primary tw:focus-visible:outline-2 tw:focus-visible:outline-(--focus-ring) tw:focus-visible:outline-offset-2" :aria-label="t('workspace.context.cancel')" @click="emit('close')">
+        <X :size="14" aria-hidden="true" />
       </button>
     </div>
 
-    <!-- Backlinks -->
-    <div class="right-panel__section right-panel__section--scroll">
-      <div class="right-panel__section-label">{{ t('workspace.rightPanel.backlinks') }}</div>
-      <div v-if="!backlinks.length" class="right-panel__empty right-panel__empty--sm">{{ t('workspace.rightPanel.noBacklinks') }}</div>
-      <button v-for="bl in backlinks" :key="bl.sourceId" type="button" class="right-panel__backlink-item" @click="emit('open-note', bl.sourceId)">
-        <span class="right-panel__backlink-icon">{{ bl.sourceIcon || '📄' }}</span>
-        <span class="right-panel__backlink-title">{{ bl.sourceTitle }}</span>
-        <span v-if="bl.count > 1" class="right-panel__backlink-count">{{ bl.count }}</span>
-      </button>
+    <div
+      v-if="activeTab === 'document'"
+      id="right-panel-tabpanel-document"
+      class="right-panel__tabpanel tw:flex tw:flex-col tw:pb-4"
+      role="tabpanel"
+      aria-labelledby="right-panel-tab-document"
+    >
+      <div class="right-panel__section tw:flex-shrink-0 tw:pt-3 tw:px-4 tw:pb-3.5 tw:flex tw:flex-col tw:gap-1.5">
+        <div class="right-panel__section-label tw:mb-1 tw:font-nv-mono tw:text-[10.5px] tw:font-medium tw:tracking-[0.06em] tw:uppercase tw:text-content-muted">{{ t('workspace.rightPanel.outline') }}</div>
+        <div v-if="!outline.length" class="right-panel__empty right-panel__empty--sm tw:text-xs tw:text-content-muted">{{ t('workspace.rightPanel.noHeadings') }}</div>
+        <div v-else class="right-panel__toc tw:flex tw:flex-col tw:-ml-1.5">
+          <div
+            v-for="{ item, hasChildren, collapsed } in visibleOutline"
+            :key="item.index"
+            class="right-panel__toc-item tw:w-full tw:min-h-7 tw:flex tw:items-center tw:gap-0.5 tw:pr-1.5 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:text-[12.5px] tw:transition-[background-color,color] tw:duration-[120ms] tw:ease-[ease] tw:hover:bg-(--hover) tw:hover:text-content-primary"
+            :class="collapsed ? 'is-collapsed tw:text-content-muted' : 'tw:text-content-secondary'"
+            :style="{ paddingLeft: `${(item.level - 1) * 12}px` }"
+          >
+            <button
+              type="button"
+              class="right-panel__toc-chevron tw:size-[18px] tw:flex-shrink-0 tw:grid tw:place-items-center tw:border-none tw:bg-transparent tw:text-content-muted tw:cursor-pointer tw:rounded-[calc(4px*var(--radius-scale,1))] tw:hover:text-content-secondary tw:focus-visible:outline-2 tw:focus-visible:outline-(--focus-ring) tw:focus-visible:outline-offset-2"
+              :class="{ 'is-open': !collapsed, 'is-hidden tw:opacity-0 tw:pointer-events-none': !hasChildren }"
+              @click.stop="hasChildren && toggleTocCollapse(item.index)"
+            >
+              <ChevronRight :size="11" />
+            </button>
+            <button type="button" class="right-panel__toc-text tw:flex-1 tw:min-w-0 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:border-none tw:bg-transparent tw:text-inherit tw:font-inherit tw:text-left tw:cursor-pointer tw:py-1 tw:px-0 tw:focus-visible:outline-2 tw:focus-visible:outline-(--focus-ring) tw:focus-visible:outline-offset-2" @click="scrollToHeading(item.index)">
+              {{ item.text || t('workspace.untitledNote') }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="right-panel__section right-panel__properties tw:flex-shrink-0 tw:pt-3 tw:px-4 tw:pb-3.5 tw:flex tw:flex-col tw:gap-0.5">
+        <div class="right-panel__section-label tw:mb-1 tw:font-nv-mono tw:text-[10.5px] tw:font-medium tw:tracking-[0.06em] tw:uppercase tw:text-content-muted">{{ t('workspace.rightPanel.properties.title') }}</div>
+        <div class="right-panel__property-row tw:min-h-8 tw:grid tw:grid-cols-[76px_minmax(0,1fr)] tw:items-center tw:gap-2">
+          <span class="right-panel__property-label tw:text-xs tw:text-content-muted tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap">{{ t('workspace.rightPanel.properties.type') }}</span>
+          <NvSelect
+            class="right-panel__property-control tw:min-w-0 tw:w-full"
+            :model-value="typeValue"
+            :options="typeOptions"
+            :min-width="132"
+            :placeholder="t('workspace.rightPanel.properties.typeNone')"
+            :disabled="!note"
+            @update:model-value="updateType"
+          />
+        </div>
+        <div class="right-panel__property-row tw:min-h-8 tw:grid tw:grid-cols-[76px_minmax(0,1fr)] tw:items-center tw:gap-2">
+          <span class="right-panel__property-label tw:text-xs tw:text-content-muted tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap">{{ t('workspace.rightPanel.properties.status') }}</span>
+          <NvSelect
+            class="right-panel__property-control tw:min-w-0 tw:w-full"
+            :model-value="statusValue"
+            :options="statusOptions"
+            :min-width="132"
+            :disabled="!note"
+            @update:model-value="updateStatus"
+          />
+        </div>
+        <div class="right-panel__property-row tw:min-h-8 tw:grid tw:grid-cols-[76px_minmax(0,1fr)] tw:items-center tw:gap-2">
+          <span class="right-panel__property-label tw:text-xs tw:text-content-muted tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap">{{ t('workspace.rightPanel.properties.date') }}</span>
+          <NvDatePicker
+            class="right-panel__property-control tw:min-w-0 tw:w-full"
+            :model-value="properties.date"
+            :placeholder="t('workspace.rightPanel.properties.datePlaceholder')"
+            :disabled="!note"
+            @update:model-value="updateDate"
+          />
+        </div>
+        <div class="right-panel__property-row right-panel__property-row--tags tw:min-h-8 tw:grid tw:grid-cols-[76px_minmax(0,1fr)] tw:items-start tw:gap-2 tw:pt-1">
+          <span class="right-panel__property-label tw:text-xs tw:text-content-muted tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:leading-6">{{ t('workspace.rightPanel.properties.tags') }}</span>
+          <div class="right-panel__property-tags tw:min-w-0 tw:flex tw:items-center tw:flex-wrap tw:gap-1" :aria-label="t('workspace.rightPanel.properties.tags')">
+            <span
+              v-for="(tag, index) in properties.tags"
+              :key="`${tag}-${index}`"
+              class="right-panel__tag tw:max-w-full tw:min-w-0 tw:h-6 tw:inline-flex tw:items-center tw:gap-0.5 tw:pt-0 tw:pr-1 tw:pb-0 tw:pl-[9px] tw:rounded-full tw:bg-[color-mix(in_oklab,var(--frame-bg)_90%,var(--text-primary))] tw:text-content-secondary tw:text-xs"
+            >
+              <span class="right-panel__tag-text tw:min-w-0 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap">{{ tag }}</span>
+              <button type="button" class="right-panel__tag-remove tw:size-4 tw:flex-shrink-0 tw:grid tw:place-items-center tw:border-none tw:rounded-full tw:bg-transparent tw:text-content-muted tw:cursor-pointer tw:p-0 tw:hover:bg-(--hover-strong) tw:hover:text-content-primary" :aria-label="t('workspace.rightPanel.properties.removeTag', { tag })" @click="removeTag(index)">
+                <X :size="10" />
+              </button>
+            </span>
+            <input
+              v-model="tagInput"
+              class="right-panel__tag-input tw:flex-[1_1_72px] tw:min-w-[72px] tw:h-6 tw:px-1 tw:border tw:border-solid tw:border-transparent tw:rounded-[calc(6px*var(--radius-scale,1))] tw:outline-none tw:bg-transparent tw:text-content-secondary tw:font-inherit tw:text-xs tw:hover:bg-(--hover) tw:focus:bg-input-bg tw:focus:shadow-[0_0_0_2px_var(--input-ring)] tw:placeholder:text-content-muted disabled:tw:cursor-not-allowed disabled:tw:opacity-55"
+              type="text"
+              :disabled="!note"
+              :placeholder="properties.tags.length ? t('workspace.rightPanel.properties.addTag') : t('workspace.rightPanel.properties.tagsPlaceholder')"
+              @keydown="onTagKeydown"
+              @blur="addTags"
+            >
+          </div>
+        </div>
+      </div>
+
+      <div class="right-panel__section tw:flex-shrink-0 tw:pt-3 tw:px-4 tw:pb-3.5 tw:flex tw:flex-col tw:gap-1.5">
+        <div class="right-panel__section-label tw:mb-1 tw:font-nv-mono tw:text-[10.5px] tw:font-medium tw:tracking-[0.06em] tw:uppercase tw:text-content-muted">{{ t('workspace.rightPanel.metadata') }}</div>
+        <div class="right-panel__meta-row tw:min-h-6 tw:flex tw:items-center tw:gap-1.25 tw:text-xs tw:text-content-secondary [&>svg]:tw:text-content-muted"><FileText :size="12" aria-hidden="true" /><span>{{ t('workspace.rightPanel.words', { n: wordCount }) }}</span><span class="right-panel__meta-sep tw:text-content-muted">·</span><span>{{ t('workspace.rightPanel.readTime', { n: readMinutes }) }}</span></div>
+        <div class="right-panel__meta-row tw:min-h-6 tw:flex tw:items-center tw:gap-1.25 tw:text-xs tw:text-content-secondary [&>svg]:tw:text-content-muted"><span class="right-panel__meta-key tw:text-content-muted tw:w-[76px] tw:flex-shrink-0 tw:mr-[3px]">{{ t('workspace.rightPanel.updated') }}</span><span class="right-panel__meta-value tw:[font-variant-numeric:tabular-nums]">{{ updatedAgo }}</span></div>
+        <div class="right-panel__meta-row tw:min-h-6 tw:flex tw:items-center tw:gap-1.25 tw:text-xs tw:text-content-secondary [&>svg]:tw:text-content-muted"><span class="right-panel__meta-key tw:text-content-muted tw:w-[76px] tw:flex-shrink-0 tw:mr-[3px]">{{ t('workspace.rightPanel.created') }}</span><span class="right-panel__meta-value tw:[font-variant-numeric:tabular-nums]">{{ createdFormatted }}</span></div>
+      </div>
+    </div>
+
+    <div
+      v-else-if="activeTab === 'links'"
+      id="right-panel-tabpanel-links"
+      class="right-panel__tabpanel tw:flex tw:flex-col tw:pb-4"
+      role="tabpanel"
+      aria-labelledby="right-panel-tab-links"
+    >
+      <div class="right-panel__section right-panel__backlinks tw:flex-shrink-0 tw:pt-3 tw:px-4 tw:pb-3.5 tw:flex tw:flex-col tw:gap-1.5">
+        <div class="right-panel__section-label tw:mb-1 tw:font-nv-mono tw:text-[10.5px] tw:font-medium tw:tracking-[0.06em] tw:uppercase tw:text-content-muted">
+          {{ t('workspace.rightPanel.backlinks') }}<template v-if="backlinks.length"> · {{ backlinks.length }}</template>
+        </div>
+        <div v-if="!backlinks.length" class="right-panel__empty right-panel__empty--sm tw:text-xs tw:text-content-muted">{{ t('workspace.rightPanel.noBacklinks') }}</div>
+        <button v-for="bl in backlinks" :key="bl.sourceId" type="button" class="right-panel__backlink-item tw:w-full tw:min-h-8 tw:flex tw:items-center tw:gap-2 tw:-ml-1.5 tw:px-1.5 tw:border-none tw:rounded-[calc(6px*var(--radius-scale,1))] tw:bg-transparent tw:text-content-secondary tw:text-[12.5px] tw:text-left tw:cursor-pointer tw:transition-[background-color,color] tw:duration-[120ms] tw:ease-[ease] tw:hover:bg-(--hover) tw:hover:text-content-primary tw:focus-visible:outline-2 tw:focus-visible:outline-(--focus-ring) tw:focus-visible:outline-offset-2" @click="emit('open-note', bl.sourceId)">
+          <span class="right-panel__backlink-icon tw:text-[13px] tw:leading-none tw:flex-shrink-0">{{ bl.sourceIcon || '📄' }}</span>
+          <span class="right-panel__backlink-title tw:flex-1 tw:min-w-0 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap">{{ bl.sourceTitle }}</span>
+          <span v-if="bl.count > 1" class="right-panel__backlink-count tw:font-nv-mono tw:text-[10.5px] tw:text-content-muted tw:flex-shrink-0">{{ bl.count }}</span>
+        </button>
+      </div>
+
+      <div class="right-panel__section tw:flex-shrink-0 tw:pt-3 tw:px-4 tw:pb-3.5 tw:flex tw:flex-col tw:gap-1.5">
+        <div class="right-panel__section-label tw:mb-1 tw:font-nv-mono tw:text-[10.5px] tw:font-medium tw:tracking-[0.06em] tw:uppercase tw:text-content-muted">{{ t('workspace.rightPanel.externalLinks') }}</div>
+        <div v-if="!externalLinks.length" class="right-panel__empty right-panel__empty--sm tw:text-xs tw:text-content-muted">{{ t('workspace.rightPanel.noExternalLinks') }}</div>
+        <button v-for="link in externalLinks" :key="link.url" type="button" class="right-panel__link-item tw:w-full tw:min-h-8 tw:flex tw:items-center tw:gap-2 tw:-ml-1.5 tw:px-1.5 tw:border-none tw:rounded-[calc(6px*var(--radius-scale,1))] tw:bg-transparent tw:text-content-secondary tw:text-[12.5px] tw:text-left tw:cursor-pointer tw:transition-[background-color,color] tw:duration-[120ms] tw:ease-[ease] tw:hover:bg-(--hover) tw:hover:text-content-primary tw:focus-visible:outline-2 tw:focus-visible:outline-(--focus-ring) tw:focus-visible:outline-offset-2" :title="link.url" @click="onOpenLink(link.url)">
+          <ExternalLink :size="11" class="right-panel__link-icon tw:flex-shrink-0 tw:text-content-muted" />
+          <span class="right-panel__link-text tw:flex-1 tw:min-w-0 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap">{{ linkDomain(link.url) }}</span>
+        </button>
+      </div>
+    </div>
+
+    <div
+      v-else
+      id="right-panel-tabpanel-graph"
+      class="right-panel__tabpanel tw:flex tw:min-h-0 tw:flex-1 tw:flex-col tw:overflow-hidden"
+      role="tabpanel"
+      aria-labelledby="right-panel-tab-graph"
+    >
+      <LocalGraphPanel
+        class="right-panel__graph-canvas tw:flex-1"
+        :note="note"
+        embedded
+        @open-note="emit('open-note', $event)"
+      />
     </div>
   </aside>
 </template>
 
 <style scoped>
-.right-panel {
-  width: 280px; height: 100%;
-  border-left: 1px solid var(--line-1);
-  background: var(--glass-1);
-  backdrop-filter: blur(28px) saturate(140%);
-  -webkit-backdrop-filter: blur(28px) saturate(140%);
-  display: flex; flex-direction: column; overflow: hidden;
+.right-panel__toc-chevron :deep(svg) {
+  transition: transform 180ms ease;
+  transform: rotate(0deg);
 }
 
-.right-panel__head {
-  flex-shrink: 0; height: 42px; display: flex; align-items: center; gap: 7px;
-  padding: 0 12px; border-bottom: 1px solid var(--line-1);
+.right-panel__toc-chevron.is-open :deep(svg) {
+  transform: rotate(90deg);
 }
-.right-panel__head-icon { color: var(--text-4); }
-.right-panel__head-title { flex: 1; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-4); }
-.right-panel__close { width: 24px; height: 24px; display: grid; place-items: center; border: none; border-radius: calc(6px * var(--radius-scale, 1)); background: transparent; color: var(--text-4); cursor: pointer; transition: background-color 120ms ease, color 120ms ease; }
-.right-panel__close:hover { background: var(--hover); color: var(--text-1); }
 
-.right-panel__toc { flex: 1; overflow-y: auto; padding: 6px 0; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; contain: paint; }
-
-.right-panel__toc-item {
-  position: relative; width: 100%; height: 28px; display: flex; align-items: center;
-  gap: 5px; padding-right: 10px; border-radius: calc(7px * var(--radius-scale, 1)); color: var(--text-2);
-  font-size: 12.5px; transition: background-color 120ms ease, color 120ms ease;
-}
-.right-panel__toc-item:hover { background: var(--hover); color: var(--text-1); }
-.right-panel__toc-item.is-collapsed { color: var(--text-4); }
-.right-panel__toc-chevron { width: 16px; height: 16px; flex-shrink: 0; display: grid; place-items: center; border: none; background: transparent; color: var(--text-4); cursor: pointer; border-radius: calc(4px * var(--radius-scale, 1)); }
-.right-panel__toc-chevron.is-hidden { opacity: 0; pointer-events: none; }
-.right-panel__toc-chevron:hover { color: var(--text-2); }
-.right-panel__toc-chevron :deep(svg) { transition: transform 180ms ease; transform: rotate(0deg); }
-.right-panel__toc-chevron.is-open :deep(svg) { transform: rotate(90deg); }
-
-.right-panel__toc-level { font-size: 9.5px; font-weight: 600; color: var(--text-4); min-width: 16px; flex-shrink: 0; }
-.right-panel__toc-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: none; background: transparent; color: inherit; font-size: inherit; font-family: inherit; text-align: left; cursor: pointer; padding: 0; }
-
-.right-panel__section { flex-shrink: 0; padding: 10px 12px; border-top: 1px solid var(--line-1); display: flex; flex-direction: column; gap: 4px; }
-.right-panel__section--scroll { max-height: 160px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; contain: paint; }
-.right-panel__section-label { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-4); margin-bottom: 4px; }
-.right-panel__properties { gap: 7px; }
-.right-panel__property-row { min-height: 28px; display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 8px; }
-.right-panel__property-label { font-size: 11.5px; color: var(--text-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.right-panel__property-control { min-width: 0; width: 100%; }
 .right-panel__property-control :deep(.nv-select__trigger),
-.right-panel__property-control :deep(.ndp-trigger) { width: 100%; min-width: 0; height: 28px; }
-.right-panel__property-tags {
-  min-height: 30px;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 5px;
-  padding: 4px 6px;
-  border: 1px solid var(--line-1);
-  border-radius: calc(7px * var(--radius-scale, 1));
-  background: var(--glass-2);
-}
-.right-panel__tag {
-  max-width: 100%;
+.right-panel__property-control :deep(.ndp-trigger) {
+  width: 100%;
   min-width: 0;
-  height: 21px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0 3px 0 7px;
-  border-radius: calc(5px * var(--radius-scale, 1));
-  background: var(--hover);
-  color: var(--text-2);
-  font-size: 11.5px;
-}
-.right-panel__tag-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.right-panel__tag-remove { width: 15px; height: 15px; flex-shrink: 0; display: grid; place-items: center; border: none; border-radius: calc(4px * var(--radius-scale, 1)); background: transparent; color: var(--text-4); cursor: pointer; padding: 0; }
-.right-panel__tag-remove:hover { background: var(--hover-strong); color: var(--text-1); }
-.right-panel__tag-input {
-  flex: 1 1 78px;
-  min-width: 78px;
-  height: 22px;
-  border: none;
-  outline: none;
+  height: 28px;
+  margin-left: -8px;
   background: transparent;
-  color: var(--text-2);
-  font: inherit;
-  font-size: 11.5px;
-  padding: 0 2px;
+  box-shadow: none;
+  color: var(--text-primary);
 }
-.right-panel__tag-input::placeholder { color: var(--text-4); }
-.right-panel__tag-input:disabled { cursor: not-allowed; opacity: 0.55; }
-.right-panel__meta-row { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-3); }
-.right-panel__meta-key { color: var(--text-4); min-width: 58px; flex-shrink: 0; }
-.right-panel__meta-sep { color: var(--text-4); }
-.right-panel__empty { padding: 4px 12px; font-size: 12px; color: var(--text-4); }
-.right-panel__section .right-panel__empty { padding: 4px 0; }
-.right-panel__empty--sm { font-size: 11.5px; }
 
-.right-panel__link-item { width: 100%; height: 26px; display: flex; align-items: center; gap: 6px; padding: 0 2px; border: none; background: transparent; color: var(--text-3); font-size: 12px; text-align: left; cursor: pointer; border-radius: calc(6px * var(--radius-scale, 1)); transition: background-color 120ms ease, color 120ms ease; }
-.right-panel__link-item:hover { background: var(--hover); color: var(--text-1); }
-.right-panel__link-icon { flex-shrink: 0; color: var(--text-4); }
-.right-panel__link-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.right-panel__backlink-item { width: 100%; height: 28px; display: flex; align-items: center; gap: 7px; padding: 0 2px; border: none; background: transparent; color: var(--text-2); font-size: 12.5px; text-align: left; cursor: pointer; border-radius: calc(7px * var(--radius-scale, 1)); transition: background-color 120ms ease, color 120ms ease; }
-.right-panel__backlink-item:hover { background: var(--hover); color: var(--text-1); }
-.right-panel__backlink-icon { font-size: 13px; line-height: 1; flex-shrink: 0; }
-.right-panel__backlink-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.right-panel__backlink-count { font-size: 10.5px; font-weight: 600; color: var(--text-4); background: var(--hover); padding: 1px 5px; border-radius: calc(4px * var(--radius-scale, 1)); flex-shrink: 0; }
+.right-panel__property-control :deep(.nv-select__trigger:hover),
+.right-panel__property-control :deep(.ndp-trigger:hover) {
+  background: var(--hover);
+}
 </style>

@@ -36,4 +36,16 @@ describe('matchHotkeyCommand', () => {
     expect(matchHotkeyCommand(bindings, event)).toBe('workspace.save-note')
     expect(getGlobalShortcutBindings(bindings).map(binding => binding.commandId)).not.toContain('workspace.save-note')
   })
+
+  it('resolves Ctrl+F to find-in-note and Ctrl+H to replace-in-note, both local-only', () => {
+    const bindings = createDefaultWorkspaceSettings().hotkeys.bindings
+    const findEvent = new KeyboardEvent('keydown', { ctrlKey: true, key: 'a', code: 'KeyF' })
+    const replaceEvent = new KeyboardEvent('keydown', { ctrlKey: true, key: 'r', code: 'KeyH' })
+
+    expect(matchHotkeyCommand(bindings, findEvent)).toBe('editor.find-in-note')
+    expect(matchHotkeyCommand(bindings, replaceEvent)).toBe('editor.replace-in-note')
+    const globalCommandIds = getGlobalShortcutBindings(bindings).map(binding => binding.commandId)
+    expect(globalCommandIds).not.toContain('editor.find-in-note')
+    expect(globalCommandIds).not.toContain('editor.replace-in-note')
+  })
 })

@@ -71,48 +71,48 @@ async function pickLink(targetId: string) {
 </script>
 
 <template>
-  <section class="km-section">
-    <div class="km-section-label">
+  <section class="km-section tw:mt-5 tw:min-w-0">
+    <div class="km-section-label tw:m-0 tw:mb-2.5 tw:text-[11px] tw:font-bold tw:tracking-[0.04em] tw:text-content-muted tw:uppercase">
       {{ t('kanban.card.linked') }}
-      <span class="km-section-count">{{ linkedCards.length }}</span>
+      <span class="km-section-count tw:ml-1.5">{{ linkedCards.length }}</span>
     </div>
-    <div class="km-links">
-      <div v-for="link in linkedCards" :key="link.cardId" class="km-link-row">
-        <span class="km-link-kind">
+    <div class="km-links tw:flex tw:min-w-0 tw:flex-col tw:gap-2">
+      <div v-for="link in linkedCards" :key="link.cardId" class="km-link-row tw:flex tw:items-center tw:gap-2 tw:text-xs tw:text-content-secondary">
+        <span class="km-link-kind tw:shrink-0 tw:text-[var(--text-muted,var(--text-secondary))]">
           {{ link.kind === 'blocked-by'
             ? `↘ ${t('kanban.card.blocked')}`
             : link.kind === 'blocks'
               ? `↗ ${t('kanban.card.blocks')}`
               : `↔ ${t('kanban.card.related')}` }}
         </span>
-        <span class="km-link-title" :class="{ 'km-link-title--missing': !link.found }">
+        <span class="km-link-title" :class="{ 'km-link-title--missing tw:text-[var(--text-muted,var(--text-muted))]': !link.found }">
           {{ link.title }}
         </span>
       </div>
-      <div v-if="!linkedCards.length" class="km-links-empty">
+      <div v-if="!linkedCards.length" class="km-links-empty tw:text-[var(--text-muted,var(--text-muted))]">
         {{ t('kanban.card.linkedEmpty') }}
       </div>
-      <NvButton class="km-add-link-btn" variant="ghost" @click="showLinkPicker = !showLinkPicker">
+      <NvButton class="km-add-link-btn tw:self-start" variant="ghost" @click="showLinkPicker = !showLinkPicker">
         <Link :size="10" /> {{ t('kanban.card.linkCard') }}
       </NvButton>
-      <div v-if="showLinkPicker" class="km-link-picker">
+      <div v-if="showLinkPicker" class="km-link-picker tw:flex tw:flex-col tw:gap-2">
         <input
           v-model="linkSearch"
-          class="km-link-search"
+          class="km-link-search tw:box-border tw:w-full tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--input-bg) tw:text-content-primary tw:outline-none tw:h-[34px] tw:px-2.5 tw:text-[13px]"
           :placeholder="t('kanban.card.searchCards')"
           autofocus
         />
-        <div class="km-link-results">
+        <div class="km-link-results tw:flex tw:flex-col tw:gap-1.5">
           <button
             v-for="linkCard in linkableCards"
             :key="linkCard.id"
             type="button"
-            class="km-link-result"
+            class="km-link-result tw:cursor-pointer tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle tw:px-2.5 tw:py-2 tw:text-left tw:text-content-secondary"
             @click="pickLink(linkCard.id)"
           >
             {{ linkCard.title || t('kanban.card.untitled') }}
           </button>
-          <div v-if="!linkableCards.length" class="km-link-empty">{{ t('kanban.card.noCardsFound') }}</div>
+          <div v-if="!linkableCards.length" class="km-link-empty tw:text-[var(--text-muted,var(--text-muted))]">{{ t('kanban.card.noCardsFound') }}</div>
         </div>
       </div>
     </div>

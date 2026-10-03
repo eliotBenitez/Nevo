@@ -52,7 +52,7 @@ pub(super) fn import_assets(
                 .file_name()
                 .and_then(|value| value.to_str())
                 .ok_or_else(|| "Attachment has no valid file name".to_string())?;
-            crate::commands::note::import_image_asset(
+            crate::commands::note::import_image_asset_impl(
                 workspace_path.clone(),
                 file_name.to_string(),
                 bytes,

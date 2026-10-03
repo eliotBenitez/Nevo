@@ -10,9 +10,9 @@
 //!
 //! Deferred (reported via `MergeReport`, not imported): standalone kanban
 //! boards and per-note snapshot history (see `extras::count_deferred`).
-//! `.nevo/collab/*.yjs` is never copied — the editor rebuilds each note's
-//! Y.Doc from its `.nevo` JSON on first open, and the old CRDT state refers
-//! to pre-remap ids anyway.
+//! `.nevo/collab/*.yjs` is never copied — `note.json` is a note's source of
+//! truth, and any leftover legacy Y.Doc state would refer to pre-remap ids
+//! anyway.
 
 mod assets;
 mod databases;
@@ -30,8 +30,13 @@ use serde::Serialize;
 use tauri::AppHandle;
 
 use super::TransferProgress;
+use crate::commands::folder::{load_manifest, manifest_lock, save_manifest};
+use crate::commands::note::notebook::{
+    validate_note_for_write, validate_serialized_size, DocumentFormat,
+};
+use crate::commands::note::{note_path, NoteDocument};
 use crate::commands::path_utils::normalize_workspace_path;
-use crate::commands::workspace::WorkspaceManifest;
+use crate::commands::workspace::{WorkspaceManifest, CURRENT_WORKSPACE_SCHEMA_VERSION};
 
 /// Reported back to the frontend so it can toast an honest summary — merge
 /// always succeeds-or-fails as a whole (no partial-merge state is exposed),
@@ -70,6 +75,29 @@ fn run_merge(
     let imported_manifest: WorkspaceManifest = serde_json::from_str(&imported_manifest_json)
         .map_err(|error| format!("Imported workspace manifest is not valid JSON: {error}"))?;
 
+    let notebook_ids = all_notebook_ids(temp_dir, &imported_manifest)?;
+    if !notebook_ids.is_empty() {
+        if imported_manifest.schema_version < 2 {
+            return Err(
+                "Notebook transfer archive has an inconsistent workspace schema".to_string(),
+            );
+        }
+        let current_root_string = current_root.to_string_lossy().into_owned();
+        let lock = manifest_lock(&current_root_string);
+        let _manifest_guard = lock.lock().map_err(|error| error.to_string())?;
+        let mut current_manifest = load_manifest(&current_root_string)?;
+        if current_manifest.schema_version > CURRENT_WORKSPACE_SCHEMA_VERSION {
+            return Err(format!(
+                "workspace-schema-too-new:{}:{}",
+                current_manifest.schema_version, CURRENT_WORKSPACE_SCHEMA_VERSION
+            ));
+        }
+        if current_manifest.schema_version < 2 {
+            current_manifest.schema_version = 2;
+            save_manifest(&current_root_string, &current_manifest)?;
+        }
+    }
+
     let mut maps = idmap::build_id_maps(&imported_manifest);
     let current_root_string = current_root.to_string_lossy().into_owned();
 
@@ -100,6 +128,38 @@ fn run_merge(
         skipped_boards,
         skipped_snapshots,
     })
+}
+
+fn all_notebook_ids(root: &Path, manifest: &WorkspaceManifest) -> Result<Vec<String>, String> {
+    fn collect(folder: &crate::commands::workspace::FolderMeta, ids: &mut Vec<String>) {
+        ids.extend(folder.notes.iter().map(|note| note.id.clone()));
+        for child in &folder.children {
+            collect(child, ids);
+        }
+    }
+    let mut ids: Vec<String> = manifest
+        .root_notes
+        .iter()
+        .map(|note| note.id.clone())
+        .collect();
+    for folder in &manifest.tree {
+        collect(folder, &mut ids);
+    }
+    let mut notebooks = Vec::new();
+    for id in ids {
+        let path = note_path(&root.to_string_lossy(), &id)?;
+        let raw = std::fs::read_to_string(path)
+            .map_err(|error| format!("Unable to inspect imported note {id}: {error}"))?;
+        let value: serde_json::Value = serde_json::from_str(&raw)
+            .map_err(|error| format!("Imported note {id} is not valid JSON: {error}"))?;
+        let note: NoteDocument = serde_json::from_value(value.clone())
+            .map_err(|error| format!("Imported note {id} is not valid: {error}"))?;
+        if validate_note_for_write(&note)? == DocumentFormat::Notebook {
+            validate_serialized_size(&value)?;
+            notebooks.push(id);
+        }
+    }
+    Ok(notebooks)
 }
 
 /// Opens the archive picker, extracts the chosen archive to a temp directory,

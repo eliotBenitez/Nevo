@@ -19,6 +19,8 @@ export const GLOBAL_SHORTCUT_COMMAND_IDS = new Set([
 export const LOCAL_SHORTCUT_COMMAND_IDS = new Set([
   ...GLOBAL_SHORTCUT_COMMAND_IDS,
   'workspace.save-note',
+  'editor.find-in-note',
+  'editor.replace-in-note',
 ])
 
 interface HotkeyCommandDetail {

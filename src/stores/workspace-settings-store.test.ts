@@ -6,18 +6,24 @@ import type {
   WorkspaceDiagnostics,
   WorkspaceManifest,
 } from '../types/workspace'
-import { configCommands, noteCommands, workspaceCommands } from '../tauri/commands'
+import { collabCommands, configCommands, noteCommands, workspaceCommands } from '../tauri/commands'
 import { appLogger } from '../utils/logger'
 import { runMarketplacePluginTransaction } from '../core/plugins/marketplaceMigration'
 import { pauseMarketplaceRuntime } from '../core/plugins/marketplaceRuntime'
+import { migrateWorkspaceYjs } from '../core/legacy-yjs/migrateWorkspaceYjs'
 import { useWorkspaceStore } from './workspace'
 
 vi.mock('../core/plugins/marketplaceMigration', () => ({
   runMarketplacePluginTransaction: vi.fn(),
+  collectWorkspaceNoteIds: vi.fn().mockReturnValue([]),
 }))
 
 vi.mock('../core/plugins/marketplaceRuntime', () => ({
   pauseMarketplaceRuntime: vi.fn(),
+}))
+
+vi.mock('../core/legacy-yjs/migrateWorkspaceYjs', () => ({
+  migrateWorkspaceYjs: vi.fn().mockResolvedValue({ migrated: 0, skipped: [], failed: [] }),
 }))
 
 vi.mock('../tauri/commands', () => ({
@@ -44,6 +50,12 @@ vi.mock('../tauri/commands', () => ({
     getWorkspaceDiagnostics: vi.fn(),
     pruneWorkspaceSnapshots: vi.fn(),
     cleanupOrphanedAssets: vi.fn(),
+  },
+  // Defaults every test in this file to skipping the legacy migration pass
+  // (the common, already-migrated-workspace case); tests that care about the
+  // migration path override this per-test.
+  collabCommands: {
+    hasLegacyCollabDir: vi.fn().mockResolvedValue(false),
   },
   folderCommands: {},
   noteCommands: {
@@ -112,7 +124,7 @@ describe('useWorkspaceStore settings integration', () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
 
-    vi.mocked(configCommands.loadAppConfig).mockResolvedValue({ version: '1', theme: 'system', locale: 'ru', recents: [], interfaceDensity: 'comfortable', reducedMotion: 'system', scrollbarVisibility: 'hidden', focusRingStyle: 'accent', windowChromeStyle: 'default', interfaceZoom: 100, reduceTransparency: false, interfaceRoundness: 'default', themeSchedule: { enabled: false, lightTime: '07:00', darkTime: '20:00' } })
+    vi.mocked(configCommands.loadAppConfig).mockResolvedValue({ version: '1', theme: 'system', locale: 'ru', recents: [], interfaceDensity: 'comfortable', reducedMotion: 'system', scrollbarVisibility: 'hidden', focusRingStyle: 'accent', windowChromeStyle: 'default', interfaceZoom: 100, reduceTransparency: false, interfaceRoundness: 'default', themeSchedule: { enabled: false, lightTime: '07:00', darkTime: '20:00' }, onboarding: { tourStatus: 'pending', firstSteps: [], firstStepsHidden: false, seenHints: [], hintsEnabled: true } })
     vi.mocked(configCommands.getAppMetadata).mockResolvedValue({
       version: '0.1.0',
       engine: 'Tauri 2',
@@ -188,15 +200,18 @@ describe('useWorkspaceStore settings integration', () => {
     await store.init()
     await store.openWorkspace('/tmp/workspace')
     await store.updateSettings((draft) => {
+      draft.appearance.accentColoredHeadings = true
       draft.editor.spellCheck = true
       draft.files.snapshotRetentionCount = 12
     })
 
+    expect(store.settings.appearance.accentColoredHeadings).toBe(true)
     expect(store.settings.editor.spellCheck).toBe(true)
     expect(store.settings.files.snapshotRetentionCount).toBe(12)
     expect(vi.mocked(workspaceCommands.saveSettings)).toHaveBeenCalledWith(
       '/tmp/workspace',
       expect.objectContaining({
+        appearance: expect.objectContaining({ accentColoredHeadings: true }),
         editor: expect.objectContaining({ spellCheck: true }),
         files: expect.objectContaining({ snapshotRetentionCount: 12 }),
       }),
@@ -266,6 +281,20 @@ describe('useWorkspaceStore settings integration', () => {
     }))
   })
 
+  it('keeps the notebook palette through normalization and app config saves', async () => {
+    const store = useWorkspaceStore()
+    await store.init()
+    await store.saveAppConfig({ notebookPalette: { presets: ['#ABCDEF', 'zzzzzz'], recents: ['#123456'] } })
+
+    expect(store.appConfig.notebookPalette).toEqual({ presets: ['#abcdef'], recents: ['#123456'] })
+    expect(vi.mocked(configCommands.saveAppConfig)).toHaveBeenCalledWith(expect.objectContaining({
+      notebookPalette: { presets: ['#abcdef'], recents: ['#123456'] },
+    }))
+
+    await store.setAppLocale('en')
+    expect(store.appConfig.notebookPalette).toEqual({ presets: ['#abcdef'], recents: ['#123456'] })
+  })
+
   it('logs save settings failures with workspace context', async () => {
     vi.mocked(workspaceCommands.openWorkspace).mockResolvedValue(manifest())
     vi.mocked(workspaceCommands.loadSettings).mockResolvedValue({} as never)
@@ -285,5 +314,30 @@ describe('useWorkspaceStore settings integration', () => {
       event: 'save_settings',
       workspacePath: '/tmp/workspace',
     }))
+  })
+
+  it('skips the legacy Y.Doc migration pass when hasLegacyCollabDir reports nothing to migrate', async () => {
+    vi.mocked(workspaceCommands.openWorkspace).mockResolvedValue(manifest())
+    vi.mocked(workspaceCommands.loadSettings).mockResolvedValue({} as never)
+    vi.mocked(workspaceCommands.listPlugins).mockResolvedValue([])
+    vi.mocked(collabCommands.hasLegacyCollabDir).mockResolvedValue(false)
+
+    const store = useWorkspaceStore()
+    await store.openWorkspace('/tmp/workspace')
+
+    expect(vi.mocked(collabCommands.hasLegacyCollabDir)).toHaveBeenCalledWith('/tmp/workspace')
+    expect(vi.mocked(migrateWorkspaceYjs)).not.toHaveBeenCalled()
+  })
+
+  it('runs the legacy Y.Doc migration pass when hasLegacyCollabDir reports a pending migration', async () => {
+    vi.mocked(workspaceCommands.openWorkspace).mockResolvedValue(manifest())
+    vi.mocked(workspaceCommands.loadSettings).mockResolvedValue({} as never)
+    vi.mocked(workspaceCommands.listPlugins).mockResolvedValue([])
+    vi.mocked(collabCommands.hasLegacyCollabDir).mockResolvedValue(true)
+
+    const store = useWorkspaceStore()
+    await store.openWorkspace('/tmp/workspace')
+
+    expect(vi.mocked(migrateWorkspaceYjs)).toHaveBeenCalledOnce()
   })
 })

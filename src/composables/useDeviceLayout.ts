@@ -11,7 +11,7 @@ let listenersBound = false
 let activeConsumers = 0
 let rafId: number | null = null
 
-function updateViewport() {
+export function updateViewport() {
   if (typeof window === 'undefined') return
   viewportWidth.value = window.innerWidth
   viewportHeight.value = window.innerHeight
@@ -60,7 +60,7 @@ export function useDeviceLayout() {
   onMounted(() => {
     activeConsumers += 1
     bindGlobalListeners()
-    updatePointerCapabilities()
+    updateViewport()
   })
 
   onBeforeUnmount(() => {

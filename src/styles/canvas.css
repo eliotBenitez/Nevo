@@ -3,7 +3,7 @@
   inset: 0;
   overflow: hidden;
   touch-action: none;
-  background: var(--canvas-0);
+  background: var(--island-bg);
   outline: none;
   /* Every drag here is a canvas gesture, never a text selection: without this,
    * dragging from a toolbar button or a label highlights the surrounding UI. */
@@ -54,126 +54,24 @@
 }
 
 .edgeless-canvas--presenting .edgeless-canvas__frame-chrome,
-.edgeless-canvas--presenting .edgeless-canvas__selection,
-.edgeless-canvas--presenting .edgeless-canvas__peer {
+.edgeless-canvas--presenting .edgeless-canvas__selection {
   display: none;
 }
 
 .edgeless-canvas:fullscreen {
-  background: var(--canvas-0);
+  background: var(--island-bg);
 }
 
 .edgeless-canvas__grid {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle, color-mix(in srgb, var(--text-3) 42%, transparent) 1px, transparent 1.25px);
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--text-muted) 42%, transparent) 1px, transparent 1.25px);
   background-position: var(--canvas-grid-x, 0px) var(--canvas-grid-y, 0px);
   background-size: var(--canvas-grid-size, 24px) var(--canvas-grid-size, 24px);
   /* The grid covers the whole viewport; as a hit target it would swallow every
    * background pointerdown, and `onBackgroundPointerDown` only starts pan/marquee
    * when the viewport itself is the event target. */
   pointer-events: none;
-}
-
-.edgeless-canvas__selection {
-  position: absolute;
-  z-index: 15;
-  border: 2px solid var(--accent);
-  border-radius: 14px;
-  pointer-events: none;
-}
-
-.edgeless-canvas__marquee {
-  position: absolute;
-  z-index: 22;
-  border: 1px solid var(--accent);
-  background: var(--accent-soft);
-  pointer-events: none;
-}
-
-.edgeless-canvas__resize-handle {
-  position: absolute;
-  right: -6px;
-  bottom: -6px;
-  width: 12px;
-  height: 12px;
-  border: 2px solid var(--canvas-0);
-  border-radius: 50%;
-  background: var(--accent);
-  pointer-events: auto;
-  cursor: nwse-resize;
-}
-
-.edgeless-canvas__connect-anchors {
-  position: absolute;
-  z-index: 21;
-  inset: 0;
-  pointer-events: none;
-}
-
-.edgeless-canvas__connect-anchor {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  padding: 0;
-  border: 2px solid var(--canvas-0);
-  border-radius: 50%;
-  background: var(--accent);
-  transform: translate(-50%, -50%);
-  pointer-events: auto;
-  cursor: crosshair;
-  transition: transform 0.1s ease;
-}
-
-.edgeless-canvas__connect-anchor:hover {
-  transform: translate(-50%, -50%) scale(1.35);
-}
-
-.edgeless-canvas__connect-anchor:focus-visible {
-  transform: translate(-50%, -50%) scale(1.35);
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.edgeless-canvas__peer {
-  position: absolute;
-  z-index: 40;
-  width: 14px;
-  height: 18px;
-  pointer-events: none;
-}
-
-.edgeless-canvas__peer::before {
-  content: '';
-  position: absolute;
-  border-top: 10px solid var(--accent);
-  border-right: 7px solid transparent;
-  transform: rotate(-25deg);
-}
-
-.canvas-image-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-.canvas-import-error {
-  position: absolute;
-  z-index: 50;
-  right: 16px;
-  bottom: 16px;
-  max-width: 360px;
-  margin: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--danger);
-  border-radius: 10px;
-  color: var(--danger);
-  background: var(--canvas-1);
-  box-shadow: var(--shadow-2);
-  font-size: 12px;
 }
 
 .editor-pane--canvas .editor-doc,
@@ -237,10 +135,10 @@
   margin: 0 !important;
   max-width: none !important;
   padding: 56px 64px !important;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid transparent;
   border-radius: 18px;
-  background: var(--canvas-1);
-  box-shadow: var(--shadow-2);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-raised);
   pointer-events: none;
   user-select: none;
   contain: layout paint;
@@ -268,140 +166,6 @@
   pointer-events: auto;
   user-select: text;
   overflow: auto;
-}
-
-.edgeless-canvas__frame-chrome {
-  position: absolute;
-  z-index: 14;
-  pointer-events: none;
-}
-
-.edgeless-canvas__frame-header-row {
-  position: absolute;
-  top: -34px;
-  left: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  /* The row only positions its buttons; the gap between them must not become a
-   * hit target that swallows canvas background gestures. */
-  pointer-events: none;
-}
-
-.edgeless-canvas__frame-header {
-  display: inline-flex;
-  align-items: center;
-  height: 26px;
-  padding: 0 10px;
-  border: none;
-  border-radius: 8px;
-  background: var(--canvas-1);
-  color: var(--text-secondary);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  box-shadow: var(--shadow-1);
-  cursor: grab;
-  pointer-events: auto;
-}
-
-.edgeless-canvas__frame-header:active {
-  cursor: grabbing;
-}
-
-.edgeless-canvas__frame-header:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.edgeless-canvas__frame-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: none;
-  border-radius: 8px;
-  background: var(--canvas-1);
-  color: var(--text-secondary);
-  box-shadow: var(--shadow-1);
-  cursor: pointer;
-  pointer-events: auto;
-}
-
-.edgeless-canvas__frame-toggle:hover {
-  background: color-mix(in srgb, var(--text-secondary) 14%, transparent);
-}
-
-.edgeless-canvas__frame-toggle:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-.edgeless-canvas__frame-toggle svg {
-  width: 12px;
-  height: 12px;
-  transition: transform 0.15s ease;
-}
-
-.edgeless-canvas__frame-toggle[aria-expanded='false'] svg {
-  transform: rotate(-90deg);
-}
-
-.edgeless-canvas__frame-outline {
-  position: absolute;
-  inset: 0;
-  border: 2px solid var(--accent);
-  border-radius: 18px;
-  pointer-events: none;
-}
-
-.edgeless-canvas__frame-resize-handle {
-  position: absolute;
-  right: -6px;
-  bottom: -6px;
-  width: 12px;
-  height: 12px;
-  border: 2px solid var(--canvas-0);
-  border-radius: 50%;
-  background: var(--accent);
-  pointer-events: auto;
-  cursor: nwse-resize;
-}
-
-/* Mini card shown in place of the (hidden) ProseMirror card while the frame is
- * collapsed. Matches the expanded card's surface/border/radius/shadow so the
- * transition between the two reads as one object shrinking, not a swap. */
-.edgeless-canvas__collapsed-card {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 4px;
-  box-sizing: border-box;
-  padding: 16px 20px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 18px;
-  background: var(--canvas-1);
-  box-shadow: var(--shadow-2);
-  pointer-events: auto;
-  overflow: hidden;
-}
-
-.edgeless-canvas__collapsed-card__title {
-  overflow: hidden;
-  color: var(--text-primary);
-  font-size: 15px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.edgeless-canvas__collapsed-card__hint {
-  color: var(--text-muted);
-  font-size: 12px;
 }
 
 @media (prefers-reduced-motion: reduce) {

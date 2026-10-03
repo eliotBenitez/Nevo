@@ -10,7 +10,7 @@ import type {
 export type ThemeMode = 'dark' | 'light' | 'system'
 export type AppLocale = 'ru' | 'en' | 'fr' | 'es' | 'de'
 export type WorkspaceView = 'editor' | 'table' | 'kanban' | 'graph' | 'last-note' | 'specific-note'
-export type AccentPreset = 'violet' | 'ember' | 'sage' | 'ocean' | 'rose' | (string & {})
+export type AccentPreset = 'mineral' | 'azure' | 'violet' | 'ember' | 'sage' | 'ocean' | 'rose' | (string & {})
 export type InterfaceDensity = 'comfortable' | 'compact'
 export type ReducedMotionMode = 'system' | 'reduce' | 'full'
 export type ScrollbarVisibility = 'hidden' | 'thin' | 'system'
@@ -48,6 +48,7 @@ export type TabKeyBehavior = 'indent' | 'focus'
 export type AutosavePolicy = 'immediate' | 'window-idle'
 export type FocusMode = 'off' | 'soft'
 export type PasteBehavior = 'smart' | 'plain-text'
+export type SlashMenuLayout = 'list' | 'grid' | 'preview'
 export type EditorStatsVisibility = 'off' | 'corner'
 export type EditorTypewriterPosition = 'upper' | 'center' | 'lower'
 export type RecentItemsBehavior = 'remember' | 'manual'
@@ -82,12 +83,6 @@ export interface RecentWorkspace {
   pageCount: number
   pinned?: boolean
   unreadCount?: number
-  /** 'cloud' for server-hosted shared storages; absent/'local' for filesystem workspaces. */
-  kind?: 'local' | 'cloud'
-  /** Set when kind === 'cloud': the shared storage id used to open it. */
-  storageId?: string
-  /** Set when kind === 'cloud': base URL of the relay hosting this storage. */
-  serverUrl?: string
 }
 
 export interface WorkspaceConfig {
@@ -171,6 +166,7 @@ export interface EditorSettings {
   activeBlockEmphasis: boolean
   pasteBehavior: PasteBehavior
   slashMenuHints: boolean
+  slashMenuLayout: SlashMenuLayout
   editorStatsVisibility: EditorStatsVisibility
   typewriterPosition: EditorTypewriterPosition
 }
@@ -367,7 +363,27 @@ export interface MarketplacePreparedPlugin {
 export interface MarketplaceMigrationBundle {
   workspaceStorage?: Record<string, unknown>
   pluginRegistry?: Record<string, unknown>
-  collabStatesBase64?: Record<string, string>
+  /** Migrated note content, keyed by note id — replaces the pre-Phase-5
+   *  `collabStatesBase64` now that `note.json` (not a per-note Y.Doc) is a
+   *  note's source of truth. The Rust `marketplace_commit_plugin` command
+   *  writes each document straight into that note's `note.json`. */
+  migratedContent?: Record<string, Record<string, unknown>>
+}
+
+export type ProductTourStatus = 'pending' | 'completed' | 'dismissed'
+export type FirstStepId = 'createWorkspace' | 'takeTour' | 'insertBlock' | 'openGraph' | 'chooseAppearance'
+/** Ids of the standalone first-use hints (distinct from the guided product tour). */
+export type FirstUseHintId = 'editorCanvas' | 'kanbanViews' | 'graphFilters' | 'historyRestore' | 'canvasPresent'
+
+export interface OnboardingState {
+  tourStatus: ProductTourStatus
+  /** Completed checklist steps that are detected by events (insertBlock, openGraph, chooseAppearance). */
+  firstSteps: FirstStepId[]
+  firstStepsHidden: boolean
+  /** Ids of first-use hints already shown (dismissed or found by the user) — never shown again. */
+  seenHints: FirstUseHintId[]
+  /** Master toggle for first-use hints, independent of the guided product tour. */
+  hintsEnabled: boolean
 }
 
 export interface AppConfig {
@@ -381,12 +397,19 @@ export interface AppConfig {
   focusRingStyle: FocusRingStyle
   windowChromeStyle: WindowChromeStyle
   interfaceZoom: number
-  /** Tri-state: `undefined` means "auto" — enabled on Linux/WebKitGTK (where
-   *  backdrop-filter is expensive) and disabled elsewhere. An explicit boolean
-   *  is a manual user override. */
+  /** Tri-state: `undefined` means "auto". Historically enabled by default on
+   *  Linux/WebKitGTK, where translucent blurred surfaces were expensive to
+   *  composite; the Borderless redesign removed all surface blur, so this is
+   *  currently a no-op kept only for persisted-settings compatibility. An
+   *  explicit boolean is a manual user override. */
   reduceTransparency?: boolean
   interfaceRoundness: InterfaceRoundness
   themeSchedule: ThemeSchedule
+  onboarding: OnboardingState
+  /** Notebook color palette shared across workspaces: own presets and recently used ink colors (`#rrggbb`). */
+  notebookPalette?: { presets: string[]; recents: string[] }
+  /** Last pen/marker colors and widths (`src/core/notebook/toolPreferences.ts`). */
+  notebookTools?: { penColor?: string; markerColor?: string; strokeWidth?: number; markerWidth?: number }
 }
 
 export interface WorkspaceDiagnostics {
@@ -421,6 +444,7 @@ export interface AppMetadata {
   configPath: string
   logsPath: string
   supportsWindowControls: boolean
+  supportsNotebookLifecycleEvents?: boolean
   supportsGlobalShortcuts: boolean
   supportsRevealInFileManager: boolean
   supportsWindowDragRegions: boolean

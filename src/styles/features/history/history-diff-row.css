@@ -1,0 +1,6 @@
+/* The block is a child component; preserve the removed-content treatment across that boundary. */
+.history-diff-row--removed :deep(.history-block-content) {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in oklab, var(--danger) 60%, transparent);
+  color: var(--text-muted);
+}

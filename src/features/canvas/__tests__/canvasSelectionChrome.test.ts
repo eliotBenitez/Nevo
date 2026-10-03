@@ -55,8 +55,6 @@ function mountInteraction(elements: CanvasElement[], selectedIds: string[]) {
         getEditorView: () => null,
         panBy: vi.fn(),
         zoomAt: vi.fn(),
-        publishSelection: vi.fn(),
-        publishCursor: vi.fn(),
       })
       return () => null
     },

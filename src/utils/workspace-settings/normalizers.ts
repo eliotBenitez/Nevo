@@ -1,4 +1,6 @@
-import type { AppConfig, HotkeyBinding, HotkeyScope, RecentWorkspace, ThemeSchedule, WorkspaceHomeFavorite, WorkspaceSettings, WorkspaceView } from '../../types/workspace'
+import type { AppConfig, FirstStepId, FirstUseHintId, HotkeyBinding, HotkeyScope, OnboardingState, ProductTourStatus, RecentWorkspace, ThemeSchedule, WorkspaceHomeFavorite, WorkspaceSettings, WorkspaceView } from '../../types/workspace'
+import { normalizeNotebookPalette } from '../../core/notebook/palette'
+import { normalizeNotebookToolPreferences } from '../../core/notebook/toolPreferences'
 import { normalizeHotkeyChord } from '../hotkey-chords'
 import { DEFAULT_HOTKEY_BINDINGS, createDefaultAppConfig, createDefaultWorkspaceSettings } from './defaults'
 
@@ -158,7 +160,7 @@ export function normalizeWorkspaceSettings(input: unknown): WorkspaceSettings {
     : defaults.appearance.accentPreset
   normalized.appearance.backgroundScene = appearance.backgroundScene === 'paper' || appearance.backgroundScene === 'studio' || appearance.backgroundScene === 'plain'
     ? appearance.backgroundScene : defaults.appearance.backgroundScene
-  normalized.appearance.surfaceStyle = appearance.surfaceStyle === 'solid' || appearance.surfaceStyle === 'tinted'
+  normalized.appearance.surfaceStyle = appearance.surfaceStyle === 'glass' || appearance.surfaceStyle === 'solid' || appearance.surfaceStyle === 'tinted'
     ? appearance.surfaceStyle : defaults.appearance.surfaceStyle
   normalized.appearance.contrastMode = appearance.contrastMode === 'soft' || appearance.contrastMode === 'high'
     ? appearance.contrastMode : defaults.appearance.contrastMode
@@ -180,7 +182,11 @@ export function normalizeWorkspaceSettings(input: unknown): WorkspaceSettings {
     : defaults.appearance.customCssFileName
   normalized.appearance.accentColoredHeadings = typeof appearance.accentColoredHeadings === 'boolean'
     ? appearance.accentColoredHeadings
-    : defaults.appearance.accentColoredHeadings
+    : typeof editor.accentColoredHeadings === 'boolean'
+      ? editor.accentColoredHeadings
+      : typeof legacy.accentColoredHeadings === 'boolean'
+        ? legacy.accentColoredHeadings
+        : defaults.appearance.accentColoredHeadings
 
   normalized.editor.spellCheck = typeof editor.spellCheck === 'boolean'
     ? editor.spellCheck
@@ -197,6 +203,8 @@ export function normalizeWorkspaceSettings(input: unknown): WorkspaceSettings {
   normalized.editor.activeBlockEmphasis = typeof editor.activeBlockEmphasis === 'boolean' ? editor.activeBlockEmphasis : defaults.editor.activeBlockEmphasis
   normalized.editor.pasteBehavior = editor.pasteBehavior === 'plain-text' ? 'plain-text' : defaults.editor.pasteBehavior
   normalized.editor.slashMenuHints = typeof editor.slashMenuHints === 'boolean' ? editor.slashMenuHints : defaults.editor.slashMenuHints
+  normalized.editor.slashMenuLayout = editor.slashMenuLayout === 'grid' || editor.slashMenuLayout === 'preview'
+    ? editor.slashMenuLayout : defaults.editor.slashMenuLayout
   normalized.editor.editorStatsVisibility = editor.editorStatsVisibility === 'corner' || (editor.editorStatsVisibility as string) === 'footer' ? 'corner' : defaults.editor.editorStatsVisibility
   normalized.editor.typewriterPosition = editor.typewriterPosition === 'upper' || editor.typewriterPosition === 'center' ? editor.typewriterPosition : defaults.editor.typewriterPosition
 
@@ -229,9 +237,7 @@ export function normalizeWorkspaceSettings(input: unknown): WorkspaceSettings {
   normalized.workspace.newWorkspaceHomeNote = typeof workspace.newWorkspaceHomeNote === 'boolean' ? workspace.newWorkspaceHomeNote : defaults.workspace.newWorkspaceHomeNote
   normalized.workspace.autoCreateStarterStructure = workspace.autoCreateStarterStructure === 'off' || workspace.autoCreateStarterStructure === 'structured'
     ? workspace.autoCreateStarterStructure : defaults.workspace.autoCreateStarterStructure
-  normalized.workspace.sidebarContentMode = workspace.sidebarContentMode === 'tag-preview'
-    ? 'tag-preview'
-    : defaults.workspace.sidebarContentMode
+  normalized.workspace.sidebarContentMode = 'tree'
   normalized.workspace.sidebarLayout = workspace.sidebarLayout === 'floating'
     ? 'floating'
     : defaults.workspace.sidebarLayout
@@ -289,23 +295,84 @@ export function normalizeWorkspaceSettings(input: unknown): WorkspaceSettings {
   return normalized
 }
 
+const KNOWN_FIRST_STEP_IDS: FirstStepId[] = ['createWorkspace', 'takeTour', 'insertBlock', 'openGraph', 'chooseAppearance']
+
+function normalizeFirstSteps(value: unknown): FirstStepId[] {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<FirstStepId>()
+  for (const entry of value) {
+    if (typeof entry === 'string' && (KNOWN_FIRST_STEP_IDS as string[]).includes(entry)) {
+      seen.add(entry as FirstStepId)
+    }
+  }
+  // Dedupe while preserving a stable, canonical order rather than input order.
+  return KNOWN_FIRST_STEP_IDS.filter(id => seen.has(id))
+}
+
+const KNOWN_FIRST_USE_HINT_IDS: FirstUseHintId[] = ['editorCanvas', 'kanbanViews', 'graphFilters', 'historyRestore', 'canvasPresent']
+
+function normalizeSeenHints(value: unknown): FirstUseHintId[] {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<FirstUseHintId>()
+  for (const entry of value) {
+    if (typeof entry === 'string' && (KNOWN_FIRST_USE_HINT_IDS as string[]).includes(entry)) {
+      seen.add(entry as FirstUseHintId)
+    }
+  }
+  // Dedupe while preserving a stable, canonical order rather than input order.
+  return KNOWN_FIRST_USE_HINT_IDS.filter(id => seen.has(id))
+}
+
+/**
+ * Backward-compat rule: an app config saved before onboarding existed never had
+ * an `onboarding` field. A non-empty `recents` list means this is an existing
+ * user who has already used the app without a tour — treat the tour as
+ * dismissed and hide the first-steps checklist. An empty `recents` list means a
+ * fresh install, which should see the pending tour and checklist.
+ */
+function normalizeOnboardingState(raw: unknown, hasRecents: boolean): OnboardingState {
+  const fallback: OnboardingState = hasRecents
+    ? { tourStatus: 'dismissed', firstSteps: [], firstStepsHidden: true, seenHints: [], hintsEnabled: true }
+    : { tourStatus: 'pending', firstSteps: [], firstStepsHidden: false, seenHints: [], hintsEnabled: true }
+
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return fallback
+
+  const value = raw as Partial<OnboardingState>
+  const tourStatus: ProductTourStatus = value.tourStatus === 'pending' || value.tourStatus === 'completed' || value.tourStatus === 'dismissed'
+    ? value.tourStatus
+    : fallback.tourStatus
+
+  return {
+    tourStatus,
+    firstSteps: normalizeFirstSteps(value.firstSteps),
+    firstStepsHidden: typeof value.firstStepsHidden === 'boolean' ? value.firstStepsHidden : fallback.firstStepsHidden,
+    seenHints: normalizeSeenHints(value.seenHints),
+    // Defaults to enabled for both fresh installs and pre-existing configs
+    // saved before this field existed — only an explicit `false` opts out.
+    hintsEnabled: typeof value.hintsEnabled === 'boolean' ? value.hintsEnabled : fallback.hintsEnabled,
+  }
+}
+
 export function normalizeAppConfig(input: unknown): AppConfig {
   const defaults = createDefaultAppConfig()
   const raw = input && typeof input === 'object' ? input as Partial<AppConfig> : {}
+  const recents: RecentWorkspace[] = Array.isArray(raw.recents)
+    ? raw.recents
+        .filter((r: { path?: string; storageId?: string; kind?: string }) =>
+          r.kind !== 'cloud' && !r.storageId && !r.path?.startsWith('cloud:'))
+        .map((r): RecentWorkspace => {
+          const { id, name, glyph, gradient, path, lastOpened, pageCount, pinned, unreadCount } = r as RecentWorkspace
+          return { id, name, glyph, gradient, path, lastOpened, pageCount, pinned, unreadCount }
+        })
+    : defaults.recents
   return {
     version: typeof raw.version === 'string' && raw.version.trim() ? raw.version : defaults.version,
     theme: raw.theme === 'dark' || raw.theme === 'light' || raw.theme === 'system' ? raw.theme : defaults.theme,
     locale: raw.locale === 'en' || raw.locale === 'ru' || raw.locale === 'fr' || raw.locale === 'es' || raw.locale === 'de' ? raw.locale : defaults.locale,
-    recents: Array.isArray(raw.recents)
-      ? raw.recents.map((r: { path?: string; storageId?: string; kind?: string }) => {
-          const p = r.path
-          if (!r.storageId && p?.startsWith('cloud:')) {
-            r.kind = 'cloud'
-            r.storageId = p.replace('cloud:', '')
-          }
-          return r as RecentWorkspace
-        })
-      : defaults.recents,
+    // Drops legacy cloud/shared-storage entries (now-removed feature): those
+    // carried `kind: 'cloud'`, a `storageId`, and/or a `cloud:`-prefixed
+    // `path` that no longer resolves to anything openable.
+    recents,
     interfaceDensity: raw.interfaceDensity === 'compact' ? 'compact' : defaults.interfaceDensity,
     reducedMotion: raw.reducedMotion === 'reduce' || raw.reducedMotion === 'full' ? raw.reducedMotion : defaults.reducedMotion,
     scrollbarVisibility: raw.scrollbarVisibility === 'thin' || raw.scrollbarVisibility === 'system' ? raw.scrollbarVisibility : defaults.scrollbarVisibility,
@@ -315,5 +382,8 @@ export function normalizeAppConfig(input: unknown): AppConfig {
     reduceTransparency: typeof raw.reduceTransparency === 'boolean' ? raw.reduceTransparency : undefined,
     interfaceRoundness: raw.interfaceRoundness === 'sharp' || raw.interfaceRoundness === 'soft' ? raw.interfaceRoundness : defaults.interfaceRoundness,
     themeSchedule: normalizeThemeSchedule(raw.themeSchedule, defaults.themeSchedule),
+    onboarding: normalizeOnboardingState(raw.onboarding, recents.length > 0),
+    notebookPalette: normalizeNotebookPalette(raw.notebookPalette),
+    notebookTools: normalizeNotebookToolPreferences(raw.notebookTools),
   }
 }

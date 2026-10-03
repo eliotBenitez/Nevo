@@ -50,33 +50,17 @@ interface UseCanvasPointerInteractionOptions {
   getEditorView: () => EditorView | null
   panBy: (delta: CanvasPoint) => void
   zoomAt: (point: CanvasPoint, zoom: number) => void
-  publishSelection: (ids: string[]) => void
-  publishCursor: (ids: string[], point: CanvasPoint) => void
 }
 
 export function useCanvasPointerInteraction(options: UseCanvasPointerInteractionOptions) {
   // Cached viewport rect avoids a synchronous layout read (getBoundingClientRect) on every
   // pointermove; the viewport is `inset: 0` so its rect only changes on resize/scroll.
   let viewportRect: DOMRect | null = null
-  let cursorFrame: number | null = null
-  let pendingCursorPoint: CanvasPoint | null = null
   const wheelGesture = createWheelGestureClassifier()
   const alignmentGuides = shallowRef<Array<{ axis: 'x' | 'y'; value: number }>>([])
 
   function refreshViewportRect() {
     viewportRect = options.viewport.value?.getBoundingClientRect() ?? null
-  }
-
-  function flushCursor() {
-    cursorFrame = null
-    if (pendingCursorPoint) options.publishCursor(options.selectedIds.value, pendingCursorPoint)
-    pendingCursorPoint = null
-  }
-
-  function queueCursorPublish(point: CanvasPoint) {
-    pendingCursorPoint = point
-    if (cursorFrame !== null) return
-    cursorFrame = requestAnimationFrame(flushCursor)
   }
 
   let dragging: {
@@ -158,7 +142,6 @@ export function useCanvasPointerInteraction(options: UseCanvasPointerInteraction
     } else {
       options.selectedIds.value = groupedIds
     }
-    options.publishSelection(options.selectedIds.value)
   }
 
   function onBackgroundPointerDown(event: PointerEvent) {
@@ -253,12 +236,6 @@ export function useCanvasPointerInteraction(options: UseCanvasPointerInteraction
 
   function onPointerMove(event: PointerEvent) {
     const rect = viewportRect
-    if (rect) {
-      queueCursorPublish(screenToWorld({
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top,
-      }, options.camera))
-    }
     if (!dragging || dragging.pointerId !== event.pointerId) return
     const delta = { x: event.clientX - dragging.start.x, y: event.clientY - dragging.start.y }
     if (dragging.kind === 'pan') {
@@ -466,8 +443,6 @@ export function useCanvasPointerInteraction(options: UseCanvasPointerInteraction
     window.removeEventListener('pointerup', onPointerUp)
     window.removeEventListener('resize', refreshViewportRect)
     window.removeEventListener('scroll', refreshViewportRect, true)
-    if (cursorFrame !== null) cancelAnimationFrame(cursorFrame)
-    cursorFrame = null
     wheelGesture.dispose()
   })
 

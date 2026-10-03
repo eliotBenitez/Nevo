@@ -20,6 +20,11 @@ withDefaults(defineProps<Props>(), {
   size: 'sm',
 })
 
+const sizeClasses = {
+  sm: 'tw:h-8 tw:px-[10px]',
+  md: 'tw:h-[34px] tw:px-3 tw:text-[13px]',
+} as const
+
 const emit = defineEmits<{
   'update:modelValue': [value: string]
   change: [value: string]
@@ -33,8 +38,8 @@ function inputValue(event: Event): string {
 <template>
   <input
     :type="type"
-    class="nv-text-input"
-    :class="`nv-text-input--${size}`"
+    class="nv-text-input tw:min-w-0 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-[var(--input-bg)] tw:text-[12px] tw:font-medium tw:font-nv-ui tw:text-content-primary tw:caret-accent tw:outline-none tw:transition-[background-color,border-color,box-shadow] tw:duration-[140ms] tw:placeholder:font-normal tw:placeholder:text-content-muted tw:disabled:cursor-not-allowed tw:disabled:opacity-[0.48]"
+    :class="[`nv-text-input--${size}`, sizeClasses[size]]"
     :value="modelValue"
     :disabled="disabled"
     :placeholder="placeholder"
@@ -47,45 +52,20 @@ function inputValue(event: Event): string {
 </template>
 
 <style scoped>
-.nv-text-input {
-  min-width: 0;
-  border: 1px solid var(--line-2);
-  border-radius: calc(7px * var(--radius-scale, 1));
-  outline: none;
-  color: var(--text-1);
-  background: var(--glass-3, var(--surface-1));
-  caret-color: var(--accent);
-  font: 500 12px var(--font-ui);
-  transition: border-color 0.12s, box-shadow 0.12s;
-}
-
-.nv-text-input--sm {
-  height: 28px;
-  padding: 0 8px;
-}
-
-.nv-text-input--md {
-  height: 32px;
-  padding: 0 10px;
-  font-size: 13px;
-}
-
-.nv-text-input::placeholder {
-  color: var(--text-4);
-  font-weight: 400;
-}
-
 .nv-text-input:hover:not(:disabled) {
-  border-color: var(--line-3);
+  background: color-mix(in oklab, var(--input-bg) 88%, var(--text-primary) 6%);
 }
 
 .nv-text-input:focus-visible {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-soft);
+  background: var(--surface-raised);
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--input-ring);
 }
 
-.nv-text-input:disabled {
-  opacity: 0.48;
-  cursor: not-allowed;
+.nv-text-input[aria-invalid="true"] {
+  background: var(--surface-danger);
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--danger);
 }
+
 </style>

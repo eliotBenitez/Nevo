@@ -71,7 +71,7 @@ function selectHeading(level: number) {
 
 <template>
   <div
-    class="mobile-editor-tab-bar"
+    class="mobile-editor-tab-bar tw:absolute tw:z-[42] tw:right-[calc(12px+max(var(--safe-area-right),0px))] tw:bottom-[calc(20px+max(var(--safe-area-bottom),0px)+var(--mobile-keyboard-inset,0px))] tw:left-[calc(12px+max(var(--safe-area-left),0px))] tw:flex tw:min-h-14 tw:items-center tw:justify-between tw:gap-0 tw:p-1.5 tw:overflow-x-auto tw:overflow-y-visible tw:border tw:border-solid tw:border-transparent tw:rounded-[calc(18px*var(--radius-scale,1))] tw:bg-(--menu-bg) tw:shadow-[0_18px_44px_-16px_var(--shadow)] tw:scrollbar-none [&::-webkit-scrollbar]:tw:hidden max-[719px]:tw:flex min-[720px]:tw:hidden"
     role="toolbar"
     :aria-label="t('editor.toolbar.mobile')"
     @pointerdown.prevent
@@ -79,7 +79,7 @@ function selectHeading(level: number) {
   >
     <button
       type="button"
-      class="mobile-editor-tab-bar__button"
+      class="mobile-editor-tab-bar__button tw:grid tw:size-11 tw:min-w-11 tw:p-0 tw:place-items-center tw:border-0 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:text-content-muted tw:bg-transparent tw:font-inherit tw:active:bg-(--press) tw:active:scale-[0.96] tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-1 tw:motion-reduce:transition-none"
       :aria-label="t('editor.toolbar.insertBlock')"
       :title="t('editor.toolbar.insertBlock')"
       @click="openBlockMenu"
@@ -88,7 +88,7 @@ function selectHeading(level: number) {
     </button>
     <button
       type="button"
-      class="mobile-editor-tab-bar__button mobile-editor-tab-bar__button--text"
+      class="mobile-editor-tab-bar__button mobile-editor-tab-bar__button--text tw:grid tw:size-11 tw:min-w-11 tw:p-0 tw:place-items-center tw:border-0 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:text-content-muted tw:bg-transparent tw:font-inherit tw:text-[13px] tw:font-[720] tw:tracking-[-0.02em] tw:active:bg-(--press) tw:active:scale-[0.96] tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-1 tw:motion-reduce:transition-none"
       :aria-label="t('slashMenu.items.h1')"
       :title="t('slashMenu.items.h1')"
       aria-haspopup="menu"
@@ -100,7 +100,7 @@ function selectHeading(level: number) {
     </button>
     <button
       type="button"
-      class="mobile-editor-tab-bar__button"
+      class="mobile-editor-tab-bar__button tw:grid tw:size-11 tw:min-w-11 tw:p-0 tw:place-items-center tw:border-0 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:text-content-muted tw:bg-transparent tw:font-inherit tw:active:bg-(--press) tw:active:scale-[0.96] tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-1 tw:motion-reduce:transition-none"
       :aria-label="t('editor.toolbar.bold')"
       :title="t('editor.toolbar.bold')"
       @click="runCommand('core.bold')"
@@ -109,7 +109,7 @@ function selectHeading(level: number) {
     </button>
     <button
       type="button"
-      class="mobile-editor-tab-bar__button"
+      class="mobile-editor-tab-bar__button tw:grid tw:size-11 tw:min-w-11 tw:p-0 tw:place-items-center tw:border-0 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:text-content-muted tw:bg-transparent tw:font-inherit tw:active:bg-(--press) tw:active:scale-[0.96] tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-1 tw:motion-reduce:transition-none"
       :aria-label="t('editor.toolbar.italic')"
       :title="t('editor.toolbar.italic')"
       @click="runCommand('core.italic')"
@@ -118,7 +118,7 @@ function selectHeading(level: number) {
     </button>
     <button
       type="button"
-      class="mobile-editor-tab-bar__button"
+      class="mobile-editor-tab-bar__button tw:grid tw:size-11 tw:min-w-11 tw:p-0 tw:place-items-center tw:border-0 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:text-content-muted tw:bg-transparent tw:font-inherit tw:active:bg-(--press) tw:active:scale-[0.96] tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-1 tw:motion-reduce:transition-none"
       :aria-label="t('slashMenu.items.checklist')"
       :title="t('slashMenu.items.checklist')"
       @click="runCommand('core.checklistItem')"
@@ -127,7 +127,7 @@ function selectHeading(level: number) {
     </button>
     <button
       type="button"
-      class="mobile-editor-tab-bar__button"
+      class="mobile-editor-tab-bar__button tw:grid tw:size-11 tw:min-w-11 tw:p-0 tw:place-items-center tw:border-0 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:text-content-muted tw:bg-transparent tw:font-inherit tw:active:bg-(--press) tw:active:scale-[0.96] tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-1 tw:motion-reduce:transition-none"
       :aria-label="t('editor.toolbar.link')"
       :title="t('editor.toolbar.link')"
       @click="openLink"
@@ -136,7 +136,7 @@ function selectHeading(level: number) {
     </button>
     <button
       type="button"
-      class="mobile-editor-tab-bar__button"
+      class="mobile-editor-tab-bar__button tw:grid tw:size-11 tw:min-w-11 tw:p-0 tw:place-items-center tw:border-0 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:text-content-muted tw:bg-transparent tw:font-inherit tw:active:bg-(--press) tw:active:scale-[0.96] tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-1 tw:motion-reduce:transition-none"
       :aria-label="t('editor.toolbar.moreFormatting')"
       :title="t('editor.toolbar.moreFormatting')"
       :aria-expanded="overflowOpen"
@@ -150,49 +150,52 @@ function selectHeading(level: number) {
   <Teleport to="body">
     <div
       v-if="headingMenuOpen || overflowOpen"
-      class="mobile-editor-tab-bar__dismiss-layer"
+      class="mobile-editor-tab-bar__dismiss-layer tw:fixed tw:inset-0 tw:z-[41]"
       aria-hidden="true"
       @pointerdown="closeMenus"
     />
     <div
       v-if="overflowOpen"
       id="mobile-editor-tab-bar-overflow"
-      class="mobile-editor-tab-bar__overflow"
+      class="mobile-editor-tab-bar__overflow tw:fixed tw:z-[43] tw:right-[calc(12px+max(var(--safe-area-right),0px))] tw:bottom-[calc(88px+max(var(--safe-area-bottom),0px)+var(--mobile-keyboard-inset,0px))] tw:grid tw:w-[min(286px,calc(100vw-24px))] tw:grid-cols-2 tw:gap-1 tw:p-2 tw:border tw:border-solid tw:border-transparent tw:rounded-[calc(18px*var(--radius-scale,1))] tw:bg-(--menu-bg) tw:shadow-[var(--shadow-overlay)]"
       role="menu"
       @pointerdown.prevent
       @keydown.esc.stop="closeMenus"
     >
-      <button type="button" role="menuitem" @click="runCommand('core.paragraph')">
+      <button type="button" role="menuitem" class="tw:flex tw:min-w-0 tw:min-h-11 tw:items-center tw:gap-[9px] tw:px-2.5 tw:py-2 tw:border-0 tw:rounded-[calc(11px*var(--radius-scale,1))] tw:text-content-secondary tw:bg-transparent tw:font-inherit tw:text-[11px] tw:text-left tw:active:bg-(--press) tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-1" @click="runCommand('core.paragraph')">
         <Pilcrow :size="17" aria-hidden="true" />
-        <span>{{ t('slashMenu.items.paragraph') }}</span>
+        <span class="tw:min-w-0 tw:truncate">{{ t('slashMenu.items.paragraph') }}</span>
       </button>
       <button
         type="button"
         role="menuitem"
+        class="tw:flex tw:min-w-0 tw:min-h-11 tw:items-center tw:gap-[9px] tw:px-2.5 tw:py-2 tw:border-0 tw:rounded-[calc(11px*var(--radius-scale,1))] tw:text-content-secondary tw:bg-transparent tw:font-inherit tw:text-[11px] tw:text-left tw:active:bg-(--press) tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-1"
         @click="runCommand('core.strikethrough')"
       >
         <Strikethrough :size="17" aria-hidden="true" />
-        <span>{{ t('editor.toolbar.strikethrough') }}</span>
+        <span class="tw:min-w-0 tw:truncate">{{ t('editor.toolbar.strikethrough') }}</span>
       </button>
       <button
         type="button"
         role="menuitem"
+        class="tw:flex tw:min-w-0 tw:min-h-11 tw:items-center tw:gap-[9px] tw:px-2.5 tw:py-2 tw:border-0 tw:rounded-[calc(11px*var(--radius-scale,1))] tw:text-content-secondary tw:bg-transparent tw:font-inherit tw:text-[11px] tw:text-left tw:active:bg-(--press) tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-1"
         @click="runCommand('core.underline')"
       >
         <Underline :size="17" aria-hidden="true" />
-        <span>{{ t('editor.toolbar.underline') }}</span>
+        <span class="tw:min-w-0 tw:truncate">{{ t('editor.toolbar.underline') }}</span>
       </button>
       <button
         type="button"
         role="menuitem"
+        class="tw:flex tw:min-w-0 tw:min-h-11 tw:items-center tw:gap-[9px] tw:px-2.5 tw:py-2 tw:border-0 tw:rounded-[calc(11px*var(--radius-scale,1))] tw:text-content-secondary tw:bg-transparent tw:font-inherit tw:text-[11px] tw:text-left tw:active:bg-(--press) tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-1"
         @click="runCommand('core.code')"
       >
         <Code2 :size="17" aria-hidden="true" />
-        <span>{{ t('editor.toolbar.code') }}</span>
+        <span class="tw:min-w-0 tw:truncate">{{ t('editor.toolbar.code') }}</span>
       </button>
-      <button type="button" role="menuitem" @click="requestImage">
+      <button type="button" role="menuitem" class="tw:flex tw:min-w-0 tw:min-h-11 tw:items-center tw:gap-[9px] tw:px-2.5 tw:py-2 tw:border-0 tw:rounded-[calc(11px*var(--radius-scale,1))] tw:text-content-secondary tw:bg-transparent tw:font-inherit tw:text-[11px] tw:text-left tw:active:bg-(--press) tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-1" @click="requestImage">
         <ImageIcon :size="17" aria-hidden="true" />
-        <span>{{ t('editor.toolbar.image') }}</span>
+        <span class="tw:min-w-0 tw:truncate">{{ t('editor.toolbar.image') }}</span>
       </button>
     </div>
   </Teleport>
@@ -203,136 +206,3 @@ function selectHeading(level: number) {
     @select="selectHeading"
   />
 </template>
-
-<style scoped>
-.mobile-editor-tab-bar {
-  position: absolute;
-  z-index: 42;
-  right: calc(12px + max(var(--safe-area-right), 0px));
-  bottom:
-    calc(
-      20px
-      + max(var(--safe-area-bottom), 0px)
-      + var(--mobile-keyboard-inset, 0px)
-    );
-  left: calc(12px + max(var(--safe-area-left), 0px));
-  display: flex;
-  min-height: 56px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0;
-  padding: 6px;
-  overflow-x: auto;
-  overflow-y: visible;
-  border: 1px solid var(--line-2);
-  border-radius: calc(18px * var(--radius-scale, 1));
-  background: color-mix(in oklab, var(--glass-titlebar) 94%, var(--canvas-1));
-  box-shadow: 0 18px 44px -16px var(--shadow);
-  backdrop-filter: blur(24px) saturate(118%);
-  -webkit-backdrop-filter: blur(24px) saturate(118%);
-  scrollbar-width: none;
-}
-
-.mobile-editor-tab-bar::-webkit-scrollbar {
-  display: none;
-}
-
-.mobile-editor-tab-bar__button {
-  display: grid;
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-  padding: 0;
-  place-items: center;
-  border: 0;
-  border-radius: calc(12px * var(--radius-scale, 1));
-  color: var(--text-3);
-  background: transparent;
-  font: inherit;
-}
-
-.mobile-editor-tab-bar__button--text {
-  font-size: 13px;
-  font-weight: 720;
-  letter-spacing: -0.02em;
-}
-
-.mobile-editor-tab-bar__button:active {
-  background: var(--press);
-  transform: scale(0.96);
-}
-
-.mobile-editor-tab-bar__button:focus-visible,
-.mobile-editor-tab-bar__overflow button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-.mobile-editor-tab-bar__dismiss-layer {
-  position: fixed;
-  z-index: 41;
-  inset: 0;
-}
-
-.mobile-editor-tab-bar__overflow {
-  position: fixed;
-  z-index: 43;
-  right: calc(12px + max(var(--safe-area-right), 0px));
-  bottom:
-    calc(
-      88px
-      + max(var(--safe-area-bottom), 0px)
-      + var(--mobile-keyboard-inset, 0px)
-    );
-  display: grid;
-  width: min(286px, calc(100vw - 24px));
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px;
-  padding: 8px;
-  border: 1px solid var(--line-2);
-  border-radius: calc(18px * var(--radius-scale, 1));
-  background: color-mix(in oklab, var(--glass-titlebar) 96%, var(--canvas-1));
-  box-shadow: var(--shadow-pop);
-  backdrop-filter: blur(24px) saturate(118%);
-  -webkit-backdrop-filter: blur(24px) saturate(118%);
-}
-
-.mobile-editor-tab-bar__overflow button {
-  display: flex;
-  min-width: 0;
-  min-height: 44px;
-  align-items: center;
-  gap: 9px;
-  padding: 8px 10px;
-  border: 0;
-  border-radius: calc(11px * var(--radius-scale, 1));
-  color: var(--text-2);
-  background: transparent;
-  font: inherit;
-  font-size: 11px;
-  text-align: left;
-}
-
-.mobile-editor-tab-bar__overflow button:active {
-  background: var(--press);
-}
-
-.mobile-editor-tab-bar__overflow span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-@media (min-width: 720px) {
-  .mobile-editor-tab-bar {
-    display: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mobile-editor-tab-bar__button {
-    transition: none;
-  }
-}
-</style>

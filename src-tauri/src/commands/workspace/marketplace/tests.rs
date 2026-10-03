@@ -5,7 +5,6 @@ use super::commands::*;
 use super::repository::*;
 use super::transaction::*;
 use super::types::*;
-use base64::Engine;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -261,7 +260,7 @@ fn git_blob_hash_matches_git_object_format() {
 }
 
 #[test]
-fn crash_recovery_restores_plugin_storage_registry_and_y_doc() {
+fn crash_recovery_restores_plugin_storage_registry_and_note_content() {
     let workspace = workspace("transaction-recovery");
     let plugin_id = "plugin.market";
     let target_plugin = plugins_dir_path(&workspace.to_string_lossy()).join(plugin_id);
@@ -269,14 +268,27 @@ fn crash_recovery_restores_plugin_storage_registry_and_y_doc() {
     std::fs::write(target_plugin.join("marker.txt"), b"old plugin").expect("old plugin marker");
     let storage_path = workspace.join(".nevo/plugin-data/plugin.market.json");
     let registry_path = workspace.join(".nevo/plugin-registry.json");
-    let collab_path = workspace.join(".nevo/collab/note_1.yjs");
+    let note_id = "note_1";
+    let note_path = workspace.join("notes/note-note_1.nevo");
+    std::fs::create_dir_all(note_path.parent().unwrap()).expect("notes dir");
+    let old_note = serde_json::json!({
+        "id": note_id,
+        "title": "Old title",
+        "icon": "📄",
+        "cover": null,
+        "folderId": null,
+        "createdAt": "2026-01-01T00:00:00Z",
+        "updatedAt": "2026-01-01T00:00:00Z",
+        "properties": null,
+        "content": { "type": "doc", "content": [] },
+    });
+    std::fs::write(&note_path, serde_json::to_vec(&old_note).unwrap()).expect("old note");
     write_workspace_file(&storage_path, br#"{"value":"old storage"}"#).expect("old storage");
     write_workspace_file(
             &registry_path,
             br#"{"version":1,"plugins":{"plugin.market":{"version":"1.0.0","dataVersion":1,"contributions":[]}}}"#,
         )
         .expect("old registry");
-    write_workspace_file(&collab_path, b"old ydoc").expect("old ydoc");
 
     let transaction_id = uuid::Uuid::new_v4().to_string();
     let transaction_dir =
@@ -284,6 +296,10 @@ fn crash_recovery_restores_plugin_storage_registry_and_y_doc() {
     let staged_plugin = transaction_dir.join("staged-plugin");
     std::fs::create_dir_all(&staged_plugin).expect("staged plugin");
     std::fs::write(staged_plugin.join("marker.txt"), b"new plugin").expect("new plugin marker");
+    let new_content = serde_json::json!({
+        "type": "doc",
+        "content": [{ "type": "paragraph", "content": [] }],
+    });
     let migration = prepare_migration_files(MarketplaceMigrationBundle {
         workspace_storage: Some(serde_json::json!({ "value": "new storage" })),
         plugin_registry: Some(serde_json::json!({
@@ -296,10 +312,7 @@ fn crash_recovery_restores_plugin_storage_registry_and_y_doc() {
                 },
             },
         })),
-        collab_states_base64: BTreeMap::from([(
-            "note_1".to_string(),
-            base64::engine::general_purpose::STANDARD.encode(b"new ydoc"),
-        )]),
+        migrated_content: BTreeMap::from([(note_id.to_string(), new_content.clone())]),
     })
     .expect("migration payload");
     let mut journal = MarketplaceTransactionJournal {
@@ -325,7 +338,13 @@ fn crash_recovery_restores_plugin_storage_registry_and_y_doc() {
         std::fs::read(target_plugin.join("marker.txt")).expect("new plugin"),
         b"new plugin"
     );
-    assert_eq!(std::fs::read(&collab_path).expect("new ydoc"), b"new ydoc");
+    let committed_note: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&note_path).unwrap()).unwrap();
+    assert_eq!(committed_note["content"], new_content);
+    assert_eq!(
+        committed_note["title"], "Old title",
+        "non-content fields must round trip through the migration write unchanged"
+    );
 
     recover_marketplace_transaction(&workspace, &transaction_dir, &journal)
         .expect("crash recovery");
@@ -337,9 +356,12 @@ fn crash_recovery_restores_plugin_storage_registry_and_y_doc() {
         std::fs::read(storage_path).expect("restored storage"),
         br#"{"value":"old storage"}"#
     );
+    let restored_note: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&note_path).unwrap()).unwrap();
     assert_eq!(
-        std::fs::read(collab_path).expect("restored ydoc"),
-        b"old ydoc"
+        restored_note["content"],
+        serde_json::json!({ "type": "doc", "content": [] }),
+        "note.json must roll back to its pre-migration content"
     );
     assert!(!transaction_dir.exists());
     std::fs::remove_dir_all(workspace).expect("cleanup");
@@ -348,9 +370,9 @@ fn crash_recovery_restores_plugin_storage_registry_and_y_doc() {
 #[test]
 fn migration_payload_validation_rejects_unsafe_notes_and_oversized_storage() {
     let unsafe_notes = MarketplaceMigrationBundle {
-        collab_states_base64: BTreeMap::from([(
+        migrated_content: BTreeMap::from([(
             "../other".to_string(),
-            base64::engine::general_purpose::STANDARD.encode(b"state"),
+            serde_json::json!({ "type": "doc", "content": [] }),
         )]),
         ..MarketplaceMigrationBundle::default()
     };

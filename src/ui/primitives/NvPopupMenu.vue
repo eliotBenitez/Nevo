@@ -46,6 +46,7 @@ const { position, reposition } = usePopupPosition({
 })
 
 watch(() => props.open, (val) => {
+  console.log('NvPopupMenu watch(props.open) triggered! val =', val)
   if (val !== undefined) {
     if (val) openMenu()
     else closeMenu(false)
@@ -183,8 +184,8 @@ function resolveProps(item: NvMenuItemDef) {
 </script>
 
 <template>
-  <div class="nv-popup-menu">
-    <div ref="triggerWrapRef" class="nv-popup-menu__trigger-wrap" @click.stop="toggleMenu">
+  <div class="nv-popup-menu tw:contents">
+    <div ref="triggerWrapRef" class="nv-popup-menu__trigger-wrap tw:contents" @click.stop="toggleMenu">
       <slot name="trigger" />
     </div>
 
@@ -195,7 +196,7 @@ function resolveProps(item: NvMenuItemDef) {
           ref="menuRef"
           role="menu"
           tabindex="-1"
-          class="nv-popup-menu__panel"
+          class="nv-popup-menu__panel tw:fixed tw:min-w-[160px] tw:max-h-[min(420px,calc(100vh-24px))] tw:overflow-y-auto tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--menu-bg) tw:p-1 tw:shadow-(--menu-shadow) tw:outline-none"
           :style="{
             top: `${position.top}px`,
             left: `${position.left}px`,

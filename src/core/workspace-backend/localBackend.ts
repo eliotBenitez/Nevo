@@ -3,6 +3,8 @@
 // directly with workspaceStore.activePath.
 
 import { workspaceCommands, noteCommands, folderCommands, templateCommands, kanbanCommands, graphCommands, noteQueryCommands } from '../../tauri/commands'
+import { createNotebook as createNotebookCommand } from '../../tauri/notebook'
+import { primeNotebookSave, saveNotebookNote } from '../../tauri/notebookSave'
 import type { KanbanBoard, KanbanCard, KanbanPropertyDef } from '../../types/kanban'
 import type { WorkspaceBlockSearchItem } from '../../types/search'
 import type { BacklinkRef, GraphEdge, ExtractedEdge } from '../../types/graph'
@@ -11,8 +13,9 @@ import type { KanbanBoardUpdate, KanbanCardUpdate } from './types'
 import type {
   WorkspaceManifest, WorkspaceSettings, WorkspaceDiagnostics, WorkspaceCleanupReport, PluginManifest, MarketplaceCatalog,
 } from '../../types/workspace'
-import type { FolderMeta, NoteDocument, NoteSnapshotMeta, ImportedImageAsset, SidebarNotePreview } from '../../types/note'
+import type { FolderMeta, NoteDocument, NoteSnapshotMeta, ImportedImageAsset, RestoreNoteSnapshotResult, SidebarNotePreview } from '../../types/note'
 import type { TemplateDocument, TemplateFieldValues } from '../../types/template'
+import type { NotebookPaperKind } from '../notebook/types'
 import type { DatabaseRepository } from '../../features/database/databaseRepository'
 import { TauriDatabaseRepository } from '../../features/database/databaseRepository'
 import type { WorkspaceBackend, WorkspaceHandle } from './types'
@@ -34,6 +37,11 @@ export class LocalBackend implements WorkspaceBackend {
 
   open(): Promise<WorkspaceManifest> {
     return workspaceCommands.openWorkspace(this.path)
+  }
+  // Local writes go through awaited Tauri IPC calls already, so by the time
+  // any of them resolves the data is on disk.
+  flushDurability(): Promise<void> {
+    return Promise.resolve()
   }
   saveManifest(manifest: WorkspaceManifest): Promise<void> {
     return workspaceCommands.saveManifest(this.path, manifest)
@@ -94,6 +102,9 @@ export class LocalBackend implements WorkspaceBackend {
   createNote(folderId: string | null, title: string, icon: string): Promise<NoteDocument> {
     return noteCommands.createNote(this.path, folderId, title, icon)
   }
+  createNotebook(folderId: string | null, title: string, icon: string, paper: NotebookPaperKind): Promise<NoteDocument> {
+    return createNotebookCommand({ workspacePath: this.path, folderId, title, icon, paper })
+  }
   createNoteFromTemplate(
     templateId: string, folderId: string | null, title: string, icon: string, fieldValues: TemplateFieldValues,
   ): Promise<NoteDocument> {
@@ -115,15 +126,19 @@ export class LocalBackend implements WorkspaceBackend {
   deleteTemplate(templateId: string): Promise<void> {
     return templateCommands.deleteTemplate(this.path, templateId)
   }
-  loadNote(noteId: string): Promise<NoteDocument> {
-    return noteCommands.loadNote(this.path, noteId)
+  async loadNote(noteId: string): Promise<NoteDocument> {
+    const note = await noteCommands.loadNote(this.path, noteId)
+    primeNotebookSave(this.path, note)
+    return note
   }
   /** A local note is stored whole, so this is just loadNote. */
   loadNoteWithContent(noteId: string): Promise<NoteDocument> {
     return noteCommands.loadNote(this.path, noteId)
   }
   saveNote(note: NoteDocument): Promise<void> {
-    return noteCommands.saveNote(this.path, note)
+    return note.documentKind === 'notebook'
+      ? saveNotebookNote(this.path, note)
+      : noteCommands.saveNote(this.path, note)
   }
   deleteNote(noteId: string): Promise<void> {
     return noteCommands.deleteNote(this.path, noteId)
@@ -135,7 +150,7 @@ export class LocalBackend implements WorkspaceBackend {
     return noteCommands.listSidebarNotePreviews(this.path)
   }
 
-  importImageAsset(fileName: string, bytes: number[]): Promise<ImportedImageAsset> {
+  importImageAsset(fileName: string, bytes: Uint8Array): Promise<ImportedImageAsset> {
     return noteCommands.importImageAsset(this.path, fileName, bytes)
   }
   importImageFromUrl(url: string): Promise<ImportedImageAsset> {
@@ -163,7 +178,13 @@ export class LocalBackend implements WorkspaceBackend {
   listNoteSnapshots(noteId: string): Promise<NoteSnapshotMeta[]> {
     return noteCommands.listNoteSnapshots(this.path, noteId)
   }
-  restoreNoteSnapshot(noteId: string, snapshotId: string): Promise<NoteDocument> {
+  /**
+   * Restores `note.json` (content + canvas) from a prior snapshot. `note.json`
+   * is a note's sole source of truth, so the backend just commits the
+   * snapshot's saved fields back into it — there is no separate Y.Doc state
+   * to rebuild or restore alongside it.
+   */
+  restoreNoteSnapshot(noteId: string, snapshotId: string): Promise<RestoreNoteSnapshotResult> {
     return noteCommands.restoreNoteSnapshot(this.path, noteId, snapshotId)
   }
 

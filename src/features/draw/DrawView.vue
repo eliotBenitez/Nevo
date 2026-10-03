@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { ArrowLeft, Shapes, Settings, Download } from 'lucide-vue-next'
+// Loaded here (not main.ts) so the draw feature's CSS ships only with this route.
+import './draw.css'
 import { useWorkspaceStore } from '../../stores/workspace'
 import { useDrawEditor } from './useDrawEditor'
 import { useDrawExport } from './view/useDrawExport'
@@ -462,18 +464,27 @@ async function back() {
 </script>
 
 <template>
-  <div class="draw-view" :class="{ 'draw-view--dark': isDark }">
-    <header class="draw-view__header">
-      <button type="button" class="draw-view__back" :title="$t('common.back')" @click="back">
+  <div class="draw-view tw:relative tw:flex tw:flex-col tw:w-full tw:h-full tw:min-h-0 tw:bg-surface-navigation" :class="{ 'draw-view--dark': isDark }">
+    <header class="draw-view__header tw:flex tw:items-center tw:gap-3 tw:py-2.5 tw:px-4 tw:border-b-0 tw:bg-transparent tw:max-[719px]:absolute tw:max-[719px]:z-12 tw:max-[719px]:top-[calc(7px+max(var(--safe-area-top),0px))] tw:max-[719px]:right-[calc(14px+max(var(--safe-area-right),0px))] tw:max-[719px]:left-[calc(14px+max(var(--safe-area-left),0px))] tw:max-[719px]:min-h-11 tw:max-[719px]:gap-2.5 tw:max-[719px]:p-0 tw:max-[719px]:border-0 tw:max-[719px]:bg-transparent tw:max-[719px]:pointer-events-none">
+      <button
+        type="button"
+        class="draw-view__back tw:inline-flex tw:items-center tw:justify-center tw:size-8 tw:border tw:border-solid tw:border-transparent tw:rounded-lg tw:bg-surface-subtle tw:text-content-secondary tw:cursor-pointer tw:transition-colors tw:duration-[120ms] tw:hover:bg-(--accent-fill) tw:hover:text-(--accent-on) tw:max-[719px]:size-11 tw:max-[719px]:flex-[0_0_44px] tw:max-[719px]:rounded-[14px] tw:max-[719px]:bg-(--menu-bg) tw:max-[719px]:shadow-(--shadow-raised) tw:max-[719px]:pointer-events-auto"
+        :title="$t('common.back')"
+        @click="back"
+      >
         <ArrowLeft :size="18" />
       </button>
-      <div class="draw-view__title">{{ $t('editor.draw.label') }}</div>
-      <div class="draw-view__header-spacer" />
-      <div v-if="errorMessage" class="draw-view__error" role="alert">{{ errorMessage }}</div>
+      <div class="draw-view__title tw:text-sm tw:font-semibold tw:text-content-primary tw:max-[719px]:min-w-0 tw:max-[719px]:py-[9px] tw:max-[719px]:px-3 tw:max-[719px]:overflow-hidden tw:max-[719px]:border tw:max-[719px]:border-solid tw:max-[719px]:border-transparent tw:max-[719px]:rounded-xl tw:max-[719px]:bg-(--menu-bg) tw:max-[719px]:shadow-[0_12px_30px_rgba(0,0,0,0.14)] tw:max-[719px]:text-xs tw:max-[719px]:text-ellipsis tw:max-[719px]:whitespace-nowrap tw:max-[719px]:pointer-events-auto">{{ $t('editor.draw.label') }}</div>
+      <div class="draw-view__header-spacer tw:flex-1" />
+      <div
+        v-if="errorMessage"
+        class="draw-view__error tw:max-w-[50%] tw:py-1 tw:px-2.5 tw:rounded-md tw:bg-[color-mix(in_oklab,var(--danger)_16%,transparent)] tw:text-danger tw:text-xs tw:whitespace-nowrap tw:overflow-hidden tw:[text-overflow:ellipsis] tw:max-[719px]:absolute tw:max-[719px]:top-[52px] tw:max-[719px]:left-0 tw:max-[719px]:max-w-full tw:max-[719px]:pointer-events-auto"
+        role="alert"
+      >{{ errorMessage }}</div>
     </header>
 
-    <div ref="canvasWrapEl" class="draw-view__canvas-wrap" :style="bgStyle" :class="cursorClass">
-      <div v-if="loading" class="draw-view__loading">{{ $t('common.loading') }}</div>
+    <div ref="canvasWrapEl" class="draw-view__canvas-wrap tw:relative tw:flex-1 tw:min-h-0 tw:overflow-hidden tw:flex" :style="bgStyle" :class="cursorClass">
+      <div v-if="loading" class="draw-view__loading tw:absolute tw:inset-0 tw:flex tw:items-center tw:justify-center tw:text-content-muted tw:text-sm tw:z-3">{{ $t('common.loading') }}</div>
       <!-- Background grid (в экранных координатах; фикс. размер клетки, едет за pan) -->
       <svg
         v-if="editor.gridType.value !== 'none'"
@@ -532,7 +543,7 @@ async function back() {
       <!-- Кастомный курсор-круг режима «стёрки» (диаметр = размер кисти) -->
       <div
         v-if="editor.tool.value === 'eraser' && eraserCursor.visible"
-        class="draw-eraser-cursor"
+        class="draw-eraser-cursor tw:absolute tw:z-4 tw:box-border tw:rounded-full tw:border-[1.5px] tw:border-solid tw:border-content-secondary tw:bg-[color-mix(in_oklab,var(--text-secondary)_14%,transparent)] tw:pointer-events-none tw:-translate-1/2"
         :style="{
           left: `${eraserCursor.x}px`,
           top: `${eraserCursor.y}px`,
@@ -563,8 +574,10 @@ async function back() {
       <!-- Кнопка экспорта рисунка (SVG, PNG) -->
       <button
         type="button"
-        class="draw-export-toggle"
-        :class="{ 'is-active': showExport }"
+        class="draw-export-toggle tw:absolute tw:top-4 tw:right-[104px] tw:z-6 tw:inline-flex tw:items-center tw:justify-center tw:size-9 tw:border tw:border-solid tw:rounded-[10px] tw:bg-(--menu-bg) tw:hover:bg-surface-subtle tw:shadow-(--shadow-raised) tw:transition-colors tw:duration-100 tw:max-[719px]:top-[calc(62px+max(var(--safe-area-top),0px))] tw:max-[719px]:right-[calc(114px+max(var(--safe-area-right),0px))] tw:max-[719px]:size-11 tw:max-[719px]:rounded-[14px]"
+        :class="showExport
+          ? 'is-active tw:border-accent tw:text-accent'
+          : 'tw:border-transparent tw:text-content-secondary tw:hover:text-content-primary'"
         :title="$t('editor.draw.export.title')"
         :aria-pressed="showExport"
         @click="toggleExport"
@@ -575,8 +588,10 @@ async function back() {
       <!-- Кнопка настроек холста (задний фон, сетка) -->
       <button
         type="button"
-        class="draw-canvas-settings-toggle"
-        :class="{ 'is-active': showSettings }"
+        class="draw-canvas-settings-toggle tw:absolute tw:top-4 tw:right-[60px] tw:z-6 tw:inline-flex tw:items-center tw:justify-center tw:size-9 tw:border tw:border-solid tw:rounded-[10px] tw:bg-(--menu-bg) tw:hover:bg-surface-subtle tw:shadow-(--shadow-raised) tw:transition-colors tw:duration-100 tw:max-[719px]:top-[calc(62px+max(var(--safe-area-top),0px))] tw:max-[719px]:right-[calc(64px+max(var(--safe-area-right),0px))] tw:max-[719px]:size-11 tw:max-[719px]:rounded-[14px]"
+        :class="showSettings
+          ? 'is-active tw:border-accent tw:text-accent'
+          : 'tw:border-transparent tw:text-content-secondary tw:hover:text-content-primary'"
         :title="$t('editor.draw.settings.title')"
         :aria-pressed="showSettings"
         @click="toggleSettings"
@@ -587,8 +602,10 @@ async function back() {
       <!-- Кнопка открытия библиотеки шаблонов (правый верхний угол холста) -->
       <button
         type="button"
-        class="draw-templates-toggle"
-        :class="{ 'is-active': showTemplates }"
+        class="draw-templates-toggle tw:absolute tw:top-4 tw:right-4 tw:z-6 tw:inline-flex tw:items-center tw:justify-center tw:size-9 tw:border tw:border-solid tw:rounded-[10px] tw:bg-(--menu-bg) tw:hover:bg-surface-subtle tw:shadow-(--shadow-raised) tw:transition-colors tw:duration-100 tw:max-[719px]:top-[calc(62px+max(var(--safe-area-top),0px))] tw:max-[719px]:right-[calc(14px+max(var(--safe-area-right),0px))] tw:max-[719px]:size-11 tw:max-[719px]:rounded-[14px]"
+        :class="showTemplates
+          ? 'is-active tw:border-accent tw:text-accent'
+          : 'tw:border-transparent tw:text-content-secondary tw:hover:text-content-primary'"
         :title="$t('editor.draw.templates.open')"
         :aria-pressed="showTemplates"
         @click="toggleTemplates"
@@ -597,12 +614,15 @@ async function back() {
       </button>
 
       <!-- Панель экспорта рисунка -->
-      <div v-if="showExport" class="draw-export-settings">
-        <div class="draw-export-settings__header">
-          <div class="draw-export-settings__title">{{ $t('editor.draw.export.title') }}</div>
+      <div
+        v-if="showExport"
+        class="draw-export-settings tw:absolute tw:right-4 tw:top-16 tw:z-6 tw:flex tw:flex-col tw:gap-3 tw:w-60 tw:p-3 tw:border tw:border-solid tw:border-transparent tw:rounded-[14px] tw:bg-(--menu-bg) tw:shadow-(--shadow-overlay) tw:box-border tw:max-[719px]:top-[calc(114px+max(var(--safe-area-top),0px))] tw:max-[719px]:right-[calc(14px+max(var(--safe-area-right),0px))] tw:max-[719px]:left-[calc(14px+max(var(--safe-area-left),0px))] tw:max-[719px]:w-auto tw:max-[719px]:max-h-[min(52vh,420px)] tw:max-[719px]:overflow-y-auto"
+      >
+        <div class="draw-export-settings__header tw:flex tw:items-center tw:justify-between">
+          <div class="draw-export-settings__title tw:text-[13px] tw:font-semibold tw:text-content-primary">{{ $t('editor.draw.export.title') }}</div>
           <button
             type="button"
-            class="draw-export-settings__close"
+            class="draw-export-settings__close tw:border-none tw:bg-transparent tw:text-content-muted tw:text-xl tw:leading-none tw:cursor-pointer tw:hover:text-content-primary"
             :title="$t('editor.draw.templates.close')"
             @click="showExport = false"
           >
@@ -611,21 +631,25 @@ async function back() {
         </div>
 
         <!-- Выбор формата -->
-        <div class="draw-export-settings__section">
-          <div class="draw-export-settings__label">{{ $t('editor.draw.export.format') }}</div>
-          <div class="draw-export-settings__segs">
+        <div class="draw-export-settings__section tw:flex tw:flex-col tw:gap-1.5">
+          <div class="draw-export-settings__label tw:text-[11px] tw:font-medium tw:text-content-muted tw:uppercase tw:tracking-[0.04em] tw:select-none">{{ $t('editor.draw.export.format') }}</div>
+          <div class="draw-export-settings__segs tw:flex tw:flex-row tw:gap-1 tw:flex-wrap">
             <button
               type="button"
-              class="draw-export-settings__seg"
-              :class="{ 'is-active': drawExport.format.value === 'png' }"
+              class="draw-export-settings__seg tw:flex-1 tw:min-w-0 tw:h-7 tw:px-1.5 tw:border tw:border-solid tw:rounded-md tw:text-xs tw:text-center tw:cursor-pointer tw:transition-colors tw:duration-100 tw:whitespace-nowrap tw:overflow-hidden tw:[text-overflow:ellipsis]"
+              :class="drawExport.format.value === 'png'
+                ? 'is-active tw:bg-[color-mix(in_oklab,var(--accent)_18%,transparent)] tw:text-accent tw:border-[color-mix(in_oklab,var(--accent)_40%,transparent)]'
+                : 'tw:bg-transparent tw:text-content-secondary tw:border-transparent tw:hover:bg-(--hover-strong) tw:hover:text-content-primary'"
               @click="drawExport.format.value = 'png'"
             >
               PNG
             </button>
             <button
               type="button"
-              class="draw-export-settings__seg"
-              :class="{ 'is-active': drawExport.format.value === 'svg' }"
+              class="draw-export-settings__seg tw:flex-1 tw:min-w-0 tw:h-7 tw:px-1.5 tw:border tw:border-solid tw:rounded-md tw:text-xs tw:text-center tw:cursor-pointer tw:transition-colors tw:duration-100 tw:whitespace-nowrap tw:overflow-hidden tw:[text-overflow:ellipsis]"
+              :class="drawExport.format.value === 'svg'
+                ? 'is-active tw:bg-[color-mix(in_oklab,var(--accent)_18%,transparent)] tw:text-accent tw:border-[color-mix(in_oklab,var(--accent)_40%,transparent)]'
+                : 'tw:bg-transparent tw:text-content-secondary tw:border-transparent tw:hover:bg-(--hover-strong) tw:hover:text-content-primary'"
               @click="drawExport.format.value = 'svg'"
             >
               SVG
@@ -634,29 +658,35 @@ async function back() {
         </div>
 
         <!-- Выбор области экспорта -->
-        <div class="draw-export-settings__section">
-          <div class="draw-export-settings__label">{{ $t('editor.draw.export.scope') }}</div>
-          <div class="draw-export-settings__segs draw-export-settings__segs--vertical">
+        <div class="draw-export-settings__section tw:flex tw:flex-col tw:gap-1.5">
+          <div class="draw-export-settings__label tw:text-[11px] tw:font-medium tw:text-content-muted tw:uppercase tw:tracking-[0.04em] tw:select-none">{{ $t('editor.draw.export.scope') }}</div>
+          <div class="draw-export-settings__segs draw-export-settings__segs--vertical tw:flex tw:flex-col tw:gap-1">
             <button
               type="button"
-              class="draw-export-settings__seg"
-              :class="{ 'is-active': drawExport.scope.value === 'all' }"
+              class="draw-export-settings__seg tw:flex-1 tw:min-w-0 tw:h-auto tw:py-1.5 tw:px-2 tw:border tw:border-solid tw:rounded-md tw:text-xs tw:text-left tw:leading-[1.3] tw:cursor-pointer tw:transition-colors tw:duration-100 tw:whitespace-nowrap tw:overflow-hidden tw:[text-overflow:ellipsis]"
+              :class="drawExport.scope.value === 'all'
+                ? 'is-active tw:bg-[color-mix(in_oklab,var(--accent)_18%,transparent)] tw:text-accent tw:border-[color-mix(in_oklab,var(--accent)_40%,transparent)]'
+                : 'tw:bg-transparent tw:text-content-secondary tw:border-transparent tw:hover:bg-(--hover-strong) tw:hover:text-content-primary'"
               @click="drawExport.scope.value = 'all'"
             >
               {{ $t('editor.draw.export.scopeAll') }}
             </button>
             <button
               type="button"
-              class="draw-export-settings__seg"
-              :class="{ 'is-active': drawExport.scope.value === 'viewport' }"
+              class="draw-export-settings__seg tw:flex-1 tw:min-w-0 tw:h-auto tw:py-1.5 tw:px-2 tw:border tw:border-solid tw:rounded-md tw:text-xs tw:text-left tw:leading-[1.3] tw:cursor-pointer tw:transition-colors tw:duration-100 tw:whitespace-nowrap tw:overflow-hidden tw:[text-overflow:ellipsis]"
+              :class="drawExport.scope.value === 'viewport'
+                ? 'is-active tw:bg-[color-mix(in_oklab,var(--accent)_18%,transparent)] tw:text-accent tw:border-[color-mix(in_oklab,var(--accent)_40%,transparent)]'
+                : 'tw:bg-transparent tw:text-content-secondary tw:border-transparent tw:hover:bg-(--hover-strong) tw:hover:text-content-primary'"
               @click="drawExport.scope.value = 'viewport'"
             >
               {{ $t('editor.draw.export.scopeViewport') }}
             </button>
             <button
               type="button"
-              class="draw-export-settings__seg"
-              :class="{ 'is-active': drawExport.scope.value === 'selection' }"
+              class="draw-export-settings__seg tw:flex-1 tw:min-w-0 tw:h-auto tw:py-1.5 tw:px-2 tw:border tw:border-solid tw:rounded-md tw:text-xs tw:text-left tw:leading-[1.3] tw:cursor-pointer tw:transition-colors tw:duration-100 tw:whitespace-nowrap tw:overflow-hidden tw:[text-overflow:ellipsis]"
+              :class="drawExport.scope.value === 'selection'
+                ? 'is-active tw:bg-[color-mix(in_oklab,var(--accent)_18%,transparent)] tw:text-accent tw:border-[color-mix(in_oklab,var(--accent)_40%,transparent)]'
+                : 'tw:bg-transparent tw:text-content-secondary tw:border-transparent tw:hover:bg-(--hover-strong) tw:hover:text-content-primary'"
               @click="drawExport.scope.value = 'selection'"
             >
               {{ $t('editor.draw.export.scopeSelection') }}
@@ -665,8 +695,8 @@ async function back() {
         </div>
 
         <!-- Прозрачность фона -->
-        <div class="draw-export-settings__section draw-export-settings__section--row">
-          <div class="draw-export-settings__label">{{ $t('editor.draw.export.transparent') }}</div>
+        <div class="draw-export-settings__section draw-export-settings__section--row tw:flex tw:flex-row tw:items-center tw:justify-between tw:gap-3">
+          <div class="draw-export-settings__label tw:text-[11px] tw:font-medium tw:text-content-muted tw:uppercase tw:tracking-[0.04em] tw:select-none">{{ $t('editor.draw.export.transparent') }}</div>
           <NvToggle
             :model-value="drawExport.transparent.value"
             @update:model-value="(v) => drawExport.transparent.value = v"
@@ -674,14 +704,17 @@ async function back() {
         </div>
 
         <!-- Ошибка, если область "выделенное", но ничего не выбрано -->
-        <div v-if="drawExport.errorMessage.value" class="draw-export-settings__error">
+        <div
+          v-if="drawExport.errorMessage.value"
+          class="draw-export-settings__error tw:text-[11px] tw:text-danger tw:bg-[color-mix(in_oklab,var(--danger)_8%,transparent)] tw:py-1.5 tw:px-2.5 tw:rounded-md"
+        >
           {{ drawExport.errorMessage.value === 'selectionEmpty' ? $t('editor.draw.export.errorSelectionEmpty') : drawExport.errorMessage.value }}
         </div>
 
         <!-- Кнопка действия -->
         <button
           type="button"
-          class="draw-export-settings__btn"
+          class="draw-export-settings__btn tw:flex tw:items-center tw:justify-center tw:w-full tw:h-8 tw:border-none tw:rounded-lg tw:bg-(--accent-fill) tw:text-(--accent-on) tw:text-xs tw:font-semibold tw:cursor-pointer tw:transition-opacity tw:duration-100 tw:hover:opacity-90 tw:disabled:opacity-50 tw:disabled:cursor-not-allowed"
           :disabled="drawExport.exporting.value"
           @click="drawExport.performExport"
         >
@@ -690,12 +723,15 @@ async function back() {
       </div>
 
       <!-- Боковая панель настроек холста -->
-      <div v-if="showSettings" class="draw-canvas-settings">
-        <div class="draw-canvas-settings__header">
-          <div class="draw-canvas-settings__title">{{ $t('editor.draw.settings.title') }}</div>
+      <div
+        v-if="showSettings"
+        class="draw-canvas-settings tw:absolute tw:right-[60px] tw:top-16 tw:z-6 tw:flex tw:flex-col tw:gap-3 tw:w-60 tw:p-3 tw:border tw:border-solid tw:border-transparent tw:rounded-[14px] tw:bg-(--menu-bg) tw:shadow-(--shadow-overlay) tw:box-border tw:max-[719px]:top-[calc(114px+max(var(--safe-area-top),0px))] tw:max-[719px]:right-[calc(14px+max(var(--safe-area-right),0px))] tw:max-[719px]:left-[calc(14px+max(var(--safe-area-left),0px))] tw:max-[719px]:w-auto tw:max-[719px]:max-h-[min(52vh,420px)] tw:max-[719px]:overflow-y-auto"
+      >
+        <div class="draw-canvas-settings__header tw:flex tw:items-center tw:justify-between">
+          <div class="draw-canvas-settings__title tw:text-[13px] tw:font-semibold tw:text-content-primary">{{ $t('editor.draw.settings.title') }}</div>
           <button
             type="button"
-            class="draw-canvas-settings__close"
+            class="draw-canvas-settings__close tw:border-none tw:bg-transparent tw:text-content-muted tw:text-xl tw:leading-none tw:cursor-pointer tw:hover:text-content-primary"
             :title="$t('editor.draw.templates.close')"
             @click="showSettings = false"
           >
@@ -704,8 +740,8 @@ async function back() {
         </div>
 
         <!-- Выбор цвета фона холста -->
-        <div class="draw-canvas-settings__section">
-          <div class="draw-canvas-settings__label">{{ $t('editor.draw.settings.bgColor') }}</div>
+        <div class="draw-canvas-settings__section tw:flex tw:flex-col tw:gap-1.5">
+          <div class="draw-canvas-settings__label tw:text-[11px] tw:font-medium tw:text-content-muted tw:uppercase tw:tracking-[0.04em] tw:select-none">{{ $t('editor.draw.settings.bgColor') }}</div>
           <NvColorPicker
             :model-value="editor.bgColor.value === 'transparent' ? null : editor.bgColor.value"
             :colors="bgColorOptions()"
@@ -716,37 +752,45 @@ async function back() {
         </div>
 
         <!-- Выбор типа сетки -->
-        <div class="draw-canvas-settings__section">
-          <div class="draw-canvas-settings__label">{{ $t('editor.draw.settings.gridType') }}</div>
-          <div class="draw-canvas-settings__segs">
+        <div class="draw-canvas-settings__section tw:flex tw:flex-col tw:gap-1.5">
+          <div class="draw-canvas-settings__label tw:text-[11px] tw:font-medium tw:text-content-muted tw:uppercase tw:tracking-[0.04em] tw:select-none">{{ $t('editor.draw.settings.gridType') }}</div>
+          <div class="draw-canvas-settings__segs tw:flex tw:flex-row tw:gap-1 tw:flex-wrap">
             <button
               type="button"
-              class="draw-canvas-settings__seg"
-              :class="{ 'is-active': editor.gridType.value === 'none' }"
+              class="draw-canvas-settings__seg tw:flex-1 tw:min-w-0 tw:h-7 tw:px-1.5 tw:border tw:border-solid tw:rounded-md tw:text-[11px] tw:text-center tw:cursor-pointer tw:transition-colors tw:duration-100 tw:whitespace-nowrap tw:overflow-hidden tw:[text-overflow:ellipsis]"
+              :class="editor.gridType.value === 'none'
+                ? 'is-active tw:bg-[color-mix(in_oklab,var(--accent)_18%,transparent)] tw:text-accent tw:border-[color-mix(in_oklab,var(--accent)_40%,transparent)]'
+                : 'tw:bg-transparent tw:text-content-secondary tw:border-transparent tw:hover:bg-(--hover-strong) tw:hover:text-content-primary'"
               @click="editor.setGridType('none')"
             >
               {{ $t('editor.draw.settings.gridNone') }}
             </button>
             <button
               type="button"
-              class="draw-canvas-settings__seg"
-              :class="{ 'is-active': editor.gridType.value === 'square' }"
+              class="draw-canvas-settings__seg tw:flex-1 tw:min-w-0 tw:h-7 tw:px-1.5 tw:border tw:border-solid tw:rounded-md tw:text-[11px] tw:text-center tw:cursor-pointer tw:transition-colors tw:duration-100 tw:whitespace-nowrap tw:overflow-hidden tw:[text-overflow:ellipsis]"
+              :class="editor.gridType.value === 'square'
+                ? 'is-active tw:bg-[color-mix(in_oklab,var(--accent)_18%,transparent)] tw:text-accent tw:border-[color-mix(in_oklab,var(--accent)_40%,transparent)]'
+                : 'tw:bg-transparent tw:text-content-secondary tw:border-transparent tw:hover:bg-(--hover-strong) tw:hover:text-content-primary'"
               @click="editor.setGridType('square')"
             >
               {{ $t('editor.draw.settings.gridSquare') }}
             </button>
             <button
               type="button"
-              class="draw-canvas-settings__seg"
-              :class="{ 'is-active': editor.gridType.value === 'lines' }"
+              class="draw-canvas-settings__seg tw:flex-1 tw:min-w-0 tw:h-7 tw:px-1.5 tw:border tw:border-solid tw:rounded-md tw:text-[11px] tw:text-center tw:cursor-pointer tw:transition-colors tw:duration-100 tw:whitespace-nowrap tw:overflow-hidden tw:[text-overflow:ellipsis]"
+              :class="editor.gridType.value === 'lines'
+                ? 'is-active tw:bg-[color-mix(in_oklab,var(--accent)_18%,transparent)] tw:text-accent tw:border-[color-mix(in_oklab,var(--accent)_40%,transparent)]'
+                : 'tw:bg-transparent tw:text-content-secondary tw:border-transparent tw:hover:bg-(--hover-strong) tw:hover:text-content-primary'"
               @click="editor.setGridType('lines')"
             >
               {{ $t('editor.draw.settings.gridLines') }}
             </button>
             <button
               type="button"
-              class="draw-canvas-settings__seg"
-              :class="{ 'is-active': editor.gridType.value === 'dots' }"
+              class="draw-canvas-settings__seg tw:flex-1 tw:min-w-0 tw:h-7 tw:px-1.5 tw:border tw:border-solid tw:rounded-md tw:text-[11px] tw:text-center tw:cursor-pointer tw:transition-colors tw:duration-100 tw:whitespace-nowrap tw:overflow-hidden tw:[text-overflow:ellipsis]"
+              :class="editor.gridType.value === 'dots'
+                ? 'is-active tw:bg-[color-mix(in_oklab,var(--accent)_18%,transparent)] tw:text-accent tw:border-[color-mix(in_oklab,var(--accent)_40%,transparent)]'
+                : 'tw:bg-transparent tw:text-content-secondary tw:border-transparent tw:hover:bg-(--hover-strong) tw:hover:text-content-primary'"
               @click="editor.setGridType('dots')"
             >
               {{ $t('editor.draw.settings.gridDots') }}
@@ -755,8 +799,8 @@ async function back() {
         </div>
 
         <!-- Авто-распознавание фигур -->
-        <div class="draw-canvas-settings__section draw-canvas-settings__section--row">
-          <div class="draw-canvas-settings__label">{{ $t('editor.draw.settings.autoDetect') }}</div>
+        <div class="draw-canvas-settings__section draw-canvas-settings__section--row tw:flex tw:flex-row tw:items-center tw:justify-between tw:gap-3">
+          <div class="draw-canvas-settings__label tw:text-[11px] tw:font-medium tw:text-content-muted tw:uppercase tw:tracking-[0.04em] tw:select-none">{{ $t('editor.draw.settings.autoDetect') }}</div>
           <NvToggle
             :model-value="editor.autoDetectShapes.value"
             @update:model-value="editor.setAutoDetectShapes"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { editorPopupInputClass } from './editorPopupClasses'
 import { nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
@@ -68,19 +69,19 @@ function onCheckbox(field: NevoNodePopoverField, event: Event) {
 <template>
   <form
     v-if="open"
-    class="editor-overlay editor-popup-panel plugin-node-popover"
+    class="editor-overlay editor-popup-panel plugin-node-popover tw:fixed tw:z-60 tw:grid tw:w-[min(520px,calc(100vw-24px))] tw:-translate-x-1/2 tw:gap-2.5 tw:overflow-y-auto tw:rounded-[calc(14px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--menu-bg) tw:p-3.5 tw:shadow-(--shadow-overlay)"
     :style="popoverStyle"
     @submit.prevent="emit('apply')"
     @keydown="emit('keydown', $event)"
   >
-    <label class="editor-popup-panel__label">{{ title }}</label>
+    <label class="editor-popup-panel__label tw:text-xs tw:font-semibold tw:tracking-[0.02em] tw:text-content-secondary tw:uppercase">{{ title }}</label>
 
     <div
       v-for="(field, index) in fields"
       :key="field.key"
-      class="plugin-node-popover__field"
+      class="plugin-node-popover__field tw:mb-2 tw:flex tw:flex-col tw:gap-1"
     >
-      <label v-if="field.label" class="plugin-node-popover__field-label" :for="`plugin-field-${field.key}`">
+      <label v-if="field.label" class="plugin-node-popover__field-label tw:text-xs tw:text-content-secondary tw:opacity-70" :for="`plugin-field-${field.key}`">
         {{ field.label }}
       </label>
 
@@ -88,7 +89,7 @@ function onCheckbox(field: NevoNodePopoverField, event: Event) {
         v-if="(field.type ?? 'textarea') === 'textarea'"
         :id="`plugin-field-${field.key}`"
         :ref="index === 0 ? setFirstFieldRef : undefined"
-        class="editor-popup-panel__input"
+        class="editor-popup-panel__input" :class="editorPopupInputClass"
         :value="stringValue(field.key)"
         :rows="field.rows ?? 6"
         :placeholder="field.placeholder"
@@ -110,7 +111,7 @@ function onCheckbox(field: NevoNodePopoverField, event: Event) {
         :id="`plugin-field-${field.key}`"
         :ref="index === 0 ? setFirstFieldRef : undefined"
         type="number"
-        class="editor-popup-panel__input"
+        class="editor-popup-panel__input" :class="editorPopupInputClass"
         :value="stringValue(field.key)"
         :min="field.min"
         :max="field.max"
@@ -119,7 +120,7 @@ function onCheckbox(field: NevoNodePopoverField, event: Event) {
         @input="onNumber(field, $event)"
       >
 
-      <label v-else-if="field.type === 'checkbox'" class="plugin-node-popover__checkbox">
+      <label v-else-if="field.type === 'checkbox'" class="plugin-node-popover__checkbox tw:flex tw:items-center tw:gap-2 tw:text-[13px]">
         <input
           :id="`plugin-field-${field.key}`"
           :ref="index === 0 ? setFirstFieldRef : undefined"
@@ -135,7 +136,7 @@ function onCheckbox(field: NevoNodePopoverField, event: Event) {
         :id="`plugin-field-${field.key}`"
         :ref="index === 0 ? setFirstFieldRef : undefined"
         type="color"
-        class="plugin-node-popover__color"
+        class="plugin-node-popover__color tw:h-7 tw:w-12 tw:border-0 tw:bg-transparent tw:bg-transparent tw:p-0"
         :value="stringValue(field.key) || '#000000'"
         @input="onText(field, $event)"
       >
@@ -145,19 +146,19 @@ function onCheckbox(field: NevoNodePopoverField, event: Event) {
         :id="`plugin-field-${field.key}`"
         :ref="index === 0 ? setFirstFieldRef : undefined"
         type="text"
-        class="editor-popup-panel__input"
+        class="editor-popup-panel__input" :class="editorPopupInputClass"
         :value="stringValue(field.key)"
         :placeholder="field.placeholder"
         @input="onText(field, $event)"
       >
     </div>
 
-    <div class="editor-popup-panel__meta">
+    <div class="editor-popup-panel__meta tw:flex tw:items-center tw:justify-between tw:gap-3 tw:text-[11px] tw:text-content-muted">
       <span class="nv-kbd">{{ t('common.keyboard.ctrlCmdEnter') }}</span>
       <span>{{ t('editor.pluginBlock.applyHint') }}</span>
     </div>
 
-    <div class="editor-popup-panel__actions">
+    <div class="editor-popup-panel__actions tw:flex tw:justify-end tw:gap-2">
       <button type="submit" class="nv-btn nv-btn--primary">
         {{ t('editor.pluginBlock.apply') }}
       </button>
@@ -167,33 +168,3 @@ function onCheckbox(field: NevoNodePopoverField, event: Event) {
     </div>
   </form>
 </template>
-
-<style scoped>
-.plugin-node-popover__field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 8px;
-}
-
-.plugin-node-popover__field-label {
-  color: var(--text-2);
-  font-size: 12px;
-  opacity: 0.7;
-}
-
-.plugin-node-popover__checkbox {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-}
-
-.plugin-node-popover__color {
-  width: 48px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  background: none;
-}
-</style>

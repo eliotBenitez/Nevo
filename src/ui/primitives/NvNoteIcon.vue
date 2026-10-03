@@ -35,9 +35,9 @@ const emojiFallback = computed(() => {
 </script>
 
 <template>
-  <span class="nv-note-icon" :style="{ fontSize: iconSize }">
+  <span class="nv-note-icon tw:inline-flex tw:h-[1em] tw:w-[1em] tw:items-center tw:justify-center tw:leading-none" :style="{ fontSize: iconSize }">
     <NvGlyph v-if="isGlyph" :id="value" :size="size" />
     <component :is="lucideComponent" v-else-if="lucideComponent" :size="size" />
-    <span v-else class="nv-note-icon__emoji">{{ emojiFallback }}</span>
+    <span v-else class="nv-note-icon__emoji tw:inline-flex tw:items-center tw:justify-center tw:text-[1em] tw:leading-none">{{ emojiFallback }}</span>
   </span>
 </template>

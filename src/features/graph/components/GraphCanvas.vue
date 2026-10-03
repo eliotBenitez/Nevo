@@ -33,8 +33,22 @@ const canvasRef = ref<HTMLCanvasElement | null>(null)
 let rafId = 0
 let running = true
 
+// Custom properties can alias other custom properties (e.g. the active accent
+// preset is `oklch(var(--accent-l) c h)` — see src/utils/workspace-settings).
+// Reading a custom property directly via getComputedStyle does NOT substitute
+// nested var() references, so it can return an unusable literal string like
+// "oklch(var(--accent-l) 0.075 185)". Resolving through a real color property
+// on a probe element forces the browser to fully substitute and compute it.
+let colorProbe: HTMLElement | null = null
+
 function getVar(variable: string): string {
-  return getComputedStyle(document.documentElement).getPropertyValue(variable).trim()
+  if (!colorProbe) {
+    colorProbe = document.createElement('span')
+    colorProbe.style.display = 'none'
+    document.body.appendChild(colorProbe)
+  }
+  colorProbe.style.color = `var(${variable})`
+  return getComputedStyle(colorProbe).color.trim()
 }
 
 function hashColor(folderId: string | null): string {
@@ -80,10 +94,10 @@ function draw() {
 
   const nodeMap = new Map(props.nodes.map(n => [n.id, n]))
   const accentColor = getVar('--accent') || 'oklch(0.66 0.18 280)'
-  const edgeBase = getVar('--text-4') || 'oklch(0.52 0.01 268)'
-  const textColor = getVar('--text-1') || 'oklch(0.96 0 0)'
-  const labelBorder = getVar('--line-2') || 'oklch(0.32 0.015 270)'
-  const labelTextMuted = getVar('--text-2') || 'oklch(0.86 0.01 270)'
+  const edgeBase = getVar('--text-muted') || 'oklch(0.52 0.01 268)'
+  const textColor = getVar('--text-primary') || 'oklch(0.96 0 0)'
+  const labelBorder = getVar('--border-default') || 'oklch(0.32 0.015 270)'
+  const labelTextMuted = getVar('--text-secondary') || 'oklch(0.86 0.01 270)'
   const mutedRing = 'oklch(0.78 0.01 270 / 0.55)'
 
   function isFocusedNode(node: SimNode): boolean {
@@ -105,17 +119,18 @@ function draw() {
       || (edge.target === props.focusedNodeId && focusedNeighborIds.has(edge.source))
   }
 
-  // --- 1. Glow halos (drawn behind edges) ---
+  // --- 1. Focus halos (drawn behind edges) ---
   for (const node of props.nodes) {
     if (hasSearch && !matchesSearch(node)) continue
     const r = nodeRadius(node)
     const isActive = node.id === props.activeNodeId
-    const isHovered = node.id === props.hoveredNodeId
     const isFocused = isFocusedNode(node)
-    const isAdjacent = isAdjacentNode(node)
     const dimmed = isDimmedByFocus(node)
-    const fillColor = isFocused || isActive ? accentColor : hashColor(node.folderId)
-    const glowAlpha = dimmed ? 0.015 : isFocused ? 0.34 : isActive ? 0.24 : isHovered ? 0.2 : isAdjacent ? 0.12 : 0.05
+    const fillColor = accentColor
+    // Borderless design: no ambient glow. Only the focused/active node keeps a
+    // soft halo so the current position stays findable in a dense graph.
+    const glowAlpha = dimmed ? 0 : isFocused ? 0.18 : isActive ? 0.12 : 0
+    if (glowAlpha === 0) continue
 
     ctx.save()
     ctx.globalAlpha = glowAlpha
@@ -320,6 +335,8 @@ onBeforeUnmount(() => {
   running = false
   cancelAnimationFrame(rafId)
   ro.disconnect()
+  colorProbe?.remove()
+  colorProbe = null
 })
 
 defineExpose({ canvasRef })
@@ -328,7 +345,7 @@ defineExpose({ canvasRef })
 <template>
   <canvas
     ref="canvasRef"
-    class="graph-canvas"
+    class="graph-canvas tw:block tw:size-full tw:cursor-grab tw:touch-none"
     @mousemove="emit('mousemove', $event)"
     @mousedown="emit('mousedown', $event)"
     @mouseup="emit('mouseup', $event)"

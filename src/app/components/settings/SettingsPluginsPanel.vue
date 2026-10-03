@@ -1,35 +1,29 @@
 <script setup lang="ts">
-import { computed, markRaw, onMounted, ref } from 'vue'
-import type { Component } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { confirm } from '@tauri-apps/plugin-dialog'
-import { AlertTriangle, BarChart3, Download, ExternalLink, FolderOpen, Github, Kanban, LayoutTemplate, Network, PackageCheck, RefreshCw, Settings, Trash2 } from 'lucide-vue-next'
+import { AlertTriangle, Download, PackageCheck, RefreshCw } from 'lucide-vue-next'
 import { useWorkspaceStore } from '../../../stores/workspace'
-import { CloudBackend } from '../../../core/workspace-backend'
+import { useNoteStore } from '../../../stores/note'
 import { systemCommands, workspaceCommands } from '../../../tauri/commands'
-import type { MarketplaceCatalogItem, MarketplacePluginStatus, PluginManifest } from '../../../types/workspace'
+import type { MarketplaceCatalogItem, PluginManifest } from '../../../types/workspace'
 import { getEnabledPluginCount, getTotalPluginCount } from '../../../utils/plugin-counts'
-import { isSystemPluginId, SYSTEM_PLUGIN_SHORT_IDS, sortPluginsByKind } from '../../../utils/system-plugins'
+import { sortPluginsByKind } from '../../../utils/system-plugins'
 import { appLogger } from '../../../utils/logger'
 import NvButton from '../../../ui/primitives/NvButton.vue'
-import NvToggle from '../../../ui/primitives/NvToggle.vue'
-import PluginSettingsForm from './PluginSettingsForm.vue'
-import GithubSyncActions from './GithubSyncActions.vue'
+import SettingsSectionHeader from './ui/SettingsSectionHeader.vue'
+import PluginCard from './plugins/PluginCard.vue'
+import PluginCatalogCard from './plugins/PluginCatalogCard.vue'
 
-type RowState = 'functional' | 'info' | 'coming'
 type PanelTab = 'installed' | 'catalog'
 type MarketplaceAction = 'install' | 'update' | 'remove'
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
+const noteStore = useNoteStore()
 const { plugins, activePath, marketplaceCatalog } = storeToRefs(workspaceStore)
-// Plugins of a cloud workspace live in a device-local directory rather than in
-// the workspace, so the path these commands take is not always activePath.
-const pluginPath = computed(() => {
-  const backend = workspaceStore.backend
-  return activePath.value ?? (backend instanceof CloudBackend ? backend.pluginWorkspacePath() : null)
-})
+const pluginPath = computed(() => activePath.value)
 
 const activeTab = ref<PanelTab>('installed')
 const pluginValidation = ref<Record<string, 'valid' | 'invalid'>>({})
@@ -44,28 +38,6 @@ const pluginIssueCount = computed(() => Object.values(pluginValidation.value).fi
 const orderedPlugins = computed(() => sortPluginsByKind(plugins.value))
 const catalogItems = computed(() => marketplaceCatalog.value?.plugins ?? [])
 const invalidCatalogCount = computed(() => catalogItems.value.filter(item => item.status === 'invalid' || item.status === 'conflict').length)
-
-const systemPluginIcons: Record<string, Component> = {
-  'nevo.kanban': markRaw(Kanban),
-  'nevo.templates': markRaw(LayoutTemplate),
-  'nevo.vega': markRaw(BarChart3),
-  'nevo.markmap': markRaw(Network),
-  'nevo.github-sync': markRaw(Github),
-}
-
-function pluginTitle(plugin: PluginManifest): string {
-  if (!isSystemPluginId(plugin.id)) return plugin.name
-  return t(`settings.plugins.${SYSTEM_PLUGIN_SHORT_IDS[plugin.id]}.title`)
-}
-
-function pluginDescription(plugin: PluginManifest): string {
-  if (!isSystemPluginId(plugin.id)) return plugin.description || t('settings.plugins.noDescription')
-  return t(`settings.plugins.${SYSTEM_PLUGIN_SHORT_IDS[plugin.id]}.description`)
-}
-
-function pluginIcon(plugin: PluginManifest): Component | null {
-  return systemPluginIcons[plugin.id] ?? null
-}
 
 function capabilityList(plugin: PluginManifest): string[] {
   if (plugin.executionMode === 'sandboxed-worker') {
@@ -126,26 +98,6 @@ function permissionReviewText(item: MarketplaceCatalogItem): string {
 
 function catalogTitle(item: MarketplaceCatalogItem): string {
   return catalogManifest(item)?.name ?? item.pluginId
-}
-
-function catalogDescription(item: MarketplaceCatalogItem): string {
-  return catalogManifest(item)?.description || item.manifestError || t('settings.plugins.noDescription')
-}
-
-function statusLabel(status: MarketplacePluginStatus): string {
-  return t(`settings.plugins.marketplaceStatus.${status}`)
-}
-
-function statusState(status: MarketplacePluginStatus): RowState {
-  if (status === 'installed' || status === 'disabled') return 'functional'
-  if (status === 'notInstalled') return 'info'
-  return 'coming'
-}
-
-function stateClass(state: RowState): string {
-  if (state === 'functional') return 'status-chip--functional'
-  if (state === 'coming') return 'status-chip--coming'
-  return 'status-chip--info'
 }
 
 function canRunMarketplaceAction(item: MarketplaceCatalogItem, action: MarketplaceAction): boolean {
@@ -230,6 +182,9 @@ async function runMarketplaceAction(item: MarketplaceCatalogItem, action: Market
     if ((action === 'install' || action === 'update') && !item.permissionFingerprint) {
       throw new Error('Marketplace permission fingerprint is missing')
     }
+    if (action === 'install' || action === 'update') {
+      await noteStore.saveNote()
+    }
     if (action === 'install') {
       await workspaceStore.installMarketplacePlugin(
         item.pluginId,
@@ -278,26 +233,27 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section class="panel settings-plugins-panel">
-    <header class="panel-header">
-      <div>
-        <h2 class="panel-title">{{ t('settings.sections.plugins') }}</h2>
-        <p class="panel-sub">{{ t('settings.plugins.description') }}</p>
-      </div>
-      <div class="header-actions">
-        <NvButton @click="workspaceStore.reloadPlugins()">
-          <RefreshCw :size="14" />
-          {{ t('settings.plugins.rescan') }}
-        </NvButton>
-        <NvButton :loading="catalogLoading" :disabled="catalogLoading" @click="refreshCatalog">
-          <RefreshCw :size="14" />
-          {{ t('settings.plugins.refreshCatalog') }}
-        </NvButton>
-      </div>
-    </header>
+  <section class="panel tw:flex tw:h-full tw:min-h-0 tw:flex-col settings-plugins-panel">
+    <SettingsSectionHeader
+      :title="t('settings.sections.plugins')"
+      :description="t('settings.plugins.description')"
+    >
+      <template #actions>
+        <div class="header-actions tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+          <NvButton variant="ghost" @click="workspaceStore.reloadPlugins()">
+            <RefreshCw :size="14" />
+            {{ t('settings.plugins.rescan') }}
+          </NvButton>
+          <NvButton :loading="catalogLoading" :disabled="catalogLoading" @click="refreshCatalog">
+            <RefreshCw :size="14" />
+            {{ t('settings.plugins.refreshCatalog') }}
+          </NvButton>
+        </div>
+      </template>
+    </SettingsSectionHeader>
 
-    <div class="panel-body">
-      <div class="plugin-tabs" role="tablist" :aria-label="t('settings.plugins.tabs.label')">
+    <div class="panel-body tw:flex tw:min-h-0 tw:flex-1 tw:flex-col tw:gap-5 tw:overflow-auto tw:overscroll-contain tw:px-[30px] tw:pt-[18px] tw:pb-[30px]">
+      <div class="plugin-tabs tw:flex tw:flex-wrap tw:items-center tw:gap-2" role="tablist" :aria-label="t('settings.plugins.tabs.label')">
         <NvButton size="sm" :active="activeTab === 'installed'" role="tab" :aria-selected="activeTab === 'installed'" @click="activeTab = 'installed'">
           {{ t('settings.plugins.tabs.installed', { count: pluginTotalCount }) }}
         </NvButton>
@@ -307,224 +263,115 @@ onMounted(async () => {
       </div>
 
       <template v-if="activeTab === 'installed'">
-        <div class="plugin-metrics" :aria-label="t('settings.plugins.summary.label')">
-          <div class="plugin-metric">
-            <PackageCheck :size="15" aria-hidden="true" />
-            <span>{{ t('settings.plugins.summary.installed') }}</span>
-            <strong>{{ pluginTotalCount }}</strong>
+        <div class="plugin-metrics tw:grid tw:grid-cols-3 tw:gap-2.5 tw:max-[980px]:grid-cols-1" :aria-label="t('settings.plugins.summary.label')">
+          <div class="plugin-metric tw:grid tw:min-w-0 tw:min-h-[58px] tw:grid-cols-[auto_minmax(0,1fr)_auto] tw:items-center tw:gap-2.5 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-transparent tw:bg-surface-subtle tw:p-3 tw:text-content-muted">
+            <PackageCheck :size="15" class="tw:text-accent" aria-hidden="true" />
+            <span class="tw:min-w-0 tw:overflow-hidden tw:text-[11.5px] tw:text-ellipsis tw:whitespace-nowrap">{{ t('settings.plugins.summary.installed') }}</span>
+            <strong class="tw:text-content-primary tw:text-base tw:font-[650] tw:[overflow-wrap:anywhere]">{{ pluginTotalCount }}</strong>
           </div>
-          <div class="plugin-metric">
-            <PackageCheck :size="15" aria-hidden="true" />
-            <span>{{ t('settings.plugins.summary.enabled') }}</span>
-            <strong>{{ pluginEnabledCount }}</strong>
+          <div class="plugin-metric tw:grid tw:min-w-0 tw:min-h-[58px] tw:grid-cols-[auto_minmax(0,1fr)_auto] tw:items-center tw:gap-2.5 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-transparent tw:bg-surface-subtle tw:p-3 tw:text-content-muted">
+            <PackageCheck :size="15" class="tw:text-accent" aria-hidden="true" />
+            <span class="tw:min-w-0 tw:overflow-hidden tw:text-[11.5px] tw:text-ellipsis tw:whitespace-nowrap">{{ t('settings.plugins.summary.enabled') }}</span>
+            <strong class="tw:text-content-primary tw:text-base tw:font-[650] tw:[overflow-wrap:anywhere]">{{ pluginEnabledCount }}</strong>
           </div>
-          <div class="plugin-metric" :class="{ 'plugin-metric--warning': pluginIssueCount }">
-            <AlertTriangle :size="15" aria-hidden="true" />
-            <span>{{ t('settings.plugins.summary.issues') }}</span>
-            <strong>{{ pluginIssueCount }}</strong>
+          <div
+            class="plugin-metric tw:grid tw:min-w-0 tw:min-h-[58px] tw:grid-cols-[auto_minmax(0,1fr)_auto] tw:items-center tw:gap-2.5 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-transparent tw:p-3 tw:text-content-muted"
+            :class="pluginIssueCount ? 'plugin-metric--warning tw:bg-[var(--surface-warning)]' : 'tw:bg-surface-subtle'"
+          >
+            <AlertTriangle :size="15" :class="pluginIssueCount ? 'tw:text-[var(--warning)]' : 'tw:text-accent'" aria-hidden="true" />
+            <span class="tw:min-w-0 tw:overflow-hidden tw:text-[11.5px] tw:text-ellipsis tw:whitespace-nowrap">{{ t('settings.plugins.summary.issues') }}</span>
+            <strong class="tw:text-content-primary tw:text-base tw:font-[650] tw:[overflow-wrap:anywhere]">{{ pluginIssueCount }}</strong>
           </div>
         </div>
 
-        <div class="filters">
-          <span class="nv-chip filter-chip filter-chip--active">{{ t('settings.plugins.filters.all', { count: pluginTotalCount }) }}</span>
+        <div class="filters tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+          <span class="nv-chip filter-chip filter-chip--active tw:bg-[var(--accent-soft)] tw:text-accent">{{ t('settings.plugins.filters.all', { count: pluginTotalCount }) }}</span>
           <span class="nv-chip filter-chip">{{ t('settings.plugins.filters.enabled', { count: pluginEnabledCount }) }}</span>
-          <span class="nv-chip filter-chip" :class="{ 'filter-chip--warning': pluginIssueCount }">{{ t('settings.plugins.filters.manifestIssues', { count: pluginIssueCount }) }}</span>
+          <span
+            class="nv-chip filter-chip"
+            :class="pluginIssueCount ? 'filter-chip--warning tw:bg-[var(--surface-warning)] tw:text-[var(--warning)]' : ''"
+          >{{ t('settings.plugins.filters.manifestIssues', { count: pluginIssueCount }) }}</span>
         </div>
 
-        <div v-if="orderedPlugins.length" class="plugin-grid">
-          <article
+        <div v-if="orderedPlugins.length" class="plugin-grid tw:grid tw:grid-cols-2 tw:gap-2.5 tw:max-[980px]:grid-cols-1">
+          <PluginCard
             v-for="plugin in orderedPlugins"
             :key="plugin.id"
-            class="plugin-card"
-            :class="{ 'plugin-card--issue': pluginValidation[plugin.id] === 'invalid' }"
-          >
-            <div class="plugin-card__icon" :class="{ 'plugin-card__icon--system': plugin.kind === 'system' }">
-              <component :is="pluginIcon(plugin)" v-if="pluginIcon(plugin)" :size="16" />
-              <span v-else>{{ plugin.name.charAt(0).toUpperCase() }}</span>
-            </div>
-            <div class="plugin-card__body">
-              <div class="plugin-card__head">
-                <div>
-                  <div class="plugin-card__title">
-                    {{ pluginTitle(plugin) }}
-                    <span class="plugin-card__version">{{ plugin.kind === 'system' ? t('settings.plugins.builtIn') : `v${plugin.version}` }}</span>
-                  </div>
-                  <div class="plugin-card__author">
-                    {{ plugin.id }} · {{ plugin.source ?? 'folder' }} ·
-                    {{ t(`settings.plugins.execution.${plugin.executionMode === 'sandboxed-worker' ? 'sandboxed' : 'trusted'}`) }}
-                  </div>
-                </div>
-                <NvToggle
-                  :model-value="plugin.enabled"
-                  @update:model-value="v => togglePlugin(plugin, v)"
-                />
-              </div>
-
-              <p class="plugin-card__desc">{{ pluginDescription(plugin) }}</p>
-
-              <div class="capability-row">
-                <span v-if="!capabilityList(plugin).length" class="capability-chip">{{ t('settings.plugins.noPermissions') }}</span>
-                <span v-for="capability in capabilityList(plugin)" :key="capability" class="capability-chip">{{ capability }}</span>
-              </div>
-
-              <div class="plugin-card__footer">
-                <NvButton variant="ghost" size="xs" @click="openPluginFolder(plugin.id)">
-                  <FolderOpen :size="13" />
-                  {{ t('settings.plugins.source') }}
-                </NvButton>
-                <NvButton
-                  v-if="plugin.settingsSchema?.length"
-                  variant="ghost"
-                  size="xs"
-                  :active="expandedSettings[plugin.id]"
-                  @click="toggleSettingsExpanded(plugin.id)"
-                >
-                  <Settings :size="13" />
-                  {{ expandedSettings[plugin.id] ? t('settings.plugins.settings.hide') : t('settings.plugins.settings.configure') }}
-                </NvButton>
-                <NvButton
-                  v-if="plugin.kind === 'marketplace'"
-                  variant="ghost"
-                  size="xs"
-                  :disabled="loadingPluginId === plugin.id"
-                  :loading="loadingPluginId === plugin.id"
-                  @click="runMarketplaceAction({ pluginId: plugin.id, pluginPath: `plugins/${plugin.id}`, treeSha: '', status: 'installed', manifest: plugin, manifestError: null, installedVersion: plugin.version, sourceUrl: `https://github.com/eliotBenitez/nevo-marketplace/tree/main/plugins/${plugin.id}`, files: [], permissionFingerprint: null }, 'remove')"
-                >
-                  <Trash2 :size="13" />
-                  {{ t('settings.plugins.remove') }}
-                </NvButton>
-                <div class="spacer" />
-                <span class="status-chip" :class="stateClass(pluginValidation[plugin.id] === 'invalid' ? 'coming' : 'functional')">
-                  {{ pluginValidation[plugin.id] === 'invalid' ? t('settings.plugins.manifestIssue') : t('settings.plugins.manifestValid') }}
-                </span>
-              </div>
-
-              <template v-if="plugin.settingsSchema?.length && expandedSettings[plugin.id]">
-                <PluginSettingsForm :plugin="plugin" />
-                <GithubSyncActions v-if="plugin.id === 'nevo.github-sync'" :plugin="plugin" />
-              </template>
-            </div>
-          </article>
+            :plugin="plugin"
+            :is-valid="pluginValidation[plugin.id] !== 'invalid'"
+            :is-expanded="Boolean(expandedSettings[plugin.id])"
+            :is-loading="loadingPluginId === plugin.id"
+            @toggle="togglePlugin(plugin, $event)"
+            @toggle-settings="toggleSettingsExpanded(plugin.id)"
+            @open-folder="openPluginFolder(plugin.id)"
+            @remove="runMarketplaceAction({ pluginId: plugin.id, pluginPath: `plugins/${plugin.id}`, treeSha: '', status: 'installed', manifest: plugin, manifestError: null, installedVersion: plugin.version, sourceUrl: `https://github.com/eliotBenitez/nevo-marketplace/tree/main/plugins/${plugin.id}`, files: [], permissionFingerprint: null }, 'remove')"
+          />
         </div>
 
-        <div v-else class="empty-state">
-          <div class="empty-state__title">{{ t('settings.plugins.emptyTitle') }}</div>
-          <div class="empty-state__sub">{{ t('settings.plugins.emptyDescription') }}</div>
+        <div v-else class="empty-state tw:grid tw:justify-items-center tw:gap-1.5 tw:px-[18px] tw:py-7 tw:text-center tw:text-content-muted tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-dashed tw:border-[var(--border-default)] tw:bg-transparent">
+          <div class="empty-state__title tw:text-content-primary tw:text-sm tw:font-[560]">{{ t('settings.plugins.emptyTitle') }}</div>
+          <div class="empty-state__sub tw:mt-1 tw:text-content-muted tw:text-xs">{{ t('settings.plugins.emptyDescription') }}</div>
         </div>
       </template>
 
       <template v-else>
-        <div class="plugin-metrics" :aria-label="t('settings.plugins.summary.label')">
-          <div class="plugin-metric">
-            <Download :size="15" aria-hidden="true" />
-            <span>{{ t('settings.plugins.summary.catalog') }}</span>
-            <strong>{{ catalogItems.length }}</strong>
+        <div class="plugin-metrics tw:grid tw:grid-cols-3 tw:gap-2.5 tw:max-[980px]:grid-cols-1" :aria-label="t('settings.plugins.summary.label')">
+          <div class="plugin-metric tw:grid tw:min-w-0 tw:min-h-[58px] tw:grid-cols-[auto_minmax(0,1fr)_auto] tw:items-center tw:gap-2.5 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-transparent tw:bg-surface-subtle tw:p-3 tw:text-content-muted">
+            <Download :size="15" class="tw:text-accent" aria-hidden="true" />
+            <span class="tw:min-w-0 tw:overflow-hidden tw:text-[11.5px] tw:text-ellipsis tw:whitespace-nowrap">{{ t('settings.plugins.summary.catalog') }}</span>
+            <strong class="tw:text-content-primary tw:text-base tw:font-[650] tw:[overflow-wrap:anywhere]">{{ catalogItems.length }}</strong>
           </div>
-          <div class="plugin-metric" :class="{ 'plugin-metric--warning': invalidCatalogCount }">
-            <AlertTriangle :size="15" aria-hidden="true" />
-            <span>{{ t('settings.plugins.summary.issues') }}</span>
-            <strong>{{ invalidCatalogCount }}</strong>
+          <div
+            class="plugin-metric tw:grid tw:min-w-0 tw:min-h-[58px] tw:grid-cols-[auto_minmax(0,1fr)_auto] tw:items-center tw:gap-2.5 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-transparent tw:p-3 tw:text-content-muted"
+            :class="invalidCatalogCount ? 'plugin-metric--warning tw:bg-[var(--surface-warning)]' : 'tw:bg-surface-subtle'"
+          >
+            <AlertTriangle :size="15" :class="invalidCatalogCount ? 'tw:text-[var(--warning)]' : 'tw:text-accent'" aria-hidden="true" />
+            <span class="tw:min-w-0 tw:overflow-hidden tw:text-[11.5px] tw:text-ellipsis tw:whitespace-nowrap">{{ t('settings.plugins.summary.issues') }}</span>
+            <strong class="tw:text-content-primary tw:text-base tw:font-[650] tw:[overflow-wrap:anywhere]">{{ invalidCatalogCount }}</strong>
           </div>
-          <div class="plugin-metric">
-            <RefreshCw :size="15" aria-hidden="true" />
-            <span>{{ t('settings.plugins.summary.cache') }}</span>
-            <strong>{{ marketplaceCatalog?.fromCache ? t('settings.common.on') : t('settings.common.off') }}</strong>
+          <div class="plugin-metric tw:grid tw:min-w-0 tw:min-h-[58px] tw:grid-cols-[auto_minmax(0,1fr)_auto] tw:items-center tw:gap-2.5 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-transparent tw:bg-surface-subtle tw:p-3 tw:text-content-muted">
+            <RefreshCw :size="15" class="tw:text-accent" aria-hidden="true" />
+            <span class="tw:min-w-0 tw:overflow-hidden tw:text-[11.5px] tw:text-ellipsis tw:whitespace-nowrap">{{ t('settings.plugins.summary.cache') }}</span>
+            <strong class="tw:text-content-primary tw:text-base tw:font-[650] tw:[overflow-wrap:anywhere]">{{ marketplaceCatalog?.fromCache ? t('settings.common.on') : t('settings.common.off') }}</strong>
           </div>
         </div>
 
-        <div class="filters">
-          <span class="nv-chip filter-chip filter-chip--active">{{ t('settings.plugins.marketplace') }} · {{ catalogItems.length }}</span>
-          <span class="nv-chip filter-chip" :class="{ 'filter-chip--warning': invalidCatalogCount }">{{ t('settings.plugins.filters.manifestIssues', { count: invalidCatalogCount }) }}</span>
-          <span v-if="marketplaceCatalog?.fromCache" class="status-chip status-chip--info">{{ t('settings.plugins.cacheNotice') }}</span>
-          <span v-if="catalogError || marketplaceCatalog?.error" class="status-chip status-chip--coming">{{ catalogError || marketplaceCatalog?.error }}</span>
+        <div class="filters tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+          <span class="nv-chip filter-chip filter-chip--active tw:bg-[var(--accent-soft)] tw:text-accent">{{ t('settings.plugins.marketplace') }} · {{ catalogItems.length }}</span>
+          <span
+            class="nv-chip filter-chip"
+            :class="invalidCatalogCount ? 'filter-chip--warning tw:bg-[var(--surface-warning)] tw:text-[var(--warning)]' : ''"
+          >{{ t('settings.plugins.filters.manifestIssues', { count: invalidCatalogCount }) }}</span>
+          <span v-if="marketplaceCatalog?.fromCache" class="status-chip status-chip--info tw:inline-flex tw:h-5 tw:items-center tw:justify-center tw:rounded-full tw:border tw:border-transparent tw:px-2 tw:text-[10.5px] tw:font-semibold tw:bg-[var(--hover-strong)] tw:text-content-muted">{{ t('settings.plugins.cacheNotice') }}</span>
+          <span v-if="catalogError || marketplaceCatalog?.error" class="status-chip status-chip--coming tw:inline-flex tw:h-5 tw:items-center tw:justify-center tw:rounded-full tw:border tw:border-transparent tw:px-2 tw:text-[10.5px] tw:font-semibold tw:bg-[var(--surface-warning)] tw:text-[var(--warning)]">{{ catalogError || marketplaceCatalog?.error }}</span>
         </div>
 
-        <div v-if="catalogLoading && !catalogItems.length" class="empty-state">
-          <RefreshCw :size="24" class="empty-state__icon plugin-loading-icon" aria-hidden="true" />
-          <div class="empty-state__title">{{ t('settings.plugins.catalogLoading') }}</div>
-          <div class="empty-state__sub">{{ t('settings.plugins.catalogLoadingDescription') }}</div>
+        <div v-if="catalogLoading && !catalogItems.length" class="empty-state tw:grid tw:justify-items-center tw:gap-1.5 tw:px-[18px] tw:py-7 tw:text-center tw:text-content-muted tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-dashed tw:border-[var(--border-default)] tw:bg-transparent">
+          <RefreshCw :size="24" class="empty-state__icon plugin-loading-icon tw:text-content-muted" aria-hidden="true" />
+          <div class="empty-state__title tw:text-content-primary tw:text-sm tw:font-[560]">{{ t('settings.plugins.catalogLoading') }}</div>
+          <div class="empty-state__sub tw:mt-1 tw:text-content-muted tw:text-xs">{{ t('settings.plugins.catalogLoadingDescription') }}</div>
         </div>
 
-        <div v-else-if="catalogItems.length" class="plugin-grid">
-          <article
+        <div v-else-if="catalogItems.length" class="plugin-grid tw:grid tw:grid-cols-2 tw:gap-2.5 tw:max-[980px]:grid-cols-1">
+          <PluginCatalogCard
             v-for="item in catalogItems"
             :key="item.pluginId"
-            class="plugin-card"
-            :class="{ 'plugin-card--issue': item.status === 'invalid' || item.status === 'conflict' }"
-          >
-            <div class="plugin-card__icon">
-              <Download :size="16" />
-            </div>
-            <div class="plugin-card__body">
-              <div class="plugin-card__head">
-                <div>
-                  <div class="plugin-card__title">
-                    {{ catalogTitle(item) }}
-                    <span v-if="item.manifest" class="plugin-card__version">v{{ item.manifest.version }}</span>
-                  </div>
-                  <div class="plugin-card__author">
-                    {{ item.pluginId }}
-                    <template v-if="item.installedVersion"> · {{ t('settings.plugins.installedVersion', { version: item.installedVersion }) }}</template>
-                  </div>
-                </div>
-                <span class="status-chip" :class="stateClass(statusState(item.status))">{{ statusLabel(item.status) }}</span>
-              </div>
-
-              <p class="plugin-card__desc">{{ catalogDescription(item) }}</p>
-
-              <div class="capability-row">
-                <span v-if="!catalogCapabilities(item).length" class="capability-chip">{{ t('settings.plugins.noPermissions') }}</span>
-                <span v-for="capability in catalogCapabilities(item)" :key="capability" class="capability-chip">{{ capability }}</span>
-                <span v-for="host in catalogDomains(item)" :key="`network:${host}`" class="capability-chip">HTTPS {{ host }}</span>
-              </div>
-
-              <div class="plugin-card__footer">
-                <NvButton
-                  v-if="item.status === 'notInstalled'"
-                  variant="primary"
-                  size="xs"
-                  :disabled="!canRunMarketplaceAction(item, 'install')"
-                  :loading="loadingPluginId === item.pluginId"
-                  @click="runMarketplaceAction(item, 'install')"
-                >
-                  <Download :size="13" />
-                  {{ t('settings.plugins.install') }}
-                </NvButton>
-                <NvButton
-                  v-if="item.status === 'updateAvailable'"
-                  variant="primary"
-                  size="xs"
-                  :disabled="!canRunMarketplaceAction(item, 'update')"
-                  :loading="loadingPluginId === item.pluginId"
-                  @click="runMarketplaceAction(item, 'update')"
-                >
-                  <RefreshCw :size="13" />
-                  {{ t('settings.plugins.update') }}
-                </NvButton>
-                <NvButton
-                  v-if="item.status === 'installed' || item.status === 'disabled' || item.status === 'updateAvailable'"
-                  variant="ghost"
-                  size="xs"
-                  :disabled="!canRunMarketplaceAction(item, 'remove')"
-                  :loading="loadingPluginId === item.pluginId"
-                  @click="runMarketplaceAction(item, 'remove')"
-                >
-                  <Trash2 :size="13" />
-                  {{ t('settings.plugins.remove') }}
-                </NvButton>
-                <NvButton variant="ghost" size="xs" @click="openExternalSource(item.sourceUrl)">
-                  <ExternalLink :size="13" />
-                  {{ t('settings.plugins.openSource') }}
-                </NvButton>
-              </div>
-            </div>
-          </article>
+            :item="item"
+            :is-loading="loadingPluginId === item.pluginId"
+            :can-install="canRunMarketplaceAction(item, 'install')"
+            :can-update="canRunMarketplaceAction(item, 'update')"
+            :can-remove="canRunMarketplaceAction(item, 'remove')"
+            @install="runMarketplaceAction(item, 'install')"
+            @update="runMarketplaceAction(item, 'update')"
+            @remove="runMarketplaceAction(item, 'remove')"
+            @open-source="openExternalSource(item.sourceUrl)"
+          />
         </div>
 
-        <div v-else class="empty-state">
-          <Download :size="24" class="empty-state__icon" aria-hidden="true" />
-          <div class="empty-state__title">{{ t('settings.plugins.catalogEmptyTitle') }}</div>
-          <div class="empty-state__sub">{{ t('settings.plugins.catalogEmptyDescription') }}</div>
+        <div v-else class="empty-state tw:grid tw:justify-items-center tw:gap-1.5 tw:px-[18px] tw:py-7 tw:text-center tw:text-content-muted tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-dashed tw:border-[var(--border-default)] tw:bg-transparent">
+          <Download :size="24" class="empty-state__icon tw:text-content-muted" aria-hidden="true" />
+          <div class="empty-state__title tw:text-content-primary tw:text-sm tw:font-[560]">{{ t('settings.plugins.catalogEmptyTitle') }}</div>
+          <div class="empty-state__sub tw:mt-1 tw:text-content-muted tw:text-xs">{{ t('settings.plugins.catalogEmptyDescription') }}</div>
         </div>
       </template>
     </div>

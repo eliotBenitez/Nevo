@@ -14,6 +14,13 @@ describe('latexToTypstMath', () => {
     expect(latexToTypstMath('\\frac{a}{\\frac{b}}')).toBe('frac(a, frac(b, ""))')
   })
 
+  it('converts binomial coefficients', () => {
+    expect(latexToTypstMath('\\binom{n}{k}')).toBe('binom(n, k)')
+    expect(latexToTypstMath('\\dbinom{n+1}{2}')).toBe('binom(n+1, 2)')
+    expect(latexToTypstMath('\\tbinom nk')).toBe('binom(n, k)')
+    expect(latexToTypstMath('\\binom{n}')).toBe('binom(n, "")')
+  })
+
   it('converts roots', () => {
     expect(latexToTypstMath('\\sqrt{x}')).toBe('sqrt(x)')
     expect(latexToTypstMath('\\sqrt[3]{x}')).toBe('root(3, x)')
@@ -39,6 +46,13 @@ describe('latexToTypstMath', () => {
     expect(latexToTypstMath('x \\le y')).toBe('x ≤ y')
     expect(latexToTypstMath('\\infty')).toBe('∞')
     expect(latexToTypstMath('\\partial f')).toBe('∂ f')
+  })
+
+  it('applies the limits modifier to operators', () => {
+    expect(latexToTypstMath('\\lim\\limits_{x\\to0} f(x)'))
+      .toBe('limits(lim) _(x → 0) f(x)')
+    expect(latexToTypstMath('\\sum \\limits_{i=1}^n i'))
+      .toBe('limits(∑) _(i=1)^(n) i')
   })
 
   it('uses compile-safe symbols instead of version-sensitive Typst names', () => {

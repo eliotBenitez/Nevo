@@ -12,6 +12,7 @@ export const useGraphStore = defineStore('graph', () => {
   const backlinks = ref<BacklinkRef[]>([])
   const outlinks = ref<GraphEdge[]>([])
   const activeNoteId = ref<string | null>(null)
+  let loadGeneration = 0
 
   // The local Rust graph index stores empty title/icon for backlink sources
   // (only the cloud backend enriches them). Fill missing metadata from the
@@ -30,6 +31,10 @@ export const useGraphStore = defineStore('graph', () => {
   }
 
   async function loadNoteGraph(noteId: string) {
+    const generation = ++loadGeneration
+    activeNoteId.value = noteId
+    backlinks.value = []
+    outlinks.value = []
     const backend = workspaceStore.backend
     if (!backend) return
 
@@ -38,6 +43,7 @@ export const useGraphStore = defineStore('graph', () => {
         backend.graphGetBacklinks(noteId),
         backend.graphGetOutlinks(noteId),
       ])
+      if (generation !== loadGeneration) return
       activeNoteId.value = noteId
       backlinks.value = enrichBacklinks(bl)
       outlinks.value = ol
@@ -52,12 +58,16 @@ export const useGraphStore = defineStore('graph', () => {
   }
 
   async function updateNoteEdges(noteId: string, edges: ExtractedEdge[]) {
+    const generation = loadGeneration
     const backend = workspaceStore.backend
     if (!backend) return
     try {
       await backend.graphUpdateNoteEdges(noteId, edges)
-      if (activeNoteId.value === noteId) {
-        outlinks.value = await backend.graphGetOutlinks(noteId)
+      if (activeNoteId.value === noteId && generation === loadGeneration) {
+        const nextOutlinks = await backend.graphGetOutlinks(noteId)
+        if (activeNoteId.value === noteId && generation === loadGeneration) {
+          outlinks.value = nextOutlinks
+        }
       }
     } catch (error) {
       await appLogger.error({
@@ -89,6 +99,7 @@ export const useGraphStore = defineStore('graph', () => {
   }
 
   function clear() {
+    loadGeneration++
     backlinks.value = []
     outlinks.value = []
     activeNoteId.value = null

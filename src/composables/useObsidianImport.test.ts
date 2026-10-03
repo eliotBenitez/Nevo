@@ -7,7 +7,6 @@ const commandMocks = vi.hoisted(() => ({
   pickWorkspaceDirectory: vi.fn(),
   readObsidianVault: vi.fn(),
   saveNote: vi.fn(async (_workspacePath: string, _note: NoteDocument) => undefined),
-  deleteYjsState: vi.fn(async () => undefined),
   importVaultAsset: vi.fn(),
 }))
 vi.mock('../tauri/commands', () => ({
@@ -17,13 +16,13 @@ vi.mock('../tauri/commands', () => ({
     saveNote: commandMocks.saveNote,
     importVaultAsset: commandMocks.importVaultAsset,
   },
-  collabCommands: { deleteYjsState: commandMocks.deleteYjsState },
 }))
 
 let folderCounter = 0
 let noteCounter = 0
 
 const mockBackend = vi.hoisted(() => ({
+  handle: { kind: 'local' as const, path: '/workspace' },
   createFolder: vi.fn(),
   createNote: vi.fn(),
   listSidebarNotePreviews: vi.fn(async () => []),
@@ -58,7 +57,6 @@ beforeEach(async () => {
   commandMocks.pickWorkspaceDirectory.mockReset()
   commandMocks.readObsidianVault.mockReset()
   commandMocks.saveNote.mockClear()
-  commandMocks.deleteYjsState.mockClear()
   commandMocks.importVaultAsset.mockReset()
   mockBackend.createFolder.mockReset()
   mockBackend.createNote.mockReset()
@@ -165,9 +163,6 @@ describe('useObsidianImport', () => {
 
     // The body H1 is preserved (title comes from the filename, not the H1).
     expect(JSON.stringify(rootContent)).toContain('"type":"heading"')
-
-    // Local-backend persistence resets the disk-backed Y.Doc for each note.
-    expect(commandMocks.deleteYjsState).toHaveBeenCalledTimes(2)
   })
 
   it('counts an unresolved wiki-link and still completes the import', async () => {

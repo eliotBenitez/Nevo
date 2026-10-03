@@ -29,6 +29,9 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const NONE = ''
+const queryFieldClass = 'tw:flex tw:min-w-0 tw:flex-col tw:gap-1'
+const queryLabelClass = 'tw:text-[10.5px] tw:font-semibold tw:tracking-[0.02em] tw:text-content-muted tw:uppercase'
+const queryControlClass = 'tw:min-w-0 tw:w-full'
 const SORT_FIELDS: NoteSortField[] = ['title', 'date', 'updatedAt', 'createdAt']
 
 function patch(next: Partial<QueryBlockData['filters']>) {
@@ -112,32 +115,32 @@ function setView(view: string) {
     @remove="emit('remove')"
     @keydown="emit('keydown', $event)"
   >
-    <div class="query-popover__grid">
-      <div class="query-popover__field" role="group" :aria-label="t('editor.queryBlock.filters.tagsAny')">
-        <span class="query-popover__field-label">{{ t('editor.queryBlock.filters.tagsAny') }}</span>
+    <div class="query-popover__grid tw:grid tw:grid-cols-[repeat(auto-fit,minmax(min(168px,100%),1fr))] tw:gap-2">
+      <div class="query-popover__field" :class="queryFieldClass" role="group" :aria-label="t('editor.queryBlock.filters.tagsAny')">
+        <span class="query-popover__field-label" :class="queryLabelClass">{{ t('editor.queryBlock.filters.tagsAny') }}</span>
         <NvTextInput
           id="query-tags-any"
           v-model="tagsAnyText"
-          class="query-popover__control"
+          class="query-popover__control" :class="queryControlClass"
           :aria-label="t('editor.queryBlock.filters.tagsAny')"
           :placeholder="t('editor.queryBlock.filters.tagsPlaceholder')"
         />
       </div>
 
-      <div class="query-popover__field" role="group" :aria-label="t('editor.queryBlock.filters.tagsAll')">
-        <span class="query-popover__field-label">{{ t('editor.queryBlock.filters.tagsAll') }}</span>
+      <div class="query-popover__field" :class="queryFieldClass" role="group" :aria-label="t('editor.queryBlock.filters.tagsAll')">
+        <span class="query-popover__field-label" :class="queryLabelClass">{{ t('editor.queryBlock.filters.tagsAll') }}</span>
         <NvTextInput
           v-model="tagsAllText"
-          class="query-popover__control"
+          class="query-popover__control" :class="queryControlClass"
           :aria-label="t('editor.queryBlock.filters.tagsAll')"
           :placeholder="t('editor.queryBlock.filters.tagsPlaceholder')"
         />
       </div>
 
-      <div class="query-popover__field" role="group" :aria-label="t('editor.queryBlock.filters.status')">
-        <span class="query-popover__field-label">{{ t('editor.queryBlock.filters.status') }}</span>
+      <div class="query-popover__field" :class="queryFieldClass" role="group" :aria-label="t('editor.queryBlock.filters.status')">
+        <span class="query-popover__field-label" :class="queryLabelClass">{{ t('editor.queryBlock.filters.status') }}</span>
         <NvSelect
-          class="query-popover__control"
+          class="query-popover__control" :class="queryControlClass"
           :model-value="data.filters.status ?? NONE"
           :options="statusOptions"
           :min-width="'100%'"
@@ -145,10 +148,10 @@ function setView(view: string) {
         />
       </div>
 
-      <div class="query-popover__field" role="group" :aria-label="t('editor.queryBlock.filters.type')">
-        <span class="query-popover__field-label">{{ t('editor.queryBlock.filters.type') }}</span>
+      <div class="query-popover__field" :class="queryFieldClass" role="group" :aria-label="t('editor.queryBlock.filters.type')">
+        <span class="query-popover__field-label" :class="queryLabelClass">{{ t('editor.queryBlock.filters.type') }}</span>
         <NvSelect
-          class="query-popover__control"
+          class="query-popover__control" :class="queryControlClass"
           :model-value="data.filters.noteType ?? NONE"
           :options="typeOptions"
           :min-width="'100%'"
@@ -156,20 +159,20 @@ function setView(view: string) {
         />
       </div>
 
-      <div class="query-popover__field" role="group" :aria-label="t('editor.queryBlock.filters.dateFrom')">
-        <span class="query-popover__field-label">{{ t('editor.queryBlock.filters.dateFrom') }}</span>
+      <div class="query-popover__field" :class="queryFieldClass" role="group" :aria-label="t('editor.queryBlock.filters.dateFrom')">
+        <span class="query-popover__field-label" :class="queryLabelClass">{{ t('editor.queryBlock.filters.dateFrom') }}</span>
         <NvDatePicker
-          class="query-popover__control"
+          class="query-popover__control" :class="queryControlClass"
           :model-value="data.filters.dateFrom"
           :placeholder="t('editor.queryBlock.filters.dateFrom')"
           @update:model-value="patch({ dateFrom: $event })"
         />
       </div>
 
-      <div class="query-popover__field" role="group" :aria-label="t('editor.queryBlock.filters.dateTo')">
-        <span class="query-popover__field-label">{{ t('editor.queryBlock.filters.dateTo') }}</span>
+      <div class="query-popover__field" :class="queryFieldClass" role="group" :aria-label="t('editor.queryBlock.filters.dateTo')">
+        <span class="query-popover__field-label" :class="queryLabelClass">{{ t('editor.queryBlock.filters.dateTo') }}</span>
         <NvDatePicker
-          class="query-popover__control"
+          class="query-popover__control" :class="queryControlClass"
           :model-value="data.filters.dateTo"
           :placeholder="t('editor.queryBlock.filters.dateTo')"
           @update:model-value="patch({ dateTo: $event })"
@@ -177,13 +180,13 @@ function setView(view: string) {
       </div>
 
       <div
-        class="query-popover__field query-popover__field--wide"
+        class="query-popover__field query-popover__field--wide tw:col-[1/-1]" :class="queryFieldClass"
         role="group"
         :aria-label="t('editor.queryBlock.filters.folder')"
       >
-        <span class="query-popover__field-label">{{ t('editor.queryBlock.filters.folder') }}</span>
+        <span class="query-popover__field-label" :class="queryLabelClass">{{ t('editor.queryBlock.filters.folder') }}</span>
         <NvTextInput
-          class="query-popover__control"
+          class="query-popover__control" :class="queryControlClass"
           :model-value="data.filters.folderPathPrefix ?? ''"
           :aria-label="t('editor.queryBlock.filters.folder')"
           :placeholder="t('editor.queryBlock.filters.folderPlaceholder')"
@@ -192,17 +195,17 @@ function setView(view: string) {
       </div>
 
       <NvCheckbox
-        class="query-popover__checkbox"
+        class="query-popover__checkbox tw:col-[1/-1] tw:text-xs tw:text-content-secondary"
         size="sm"
         :label="t('editor.queryBlock.filters.includeSubtree')"
         :model-value="data.filters.includeSubtree"
         @update:model-value="patch({ includeSubtree: $event })"
       />
 
-      <div class="query-popover__field" role="group" :aria-label="t('editor.queryBlock.view')">
-        <span class="query-popover__field-label">{{ t('editor.queryBlock.view') }}</span>
+      <div class="query-popover__field" :class="queryFieldClass" role="group" :aria-label="t('editor.queryBlock.view')">
+        <span class="query-popover__field-label" :class="queryLabelClass">{{ t('editor.queryBlock.view') }}</span>
         <NvSelect
-          class="query-popover__control"
+          class="query-popover__control" :class="queryControlClass"
           :model-value="data.view"
           :options="viewOptions"
           :min-width="'100%'"
@@ -213,7 +216,7 @@ function setView(view: string) {
 
     <NvMenuSeparator />
 
-    <div class="query-popover__sorts">
+    <div class="query-popover__sorts tw:flex tw:flex-col tw:gap-1.5">
       <NvMenuLabel :label="t('editor.queryBlock.sort')" />
       <div v-for="(rule, index) in data.sorts" :key="`${rule.field}-${index}`" class="nv-db-sort__rule">
         <NvSelect

@@ -13,12 +13,20 @@ static ACTIVE_WORKSPACE_ROOT: LazyLock<RwLock<Option<PathBuf>>> =
 #[cfg(windows)]
 static WINDOWS_REPLACE_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
-/// Write `contents` to `path` atomically: write a temp file in the same
-/// directory, then rename it over the target. Rename is atomic on the same
-/// filesystem, so a crash mid-write cannot leave a half-written (corrupt) file.
-pub fn write_atomic(path: &Path, contents: &[u8]) -> std::io::Result<()> {
-    let dir = path.parent().unwrap_or_else(|| Path::new("."));
-    let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("tmp");
+/// Writes `contents` to a new, fsynced temp file beside `target` (same
+/// directory, hidden name) without renaming it into place. `target`'s
+/// directory must already exist — callers that write into a directory that
+/// may not exist yet are responsible for creating it first.
+///
+/// Split out of `write_atomic` so a journaled multi-file operation (see
+/// `note::restore_journal`) can write every temp file first, record them in a
+/// journal, and only then rename each into place. A snapshot restore stages
+/// just the note file today; rolling forward a journal marker left by an
+/// older build (note file *and* its legacy `.yjs` state) still goes through
+/// the same generic staging.
+pub(crate) fn write_temp_sibling(target: &Path, contents: &[u8]) -> std::io::Result<PathBuf> {
+    let dir = target.parent().unwrap_or_else(|| Path::new("."));
+    let file_name = target.file_name().and_then(|n| n.to_str()).unwrap_or("tmp");
     let tmp = dir.join(format!(".{file_name}.{}.tmp", Uuid::new_v4()));
     let mut file = OpenOptions::new().write(true).create_new(true).open(&tmp)?;
 
@@ -34,8 +42,27 @@ pub fn write_atomic(path: &Path, contents: &[u8]) -> std::io::Result<()> {
         let _ = std::fs::remove_file(&tmp);
         return Err(error);
     }
+    Ok(tmp)
+}
 
-    let result = replace_file(&tmp, path).and_then(|()| sync_parent_directory(dir));
+/// Renames `source` over `target` using the platform-safe replace (atomic
+/// same-filesystem rename on Unix, `MoveFileExW` with replace-existing on
+/// Windows), then fsyncs `target`'s parent directory so the rename itself is
+/// durable. Exposed so callers with more than one file to commit (see
+/// `note::restore_journal`) can reuse the exact replace semantics `write_atomic`
+/// uses instead of duplicating them.
+pub(crate) fn replace_file_durable(source: &Path, target: &Path) -> std::io::Result<()> {
+    let dir = target.parent().unwrap_or_else(|| Path::new("."));
+    replace_file(source, target)?;
+    sync_parent_directory(dir)
+}
+
+/// Write `contents` to `path` atomically: write a temp file in the same
+/// directory, then rename it over the target. Rename is atomic on the same
+/// filesystem, so a crash mid-write cannot leave a half-written (corrupt) file.
+pub fn write_atomic(path: &Path, contents: &[u8]) -> std::io::Result<()> {
+    let tmp = write_temp_sibling(path, contents)?;
+    let result = replace_file_durable(&tmp, path);
 
     match result {
         Ok(()) => Ok(()),
@@ -93,12 +120,12 @@ fn replace_file(source: &Path, target: &Path) -> std::io::Result<()> {
 }
 
 #[cfg(unix)]
-fn sync_parent_directory(dir: &Path) -> std::io::Result<()> {
+pub(crate) fn sync_parent_directory(dir: &Path) -> std::io::Result<()> {
     std::fs::File::open(dir)?.sync_all()
 }
 
 #[cfg(not(unix))]
-fn sync_parent_directory(_dir: &Path) -> std::io::Result<()> {
+pub(crate) fn sync_parent_directory(_dir: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
@@ -229,6 +256,34 @@ fn workspace_file_in_root(root: &Path, request_path: &str) -> Result<PathBuf, St
     Ok(target)
 }
 
+/// Resolves a notebook image `src` (`.nevo/assets/<name>`) to a canonical file
+/// inside `workspace_root`, which must itself be canonical. Rejects the plugins
+/// directory and any non-raster extension (SVG is untrusted active content).
+pub(crate) fn notebook_image_asset(workspace_root: &Path, src: &str) -> Result<PathBuf, String> {
+    let mut parts = src.split('/');
+    let name = match (parts.next(), parts.next(), parts.next(), parts.next()) {
+        (Some(".nevo"), Some("assets"), Some(name), None) if !name.is_empty() => name,
+        _ => return Err("Notebook image must be a workspace asset".to_string()),
+    };
+    let is_raster = Path::new(name)
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| {
+            matches!(
+                extension.to_ascii_lowercase().as_str(),
+                "png" | "jpg" | "jpeg" | "webp" | "gif"
+            )
+        });
+    if !is_raster {
+        return Err("Notebook image format is not supported".to_string());
+    }
+    let target = workspace_file_in_root(workspace_root, src)?;
+    if !target.starts_with(workspace_root.join(".nevo").join("assets")) {
+        return Err("Notebook image must be a workspace asset".to_string());
+    }
+    Ok(target)
+}
+
 fn active_workspace_file(request_path: &str) -> Result<PathBuf, String> {
     let active = ACTIVE_WORKSPACE_ROOT
         .read()
@@ -297,7 +352,7 @@ pub fn workspace_asset_response(request_path: &str) -> tauri::http::Response<Vec
 
 #[cfg(test)]
 mod tests {
-    use super::{validate_id, workspace_file_in_root, write_atomic};
+    use super::{notebook_image_asset, validate_id, workspace_file_in_root, write_atomic};
 
     #[test]
     fn validate_id_accepts_uuids_and_rejects_traversal() {
@@ -377,6 +432,29 @@ mod tests {
         assert!(workspace_file_in_root(&root, ".nevo/plugins/example/index.js").is_ok());
         assert!(workspace_file_in_root(&root, "secret.txt").is_err());
         assert!(workspace_file_in_root(&root, ".nevo/assets/../../../secret.txt").is_err());
+
+        std::fs::remove_dir_all(dir).ok();
+    }
+
+    #[test]
+    fn notebook_image_asset_resolves_only_raster_workspace_assets() {
+        let dir = std::env::temp_dir().join(format!("nevo_nbimg_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(dir.join(".nevo/assets")).unwrap();
+        std::fs::create_dir_all(dir.join(".nevo/plugins")).unwrap();
+        std::fs::write(dir.join(".nevo/assets/a.PNG"), b"png").unwrap();
+        std::fs::write(dir.join(".nevo/assets/a.svg"), b"<svg/>").unwrap();
+        std::fs::write(dir.join(".nevo/plugins/p.png"), b"png").unwrap();
+        std::fs::write(dir.join("secret.png"), b"png").unwrap();
+        let root = dir.canonicalize().unwrap();
+
+        let resolved = notebook_image_asset(&root, ".nevo/assets/a.PNG").unwrap();
+        assert!(resolved.starts_with(root.join(".nevo").join("assets")));
+        assert!(notebook_image_asset(&root, ".nevo/assets/a.svg").is_err());
+        assert!(notebook_image_asset(&root, ".nevo/plugins/p.png").is_err());
+        assert!(notebook_image_asset(&root, ".nevo/assets/missing.png").is_err());
+        assert!(notebook_image_asset(&root, ".nevo/assets/../../secret.png").is_err());
+        assert!(notebook_image_asset(&root, "secret.png").is_err());
+        assert!(notebook_image_asset(&root, ".nevo/assets/sub/a.png").is_err());
 
         std::fs::remove_dir_all(dir).ok();
     }

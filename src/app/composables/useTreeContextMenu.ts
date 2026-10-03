@@ -4,6 +4,7 @@ import type { FolderMeta, NoteDocument, NoteMeta } from '../../types/note'
 import type { WorkspaceManifest, WorkspaceSettings } from '../../types/workspace'
 import type { WorkspaceBackend } from '../../core/workspace-backend'
 import { useConfirmDialog } from '../../ui/composables/useConfirmDialog'
+import { decodeNoteFormat } from '../../core/notebook/codec'
 
 /**
  * Loads a note that is not the open one so it can be exported. A cloud note's
@@ -43,6 +44,7 @@ interface ContextMenuDeps {
   setTitle: (v: string) => void
   flushSave: () => void | Promise<void>
   t: (key: string) => string
+  onUnsupportedExport?: () => void
   renameInputRef: Ref<HTMLInputElement | null>
 }
 
@@ -97,6 +99,10 @@ export function useTreeContextMenu(deps: ContextMenuDeps, handlers: ContextMenuH
     let note: NoteDocument | null = isActive ? deps.activeNote.value : null
     if (!note) note = await loadNoteForExport(target.id, backend)
     if (!note) return
+    if (decodeNoteFormat(note).status !== 'document') {
+      deps.onUnsupportedExport?.()
+      return
+    }
     if (format === 'markdown') await handlers.exportAsMarkdown(note, path)
     else if (format === 'html') await handlers.exportAsHtml(note, path)
     else if (format === 'docx') await handlers.exportAsDocx(note, path)

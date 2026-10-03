@@ -1,5 +1,5 @@
 import { computed, markRaw, type Ref } from 'vue'
-import { Download, Network, Upload } from 'lucide-vue-next'
+import { Download, Network, Search, Upload } from 'lucide-vue-next'
 import type { NoteDocument, TreeNode } from '../../../types/note'
 import type { WorkspaceSettings } from '../../../types/workspace'
 import type { NvMenuItemDef } from '../../../ui/primitives/menu-types'
@@ -20,6 +20,8 @@ interface WorkspaceEditorPresentationOptions {
   emitTitle: (title: string) => void
   requestExport: (format: 'markdown' | 'html' | 'docx' | 'typst' | 'pdf') => void
   requestMarkdownImport: () => void
+  openFindInNote: () => void
+  onTitleEnter?: () => void
 }
 
 export function useWorkspaceEditorPresentation(options: WorkspaceEditorPresentationOptions) {
@@ -58,6 +60,11 @@ export function useWorkspaceEditorPresentation(options: WorkspaceEditorPresentat
     }
   })
   const breadcrumbMenuItems = computed<NvMenuItemDef[]>(() => [
+    {
+      label: options.translate('editor.findBar.menuItem'),
+      icon: markRaw(Search),
+      action: options.openFindInNote,
+    },
     {
       label: options.translate('export.buttonTitle'),
       icon: markRaw(Download),
@@ -108,6 +115,21 @@ export function useWorkspaceEditorPresentation(options: WorkspaceEditorPresentat
     resizeTitle()
   }
 
+  function onTitleKeyDown(event: KeyboardEvent) {
+    if (
+      event.key === 'Enter'
+      && !event.shiftKey
+      && !event.ctrlKey
+      && !event.metaKey
+      && !event.altKey
+      && !event.isComposing
+      && event.keyCode !== 229
+    ) {
+      event.preventDefault()
+      options.onTitleEnter?.()
+    }
+  }
+
   return {
     showContainerOverview,
     isFolderEmptyState,
@@ -119,5 +141,6 @@ export function useWorkspaceEditorPresentation(options: WorkspaceEditorPresentat
     breadcrumbMenuItems,
     resizeTitle,
     onTitleInput,
+    onTitleKeyDown,
   }
 }

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, nextTick } from 'vue'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
@@ -14,6 +14,9 @@ import { useTabsStore } from '../stores/tabs'
 import { dispatchHotkeyCommand } from '../utils/hotkeys'
 import { kanbanCommands, noteCommands } from '../tauri/commands'
 import { createDefaultWorkspaceSettings } from '../utils/workspace-settings'
+import { updateViewport } from '../composables/useDeviceLayout'
+import { useToast } from '../ui/composables/useToast'
+import { createNotebook } from '../core/notebook'
 
 vi.mock('../tauri/commands', async () => {
   const actual = await vi.importActual<typeof import('../tauri/commands')>('../tauri/commands')
@@ -41,9 +44,10 @@ const i18n = createI18n({
 })
 
 const SidebarStub = defineComponent({
-  emits: ['tree-action', 'open-trash', 'create-folder'],
+  emits: ['tree-action', 'open-trash', 'create-folder', 'create-notebook', 'open-note'],
   template: `
     <div class="sidebar-stub">
+      <button class="emit-create-notebook" @click="$emit('create-notebook')">Create notebook</button>
       <button class="emit-search" @click="$emit('tree-action', { action: 'search', target: { kind: 'note', id: 'note-1', title: 'Seeded title', folderId: null } })">
         Search
       </button>
@@ -58,6 +62,9 @@ const SidebarStub = defineComponent({
       </button>
       <button class="emit-open-trash" @click="$emit('open-trash')">
         Open Trash
+      </button>
+      <button class="emit-open-note" @click="$emit('open-note', 'note-1')">
+        Open note
       </button>
     </div>
   `,
@@ -119,18 +126,36 @@ const EditorPaneStub = defineComponent({
   `,
 })
 
-const SettingsModalStub = defineComponent({
+const SettingsViewStub = defineComponent({
   props: {
-    open: {
-      type: Boolean,
-      default: false,
-    },
-    initialSection: {
+    section: {
       type: String,
       default: null,
     },
   },
-  template: '<div class="settings-modal-stub" :data-open="open" :data-section="initialSection"></div>',
+  emits: ['back'],
+  template: '<div class="settings-view-stub" :data-section="section"><button class="emit-settings-back" @click="$emit(\'back\')">Back</button></div>',
+})
+
+const ArchiveViewStub = defineComponent({
+  emits: ['back'],
+  template: '<div class="archive-view-stub"><button class="emit-archive-back" @click="$emit(\'back\')">Back</button></div>',
+})
+
+const HistoryViewStub = defineComponent({
+  props: {
+    noteId: {
+      type: String,
+      required: true,
+    },
+  },
+  emits: ['back', 'open-note'],
+  template: '<div class="history-view-stub" :data-note-id="noteId"><button class="emit-history-back" @click="$emit(\'back\')">Back</button><button class="emit-history-copy-open-note" @click="$emit(\'open-note\', \'note-2\')">Open copied note</button><button class="emit-history-open-parent-note" @click="$emit(\'open-note\', noteId)">Open parent note</button></div>',
+})
+
+const HistoryNotePickerStub = defineComponent({
+  emits: ['back', 'select'],
+  template: '<div class="history-note-picker-stub"><button class="emit-history-picker-back" @click="$emit(\'back\')">Back</button><button class="emit-history-picker-select" @click="$emit(\'select\', \'note-2\')">Select note</button></div>',
 })
 
 const KanbanViewStub = defineComponent({
@@ -159,11 +184,17 @@ async function flushUi() {
   await nextTick()
 }
 
+async function flushAnimationFrame() {
+  await new Promise<void>(resolve => window.requestAnimationFrame(() => resolve()))
+  await flushUi()
+}
+
 async function mountShell(options?: {
   initialRoute?: string
   manifestOverride?: Partial<ReturnType<typeof useWorkspaceStore>['manifest']>
 }) {
-  setActivePinia(createPinia())
+  const pinia = createPinia()
+  setActivePinia(pinia)
   const workspaceStore = useWorkspaceStore()
   const treeStore = useTreeStore()
   const noteStore = useNoteStore()
@@ -278,11 +309,15 @@ async function mountShell(options?: {
       { path: '/workspace', component: { template: '<div />' } },
       { path: '/workspace/note/:noteId', component: { template: '<div />' } },
       { path: '/workspace/note/:noteId/canvas', component: { template: '<div />' } },
+      { path: '/workspace/note/:noteId/history', component: { template: '<div />' } },
+      { path: '/workspace/history', component: { template: '<div />' } },
       { path: '/workspace/folder/:folderId', component: { template: '<div />' } },
       { path: '/workspace/graph', component: { template: '<div />' } },
       { path: '/workspace/board/:boardId', component: { template: '<div />' } },
       { path: '/workspace/plugin/nevo.kanban/:boardId', component: { template: '<div />' } },
       { path: '/workspace/plugin/:pluginId/:viewId?', component: { template: '<div />' } },
+      { path: '/workspace/settings/:section?', component: { template: '<div />' } },
+      { path: '/workspace/archive', component: { template: '<div />' } },
       { path: '/onboarding', component: { template: '<div />' } },
     ],
   })
@@ -292,11 +327,14 @@ async function mountShell(options?: {
   const wrapper = mount(WorkspaceShell, {
     attachTo: document.body,
     global: {
-      plugins: [i18n, router],
+      plugins: [i18n, router, pinia],
       stubs: {
         WorkspaceSidebar: SidebarStub,
         WorkspaceEditorPane: EditorPaneStub,
-        WorkspaceSettingsModal: SettingsModalStub,
+        WorkspaceSettingsView: SettingsViewStub,
+        WorkspaceArchiveView: ArchiveViewStub,
+        HistoryView: HistoryViewStub,
+        HistoryNotePicker: HistoryNotePickerStub,
         WorkspaceHistoryModal: HistoryModalStub,
         KanbanView: KanbanViewStub,
         WindowControls: true,
@@ -304,19 +342,205 @@ async function mountShell(options?: {
     },
   })
 
+  activeWrapper = wrapper
+  await flushPromises()
   await flushUi()
 
   return { wrapper, router, workspaceStore, treeStore, noteStore, kanbanStore }
 }
 
+let activeWrapper: VueWrapper | null = null
+
 describe('WorkspaceShell', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     Object.defineProperty(window, 'innerWidth', { value: 1280, configurable: true })
+    updateViewport()
   })
 
-  afterEach(() => {
+  afterEach(async () => {
+    if (activeWrapper) {
+      activeWrapper.unmount()
+      activeWrapper = null
+    }
     document.body.innerHTML = ''
+    Object.defineProperty(window, 'innerWidth', { value: 1280, configurable: true })
+    updateViewport()
+    await flushUi()
+  })
+
+  it('creates and opens a notebook directly without the creation dialog', async () => {
+    const { wrapper, router, treeStore, workspaceStore } = await mountShell()
+    const note = {
+      id: 'new-notebook', title: 'Untitled', icon: '📓', folderId: null,
+      createdAt: '', updatedAt: '', content: { type: 'doc' as const },
+      documentKind: 'notebook' as const, notebook: createNotebook('ruled'),
+    }
+    vi.mocked(noteCommands.loadNote).mockResolvedValue(note)
+    const create = vi.spyOn(treeStore, 'createNotebook').mockImplementation(async () => {
+      workspaceStore.manifest!.rootNotes.push(note)
+      return note
+    })
+    await wrapper.get('.emit-create-notebook').trigger('click')
+    await flushPromises()
+    await flushUi()
+    expect(create).toHaveBeenCalledWith(null, 'Untitled', '📓', 'ruled')
+    expect(router.currentRoute.value.path).toBe('/workspace/note/new-notebook')
+    expect(document.querySelector('#create-notebook-form')).toBeNull()
+    create.mockRestore()
+  })
+
+  it('returns from note history to the note chooser', async () => {
+    const { wrapper, router } = await mountShell({ initialRoute: '/workspace/note/note-1/history' })
+
+    try {
+      await flushAnimationFrame()
+      await wrapper.get('.emit-history-back').trigger('click')
+      await vi.waitFor(() => {
+        expect(router.currentRoute.value.path).toBe('/workspace/history')
+      })
+      await flushAnimationFrame()
+      expect(router.currentRoute.value.path).toBe('/workspace/history')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  it('shows the history chooser without loading or opening a note, then routes the selected note to history', async () => {
+    const { wrapper, router, noteStore } = await mountShell({ initialRoute: '/workspace' })
+    const loadSpy = vi.spyOn(noteStore, 'loadNote')
+
+    dispatchHotkeyCommand('workspace.open-history')
+    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/workspace/history'))
+    await flushAnimationFrame()
+    expect(wrapper.find('.history-note-picker-stub').exists()).toBe(true)
+    expect(loadSpy).not.toHaveBeenCalled()
+    expect(wrapper.find('.emit-history-picker-select').exists()).toBe(true)
+
+    await wrapper.get('.emit-history-picker-select').trigger('click')
+    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/workspace/note/note-2/history'))
+    await flushAnimationFrame()
+    expect(loadSpy).not.toHaveBeenCalled()
+  })
+
+  it('opens the chooser from an editor without adding an active note tab', async () => {
+    const { wrapper, router, noteStore } = await mountShell({ initialRoute: '/workspace/note/note-1' })
+    const tabsStore = useTabsStore()
+    await flushAnimationFrame()
+    const initialTabIds = tabsStore.tabs.map(tab => tab.id)
+    const initialActiveTabId = tabsStore.activeTabId
+    noteStore.markContentDirty()
+    const saveSpy = vi.spyOn(noteStore, 'saveNote').mockImplementation(async () => {
+      noteStore.isDirty = false
+      noteStore.saveStatus = 'saved'
+    })
+    const loadSpy = vi.spyOn(noteStore, 'loadNote')
+
+    dispatchHotkeyCommand('workspace.open-history')
+    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/workspace/history'))
+    await flushAnimationFrame()
+
+    expect(wrapper.find('.history-note-picker-stub').exists()).toBe(true)
+    expect(saveSpy).toHaveBeenCalled()
+    expect(loadSpy).not.toHaveBeenCalled()
+    expect(tabsStore.tabs.map(tab => tab.id)).toEqual(initialTabIds)
+    expect(tabsStore.activeTabId).toBe(initialActiveTabId)
+  })
+
+  it('keeps the dirty note open and reports a save error when History is requested', async () => {
+    const { wrapper, router, noteStore } = await mountShell({ initialRoute: '/workspace/note/note-2' })
+    await flushAnimationFrame()
+    const openNote = noteStore.activeNote
+    noteStore.markContentDirty()
+    vi.spyOn(noteStore, 'saveNote').mockImplementation(async () => {
+      noteStore.isDirty = true
+      noteStore.saveStatus = 'error'
+    })
+
+    dispatchHotkeyCommand('workspace.open-history')
+    await flushAnimationFrame()
+
+    expect(router.currentRoute.value.path).toBe('/workspace/note/note-2')
+    expect(noteStore.activeNote).toBe(openNote)
+    expect(noteStore.isDirty).toBe(true)
+    expect(useToast().toastState.items.at(-1)?.message).toContain('Could not save the note')
+    wrapper.unmount()
+  })
+
+  it('returns a direct History route to the editor when saving the active note fails', async () => {
+    const { wrapper, router, noteStore } = await mountShell({ initialRoute: '/workspace/note/note-2' })
+    await flushAnimationFrame()
+    const openNote = noteStore.activeNote
+    noteStore.markContentDirty()
+    vi.spyOn(noteStore, 'saveNote').mockImplementation(async () => {
+      noteStore.isDirty = true
+      noteStore.saveStatus = 'error'
+    })
+
+    const toastCount = useToast().toastState.items.length
+    await router.push('/workspace/note/note-2/history')
+    await vi.waitFor(() => expect(useToast().toastState.items.length).toBeGreaterThan(toastCount))
+    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/workspace/note/note-2'))
+
+    expect(noteStore.activeNote).toBe(openNote)
+    expect(noteStore.isDirty).toBe(true)
+    expect(useToast().toastState.items.at(-1)?.message).toContain('Could not save the note')
+    wrapper.unmount()
+  })
+
+  it('keeps a dirty editor open when a direct History chooser route cannot save', async () => {
+    const { wrapper, router, noteStore } = await mountShell({ initialRoute: '/workspace/note/note-2' })
+    await flushAnimationFrame()
+    const openNote = noteStore.activeNote
+    noteStore.markContentDirty()
+    vi.spyOn(noteStore, 'saveNote').mockImplementation(async () => {
+      noteStore.isDirty = true
+      noteStore.saveStatus = 'error'
+    })
+
+    const toastCount = useToast().toastState.items.length
+    await router.push('/workspace/history')
+    await vi.waitFor(() => expect(useToast().toastState.items.length).toBeGreaterThan(toastCount))
+    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/workspace/note/note-2'))
+
+    expect(noteStore.activeNote).toBe(openNote)
+    expect(noteStore.isDirty).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('leaves history when selecting the same note in the sidebar', async () => {
+    localStorage.setItem('nevo.canvas.workspace-1.note-1.view', 'canvas')
+    const { wrapper, router } = await mountShell({ initialRoute: '/workspace/note/note-1/history' })
+
+    try {
+      await flushAnimationFrame()
+      const sidebarButton = document.body.querySelector<HTMLButtonElement>('.emit-open-note')
+      expect(sidebarButton).toBeTruthy()
+      sidebarButton!.click()
+      await vi.waitFor(() => {
+        expect(router.currentRoute.value.path).toBe('/workspace/note/note-1')
+      })
+      await flushAnimationFrame()
+      expect(router.currentRoute.value.path).toBe('/workspace/note/note-1')
+    } finally {
+      localStorage.removeItem('nevo.canvas.workspace-1.note-1.view')
+      wrapper.unmount()
+    }
+  })
+
+  it('opens the copied note from history', async () => {
+    const { wrapper, router } = await mountShell({ initialRoute: '/workspace/note/note-1/history' })
+
+    try {
+      await flushAnimationFrame()
+      await wrapper.get('.emit-history-copy-open-note').trigger('click')
+      await vi.waitFor(() => {
+        expect(router.currentRoute.value.path).toBe('/workspace/note/note-2')
+      })
+      await flushAnimationFrame()
+    } finally {
+      wrapper.unmount()
+    }
   })
 
   it('opens the search overlay for the workspace search hotkey', async () => {
@@ -410,8 +634,9 @@ describe('WorkspaceShell', () => {
     expect(document.body.textContent ?? '').toContain('Create folder')
 
     const dialog = document.body.querySelector<HTMLFormElement>('.rename-modal')
-    expect(dialog?.getAttribute('role')).toBe('dialog')
-    expect(dialog?.getAttribute('aria-modal')).toBe('true')
+    const panel = dialog?.closest('[role="dialog"]')
+    expect(panel?.getAttribute('role')).toBe('dialog')
+    expect(panel?.getAttribute('aria-modal')).toBe('true')
     expect(dialog?.querySelector('label')?.textContent).toBe('Folder name')
 
     const input = document.body.querySelector<HTMLInputElement>('.rename-modal__input')
@@ -456,7 +681,7 @@ describe('WorkspaceShell', () => {
   })
 
   it('opens settings to the matched section from search overlay results', async () => {
-    const { wrapper } = await mountShell()
+    const { wrapper, router } = await mountShell()
 
     dispatchHotkeyCommand('workspace.search')
     await flushUi()
@@ -474,11 +699,12 @@ describe('WorkspaceShell', () => {
     expect(resultButton).toBeTruthy()
 
     resultButton!.click()
+    await vi.waitFor(() => {
+      expect(router.currentRoute.value.path).toBe('/workspace/settings/appearance')
+    })
     await flushUi()
-
-    const modal = wrapper.get('.settings-modal-stub')
-    expect(modal.attributes('data-open')).toBe('true')
-    expect(modal.attributes('data-section')).toBe('appearance')
+    const view = wrapper.get('.settings-view-stub')
+    expect(view.attributes('data-section')).toBe('appearance')
 
     wrapper.unmount()
   })
@@ -510,7 +736,8 @@ describe('WorkspaceShell', () => {
   })
 
   it('switches to drawer navigation and suppresses window controls on mobile runtimes', async () => {
-    Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true })
+    Object.defineProperty(window, 'innerWidth', { value: 800, configurable: true })
+    updateViewport()
 
     const { wrapper, workspaceStore } = await mountShell()
     workspaceStore.appMetadata = {
@@ -522,7 +749,6 @@ describe('WorkspaceShell', () => {
       supportsRevealInFileManager: false,
       supportsWindowDragRegions: false,
     }
-    window.dispatchEvent(new Event('resize'))
     await flushUi()
 
     expect(wrapper.find('window-controls-stub').exists()).toBe(false)
@@ -540,6 +766,7 @@ describe('WorkspaceShell', () => {
 
   it('uses the mobile editor header and opens the note details screen', async () => {
     Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true })
+    updateViewport()
 
     const { wrapper, noteStore, router } = await mountShell({
       initialRoute: '/workspace/note/note-1',
@@ -560,7 +787,7 @@ describe('WorkspaceShell', () => {
       content: { type: 'doc', content: [] },
     }
     window.dispatchEvent(new Event('resize'))
-    await flushUi()
+    await flushAnimationFrame()
 
     expect(wrapper.find('.workspace-titlebar').exists()).toBe(false)
     expect(wrapper.get('.mobile-editor-header__context').text()).toBe('Workspace')
@@ -819,24 +1046,56 @@ describe('WorkspaceShell', () => {
     wrapper.unmount()
   })
 
-  it('opens and closes the trash modal via Escape key', async () => {
-    const { wrapper } = await mountShell()
+  it('navigates to archive screen on open-trash and returns on back emit', async () => {
+    const { wrapper, router } = await mountShell({ initialRoute: '/workspace' })
 
-    expect(document.body.querySelector('.trash-modal')).toBeNull()
+    expect(wrapper.find('.archive-view-stub').exists()).toBe(false)
 
-    // Open trash
+    // Open trash / archive
     await wrapper.find('.emit-open-trash').trigger('click')
+    await vi.waitFor(() => {
+      expect(router.currentRoute.value.path).toBe('/workspace/archive')
+    })
     await flushUi()
+    expect(wrapper.find('.archive-view-stub').exists()).toBe(true)
 
-    expect(document.body.querySelector('.trash-modal')).not.toBeNull()
-
-    // Press Escape on window
-    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
-    window.dispatchEvent(event)
+    // Emit back from archive view returns to previous route
+    await wrapper.find('.emit-archive-back').trigger('click')
+    await vi.waitFor(() => {
+      expect(router.currentRoute.value.path).toBe('/workspace')
+    })
     await flushUi()
-
-    expect(document.body.querySelector('.trash-modal')).toBeNull()
+    expect(wrapper.find('.archive-view-stub').exists()).toBe(false)
 
     wrapper.unmount()
   })
+
+  it('flushes unsaved note edits when navigating to settings', async () => {
+    const { wrapper, router, noteStore } = await mountShell({ initialRoute: '/workspace/note/note-1' })
+    noteStore.markContentDirty()
+    const saveSpy = vi.spyOn(noteStore, 'saveNote').mockResolvedValue()
+
+    await router.push('/workspace/settings')
+    await flushUi()
+
+    expect(saveSpy).toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('skips updateLastContext when on a system route', async () => {
+    const { wrapper, router, workspaceStore } = await mountShell({ initialRoute: '/workspace/note/note-1' })
+    const updateSpy = vi.spyOn(workspaceStore, 'updateLastContext')
+
+    await router.push('/workspace/settings')
+    await flushUi()
+
+    expect(updateSpy).not.toHaveBeenCalled()
+
+    await router.push('/workspace/archive')
+    await flushUi()
+
+    expect(updateSpy).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
 })

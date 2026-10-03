@@ -1,6 +1,7 @@
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { loadImageAsset } from '../../../utils/draw/imageAsset'
 import type { DrawStroke } from '../../../utils/draw/drawEngine'
+import { isWithinAssetLimit } from '../../../core/assets/assetLimits'
 
 export interface DrawImageAssetsOptions {
   getRefreshCommittedSvg: () => () => Promise<void>
@@ -66,7 +67,14 @@ export function useDrawImageAssets(options: DrawImageAssetsOptions) {
       const { width, height } = await image.size()
       if (!width || !height) return
       const bytes = rgbaToPngBytes(rgba, width, height)
-      const imported = await backend.importImageAsset('pasted-image.png', bytes)
+      if (!isWithinAssetLimit(bytes.length)) {
+        // This composable has no user-facing error surface wired for paste
+        // (unlike DrawView's save-error banner); match its existing
+        // console.warn convention for a failed/rejected paste.
+        console.warn('[DrawView] Pasted image exceeds the asset size limit; not imported')
+        return
+      }
+      const imported = await backend.importImageAsset('pasted-image.png', Uint8Array.from(bytes))
       const loaded = await loadImageAsset(bytes, 'image/png')
       imageFullHref.set(imported.src, loaded.full)
       imagePreviewHref.set(imported.src, loaded.preview)

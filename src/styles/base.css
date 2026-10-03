@@ -22,7 +22,7 @@ body {
 
 .nv-app {
   font-family: var(--font-ui);
-  color: var(--text-1);
+  color: var(--text-primary);
   position: relative;
   width: 100%;
   height: 100dvh;
@@ -34,18 +34,7 @@ body {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  /* Promote the app background to its own static compositing layer. Without this
-     the layered radial gradients are recomposited against every scrolling surface
-     on WebKitGTK, which is a major source of scroll jank. `translateZ(0)` + `contain`
-     keep the canvas as a static, GPU-resident layer. We deliberately avoid a
-     permanent `will-change` here: keeping it set forces the compositor to hold this
-     full-viewport layer perpetually "hot", which costs more than it saves. */
-  transform: translateZ(0);
-  contain: strict;
-  background:
-    radial-gradient(60% 50% at 18% 12%, var(--wash-a) 0%, transparent 70%),
-    radial-gradient(50% 40% at 95% 95%, var(--wash-b) 0%, transparent 70%),
-    var(--canvas-0);
+  background: var(--surface-navigation);
 }
 
 /* ── Density ────────────────────────────────────────── */
@@ -89,19 +78,23 @@ body {
 [data-scrollbars="hidden"] .nv-app::-webkit-scrollbar,
 [data-scrollbars="hidden"] .nv-app *::-webkit-scrollbar { display: none; }
 [data-scrollbars="thin"] .nv-app,
-[data-scrollbars="thin"] .nv-app * { scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+[data-scrollbars="thin"] .nv-app * { scrollbar-width: thin; scrollbar-color: var(--border-default) transparent; }
 [data-scrollbars="system"] .nv-app,
 [data-scrollbars="system"] .nv-app * { scrollbar-width: auto; }
 
 /* ── Focus ring ──────────────────────────────────────── */
-[data-focus-ring="high-contrast"] *:focus-visible {
-  outline: 2px solid var(--text-1);
-  outline-offset: 2px;
+/* Zero-specificity safety net: most interactive primitives (buttons, inputs,
+   checkboxes, menu items, toggles...) already define their own :focus-visible
+   ring and win the cascade over this. This only covers elements that don't
+   (plain links, native form controls, ad-hoc [tabindex] targets).
+   Layered as `base` so Tailwind focus utilities (e.g. `tw:focus-visible:outline-none`)
+   still win: unlayered rules beat every layered rule regardless of specificity. */
+@layer base {
+  :where(button, a, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
 }
-
-/* ── Window chrome ───────────────────────────────────── */
-[data-chrome="immersive"] .nv-titlebar { background: transparent; backdrop-filter: none; }
-[data-chrome="minimal"] .nv-titlebar { height: 0; overflow: hidden; }
 
 /* ── Interface zoom ──────────────────────────────────── */
 /* In Tauri, zoom is applied natively via webview.setZoom() (src/tauri/webview.ts)
@@ -110,53 +103,6 @@ body {
    is only the fallback for the plain web/dev build, where native zoom is unavailable. */
 .nv-app { zoom: var(--ui-scale, 1); }
 
-/* ── Reduce transparency ─────────────────────────────── */
-/* When transparency is reduced, override the glass-* color tokens at the root
-   so EVERY surface that reads them (sidebar, titlebar, settings panels, popovers,
-   prose blocks, etc.) becomes opaque — not just the .nv-glass/.nv-card classes.
-   This matters on WebKitGTK: a translucent `background` over the animated
-   `.nv-canvas` without a `backdrop-filter` forces a heavy composite of the
-   translucent layer against the layered background on every frame, which is the
-   dominant cause of scroll jank there. Making the tokens opaque lets the
-   compositor treat each surface as a simple opaque layer. */
-[data-reduce-transparency="true"] {
-  --glass-1: var(--canvas-1);
-  --glass-2: var(--canvas-1);
-  --glass-3: var(--canvas-1);
-  --glass-titlebar: var(--canvas-1);
-}
-[data-reduce-transparency="true"] .nv-glass,
-[data-reduce-transparency="true"] .nv-card,
-[data-reduce-transparency="true"] .nv-sidebar {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  background: var(--canvas-1);
-}
-/* `backdrop-filter` is the dominant rendering cost on WebKitGTK and is the
-   default-on rationale on Linux. Strip it from EVERY element — the titlebar,
-   editor popovers/menus, stats badge and prose blocks don't use the .nv-glass
-   class, so they would otherwise keep blurring even with the toggle on. */
-[data-reduce-transparency="true"] *,
-[data-reduce-transparency="true"] *::before,
-[data-reduce-transparency="true"] *::after {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-/* Keep the persistent, full-width titlebar opaque so dropping its blur doesn't
-   leave it see-through over scrolling content. */
-[data-reduce-transparency="true"] .workspace-titlebar {
-  background: var(--canvas-1);
-}
-/* The settings modal scrolls inside a `border-radius` + `overflow: hidden` window,
-   which keeps WebKitGTK on the slow main-thread scroll path; behind the scroller the
-   `.settings-shell` paints two large radial gradients that then get re-rasterized on
-   every scroll frame. Flatten the shell to a single opaque color so each frame only
-   repaints a cheap flat surface + text (the editor's doc body is fast for the same
-   reason — nothing expensive paints behind it). */
-[data-reduce-transparency="true"] .settings-shell {
-  background: var(--canvas-1);
-}
-
 /* ── Interface roundness ─────────────────────────────── */
 /* Global multiplier consumed by every `border-radius: calc(Npx * var(--radius-scale)) `
    declaration across the app. Pills/circles (999px, 50%) are intentionally left unscaled. */
@@ -164,73 +110,31 @@ body {
 [data-roundness="default"] { --radius-scale: 1; }
 [data-roundness="soft"] { --radius-scale: 1.75; }
 
-/* ── Background scenes ──────────────────────────────── */
-[data-scene="aurora"] .nv-canvas {
-  background:
-    radial-gradient(60% 50% at 18% 12%, var(--wash-a) 0%, transparent 70%),
-    radial-gradient(50% 40% at 95% 95%, var(--wash-b) 0%, transparent 70%),
-    var(--canvas-0);
-}
-[data-scene="paper"] .nv-canvas {
-  background: var(--canvas-0);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='none'/%3E%3Ccircle cx='1' cy='1' r='0.5' fill='%23888' opacity='0.08'/%3E%3C/svg%3E");
-}
-[data-scene="studio"] .nv-canvas {
-  background:
-    radial-gradient(70% 60% at 50% 0%, var(--wash-a) 0%, transparent 60%),
-    var(--canvas-0);
-}
-[data-scene="plain"] .nv-canvas {
-  background: var(--canvas-0);
-}
-
-/* ── Surface styles ─────────────────────────────────── */
-[data-surface="solid"] .nv-glass,
-[data-surface="solid"] .nv-card {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  background: var(--canvas-1);
-}
-[data-surface="tinted"] .nv-glass,
-[data-surface="tinted"] .nv-card {
-  backdrop-filter: blur(20px) saturate(120%);
-  background: color-mix(in oklab, var(--glass-2), var(--accent-soft) 10%);
-}
-
 /* ── Contrast modes ─────────────────────────────────── */
+/* Contrast modes adjust the semantic tokens (dark values first, light overrides). */
 [data-contrast="soft"] {
-  --line-1: oklch(1 0 0 / 0.04);
-  --line-2: oklch(1 0 0 / 0.07);
-  --text-2: oklch(0.76 0.008 268);
-  --text-3: oklch(0.60 0.010 268);
+  --border-subtle: #232426;
+  --border-default: #2C2D30;
+  --text-secondary: #9E9C96;
+  --text-muted: #7C7A75;
 }
 [data-contrast="high"] {
-  --line-2: oklch(1 0 0 / 0.18);
-  --line-strong: oklch(1 0 0 / 0.26);
-  --text-2: oklch(0.90 0.005 268);
-  --text-3: oklch(0.76 0.008 268);
+  --border-default: #56575D;
+  --border-strong: #6A6B72;
+  --text-secondary: #D6D4CE;
+  --text-muted: #B0AEA8;
 }
 .theme-light[data-contrast="soft"] {
-  --line-1: oklch(0 0 0 / 0.04);
-  --line-2: oklch(0 0 0 / 0.06);
-  --text-2: oklch(0.48 0.010 270);
-  --text-3: oklch(0.62 0.010 270);
+  --border-subtle: #ECE8E0;
+  --border-default: #E2DDD3;
+  --text-secondary: #6A665E;
+  --text-muted: #86817A;
 }
 .theme-light[data-contrast="high"] {
-  --line-2: oklch(0 0 0 / 0.14);
-  --line-strong: oklch(0 0 0 / 0.22);
-  --text-2: oklch(0.24 0.012 270);
-  --text-3: oklch(0.38 0.010 270);
-}
-
-/* ── Sidebar styles ─────────────────────────────────── */
-[data-sidebar="solid"] .nv-sidebar {
-  backdrop-filter: none;
-  background: var(--canvas-1);
-}
-[data-sidebar="minimal"] .nv-sidebar {
-  background: transparent;
-  border-right-color: transparent;
+  --border-default: #A9A294;
+  --border-strong: #8C8577;
+  --text-secondary: #3A3833;
+  --text-muted: #55524B;
 }
 
 /* ── Default scrollbar rule (overridden by data-scrollbars) ─ */

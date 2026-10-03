@@ -104,4 +104,59 @@ describe('useEditorDocStats', () => {
     expect(updateNoteEdges).toHaveBeenCalledOnce()
     expect(updateNoteEdges).toHaveBeenCalledWith('note-1', [])
   })
+
+  function linkedDoc(noteId: string) {
+    return nevoBaseSchema.nodeFromJSON({
+      type: 'doc',
+      content: [{
+        type: 'paragraph',
+        content: [{
+          type: 'text',
+          text: 'Linked',
+          marks: [{ type: 'internal_link', attrs: { noteId, anchor: null } }],
+        }],
+      }],
+    })
+  }
+
+  it('skips a redundant backend call when two consecutive updates extract the same links', () => {
+    const graphStore = useGraphStore()
+    const updateNoteEdges = vi.spyOn(graphStore, 'updateNoteEdges').mockImplementation(async () => {})
+    const core = createCore({ type: 'doc', content: [{ type: 'paragraph' }] })
+    const stats = useEditorDocStats(
+      core,
+      () => ({ editor: { editorStatsVisibility: 'hidden' } }) as never,
+      () => 'note-1',
+    )
+
+    stats.scheduleGraphUpdate(linkedDoc('target-1'))
+    stats.clearTimers()
+    // A different Node instance (e.g. re-parsed from the same JSON) with the
+    // same links must still be recognized as unchanged.
+    stats.scheduleGraphUpdate(linkedDoc('target-1'))
+    stats.clearTimers()
+
+    expect(updateNoteEdges).toHaveBeenCalledOnce()
+  })
+
+  it('sends a second update once the extracted links actually change', () => {
+    const graphStore = useGraphStore()
+    const updateNoteEdges = vi.spyOn(graphStore, 'updateNoteEdges').mockImplementation(async () => {})
+    const core = createCore({ type: 'doc', content: [{ type: 'paragraph' }] })
+    const stats = useEditorDocStats(
+      core,
+      () => ({ editor: { editorStatsVisibility: 'hidden' } }) as never,
+      () => 'note-1',
+    )
+
+    stats.scheduleGraphUpdate(linkedDoc('target-1'))
+    stats.clearTimers()
+    stats.scheduleGraphUpdate(linkedDoc('target-2'))
+    stats.clearTimers()
+
+    expect(updateNoteEdges).toHaveBeenCalledTimes(2)
+    expect(updateNoteEdges).toHaveBeenLastCalledWith('note-1', expect.arrayContaining([
+      expect.objectContaining({ target: 'target-2' }),
+    ]))
+  })
 })

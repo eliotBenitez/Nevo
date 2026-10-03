@@ -1,14 +1,7 @@
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { useNoteStore } from '../../../stores/note'
-import { useTreeStore } from '../../../stores/tree'
-import { collabCommands, noteCommands } from '../../../tauri/commands'
-import { CloudBackend } from '../../../core/workspace-backend'
 import { sanitizeSvg } from '../../../utils/sanitizeSvg'
-import {
-  restoreYDocFromBinary,
-  encodeYDocState,
-  updateDrawBlockAttrsInYDoc,
-} from '../../../editor-core/collaboration'
+import { patchDrawBlockInContent } from '../../../editor-core/content/drawBlockPatch'
 
 export interface DrawNoteSyncOptions {
   drawId: string
@@ -51,41 +44,29 @@ export function useDrawNoteSync(options: DrawNoteSyncOptions) {
       const noteId = options.getNoteId()
       if (!noteId || !src) return
 
-      // A cloud note's document is the live relay session rather than a file,
-      // so the attrs are patched straight into it and sync on their own. The
-      // drawing editor replaces the editor pane, so there is no EditorView to
-      // dispatch a transaction on in either case.
-      const backend = workspaceStore.backend
-      if (backend instanceof CloudBackend) {
-        const session = backend.getNoteSession(noteId)
-        if (!session) return
-        try {
-          await session.whenSynced()
-          updateDrawBlockAttrsInYDoc(session.ydoc, options.drawId, { src, svgPreview: sanitizeSvg(svgPreview) })
-        } catch (error) {
-          console.warn('[DrawView] Failed to patch draw src into cloud note document', error)
-        }
-        return
-      }
-
+      // The drawing editor replaces the editor pane, so there is no live
+      // EditorView to dispatch a transaction on. `note.content` is the
+      // note's source of truth while the note editor isn't mounted (see
+      // WorkspaceShell.vue's onUpdateDraw), so the block is patched there
+      // directly and saved through the note store's normal persist path.
       if (workspaceStore.backendKind !== 'local') return
-      const workspacePath = options.getWorkspacePath()
-      if (!workspacePath) return
+      if (!options.getWorkspacePath()) return
+
       try {
-        const bytes = await collabCommands.loadYjsState(workspacePath, noteId)
-        if (!bytes.length) return
-        const ydoc = restoreYDocFromBinary(bytes)
-        try {
-          if (updateDrawBlockAttrsInYDoc(ydoc, options.drawId, { src, svgPreview: sanitizeSvg(svgPreview) })) {
-            await collabCommands.saveYjsState(workspacePath, noteId, encodeYDocState(ydoc))
-            const updatedAt = await noteCommands.touchNoteUpdatedAt(workspacePath, noteId)
-            useTreeStore().syncNoteMeta(noteId, {}, updatedAt)
-          }
-        } finally {
-          ydoc.destroy()
-        }
+        const note = noteStore.activeNote
+        if (!note || note.id !== noteId) return
+        const result = patchDrawBlockInContent(note.content, options.drawId, {
+          src,
+          svgPreview: sanitizeSvg(svgPreview),
+        })
+        if (!result.changed) return
+        noteStore.setContent(result.content)
+        // `saveNote` never throws — failures are logged and surfaced via
+        // `saveStatus` — so this try/catch only guards `patchDrawBlockInContent`
+        // and `setContent` against an unexpectedly malformed document.
+        await noteStore.saveNote()
       } catch (error) {
-        console.warn('[DrawView] Failed to patch draw src into note Y.Doc', error)
+        console.warn('[DrawView] Failed to save draw src into note content', error)
       }
     }
     docPatchChain = docPatchChain.then(run, run)

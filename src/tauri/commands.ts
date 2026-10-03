@@ -11,7 +11,7 @@ import type {
   MarketplacePreparedPlugin,
   MarketplaceMigrationBundle,
 } from '../types/workspace'
-import type { FolderMeta, ImportedImageAsset, NoteDocument, NoteSnapshotMeta, NoteSnapshotsEntry, PickedImportedAsset, SidebarNotePreview, VaultManifest } from '../types/note'
+import type { FolderMeta, ImportedImageAsset, NoteDocument, NoteSnapshotMeta, NoteSnapshotsEntry, PickedImportedAsset, RestoreNoteSnapshotResult, SidebarNotePreview, VaultManifest } from '../types/note'
 import type { WorkspaceBlockSearchItem } from '../types/search'
 import type { BacklinkRef, GraphEdge, ExtractedEdge } from '../types/graph'
 import type { NoteQueryRequest, NoteRow } from '../types/note-query'
@@ -28,9 +28,8 @@ export interface TypstAsset {
   relPath?: string
 }
 
-/** An export asset supplied as bytes rather than as a workspace-relative path.
- *  Cloud workspaces have no asset directory on disk, so they send the file
- *  contents and Rust writes them beside the export. */
+/** An export asset supplied as bytes rather than as a workspace-relative
+ *  path; Rust writes the contents beside the export. */
 export interface InlineExportAsset {
   name: string
   bytesBase64: string
@@ -148,11 +147,6 @@ export const workspaceCommands = {
 
   listPlugins: (workspacePath: string) =>
     invokeCommand<PluginManifest[]>('list_plugins', { workspacePath }),
-
-  /** Device-local plugin directory for a cloud workspace. Plugins are not part
-   *  of a shared workspace's synced content — see the Rust command. */
-  cloudPluginRoot: (storageId: string) =>
-    invokeCommand<string>('cloud_plugin_root', { storageId }),
 
   validatePluginManifest: (workspacePath: string, pluginId: string) =>
     invokeCommand<PluginManifest>('validate_plugin_manifest', { workspacePath, pluginId }),
@@ -397,12 +391,6 @@ export const noteCommands = {
   moveNote: (workspacePath: string, noteId: string, targetFolderId: string | null) =>
     invokeCommand<void>('move_note', { workspacePath, noteId, targetFolderId }),
 
-  // Bumps a note's `updated_at` (note file + manifest entry) without touching
-  // content. For callers that mutate a note's Y.Doc directly (bypassing
-  // saveNote), e.g. draw-canvas sync, so "recently modified" stays accurate.
-  touchNoteUpdatedAt: (workspacePath: string, noteId: string) =>
-    invokeCommand<string>('touch_note_updated_at', { workspacePath, noteId }),
-
   listSidebarNotePreviews: (workspacePath: string) =>
     invokeCommand<SidebarNotePreview[]>('list_sidebar_note_previews', { workspacePath }),
 
@@ -416,7 +404,7 @@ export const noteCommands = {
     invokeCommand<NoteDocument>('load_note_snapshot', { workspacePath, noteId, snapshotId }),
 
   restoreNoteSnapshot: (workspacePath: string, noteId: string, snapshotId: string) =>
-    invokeCommand<NoteDocument>('restore_note_snapshot', { workspacePath, noteId, snapshotId }),
+    invokeCommand<RestoreNoteSnapshotResult>('restore_note_snapshot', { workspacePath, noteId, snapshotId }),
 
   pruneNoteSnapshots: (workspacePath: string, noteId: string) =>
     invokeCommand<void>('prune_note_snapshots', { workspacePath, noteId }),
@@ -430,8 +418,16 @@ export const noteCommands = {
   emptyTrash: (workspacePath: string) =>
     invokeCommand<void>('empty_trash', { workspacePath }),
 
-  importImageAsset: (workspacePath: string, fileName: string, bytes: number[]) =>
-    invokeCommand<ImportedImageAsset>('import_image_asset', { workspacePath, fileName, bytes }),
+  // Pass the file bytes as a raw IPC body (ArrayBuffer) instead of a JSON
+  // number array, avoiding ~3-4x transport overhead. workspacePath/fileName
+  // travel via headers since `invoke` accepts either args OR a raw body, not
+  // both; the file name is percent-encoded because header values must be ASCII.
+  importImageAsset: (workspacePath: string, fileName: string, bytes: Uint8Array) =>
+    invoke<ImportedImageAsset>(
+      'import_image_asset',
+      bytes,
+      { headers: { 'nv-workspace-path': workspacePath, 'nv-file-name': encodeURIComponent(fileName) } },
+    ),
 
   pickAndImportAsset: (workspacePath: string, kind: 'image' | 'audio' | 'video' | 'file') =>
     invokeCommand<PickedImportedAsset | null>('pick_and_import_asset', { workspacePath, kind }),
@@ -550,24 +546,11 @@ export const templateCommands = {
     invokeCommand<NoteDocument>('template_create_note', { workspacePath, templateId, folderId, title, icon, fieldValues, locale: activeLocale() }),
 }
 
-export interface CollabServerInfo {
-  url: string
-  localIp: string
-  port: number
-  sessionToken: string
-}
-
+// Everything here exists only to support the one-time legacy
+// `.nevo/collab/<id>.yjs` -> `note.json` migration (`migrateLegacyYjsState`
+// in `src/stores/workspace.ts`). `note.json` is a note's sole source of
+// truth; the editor no longer reads or writes a Y.Doc.
 export const collabCommands = {
-  saveYjsState: (workspacePath: string, noteId: string, bytes: Uint8Array) =>
-    // Pass the Y.Doc update as a raw IPC body (ArrayBuffer) instead of a JSON
-    // number array, avoiding ~3-4× transport overhead. workspacePath/noteId
-    // travel via headers since `invoke` accepts either args OR a raw body, not both.
-    invoke<void>(
-      'save_yjs_state',
-      bytes,
-      { headers: { 'nv-workspace-path': workspacePath, 'nv-note-id': noteId } },
-    ),
-
   loadYjsState: (workspacePath: string, noteId: string) =>
     // Backend returns a raw binary response (ArrayBuffer), which we expose as
     // Uint8Array so callers can hand it straight to Yjs without re-encoding.
@@ -575,17 +558,21 @@ export const collabCommands = {
       (buf) => new Uint8Array(buf),
     ),
 
-  deleteYjsState: (workspacePath: string, noteId: string) =>
-    invokeCommand<boolean>('delete_yjs_state', { workspacePath, noteId }),
+  // Renames `.nevo/collab` aside as a timestamped backup (never deletes it)
+  // once `migrateWorkspaceYjs` has folded every note's Y.Doc into note.json.
+  // A no-op (`archived: false`) when `.nevo/collab` doesn't exist.
+  archiveLegacyCollabDir: (workspacePath: string, noteIds: string[]) =>
+    invokeCommand<{ archived: boolean; archivePath: string | null }>(
+      'archive_legacy_collab_dir',
+      { workspacePath, noteIds },
+    ),
 
-  startServer: (port: number) =>
-    invokeCommand<CollabServerInfo>('start_collab_server', { port }),
-
-  stopServer: () =>
-    invokeCommand<void>('stop_collab_server'),
-
-  getServerInfo: () =>
-    invokeCommand<CollabServerInfo | null>('get_collab_server_info'),
+  // Cheap existence check so `migrateLegacyYjsState` can skip the whole
+  // migration pass (and its dynamic `yjs` import) once a workspace has
+  // already been migrated and `archiveLegacyCollabDir` has renamed
+  // `.nevo/collab` away.
+  hasLegacyCollabDir: (workspacePath: string) =>
+    invokeCommand<boolean>('has_legacy_collab_dir', { workspacePath }),
 }
 
 export const kanbanCommands = {

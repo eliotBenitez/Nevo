@@ -26,6 +26,7 @@ pub fn restore_from_trash(workspace_path: String, item_id: String) -> Result<(),
             icon: item.icon.unwrap_or_else(|| "📄".to_string()),
             folder_id: item.original_parent_id.clone(),
             updated_at: Utc::now().to_rfc3339(),
+            extra: item.extra,
         };
 
         if let Some(parent_id) = &meta.folder_id {

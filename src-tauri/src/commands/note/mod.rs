@@ -1,6 +1,8 @@
+use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::Path;
+use std::sync::{Arc, Mutex, OnceLock};
 
 use crate::commands::workspace::{FolderMeta, NoteMeta};
 use crate::logging::{LogContext, LogError};
@@ -10,8 +12,11 @@ mod canvas;
 mod collab;
 mod crud;
 mod export;
+pub(crate) mod notebook;
+pub(crate) mod restore_journal;
 mod search;
 mod sidebar;
+mod snapshot_restore;
 mod snapshots;
 mod trash;
 mod vault_import;
@@ -27,8 +32,10 @@ pub use canvas::*;
 pub use collab::*;
 pub use crud::*;
 pub use export::*;
+pub use notebook::*;
 pub use search::*;
 pub use sidebar::*;
+pub use snapshot_restore::*;
 pub use snapshots::*;
 pub use trash::*;
 pub use vault_import::*;
@@ -49,6 +56,12 @@ pub struct NoteDocument {
     pub content: Value,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub canvas: Option<CanvasSnapshotV1>,
+    /// Fields written by a newer Nevo build that this build doesn't know
+    /// about. Preserved verbatim on load->save round trips instead of being
+    /// silently dropped — see the workspace-schema-version gate in
+    /// `commands/workspace/manifest.rs`.
+    #[serde(default, flatten, skip_serializing_if = "serde_json::Map::is_empty")]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -59,6 +72,8 @@ pub struct NoteProperties {
     pub tags: Vec<String>,
     pub date: Option<String>,
     pub status: Option<NoteStatus>,
+    #[serde(default, flatten, skip_serializing_if = "serde_json::Map::is_empty")]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 impl NoteProperties {
@@ -68,6 +83,7 @@ impl NoteProperties {
             tags: Vec::new(),
             date: None,
             status: None,
+            extra: serde_json::Map::new(),
         }
     }
 }
@@ -143,6 +159,21 @@ pub(crate) fn note_path(workspace_path: &str, note_id: &str) -> Result<std::path
     Ok(Path::new(workspace_path)
         .join("notes")
         .join(format!("note-{}.nevo", note_id)))
+}
+
+static NOTE_LOCKS: OnceLock<DashMap<String, Arc<Mutex<()>>>> = OnceLock::new();
+
+/// Serializes the operations that write a note's authoritative state —
+/// `save_note` and a snapshot restore — against each other, per (workspace,
+/// note) pair. Without this an in-flight autosave could race a restore's
+/// write to the same `note.json` and clobber whichever one finished last,
+/// silently undoing the other.
+pub(crate) fn note_lock(workspace_path: &str, note_id: &str) -> Arc<Mutex<()>> {
+    NOTE_LOCKS
+        .get_or_init(DashMap::new)
+        .entry(format!("{workspace_path}\u{0}{note_id}"))
+        .or_insert_with(|| Arc::new(Mutex::new(())))
+        .clone()
 }
 
 fn assets_dir_path(workspace_path: &str) -> std::path::PathBuf {

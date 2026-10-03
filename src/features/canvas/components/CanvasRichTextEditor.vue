@@ -144,23 +144,31 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="canvas-rich-editor" :style="style" @pointerdown.stop>
-    <div class="canvas-rich-editor__toolbar" role="toolbar" :aria-label="label">
-      <button type="button" :aria-label="t('workspace.canvas.bold')" @mousedown.prevent="runMark('bold')"><Bold :size="15" /></button>
-      <button type="button" :aria-label="t('workspace.canvas.italic')" @mousedown.prevent="runMark('italic')"><Italic :size="15" /></button>
-      <button type="button" :aria-label="t('workspace.canvas.underline')" @mousedown.prevent="runMark('underline')"><Underline :size="15" /></button>
-      <button type="button" :aria-label="t('workspace.canvas.strike')" @mousedown.prevent="runMark('strikeThrough')"><Strikethrough :size="15" /></button>
-      <button type="button" :aria-label="t('workspace.canvas.code')" @mousedown.prevent="runMark('formatBlock', 'pre')"><Code2 :size="15" /></button>
-      <span aria-hidden="true" />
-      <button type="button" :aria-label="t('workspace.canvas.heading')" @mousedown.prevent="setBlockType('heading')">H</button>
-      <button type="button" :aria-label="t('workspace.canvas.bulletList')" @mousedown.prevent="setBlockType('bullet')"><List :size="15" /></button>
-      <button type="button" :aria-label="t('workspace.canvas.numberList')" @mousedown.prevent="setBlockType('number')"><ListOrdered :size="15" /></button>
-      <button type="button" :aria-label="t('workspace.canvas.todo')" @mousedown.prevent="toggleTodo"><CheckSquare :size="15" /></button>
-      <button type="button" :aria-label="t('workspace.canvas.quote')" @mousedown.prevent="setBlockType('quote')"><Quote :size="15" /></button>
+  <div
+    class="canvas-rich-editor tw:absolute tw:box-border tw:z-42 tw:border-2 tw:border-solid tw:border-accent tw:bg-[#fff8c5] tw:shadow-(--shadow-3)"
+    :style="style"
+    @pointerdown.stop
+  >
+    <div
+      class="canvas-rich-editor__toolbar tw:absolute tw:bottom-[calc(100%+8px)] tw:left-0 tw:flex tw:gap-0.5 tw:min-h-9 tw:p-1 tw:rounded-[10px] tw:border tw:border-solid tw:border-(--border-subtle) tw:bg-surface-canvas tw:shadow-(--shadow-raised)"
+      role="toolbar"
+      :aria-label="label"
+    >
+      <button type="button" class="tw:grid tw:size-7 tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[7px] tw:text-content-secondary tw:bg-transparent tw:hover:text-content-primary tw:hover:bg-(--hover-bg) tw:focus-visible:text-content-primary tw:focus-visible:bg-(--hover-bg) tw:max-[760px]:size-9" :aria-label="t('workspace.canvas.bold')" @mousedown.prevent="runMark('bold')"><Bold :size="15" /></button>
+      <button type="button" class="tw:grid tw:size-7 tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[7px] tw:text-content-secondary tw:bg-transparent tw:hover:text-content-primary tw:hover:bg-(--hover-bg) tw:focus-visible:text-content-primary tw:focus-visible:bg-(--hover-bg) tw:max-[760px]:size-9" :aria-label="t('workspace.canvas.italic')" @mousedown.prevent="runMark('italic')"><Italic :size="15" /></button>
+      <button type="button" class="tw:grid tw:size-7 tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[7px] tw:text-content-secondary tw:bg-transparent tw:hover:text-content-primary tw:hover:bg-(--hover-bg) tw:focus-visible:text-content-primary tw:focus-visible:bg-(--hover-bg) tw:max-[760px]:size-9" :aria-label="t('workspace.canvas.underline')" @mousedown.prevent="runMark('underline')"><Underline :size="15" /></button>
+      <button type="button" class="tw:grid tw:size-7 tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[7px] tw:text-content-secondary tw:bg-transparent tw:hover:text-content-primary tw:hover:bg-(--hover-bg) tw:focus-visible:text-content-primary tw:focus-visible:bg-(--hover-bg) tw:max-[760px]:size-9" :aria-label="t('workspace.canvas.strike')" @mousedown.prevent="runMark('strikeThrough')"><Strikethrough :size="15" /></button>
+      <button type="button" class="tw:grid tw:size-7 tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[7px] tw:text-content-secondary tw:bg-transparent tw:hover:text-content-primary tw:hover:bg-(--hover-bg) tw:focus-visible:text-content-primary tw:focus-visible:bg-(--hover-bg) tw:max-[760px]:size-9" :aria-label="t('workspace.canvas.code')" @mousedown.prevent="runMark('formatBlock', 'pre')"><Code2 :size="15" /></button>
+      <span class="tw:w-px tw:my-1 tw:mx-0.5 tw:bg-(--border-subtle)" aria-hidden="true" />
+      <button type="button" class="tw:grid tw:size-7 tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[7px] tw:text-content-secondary tw:bg-transparent tw:hover:text-content-primary tw:hover:bg-(--hover-bg) tw:focus-visible:text-content-primary tw:focus-visible:bg-(--hover-bg) tw:max-[760px]:size-9" :aria-label="t('workspace.canvas.heading')" @mousedown.prevent="setBlockType('heading')">H</button>
+      <button type="button" class="tw:grid tw:size-7 tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[7px] tw:text-content-secondary tw:bg-transparent tw:hover:text-content-primary tw:hover:bg-(--hover-bg) tw:focus-visible:text-content-primary tw:focus-visible:bg-(--hover-bg) tw:max-[760px]:size-9" :aria-label="t('workspace.canvas.bulletList')" @mousedown.prevent="setBlockType('bullet')"><List :size="15" /></button>
+      <button type="button" class="tw:grid tw:size-7 tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[7px] tw:text-content-secondary tw:bg-transparent tw:hover:text-content-primary tw:hover:bg-(--hover-bg) tw:focus-visible:text-content-primary tw:focus-visible:bg-(--hover-bg) tw:max-[760px]:size-9" :aria-label="t('workspace.canvas.numberList')" @mousedown.prevent="setBlockType('number')"><ListOrdered :size="15" /></button>
+      <button type="button" class="tw:grid tw:size-7 tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[7px] tw:text-content-secondary tw:bg-transparent tw:hover:text-content-primary tw:hover:bg-(--hover-bg) tw:focus-visible:text-content-primary tw:focus-visible:bg-(--hover-bg) tw:max-[760px]:size-9" :aria-label="t('workspace.canvas.todo')" @mousedown.prevent="toggleTodo"><CheckSquare :size="15" /></button>
+      <button type="button" class="tw:grid tw:size-7 tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[7px] tw:text-content-secondary tw:bg-transparent tw:hover:text-content-primary tw:hover:bg-(--hover-bg) tw:focus-visible:text-content-primary tw:focus-visible:bg-(--hover-bg) tw:max-[760px]:size-9" :aria-label="t('workspace.canvas.quote')" @mousedown.prevent="setBlockType('quote')"><Quote :size="15" /></button>
     </div>
     <div
       ref="editor"
-      class="canvas-rich-editor__surface"
+      class="canvas-rich-editor__surface tw:h-full tw:overflow-auto tw:text-[#2b2615] tw:leading-[1.45] tw:outline-none"
       contenteditable="true"
       role="textbox"
       aria-multiline="true"
@@ -172,64 +180,20 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* Scale-dependent sizing driven by the runtime `--canvas-rich-editor-scale`
+ * variable (set from the canvas camera zoom); layout/color live in the
+ * template above. */
 .canvas-rich-editor {
-  position: absolute;
-  box-sizing: border-box;
-  z-index: 42;
   padding: calc(14px * var(--canvas-rich-editor-scale));
-  border: 2px solid var(--accent);
   border-radius: calc(14px * var(--canvas-rich-editor-scale));
-  background: #fff8c5;
-  box-shadow: var(--shadow-3);
-}
-
-.canvas-rich-editor__toolbar {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 0;
-  display: flex;
-  gap: 2px;
-  min-height: 36px;
-  padding: 4px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  background: var(--canvas-1);
-  box-shadow: var(--shadow-2);
-}
-
-.canvas-rich-editor__toolbar button {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: 7px;
-  color: var(--text-secondary);
-  background: transparent;
-}
-
-.canvas-rich-editor__toolbar button:hover,
-.canvas-rich-editor__toolbar button:focus-visible {
-  color: var(--text-primary);
-  background: var(--hover-bg);
-}
-
-.canvas-rich-editor__toolbar span {
-  width: 1px;
-  margin: 4px 2px;
-  background: var(--border-subtle);
 }
 
 .canvas-rich-editor__surface {
-  height: 100%;
-  overflow: auto;
-  color: #2b2615;
   font-size: calc(15px * var(--canvas-rich-editor-scale));
-  line-height: 1.45;
-  outline: none;
 }
 
+/* Generated by `blockHtml`/`onMounted` via `innerHTML`, not Vue-rendered
+ * elements, so scoped attribute selectors cannot reach them without `:deep()`. */
 .canvas-rich-editor__surface :deep([data-block-type='heading']) {
   font-size: 1.35em;
   font-weight: 700;
@@ -242,12 +206,5 @@ onMounted(() => {
 .canvas-rich-editor__surface :deep([data-block-type='quote']) {
   padding-left: 10px;
   border-left: 3px solid #c3a329;
-}
-
-@media (max-width: 760px) {
-  .canvas-rich-editor__toolbar button {
-    width: 36px;
-    height: 36px;
-  }
 }
 </style>

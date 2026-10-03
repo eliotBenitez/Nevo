@@ -8,10 +8,40 @@ const INLINE_TEXT_CONTAINER_TYPES = new Set([
   'toggle_title',
 ])
 
+/**
+ * Incremental word counter: counts transitions from whitespace (or start) to
+ * non-whitespace across any number of `feed()` calls, equivalent to counting
+ * the segments `text.trim().split(/\s+/)` would produce on the concatenation
+ * of every fed chunk — without ever concatenating them into one string. Used
+ * by `countWordsInText` below and by the editor's streaming doc-stats walk
+ * (`src/editor-core/docStats.ts`) so both paths share one definition of "word"
+ * and cannot drift apart.
+ */
+export function createWordCounter() {
+  let insideWord = false
+  let words = 0
+  return {
+    feed(chunk: string) {
+      for (let i = 0; i < chunk.length; i++) {
+        if (/\s/.test(chunk[i])) {
+          insideWord = false
+        } else if (!insideWord) {
+          insideWord = true
+          words += 1
+        }
+      }
+    },
+    get count() {
+      return words
+    },
+  }
+}
+
 /** Counts whitespace-delimited words in text whose block boundaries are already preserved. */
 export function countWordsInText(text: string): number {
-  const trimmed = text.trim()
-  return trimmed ? trimmed.split(/\s+/).length : 0
+  const counter = createWordCounter()
+  counter.feed(text)
+  return counter.count
 }
 
 /**

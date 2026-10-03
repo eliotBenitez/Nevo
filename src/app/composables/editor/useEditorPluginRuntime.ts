@@ -13,7 +13,6 @@ const EMPTY_PLUGIN_CONTRIBUTIONS: NevoSandboxUiContributionSnapshot = {
 interface PluginRuntimeEditorSetup {
   initPluginHost: (workspacePath: string | null, manifests: PluginManifest[]) => Promise<void>
   destroyEditorView: () => void
-  flushYjsPersistenceNow: () => Promise<void>
 }
 
 interface EditorPluginRuntimeOptions {
@@ -108,7 +107,6 @@ export function useEditorPluginRuntime(options: EditorPluginRuntimeOptions) {
     if (paused.value || disposed) return
     paused.value = true
     options.flushPendingContent()
-    await options.editorSetup.flushYjsPersistenceNow()
     options.unmountNotePreload()
     options.unmountBlockHandle()
     options.emitContributions(EMPTY_PLUGIN_CONTRIBUTIONS)

@@ -42,7 +42,7 @@
   display: block;
   min-width: 0;
   flex: 1;
-  color: var(--text-2);
+  color: var(--text-secondary);
   line-height: 1.6;
 }
 
@@ -67,7 +67,7 @@
   height: 16px;
   margin-top: 4px;
   border-radius: calc(5px * var(--radius-scale, 1));
-  border: 1.5px solid var(--line-strong);
+  border: 1.5px solid var(--border-strong);
   background: transparent;
   color: transparent;
   display: grid;
@@ -84,8 +84,8 @@
 
 .doc-editor .nv-prosemirror .nv-checklist-item[data-checked='true'] .nv-checklist-checkbox {
   border-color: var(--accent);
-  background: var(--accent);
-  color: white;
+  background: var(--accent-fill);
+  color: var(--accent-on);
 }
 
 .doc-editor .nv-prosemirror .nv-checklist-item[data-checked='true'] .nv-checklist-checkbox::after {
@@ -95,6 +95,6 @@
 }
 
 .doc-editor .nv-prosemirror .nv-checklist-item[data-checked='true'] .nv-checklist-content {
-  color: var(--text-3);
+  color: var(--text-muted);
   text-decoration: line-through;
 }

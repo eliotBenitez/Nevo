@@ -184,9 +184,20 @@ describe('KanbanCardModal', () => {
 
     const dialog = document.body.querySelector<HTMLElement>('[aria-modal="true"]')
     expect(dialog).not.toBeNull()
-    expect(dialog?.getAttribute('aria-label')).toBe('Детали карточки')
+    // NvModal labels the panel through aria-labelledby and a visually-hidden
+    // heading, where the pre-migration panel carried aria-label directly.
+    const labelledBy = dialog?.getAttribute('aria-labelledby')
+    expect(labelledBy).toBeTruthy()
+    expect(document.getElementById(labelledBy!)?.textContent).toBe('Детали карточки')
     expect(document.body.querySelector('.km-breadcrumb')).toBeNull()
     expect(document.body.querySelector('.km-card-id')).toBeNull()
+
+    const titleInput = document.body.querySelector<HTMLInputElement>('#km-card-title')
+    expect(titleInput?.closest('.nv-modal__header')).not.toBeNull()
+    expect(document.querySelector('label[for="km-card-title"]')?.textContent).toBe('Название карточки')
+    expect(document.body.querySelector('.km-picker__btn[aria-pressed="true"]')).not.toBeNull()
+    expect(document.body.querySelector('.km-metadata')?.closest('.nv-modal__footer')).not.toBeNull()
+    expect(document.body.querySelector('.km-props .km-metadata')).toBeNull()
 
     const bodyText = document.body.textContent ?? ''
     expect(bodyText).toContain('Заметки')

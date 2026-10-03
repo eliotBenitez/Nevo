@@ -11,6 +11,7 @@ import {
   createViewportRenderController,
   type ViewportRenderController,
 } from './viewportRenderController'
+import { MAX_EMBED_SOURCE_CHARS } from './embedLimits'
 
 let vegaEmbedModule: typeof import('vega-embed')['default'] | null = null
 
@@ -93,6 +94,17 @@ export function createVegaNodeView(node: PMNode, view: EditorView, getPos: NodeV
       rendered.innerHTML = ''
       rendered.textContent = 'Add a chart — click to edit'
       dom.dataset.error = 'false'
+      lastRenderedSpec = specStr
+      return
+    }
+
+    // vega-embed has no input-size bound of its own; a huge spec (pasted/
+    // imported content) can hang the tab. Skip rendering and let the user
+    // shrink it — the block stays clickable/editable either way.
+    if (specStr.length > MAX_EMBED_SOURCE_CHARS) {
+      rendered.innerHTML = ''
+      rendered.textContent = options?.t?.('editor.embeds.sourceTooLarge') ?? 'Source is too large to render — shorten it to continue'
+      dom.dataset.error = 'true'
       lastRenderedSpec = specStr
       return
     }

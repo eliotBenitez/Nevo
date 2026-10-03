@@ -40,4 +40,17 @@ describe('locale messages', () => {
       folder: expect.any(String),
     })
   })
+
+  it('defines concise single-word search labels for all locales', () => {
+    expect(ru.workspace.titlebarSearch.placeholder).toBe('Поиск')
+    expect(ru.workspace.home.search).toBe('Поиск')
+    expect(en.workspace.titlebarSearch.placeholder).toBe('Search')
+    expect(en.workspace.home.search).toBe('Search')
+    expect(de.workspace.titlebarSearch.placeholder).toBe('Suchen')
+    expect(de.workspace.home.search).toBe('Suchen')
+    expect(es.workspace.titlebarSearch.placeholder).toBe('Buscar')
+    expect(es.workspace.home.search).toBe('Buscar')
+    expect(fr.workspace.titlebarSearch.placeholder).toBe('Rechercher')
+    expect(fr.workspace.home.search).toBe('Rechercher')
+  })
 })

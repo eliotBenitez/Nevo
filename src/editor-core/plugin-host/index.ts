@@ -130,8 +130,15 @@ export class EditorPluginHost {
     for (const manifest of manifests) {
       await this.loadAndRegister(manifest)
     }
+    const trustedIds: string[] = []
+    const sandboxedIds: string[] = []
     for (const manifest of manifests) {
-      await this.activate(manifest.id)
+      if (this.sandboxedSessions.has(manifest.id)) sandboxedIds.push(manifest.id)
+      else trustedIds.push(manifest.id)
+    }
+    await Promise.all(sandboxedIds.map(id => this.activate(id)))
+    for (const pluginId of trustedIds) {
+      await this.activate(pluginId)
     }
   }
 

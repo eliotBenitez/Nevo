@@ -1,36 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import type { WorkspaceManifest } from '../../../types/workspace'
-import { createYDocFromContent, encodeYDocState } from '../../../editor-core/collaboration'
-import { nevoBaseSchema } from '../../../editor-core/schema'
-import { collabCommands, noteCommands } from '../../../tauri/commands'
+import type { BlockNode, NoteDocument } from '../../../types/note'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { useNoteStore } from '../../../stores/note'
 import { useDrawNoteSync } from './useDrawNoteSync'
 
 vi.mock('../../../tauri/commands', () => ({
-  collabCommands: {
-    loadYjsState: vi.fn(),
-    saveYjsState: vi.fn(async () => undefined),
-  },
   noteCommands: {
-    touchNoteUpdatedAt: vi.fn(),
+    saveNote: vi.fn(async () => undefined),
   },
 }))
 
-const drawBlock = (drawId: string, src = '', svgPreview = '') => ({
+const drawBlock = (drawId: string, src = '', svgPreview = ''): BlockNode => ({
   type: 'draw_block',
   attrs: { drawId, src, svgPreview, title: '' },
 })
 
-const docWith = (...blocks: unknown[]) => ({ type: 'doc', content: blocks })
-
-function encodedDocWithDrawBlock(drawId: string): Uint8Array {
-  const ydoc = createYDocFromContent(nevoBaseSchema, docWith(drawBlock(drawId)))
-  const bytes = encodeYDocState(ydoc)
-  ydoc.destroy()
-  return bytes
-}
+const docWith = (...blocks: BlockNode[]): BlockNode => ({ type: 'doc', content: blocks })
 
 function buildManifest(noteId: string, updatedAt: string): WorkspaceManifest {
   return {
@@ -43,6 +30,18 @@ function buildManifest(noteId: string, updatedAt: string): WorkspaceManifest {
     rootOrder: [noteId],
     tree: [],
     rootNotes: [{ id: noteId, title: 'Draw note', icon: '📄', folderId: null, updatedAt }],
+  }
+}
+
+function buildNote(noteId: string, drawId: string): NoteDocument {
+  return {
+    id: noteId,
+    title: 'Draw note',
+    icon: '📄',
+    folderId: null,
+    createdAt: '2000-01-01T00:00:00.000Z',
+    updatedAt: '2000-01-01T00:00:00.000Z',
+    content: docWith(drawBlock(drawId)),
   }
 }
 
@@ -59,11 +58,10 @@ describe('useDrawNoteSync', () => {
     useNoteStore().activeNote = null
   })
 
-  it('saves the Y.Doc and touches the note metadata when the draw_block attrs actually change', async () => {
-    const mockedCollab = vi.mocked(collabCommands)
-    const mockedNote = vi.mocked(noteCommands)
-    mockedCollab.loadYjsState.mockResolvedValue(encodedDocWithDrawBlock('draw-1'))
-    mockedNote.touchNoteUpdatedAt.mockResolvedValue('2026-07-21T12:00:00.000Z')
+  it('patches note.content and saves it when the draw_block attrs actually change', async () => {
+    const noteStore = useNoteStore()
+    noteStore.activeNote = buildNote(noteId, 'draw-1')
+    const saveNoteSpy = vi.spyOn(noteStore, 'saveNote').mockResolvedValue(undefined)
 
     const sync = useDrawNoteSync({
       drawId: 'draw-1',
@@ -74,18 +72,17 @@ describe('useDrawNoteSync', () => {
     await sync.patchDrawSrcIntoNoteDoc('.nevo/assets/draw-1.draw.json', '<svg/>')
     await sync.awaitDocPatch()
 
-    expect(mockedCollab.saveYjsState).toHaveBeenCalledTimes(1)
-    expect(mockedNote.touchNoteUpdatedAt).toHaveBeenCalledWith(workspacePath, noteId)
-
-    const workspaceStore = useWorkspaceStore()
-    expect(workspaceStore.manifest?.rootNotes[0].updatedAt).toBe('2026-07-21T12:00:00.000Z')
+    const patchedBlock = noteStore.activeNote?.content.content?.[0]
+    expect(patchedBlock?.attrs?.src).toBe('.nevo/assets/draw-1.draw.json')
+    expect(patchedBlock?.attrs?.svgPreview).toBe('<svg/>')
+    expect(saveNoteSpy).toHaveBeenCalledTimes(1)
   })
 
-  it('does not save or touch the note when no matching draw_block is found (no-op patch)', async () => {
-    const mockedCollab = vi.mocked(collabCommands)
-    const mockedNote = vi.mocked(noteCommands)
-    // The persisted doc has no draw_block matching this drawId.
-    mockedCollab.loadYjsState.mockResolvedValue(encodedDocWithDrawBlock('some-other-draw'))
+  it('does not patch or save when no matching draw_block is found (no-op patch)', async () => {
+    const noteStore = useNoteStore()
+    const note = buildNote(noteId, 'some-other-draw')
+    noteStore.activeNote = note
+    const saveNoteSpy = vi.spyOn(noteStore, 'saveNote').mockResolvedValue(undefined)
 
     const sync = useDrawNoteSync({
       drawId: 'draw-1',
@@ -96,18 +93,17 @@ describe('useDrawNoteSync', () => {
     await sync.patchDrawSrcIntoNoteDoc('.nevo/assets/draw-1.draw.json', '<svg/>')
     await sync.awaitDocPatch()
 
-    expect(mockedCollab.saveYjsState).not.toHaveBeenCalled()
-    expect(mockedNote.touchNoteUpdatedAt).not.toHaveBeenCalled()
-
-    const workspaceStore = useWorkspaceStore()
-    expect(workspaceStore.manifest?.rootNotes[0].updatedAt).toBe('2000-01-01T00:00:00.000Z')
+    // `noteStore.activeNote` is a reactive ref, so the read comes back as a
+    // proxy — assert structural, not referential, equality against the
+    // original content.
+    expect(noteStore.activeNote?.content).toEqual(note.content)
+    expect(saveNoteSpy).not.toHaveBeenCalled()
   })
 
-  it('does nothing when the backend is not local', async () => {
-    const mockedCollab = vi.mocked(collabCommands)
-    const mockedNote = vi.mocked(noteCommands)
-    const workspaceStore = useWorkspaceStore()
-    workspaceStore.activeHandle = { kind: 'cloud', storageId: 'storage-1' }
+  it('does not patch or save when the active note does not match the drawing note', async () => {
+    const noteStore = useNoteStore()
+    noteStore.activeNote = buildNote('other-note', 'draw-1')
+    const saveNoteSpy = vi.spyOn(noteStore, 'saveNote').mockResolvedValue(undefined)
 
     const sync = useDrawNoteSync({
       drawId: 'draw-1',
@@ -118,8 +114,25 @@ describe('useDrawNoteSync', () => {
     await sync.patchDrawSrcIntoNoteDoc('.nevo/assets/draw-1.draw.json', '<svg/>')
     await sync.awaitDocPatch()
 
-    expect(mockedCollab.loadYjsState).not.toHaveBeenCalled()
-    expect(mockedCollab.saveYjsState).not.toHaveBeenCalled()
-    expect(mockedNote.touchNoteUpdatedAt).not.toHaveBeenCalled()
+    expect(saveNoteSpy).not.toHaveBeenCalled()
+  })
+
+  it('does nothing when there is no open local workspace', async () => {
+    const noteStore = useNoteStore()
+    noteStore.activeNote = buildNote(noteId, 'draw-1')
+    const saveNoteSpy = vi.spyOn(noteStore, 'saveNote').mockResolvedValue(undefined)
+    const workspaceStore = useWorkspaceStore()
+    workspaceStore.activeHandle = null
+
+    const sync = useDrawNoteSync({
+      drawId: 'draw-1',
+      getWorkspacePath: () => workspacePath,
+      getNoteId: () => noteId,
+    })
+
+    await sync.patchDrawSrcIntoNoteDoc('.nevo/assets/draw-1.draw.json', '<svg/>')
+    await sync.awaitDocPatch()
+
+    expect(saveNoteSpy).not.toHaveBeenCalled()
   })
 })

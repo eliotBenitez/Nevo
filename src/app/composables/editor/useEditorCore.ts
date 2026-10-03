@@ -2,8 +2,6 @@ import { EditorView } from 'prosemirror-view'
 import { AllSelection, NodeSelection, TextSelection, type Command, type EditorState, type Transaction } from 'prosemirror-state'
 import { Slice, type Node } from 'prosemirror-model'
 import { cellAround, CellSelection } from 'prosemirror-tables'
-import * as Y from 'yjs'
-import { Awareness } from 'y-protocols/awareness'
 import type { NevoCoreCommands } from '../../../editor-core/commands'
 import type { PluginManifest, WorkspaceSettings } from '../../../types/workspace'
 import type {
@@ -23,31 +21,28 @@ import {
   nevoSlashPluginKey,
   brokenLinkPluginKey,
   parseNoteContentToDoc,
+  parseNoteContentToDocSafe,
   serializeDocToNoteContent,
   setActivePluginSerialization,
 } from '../../../editor-core'
-import {
-  loadOrCreateYDoc,
-  seedEmptyYDocFromContent,
-  Y_FRAGMENT_NAME,
-} from '../../../editor-core/collaboration'
-import { createYjsPersistence } from './useYjsPersistence'
-import { collabCommands } from '../../../tauri/commands'
-import { initAwarenessUser } from '../../../editor-core/collaboration/yAwareness'
+import { registerEditorPersistence } from '../../../core/document-session/editorSessionRegistry'
+import type { VoiceRecordingEditorBindings } from './useVoiceRecording'
+import { useToast } from '../../../ui/composables/useToast'
 import { useWorkspaceStore } from '../../../stores/workspace'
-import { useAuthStore } from '../../../stores/auth'
-import { CloudBackend } from '../../../core/workspace-backend'
+import { useOnboardingStore } from '../../../stores/onboarding'
 import { createPasteHandler } from './usePasteHandling'
 import { buildPluginRuntime } from './pluginRuntime'
 import { appLogger } from '../../../utils/logger'
 import { runGuardedCommand } from './prosemirrorErrors'
 import { i18n } from '../../../i18n'
+import { getSlashSearchTerms } from './slashSearchTerms'
 import { useAiCompletion } from '../../../composables/useAiCompletion'
 import { buildAiSlashItems } from './aiSlashItems'
 import { createDatabaseRepository } from '../../../features/database/databaseRepository'
 import { createDatabaseCleanup, collectRemovedAssetSrcs } from './documentCleanup'
 import { createIdleTaskScheduler } from './idleTaskScheduler'
 import { resolveBlockRef } from '../../../core/blockRef/resolveBlockRef'
+import { slashGridColumns } from '../../../utils/slashMenuLayout'
 import {
   clearActiveEditor,
   notifyActiveEditorTransaction,
@@ -56,6 +51,28 @@ import {
 
 function resolveEditorLanguage(): string {
   return document.documentElement.lang || 'ru'
+}
+
+/** Surfaces a degraded `note.content` parse to the user (a lasting —
+ *  `duration: 0` — toast) and to the log. Not damaged — the note's own
+ *  content just holds a node type this schema can't parse. Never persist
+ *  over it: contentPersistenceDisabled (set by the caller) blocks the
+ *  plain-text stand-in shown on screen from ever being saved back over the
+ *  original. */
+function reportDegradedContentNotice(noteId: string, workspacePath: string | null): void {
+  void appLogger.warn({
+    source: 'frontend.editor',
+    event: 'note_content_degraded',
+    message: 'note.content uses a node type this schema cannot parse; opening as plain text without persistence',
+    workspacePath: workspacePath ?? undefined,
+    payload: { noteId },
+  })
+  useToast().showToast({
+    variant: 'error',
+    duration: 0,
+    title: i18n.global.t('editor.yjsRecovery.degradedTitle'),
+    message: i18n.global.t('editor.yjsRecovery.degradedMessage'),
+  })
 }
 
 export interface EditorCore {
@@ -72,17 +89,17 @@ export interface EditorCore {
   pendingMediaKind: 'audio' | 'video' | null
   lastSlashPluginState: NevoSlashMenuState
   isApplyingExternalState: boolean
+  /** True while the currently loaded note's content had to be parsed in
+   *  degraded (plain-text fallback) form — see `parseNoteContentToDocSafe`.
+   *  Blocks `flushPendingContentUpdate` from writing back over the note's
+   *  real (unparseable-by-this-build) content. */
+  contentPersistenceDisabled: boolean
   lastSerializedContent: string
   lastSerializedContentRef: NoteDocument['content'] | null
   /** Defers serializing the editor doc: lastSerializedContent is computed on first
    *  read instead of eagerly on every note open. */
   setLastSerializedFromDoc: (doc: Node) => void
   lastLoadedNoteId: string | null
-  ydoc: Y.Doc | null
-  awareness: Awareness | null
-  /** False when the Y.Doc/awareness are owned by a cloud backend session and
-   *  must not be destroyed by the editor on teardown. */
-  ownsYdoc: boolean
   workspacePath: string | null
   systemPlugins: {
     templates: boolean
@@ -108,6 +125,7 @@ export interface EditorCoreCallbacks {
    *  When omitted, pasted `[[Title]]` links become broken links. */
   resolveWikiLink?: (title: string) => string | null
   onLinkPickerEnter?: () => boolean
+  onContextMenuRequest?: (view: EditorView, event: MouseEvent) => boolean
   onImagePickerRequest: (pos: number) => void
   /** Synchronously inspect a paste event for image files. Returns true when at
    *  least one image was found (and import was kicked off asynchronously), so
@@ -151,6 +169,9 @@ export interface EditorCoreCallbacks {
   onPluginNodeEditRequest: (pos: number, nodeName: string, rect?: DOMRect) => void
   onCalloutIconPickRequest: (pos: number, rect: DOMRect, icon: string) => void
   onTemplateInsertRequest?: () => void
+  /** Bindings for the `voice-recording` slash item; omitted by hosts/platforms
+   *  where `isVoiceRecordingSupported()` is false (see Step 2 in the hosts). */
+  voiceRecording?: VoiceRecordingEditorBindings
   onAfterTransaction?: (view: EditorView) => void
   onAssetSrcsRemoved?: (srcs: string[]) => void
   onAiAskRequest?: (onSubmit: (instruction: string) => void) => void
@@ -177,6 +198,7 @@ export function createEditorCore(): EditorCore {
     pendingMediaKind: null,
     lastSlashPluginState: { open: false, query: '', range: null, activeIndex: 0, itemIds: [] },
     isApplyingExternalState: false,
+    contentPersistenceDisabled: false,
     get lastSerializedContent() {
       if (serializedCache === null) {
         serializedCache = serializedDoc ? JSON.stringify(serializeDocToNoteContent(serializedDoc)) : ''
@@ -193,9 +215,6 @@ export function createEditorCore(): EditorCore {
     },
     lastSerializedContentRef: null,
     lastLoadedNoteId: null,
-    ydoc: null,
-    awareness: null,
-    ownsYdoc: false,
     workspacePath: null,
     systemPlugins: {
       templates: false,
@@ -277,10 +296,10 @@ function shouldRefreshOverlays(prevState: EditorState, nextState: EditorState, t
 }
 
 export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) {
-  // Captured synchronously (Pinia active during component setup) for use in the
-  // async note-setup path, which decides between disk-backed and cloud-backed Yjs.
+  // Captured synchronously (Pinia active during component setup) for use in
+  // the async note-setup path.
   const workspaceStore = useWorkspaceStore()
-  const authStore = useAuthStore()
+  const onboardingStore = useOnboardingStore()
   const ai = useAiCompletion()
 
   let pendingContentDoc: Node | null = null
@@ -293,13 +312,14 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     databaseCleanup.flush(core.editorView ? core.editorView.state.doc : null, core.workspacePath)
   }
 
-  // Debounced persistence of the editor-owned (disk-backed) Y.Doc. Owned by a
-  // dedicated helper so the timer/handler are torn down on note switch / editor
-  // destroy — otherwise the pending timer leaks past `ydoc.destroy()` and the
-  // last edit within the debounce window is never written.
-  const yjsPersistence = createYjsPersistence()
-  const teardownYjsPersistence = () => yjsPersistence.teardown()
-  const flushYjsPersistenceNow = () => yjsPersistence.flushNow()
+  // Lets code outside the editor (e.g. a snapshot restore in the note store)
+  // suspend this note's disk persistence without importing editor internals —
+  // see src/core/document-session/editorSessionRegistry.ts.
+  let unregisterEditorPersistence: (() => void) | null = null
+  const unregisterPersistenceSession = () => {
+    unregisterEditorPersistence?.()
+    unregisterEditorPersistence = null
+  }
 
   function flushPendingContentUpdate(): NoteDocument['content'] | null {
     contentUpdateTask.cancel()
@@ -310,7 +330,11 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     const serialized = JSON.stringify(content)
     core.lastSerializedContent = serialized
     core.lastSerializedContentRef = content
-    callbacks.onContentUpdate(content)
+    // Never write back over a note whose content had to be parsed in
+    // degraded (plain-text fallback) form — see contentPersistenceDisabled.
+    if (!core.contentPersistenceDisabled) {
+      callbacks.onContentUpdate(content)
+    }
     return content
   }
 
@@ -449,6 +473,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
       payload: { itemId: item.id },
     })
     if (!applied) return false
+    void onboardingStore.markFirstStep('insertBlock')
     if (item.id === 'math-inline' || item.id === 'math') {
       callbacks.onSlashMathItemRan()
     }
@@ -494,12 +519,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     core.toolbarPluginActions = []
     setActivePluginSerialization(null)
 
-    // Plugins for a cloud workspace live in a device-local directory rather
-    // than in the (pathless) workspace itself, and every plugin command —
-    // including the SDK's storage and assets — is addressed by that path.
-    const backend = workspaceStore.backend
     const pluginPath = workspacePath
-      ?? (backend instanceof CloudBackend ? backend.pluginWorkspacePath() : null)
 
     if (!pluginPath) {
       core.schema = createSchemaWithPluginExtensions()
@@ -534,19 +554,12 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
   }
 
   function destroyEditorView() {
+    callbacks.voiceRecording?.onEditorDestroy()
     flushPendingContentUpdate()
-    teardownYjsPersistence()
+    unregisterPersistenceSession()
     if (core.editorView) clearActiveEditor(core.editorView)
     core.editorView?.destroy()
     core.editorView = null
-    // Cloud-backed sessions are owned by the workspace backend; only release
-    // our reference, never destroy them here.
-    if (core.ownsYdoc) {
-      core.awareness?.destroy()
-      core.ydoc?.destroy()
-    }
-    core.awareness = null
-    core.ydoc = null
     core.commandRegistry = new Map()
     core.coreCommands = null
     core.slashItems = []
@@ -632,13 +645,13 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     editorRoot: HTMLDivElement,
     settings: WorkspaceSettings,
     options: {
-      yFragment?: import('yjs').XmlFragment
       enableTemplates?: boolean
+      /** Already-parsed doc for `content` (see `setupEditorForNote`), so the
+       *  note-open path does not parse `note.content` a second time. */
+      preParsedDoc?: ReturnType<typeof parseNoteContentToDocSafe>['doc']
     } = {},
   ) {
-    // The backend owns the row store (SQLite for local, manifest Y.Doc for
-    // cloud). Falling back to `createDatabaseRepository(null)` here would hand
-    // cloud workspaces a process-wide in-memory store and silently drop rows.
+    // The backend owns the row store (SQLite locally).
     const databaseRepository = workspaceStore.backend?.databaseRepository()
       ?? createDatabaseRepository(core.workspacePath)
     databaseCleanup.setRepository(databaseRepository)
@@ -662,17 +675,23 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
       schema: core.schema,
       content,
       enableSlashCommands: settings.editor.slashCommands,
+      // Read live from the store so switching list/tiles needs no editor rebuild.
+      getSlashGridColumns: () => slashGridColumns(workspaceStore.settings?.editor?.slashMenuLayout),
+      getSlashSearchTerms,
       enableMarkdownShortcuts: settings.editor.markdownShortcuts,
       tabBehavior: settings.editor.tabKeyBehavior,
       onTemplateInsertRequest: options.enableTemplates !== false && core.systemPlugins.templates
         ? callbacks.onTemplateInsertRequest
         : undefined,
+      onVoiceRecordingRequest: callbacks.voiceRecording?.request,
+      voiceRecordingPlaceholder: callbacks.voiceRecording
+        ? { ...callbacks.voiceRecording.placeholder, t: (key: string) => i18n.global.t(key) }
+        : undefined,
       enableVega: core.systemPlugins.vega,
       enableMarkmap: core.systemPlugins.markmap,
       enableDraw: settings.features?.draw !== false,
       pluginHost: core.pluginHost ?? undefined,
-      yFragment: options.yFragment,
-      awareness: options.yFragment ? core.awareness ?? undefined : undefined,
+      preParsedDoc: options.preParsedDoc,
       nodeViewOptions: {
         databaseRepository,
         onRequestCalloutIconPick: ({ position, node, anchorRect }) => {
@@ -731,8 +750,8 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
           } catch (error) {
             void appLogger.warn({
               source: 'frontend.editor',
-              event: 'yjs_transaction_apply_error',
-              message: 'Editor transaction failed — possibly corrupted Yjs state',
+              event: 'transaction_apply_error',
+              message: 'Editor transaction failed to apply',
               workspacePath: core.workspacePath,
               error,
             })
@@ -743,8 +762,8 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
           } catch (error) {
             void appLogger.warn({
               source: 'frontend.editor',
-              event: 'yjs_update_state_error',
-              message: 'Editor state update failed — possibly corrupted Yjs state',
+              event: 'editor_update_state_error',
+              message: 'Editor state update failed',
               workspacePath: core.workspacePath,
               error,
             })
@@ -807,7 +826,19 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
             return handleInternalLinkClick(view, event)
           },
           contextmenu(view, event) {
-            return handleTableContextMenu(view, event)
+            console.log('contextmenu event fired in ProseMirror!', { shiftKey: event.shiftKey, defaultPrevented: event.defaultPrevented, callbacksHasContextMenuRequest: !!callbacks.onContextMenuRequest })
+            if (event.shiftKey) return false
+            if (event.defaultPrevented) return false
+            
+            handleTableContextMenu(view, event)
+            
+            if (callbacks.onContextMenuRequest) {
+               console.log('Calling callbacks.onContextMenuRequest')
+               const result = callbacks.onContextMenuRequest(view, event)
+               console.log('callbacks.onContextMenuRequest returned', result)
+               return result
+            }
+            return false
           },
         },
         handlePaste: createPasteHandler({
@@ -828,8 +859,8 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     } catch (error) {
       void appLogger.warn({
         source: 'frontend.editor',
-        event: 'yjs_update_state_error',
-        message: 'Editor state update failed during note switch — possibly corrupted Yjs state',
+        event: 'editor_update_state_error',
+        message: 'Editor state update failed during note switch',
         workspacePath: core.workspacePath,
         error,
       })
@@ -848,80 +879,38 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     editorRoot: HTMLDivElement,
     settings: WorkspaceSettings,
   ) {
-    teardownYjsPersistence()
-    if (core.ownsYdoc) { core.awareness?.destroy(); core.ydoc?.destroy() }
-    core.awareness = null
-    core.ydoc = null
-    core.ownsYdoc = false
+    unregisterPersistenceSession()
+    core.contentPersistenceDisabled = false
     await setupEditorForContent(content, documentId, editorRoot, settings, { enableTemplates: false })
   }
 
   // Content authority invariant:
-  //  - The disk-backed Y.Doc (`.nevo/collab/<id>.yjs`) is the source of truth for
-  //    a note's body once it exists. `note.content` (in `note.json`) is a derived
-  //    cache used by search/preview/export; it only *seeds* a brand-new Y.Doc.
-  //  - Reconciliation is automatic: when a disk-loaded Y.Doc differs from the
-  //    `note.content` seed, `ySyncPlugin` overwrites the freshly-created view with
-  //    the Y.Doc content, producing a `docChanged` transaction. On a fresh view
-  //    `isApplyingExternalState` is false, so `scheduleContentUpdate` runs and
-  //    rewrites `note.content` to match — healing the drift on open.
-  //  - Both writers are flushed at the same points (autosave, navigation, app
-  //    close via `setPendingYjsFlush`), so they cannot diverge across a save.
+  //  - `note.json` (`note.content`) is the single source of truth for a
+  //    note's body — the editor is built directly from it, with no separate
+  //    disk-backed CRDT copy in between.
+  //  - Exception: when `parseNoteContentToDocSafe` reports `degraded` for
+  //    `note.content` (a node type this schema can't parse), the doc shown
+  //    is a plain-text stand-in — `contentPersistenceDisabled` blocks
+  //    `flushPendingContentUpdate` from writing it back over the original.
   // Keep this coupling intact when changing the setup/persistence paths.
   async function setupEditorForNote(note: NoteDocument, editorRoot: HTMLDivElement, settings: WorkspaceSettings) {
-    let yFragment: import('yjs').XmlFragment | undefined
+    unregisterPersistenceSession()
 
-    // Release any previous Y.Doc; cloud sessions are owned by the backend and
-    // must not be destroyed here (only the editor-owned local docs are).
-    teardownYjsPersistence()
-    if (core.ownsYdoc) { core.awareness?.destroy(); core.ydoc?.destroy() }
-    core.awareness = null
-    core.ydoc = null
-
-    if (workspaceStore.backendKind === 'cloud') {
-      const cloud = workspaceStore.backend as CloudBackend | null
-      const session = cloud?.getNoteSession(note.id) ?? null
-      if (session) {
-        await session.whenSynced()
-        // A brand-new relay document has no Y.XmlElement at all. Feeding that
-        // directly to ySyncPlugin produces a caret without a textblock, so
-        // keyboard input is silently ignored. Repair only after a complete
-        // relay sync; a timeout or decrypt failure is not evidence of emptiness.
-        if (session.hasCompleteRelayState) {
-          seedEmptyYDocFromContent(session.ydoc, core.schema, note.content)
-        }
-        core.ydoc = session.ydoc
-        core.awareness = session.awareness
-        core.ownsYdoc = false
-        yFragment = session.ydoc.getXmlFragment(Y_FRAGMENT_NAME)
-        const name = authStore.user?.displayName || authStore.user?.email || 'User'
-        initAwarenessUser(session.awareness, name)
-      }
-    } else if (core.workspacePath) {
-      const workspacePath = core.workspacePath
-      const noteId = note.id
-      let ydoc: Y.Doc | null = null
-
-      try {
-        const bytes = await collabCommands.loadYjsState(workspacePath, noteId)
-        ydoc = loadOrCreateYDoc(core.schema, note.content, bytes)
-      } catch {
-        // The persisted state could not be read (IO error): seed a fresh Y.Doc
-        // from note.content rather than dropping into non-Yjs mode.
-        ydoc = loadOrCreateYDoc(core.schema, note.content, new Uint8Array())
-      }
-
-      if (ydoc) {
-        core.ydoc = ydoc
-        core.awareness = new Awareness(ydoc)
-        core.ownsYdoc = true
-        yFragment = ydoc.getXmlFragment(Y_FRAGMENT_NAME)
-
-        yjsPersistence.attach(ydoc, workspacePath, noteId, () => core.ydoc === ydoc)
-      }
+    const contentCheck = parseNoteContentToDocSafe(core.schema, note.content)
+    core.contentPersistenceDisabled = contentCheck.degraded
+    if (contentCheck.degraded) {
+      reportDegradedContentNotice(note.id, core.workspacePath)
     }
 
-    await setupEditorForContent(note.content, note.id, editorRoot, settings, { yFragment })
+    unregisterEditorPersistence = registerEditorPersistence(note.id, {
+      // Clearing lastLoadedNoteId forces the next note load to rebuild the
+      // editor from the note's stored content even when it equals the live
+      // content; otherwise persistence would stay suspended.
+      suspend: () => { core.lastLoadedNoteId = null },
+      flushContent: () => { flushPendingContentUpdate() },
+    })
+
+    await setupEditorForContent(note.content, note.id, editorRoot, settings, { preParsedDoc: contentCheck.doc })
   }
 
   return {
@@ -937,7 +926,6 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     setupEditorForDocument,
     setupEditorForNote,
     flushPendingContentUpdate,
-    flushYjsPersistenceNow,
     flushDatabaseCleanup,
     insertContentAtSelection(content: NoteDocument['content']): boolean {
       if (!core.editorView) return false

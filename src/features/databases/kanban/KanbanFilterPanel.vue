@@ -111,18 +111,18 @@ function valueString(rule: KanbanFilterRule): string {
 </script>
 
 <template>
-  <div class="kb-filter">
-    <div v-if="!modelValue.length" class="kb-filter__empty">
+  <div class="kb-filter tw:flex tw:max-w-[460px] tw:flex-col">
+    <div v-if="!modelValue.length" class="kb-filter__empty tw:flex tw:items-center tw:gap-2 tw:px-3 tw:py-3.5 tw:text-xs tw:text-content-muted">
       <Filter :size="14" />
       <span>{{ t('kanban.filter.empty') }}</span>
     </div>
 
-    <div v-else class="kb-filter__rules">
-      <div v-for="(rule, index) in modelValue" :key="rule.id" class="kb-filter__rule">
-        <span class="kb-filter__conj">{{ index === 0 ? t('kanban.filter.where') : t('kanban.filter.and') }}</span>
+    <div v-else class="kb-filter__rules tw:flex tw:max-h-[320px] tw:flex-col tw:gap-1.5 tw:overflow-y-auto tw:p-2">
+      <div v-for="(rule, index) in modelValue" :key="rule.id" class="kb-filter__rule tw:flex tw:flex-wrap tw:items-center tw:gap-[5px]">
+        <span class="kb-filter__conj tw:min-w-[38px] tw:text-[11px] tw:text-content-muted tw:lowercase">{{ index === 0 ? t('kanban.filter.where') : t('kanban.filter.and') }}</span>
 
         <NvSelect
-          class="kb-filter__field"
+          class="kb-filter__field tw:shrink-0"
           :model-value="rule.fieldId"
           :options="fieldOptions"
           :min-width="120"
@@ -130,7 +130,7 @@ function valueString(rule: KanbanFilterRule): string {
         />
 
         <NvSelect
-          class="kb-filter__op"
+          class="kb-filter__op tw:shrink-0"
           :model-value="rule.operator"
           :options="operatorOptions(rule)"
           :min-width="110"
@@ -140,7 +140,7 @@ function valueString(rule: KanbanFilterRule): string {
         <template v-if="showValueInput(rule)">
           <template v-if="fieldFor(rule)?.type === 'select'">
             <NvSelect
-              class="kb-filter__value-select"
+              class="kb-filter__value-select tw:min-w-[120px] tw:flex-1"
               :model-value="valueString(rule)"
               :options="selectValueOptions(rule)"
               :min-width="120"
@@ -151,7 +151,7 @@ function valueString(rule: KanbanFilterRule): string {
 
           <template v-else-if="fieldFor(rule)?.type === 'checkbox'">
             <NvSelect
-              class="kb-filter__value-select"
+              class="kb-filter__value-select tw:min-w-[120px] tw:flex-1"
               :model-value="valueString(rule)"
               :options="checkboxOptions"
               :min-width="120"
@@ -160,20 +160,21 @@ function valueString(rule: KanbanFilterRule): string {
           </template>
 
           <template v-else-if="fieldFor(rule)?.type === 'multi_select'">
-            <div class="kb-filter__multi">
+            <div class="kb-filter__multi tw:flex tw:min-w-[120px] tw:flex-1 tw:flex-wrap tw:gap-x-2.5 tw:gap-y-1 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--input-bg) tw:px-1.5 tw:py-1">
               <label
                 v-for="opt in fieldFor(rule)?.options ?? []"
                 :key="opt.id"
-                class="kb-filter__multi-opt"
+                class="kb-filter__multi-opt tw:inline-flex tw:items-center tw:gap-[5px] tw:text-[11.5px] tw:text-content-secondary tw:cursor-pointer"
               >
                 <input
                   type="checkbox"
+                  class="tw:size-3 tw:accent-accent"
                   :checked="valueArray(rule).includes(opt.id)"
                   @change="toggleMultiValue(index, opt.id, ($event.target as HTMLInputElement).checked)"
                 />
                 <span>{{ opt.name }}</span>
               </label>
-              <span v-if="!(fieldFor(rule)?.options?.length)" class="kb-filter__multi-empty">
+              <span v-if="!(fieldFor(rule)?.options?.length)" class="kb-filter__multi-empty tw:text-[11px] tw:text-content-muted">
                 {{ t('kanban.filter.noOptions') }}
               </span>
             </div>
@@ -182,7 +183,7 @@ function valueString(rule: KanbanFilterRule): string {
           <input
             v-else-if="fieldFor(rule)?.type === 'number'"
             type="number"
-            class="kb-filter__input kb-filter__select--value"
+            class="kb-filter__input kb-filter__select--value tw:h-[30px] tw:min-w-[90px] tw:flex-1 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--input-bg) tw:px-2 tw:text-[12.5px] tw:text-content-primary tw:outline-none tw:focus:border-accent"
             :value="valueString(rule)"
             @input="patch(index, { value: ($event.target as HTMLInputElement).value })"
           />
@@ -190,7 +191,7 @@ function valueString(rule: KanbanFilterRule): string {
           <input
             v-else-if="fieldFor(rule)?.type === 'date'"
             type="date"
-            class="kb-filter__input kb-filter__select--value"
+            class="kb-filter__input kb-filter__select--value tw:h-[30px] tw:min-w-[90px] tw:flex-1 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--input-bg) tw:px-2 tw:text-[12.5px] tw:text-content-primary tw:outline-none tw:focus:border-accent"
             :value="valueString(rule)"
             @input="patch(index, { value: ($event.target as HTMLInputElement).value })"
           />
@@ -198,7 +199,7 @@ function valueString(rule: KanbanFilterRule): string {
           <input
             v-else
             type="text"
-            class="kb-filter__input kb-filter__select--value"
+            class="kb-filter__input kb-filter__select--value tw:h-[30px] tw:min-w-[90px] tw:flex-1 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--input-bg) tw:px-2 tw:text-[12.5px] tw:text-content-primary tw:outline-none tw:focus:border-accent"
             :placeholder="t('kanban.filter.valuePlaceholder')"
             :value="valueString(rule)"
             @input="patch(index, { value: ($event.target as HTMLInputElement).value })"
@@ -207,7 +208,7 @@ function valueString(rule: KanbanFilterRule): string {
 
         <button
           type="button"
-          class="kb-filter__remove"
+          class="kb-filter__remove tw:inline-flex tw:size-[26px] tw:shrink-0 tw:items-center tw:justify-center tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border-none tw:bg-transparent tw:text-content-muted tw:cursor-pointer tw:hover:bg-[var(--hover,var(--surface-raised))] tw:hover:text-danger"
           :aria-label="t('kanban.filter.removeRule')"
           @click="removeRule(index)"
         >
@@ -216,179 +217,14 @@ function valueString(rule: KanbanFilterRule): string {
       </div>
     </div>
 
-    <div class="kb-filter__footer">
-      <button type="button" class="kb-filter__add" :disabled="!fields.length" @click="addRule">
+    <div class="kb-filter__footer tw:flex tw:items-center tw:justify-between tw:gap-2 tw:px-2 tw:py-[7px]">
+      <button type="button" class="kb-filter__add tw:inline-flex tw:h-[26px] tw:items-center tw:gap-[5px] tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border-none tw:bg-transparent tw:px-2.5 tw:text-[11.5px] tw:font-[550] tw:text-accent tw:cursor-pointer tw:enabled:hover:bg-[var(--accent-soft,rgb(161_98_7/0.12))] tw:disabled:cursor-not-allowed tw:disabled:text-content-muted" :disabled="!fields.length" @click="addRule">
         <Plus :size="13" />
         {{ t('kanban.filter.addRule') }}
       </button>
-      <button v-if="modelValue.length" type="button" class="kb-filter__clear" @click="clearAll">
+      <button v-if="modelValue.length" type="button" class="kb-filter__clear tw:h-[26px] tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border-none tw:bg-transparent tw:px-2.5 tw:text-[11.5px] tw:text-[var(--text-muted,var(--text-secondary))] tw:cursor-pointer tw:hover:bg-[var(--hover,var(--surface-raised))] tw:hover:text-content-primary" @click="clearAll">
         {{ t('kanban.filter.clearAll') }}
       </button>
     </div>
   </div>
 </template>
-
-<style scoped>
-.kb-filter {
-  display: flex;
-  flex-direction: column;
-  max-width: 460px;
-}
-
-.kb-filter__empty {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 12px;
-  color: var(--text-4, var(--text-muted));
-  font-size: 12px;
-}
-
-.kb-filter__rules {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px;
-  max-height: 320px;
-  overflow-y: auto;
-}
-
-.kb-filter__rule {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.kb-filter__conj {
-  font-size: 11px;
-  color: var(--text-4, var(--text-muted));
-  min-width: 38px;
-  text-transform: lowercase;
-}
-
-.kb-filter__input {
-  height: 30px;
-  padding: 0 8px;
-  border-radius: calc(8px * var(--radius-scale, 1));
-  border: 1px solid var(--line-2, var(--border-subtle));
-  background: var(--hover, var(--surface-1));
-  color: var(--text-1, var(--text-primary));
-  font-size: 12.5px;
-  outline: none;
-}
-
-.kb-filter__input:focus {
-  border-color: var(--accent);
-}
-
-.kb-filter__select--value { flex: 1; min-width: 90px; }
-
-.kb-filter__field,
-.kb-filter__op { flex-shrink: 0; }
-
-.kb-filter__value-select {
-  flex: 1;
-  min-width: 120px;
-}
-
-.kb-filter__multi {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 10px;
-  flex: 1;
-  min-width: 120px;
-  padding: 4px 6px;
-  border-radius: calc(6px * var(--radius-scale, 1));
-  border: 1px solid var(--line-1, var(--border-subtle));
-  background: var(--hover, var(--surface-1));
-}
-
-.kb-filter__multi-opt {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11.5px;
-  color: var(--text-2, var(--text-secondary));
-  cursor: pointer;
-}
-
-.kb-filter__multi-opt input {
-  width: 12px;
-  height: 12px;
-  accent-color: var(--accent);
-}
-
-.kb-filter__multi-empty {
-  font-size: 11px;
-  color: var(--text-4, var(--text-muted));
-}
-
-.kb-filter__remove {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: calc(6px * var(--radius-scale, 1));
-  border: none;
-  background: none;
-  color: var(--text-4, var(--text-muted));
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.kb-filter__remove:hover {
-  background: var(--hover, var(--surface-1));
-  color: oklch(0.6 0.18 25);
-}
-
-.kb-filter__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 7px 8px;
-  border-top: 1px solid var(--line-1, var(--border-subtle));
-}
-
-.kb-filter__add {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 9px;
-  border-radius: calc(6px * var(--radius-scale, 1));
-  border: none;
-  background: none;
-  color: var(--accent);
-  font-size: 11.5px;
-  font-weight: 550;
-  cursor: pointer;
-}
-
-.kb-filter__add:disabled {
-  color: var(--text-4, var(--text-muted));
-  cursor: not-allowed;
-}
-
-.kb-filter__add:not(:disabled):hover {
-  background: var(--accent-soft, rgb(161 98 7 / 0.12));
-}
-
-.kb-filter__clear {
-  height: 26px;
-  padding: 0 9px;
-  border-radius: calc(6px * var(--radius-scale, 1));
-  border: none;
-  background: none;
-  color: var(--text-3, var(--text-secondary));
-  font-size: 11.5px;
-  cursor: pointer;
-}
-
-.kb-filter__clear:hover {
-  background: var(--hover, var(--surface-1));
-  color: var(--text-1, var(--text-primary));
-}
-</style>

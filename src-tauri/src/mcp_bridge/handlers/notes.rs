@@ -120,11 +120,16 @@ pub fn read_note(workspace_path: &str, params: Value) -> Result<Value, RpcError>
 
     let note = load_note_impl(workspace_path.to_string(), params.note_id.clone())
         .map_err(|error| RpcError::not_found(&error))?;
+    let document_kind = note
+        .extra
+        .get("documentKind")
+        .cloned()
+        .unwrap_or_else(|| json!("document"));
 
-    // `content` is the serialized copy on disk. While a note is open in the
-    // editor the live Y.Doc is the source of truth and this copy lags by the
-    // save debounce, so agents that need byte-exact current state should read
-    // through the editor bridge instead.
+    // `content` is `note.json`'s serialized copy, which is a note's source of
+    // truth. While a note is open in the editor, in-memory keystrokes are
+    // debounced before they reach this file, so agents that need byte-exact
+    // current-editor state should read through the editor bridge instead.
     Ok(json!({
         "id": note.id,
         "title": note.title,
@@ -132,6 +137,8 @@ pub fn read_note(workspace_path: &str, params: Value) -> Result<Value, RpcError>
         "folderId": note.folder_id,
         "updatedAt": note.updated_at,
         "content": note.content,
+        "format": document_kind,
+        "notebook": note.extra.get("notebook"),
         "contentSource": "persisted",
     }))
 }
@@ -187,6 +194,7 @@ mod tests {
             order: 0,
             children,
             notes,
+            extra: Default::default(),
         }
     }
 
@@ -197,6 +205,7 @@ mod tests {
             icon: String::new(),
             folder_id: None,
             updated_at: "2026-01-01T00:00:00Z".to_string(),
+            extra: Default::default(),
         }
     }
 

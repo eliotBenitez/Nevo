@@ -11,6 +11,8 @@ import type { WorkspaceManifest } from '../../types/workspace'
 
 const graphState = vi.hoisted(() => ({
   snapshot: null as GraphSnapshot | null,
+  activeNoteId: 'note-1' as string | null,
+  noteById: new Map<string, { id: string; title: string; icon: string; folderId: string | null; updatedAt: string }>(),
   simNodes: [] as Array<{
     id: string
     title: string
@@ -30,7 +32,12 @@ vi.mock('../../stores/graph', () => ({
   useGraphStore: () => ({
     backlinks: graphState.backlinks,
     outlinks: graphState.outlinks,
+    activeNoteId: graphState.activeNoteId,
   }),
+}))
+
+vi.mock('../../stores/tree', () => ({
+  useTreeStore: () => ({ noteById: graphState.noteById }),
 }))
 
 vi.mock('./composables/useGraphData', async () => {
@@ -210,6 +217,8 @@ describe('graph focus mode', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     graphState.snapshot = createSnapshot()
+    graphState.activeNoteId = 'note-1'
+    graphState.noteById = new Map()
     graphState.simNodes = createSimNodes()
     graphState.backlinks = [
       { sourceId: 'note-2', sourceTitle: 'Beta', sourceIcon: '📄', count: 1 },
@@ -281,6 +290,56 @@ describe('graph focus mode', () => {
     const canvas = wrapper.getComponent(GraphCanvasStub)
     expect(canvas.attributes('data-focused-node-id')).toBe('note-2')
     expect(canvas.attributes('data-focused-neighbors')).toBe('note-1')
+    wrapper.unmount()
+  })
+
+  it('does not render connections loaded for a different note', async () => {
+    graphState.activeNoteId = 'note-2'
+    const wrapper = mount(LocalGraphPanel, {
+      global: {
+        plugins: [i18n],
+        stubs: { GraphCanvas: GraphCanvasStub, GraphNodeTooltip: true },
+      },
+      props: { note: createNote() },
+    })
+
+    await flushUi()
+
+    expect(wrapper.find('.graph-canvas-stub').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('shows a useful empty state for a current note with no neighbors', async () => {
+    graphState.backlinks = []
+    graphState.outlinks = []
+    const wrapper = mount(LocalGraphPanel, {
+      global: { plugins: [i18n], stubs: { GraphCanvas: GraphCanvasStub, GraphNodeTooltip: true } },
+      props: { note: createNote(), embedded: true },
+    })
+
+    await flushUi()
+
+    expect(wrapper.find('.graph-canvas-stub').exists()).toBe(true)
+    expect(wrapper.find('.local-graph__empty-label').exists()).toBe(true)
+    expect(wrapper.find('.local-graph__header').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('shows outgoing neighbor metadata and forwards keyboard-accessible note navigation', async () => {
+    graphState.noteById = new Map([
+      ['note-3', { id: 'note-3', title: 'Gamma title', icon: '🌙', folderId: 'folder-1', updatedAt: '2026-01-01T00:00:00.000Z' }],
+    ])
+    const wrapper = mount(LocalGraphPanel, {
+      global: { plugins: [i18n], stubs: { GraphCanvas: GraphCanvasStub, GraphNodeTooltip: true } },
+      props: { note: createNote(), embedded: true },
+    })
+
+    await flushUi()
+    const relatedButtons = wrapper.findAll('.local-graph__related button')
+    expect(relatedButtons[1].text()).toContain('Gamma title')
+    await relatedButtons[1].trigger('click')
+
+    expect(wrapper.emitted('open-note')).toEqual([['note-3']])
     wrapper.unmount()
   })
 

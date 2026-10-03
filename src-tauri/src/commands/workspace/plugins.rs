@@ -3,55 +3,6 @@ use super::settings::is_extended_diagnostics_enabled;
 use super::types::{PluginExecutionMode, PluginManifest};
 use crate::commands::path_utils::normalize_workspace_path;
 use crate::logging::{LogContext, LogError};
-use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Manager};
-
-/// The storage id names a directory, and it comes from the server: treat it as
-/// untrusted and allow only the characters a UUID uses, so it can never climb
-/// out of the parent folder.
-fn validate_storage_id(storage_id: &str) -> Result<(), String> {
-    if storage_id.is_empty()
-        || storage_id.len() > 64
-        || !storage_id
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '-')
-    {
-        return Err("Invalid storage id".to_string());
-    }
-    Ok(())
-}
-
-/// Where a cloud workspace's plugins live on *this* device.
-///
-/// Plugins are deliberately not part of a cloud workspace's synced content: a
-/// plugin is executable code, and a shared workspace has other members, so
-/// syncing one member's install would run their code on everyone else's
-/// machine — which the relay could not vet either, the content being
-/// end-to-end encrypted. Each device therefore keeps its own plugin directory
-/// per storage, and every existing plugin command works against it unchanged.
-#[tauri::command]
-pub async fn cloud_plugin_root(app: AppHandle, storage_id: String) -> Result<String, String> {
-    validate_storage_id(&storage_id)?;
-
-    let app_config_dir = app
-        .path()
-        .app_config_dir()
-        .map_err(|error| error.to_string())?;
-    tauri::async_runtime::spawn_blocking(move || {
-        prepare_cloud_plugin_root(&app_config_dir, &storage_id)
-            .map(|root| root.to_string_lossy().into_owned())
-    })
-    .await
-    .map_err(|error| error.to_string())?
-}
-
-fn prepare_cloud_plugin_root(app_config_dir: &Path, storage_id: &str) -> Result<PathBuf, String> {
-    validate_storage_id(storage_id)?;
-    let root = app_config_dir.join("cloud-plugins").join(storage_id);
-    ensure_bundled_system_plugins(&root.to_string_lossy())?;
-    Ok(root)
-}
-
 const SYSTEM_PLUGIN_VERSION: &str = "1.0.0";
 
 const KANBAN_INDEX_JS: &str = r#"export default {
@@ -556,10 +507,7 @@ pub fn set_plugin_enabled(
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        ensure_bundled_system_plugins, prepare_cloud_plugin_root, validate_plugin_id,
-        validate_storage_id,
-    };
+    use super::{ensure_bundled_system_plugins, validate_plugin_id};
     use crate::commands::workspace::paths::plugins_dir_path;
     use crate::commands::workspace::types::{PluginExecutionMode, PluginManifest};
     use std::path::PathBuf;
@@ -589,32 +537,6 @@ mod tests {
         assert!(validate_plugin_id("a/b").is_err());
         assert!(validate_plugin_id("a\\b").is_err());
         assert!(validate_plugin_id("a b").is_err());
-    }
-
-    #[test]
-    fn cloud_plugin_root_installs_bundled_system_plugins() {
-        let app_config_dir = temp_workspace("cloud-root");
-        let root = prepare_cloud_plugin_root(&app_config_dir, "storage-1")
-            .expect("prepare cloud plugin root");
-
-        assert_eq!(root, app_config_dir.join("cloud-plugins").join("storage-1"));
-        for plugin_id in [
-            "nevo.kanban",
-            "nevo.templates",
-            "nevo.vega",
-            "nevo.markmap",
-            "nevo.github-sync",
-        ] {
-            assert!(
-                plugins_dir_path(&root.to_string_lossy())
-                    .join(plugin_id)
-                    .join("manifest.json")
-                    .is_file(),
-                "missing bundled plugin {plugin_id}"
-            );
-        }
-
-        std::fs::remove_dir_all(app_config_dir).expect("cleanup");
     }
 
     #[test]
@@ -716,30 +638,5 @@ mod tests {
         assert!(!plugin_dir.join("index.js").exists());
 
         std::fs::remove_dir_all(workspace).expect("cleanup");
-    }
-
-    #[test]
-    fn cloud_plugin_root_rejects_ids_that_could_escape_the_directory() {
-        // The storage id names a directory under the app config dir, so a
-        // traversal or separator in it must never be accepted.
-        for id in [
-            "",
-            "../escaped",
-            "a/b",
-            "a\\b",
-            ".",
-            "..",
-            "id with spaces",
-            "id.with.dots",
-            &"x".repeat(65),
-        ] {
-            assert!(
-                validate_storage_id(id).is_err(),
-                "storage id {id:?} should have been rejected"
-            );
-        }
-
-        assert!(validate_storage_id("3f2b91ac-77d0-4f1e-9a6b-2c5d8e0f1a34").is_ok());
-        assert!(validate_storage_id("abc123").is_ok());
     }
 }

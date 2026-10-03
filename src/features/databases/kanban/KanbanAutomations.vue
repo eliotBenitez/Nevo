@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Zap, Plus, X } from 'lucide-vue-next'
+import { Zap, Plus } from 'lucide-vue-next'
 import type { KanbanBoard, KanbanAutomation, KanbanTemplate } from '../../../types/kanban'
+import NvModal from '../../../ui/primitives/NvModal.vue'
 
 interface Props {
   board: KanbanBoard
@@ -75,413 +76,115 @@ const selectedTemplate = ref<string | null>(null)
 </script>
 
 <template>
-  <Teleport to="body">
-    <div class="ka-backdrop" @click.self="emit('close')">
-      <div class="ka-panel" role="dialog" :aria-label="t('kanban.automations.title')">
-        <!-- Header -->
-        <div class="ka-header">
-          <Zap :size="14" class="ka-header-icon" />
-          <span class="ka-header-title">{{ t('kanban.automations.title') }}</span>
-          <div class="ka-header-spacer" />
-          <button type="button" class="nv-btn ka-close-btn" :aria-label="t('kanban.common.close')" @click="emit('close')">
-            <X :size="13" />
+  <NvModal :open="true" size="md" labelled-by="ka-automations-title" @close="emit('close')">
+    <template #header>
+      <Zap :size="14" class="ka-header-icon tw:text-accent" aria-hidden="true" />
+      <h2 id="ka-automations-title" class="ka-header-title tw:m-0 tw:text-sm tw:font-semibold tw:text-content-primary">{{ t('kanban.automations.title') }}</h2>
+    </template>
+
+    <div class="ka-body tw:flex tw:flex-col tw:gap-6">
+      <!-- Automations section -->
+      <div class="ka-section tw:flex tw:flex-col tw:gap-2 tw:overflow-hidden tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle">
+        <div class="ka-section__head tw:flex tw:items-center tw:gap-2 tw:bg-[var(--hover,var(--surface-overlay))] tw:px-3.5 tw:py-[11px]">
+          <span class="ka-section__title tw:text-[10.5px] tw:font-semibold tw:tracking-[0.06em] tw:text-content-muted tw:uppercase">{{ t('kanban.automations.sectionAutomations') }}</span>
+          <span class="ka-section__count tw:font-nv-mono tw:text-[10.5px] tw:text-content-muted">{{ t('kanban.automations.active', { n: localAutomations.filter(a => a.enabled).length }) }}</span>
+          <div class="ka-section__spacer tw:flex-1" />
+          <button type="button" class="nv-btn ka-section__action tw:inline-flex tw:h-6 tw:items-center tw:gap-1 tw:px-2 tw:text-[11px] tw:text-[var(--text-muted,var(--text-secondary))]">
+            <Plus :size="10" /> {{ t('kanban.automations.newRule') }}
           </button>
         </div>
 
-        <div class="ka-body">
-          <!-- Automations section -->
-          <div class="ka-section">
-            <div class="ka-section__head">
-              <span class="ka-section__title">{{ t('kanban.automations.sectionAutomations') }}</span>
-              <span class="ka-section__count">{{ t('kanban.automations.active', { n: localAutomations.filter(a => a.enabled).length }) }}</span>
-              <div class="ka-section__spacer" />
-              <button type="button" class="nv-btn ka-section__action">
-                <Plus :size="10" /> {{ t('kanban.automations.newRule') }}
-              </button>
-            </div>
+        <div v-if="!localAutomations.length" class="ka-empty tw:flex tw:flex-col tw:gap-1 tw:px-4 tw:py-6 tw:text-center">
+          <div class="ka-empty-title tw:text-[13px] tw:font-[550] tw:text-content-secondary">{{ t('kanban.automations.noAutomations') }}</div>
+          <div class="ka-empty-hint tw:mx-auto tw:max-w-[320px] tw:text-[11.5px] tw:leading-[1.5] tw:text-content-muted">{{ t('kanban.automations.noAutomationsHint') }}</div>
+        </div>
 
-            <div v-if="!localAutomations.length" class="ka-empty">
-              <div class="ka-empty-title">{{ t('kanban.automations.noAutomations') }}</div>
-              <div class="ka-empty-hint">{{ t('kanban.automations.noAutomationsHint') }}</div>
-            </div>
-
+        <div
+          v-for="auto in localAutomations"
+          :key="auto.id"
+          class="ka-rule tw:flex tw:items-center tw:gap-3 tw:bg-[var(--hover,var(--surface-raised))] tw:px-3.5 tw:py-[11px] tw:transition-opacity tw:duration-150"
+          :class="{ 'ka-rule--off tw:opacity-55': !auto.enabled }"
+        >
+          <span
+            class="ka-rule__dot tw:size-2 tw:shrink-0 tw:rounded-full"
+            :style="{ background: auto.enabled ? (triggerHue[auto.trigger] ?? 'var(--accent)') : 'var(--text-muted)', boxShadow: auto.enabled ? `0 0 7px ${triggerHue[auto.trigger] ?? 'var(--accent)'}` : 'none' }"
+          />
+          <div class="ka-rule__body tw:flex tw:min-w-0 tw:flex-1 tw:flex-wrap tw:items-center tw:gap-3">
+            <span class="ka-rule__text tw:text-[13px] tw:leading-[1.4] tw:text-content-secondary">
+              {{ t('kanban.automations.triggerPrefix') }} <strong>{{ triggerLabel(auto) }}</strong>
+              <span class="ka-rule__then tw:text-content-muted"> → </span>
+              {{ actionLabel(auto) }}
+            </span>
+            <span v-if="auto.runCount" class="ka-rule__runs tw:shrink-0 tw:font-nv-mono tw:text-[10.5px] tw:text-content-muted">{{ t('kanban.automations.runCount', { n: auto.runCount }) }}</span>
+          </div>
+          <!-- Toggle -->
+          <div
+            class="ka-toggle tw:relative tw:h-[17px] tw:w-[30px] tw:shrink-0 tw:rounded-full tw:cursor-pointer tw:transition-colors tw:duration-200"
+            :class="auto.enabled ? 'ka-toggle--on tw:bg-accent' : 'tw:bg-[var(--hover-strong,var(--surface-overlay))]'"
+            @click="toggleAutomation(auto.id)"
+          >
             <div
-              v-for="auto in localAutomations"
-              :key="auto.id"
-              class="ka-rule"
-              :class="{ 'ka-rule--off': !auto.enabled }"
-            >
-              <span
-                class="ka-rule__dot"
-                :style="{ background: auto.enabled ? (triggerHue[auto.trigger] ?? 'var(--accent)') : 'var(--text-4)', boxShadow: auto.enabled ? `0 0 7px ${triggerHue[auto.trigger] ?? 'var(--accent)'}` : 'none' }"
-              />
-              <div class="ka-rule__body">
-                <span class="ka-rule__text">
-                  {{ t('kanban.automations.triggerPrefix') }} <strong>{{ triggerLabel(auto) }}</strong>
-                  <span class="ka-rule__then"> → </span>
-                  {{ actionLabel(auto) }}
-                </span>
-                <span v-if="auto.runCount" class="ka-rule__runs">{{ t('kanban.automations.runCount', { n: auto.runCount }) }}</span>
-              </div>
-              <!-- Toggle -->
-              <div
-                class="ka-toggle"
-                :class="{ 'ka-toggle--on': auto.enabled }"
-                @click="toggleAutomation(auto.id)"
-              >
-                <div class="ka-toggle__thumb" />
-              </div>
-            </div>
-          </div>
-
-          <!-- Dependency graph section -->
-          <div class="ka-section">
-            <div class="ka-section__head">
-              <span class="ka-section__title">{{ t('kanban.automations.depGraph') }}</span>
-            </div>
-            <div class="ka-dep-area">
-              <div v-if="!depNodes.length" class="ka-empty ka-empty--compact">
-                <div class="ka-empty-title">{{ t('kanban.automations.noDeps') }}</div>
-                <div class="ka-empty-hint">{{ t('kanban.automations.noDepsHint') }}</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Templates section -->
-          <div class="ka-section">
-            <div class="ka-section__head">
-              <span class="ka-section__title">{{ t('kanban.automations.templates') }}</span>
-              <div class="ka-section__spacer" />
-              <button type="button" class="nv-btn ka-section__action">
-                <Plus :size="10" /> {{ t('kanban.automations.saveAs') }}
-              </button>
-            </div>
-
-            <div class="ka-templates-grid">
-              <div
-                v-for="tmpl in templates"
-                :key="tmpl.id"
-                class="ka-template"
-                :class="{ 'ka-template--selected': selectedTemplate === tmpl.id }"
-                @click="selectedTemplate = tmpl.id"
-              >
-                <div
-                  class="ka-template__icon"
-                  :class="{ 'ka-template__icon--selected': selectedTemplate === tmpl.id }"
-                >{{ tmpl.icon }}</div>
-                <div class="ka-template__info">
-                  <div class="ka-template__name">{{ tmpl.name }}</div>
-                  <div class="ka-template__desc">{{ tmpl.description }}</div>
-                </div>
-                <span v-if="tmpl.shortcut" class="ka-kbd">{{ tmpl.shortcut }}</span>
-              </div>
-            </div>
-
-            <div v-if="selectedTemplate" class="ka-template-action">
-              <button type="button" class="nv-btn nv-btn--primary">
-                <Plus :size="11" /> {{ t('kanban.automations.insertTemplate') }}
-              </button>
-              <button type="button" class="nv-btn" @click="selectedTemplate = null">
-                {{ t('kanban.common.cancel') }}
-              </button>
-            </div>
+              class="ka-toggle__thumb tw:absolute tw:top-0.5 tw:size-[13px] tw:rounded-full tw:bg-white tw:shadow-(--shadow-raised) tw:transition-[left] tw:duration-200"
+              :class="auto.enabled ? 'tw:left-[15px]' : 'tw:left-0.5'"
+            />
           </div>
         </div>
       </div>
+
+      <!-- Dependency graph section -->
+      <div class="ka-section tw:flex tw:flex-col tw:gap-2 tw:overflow-hidden tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle">
+        <div class="ka-section__head tw:flex tw:items-center tw:gap-2 tw:bg-[var(--hover,var(--surface-overlay))] tw:px-3.5 tw:py-[11px]">
+          <span class="ka-section__title tw:text-[10.5px] tw:font-semibold tw:tracking-[0.06em] tw:text-content-muted tw:uppercase">{{ t('kanban.automations.depGraph') }}</span>
+        </div>
+        <div class="ka-dep-area tw:flex tw:min-h-20 tw:items-center tw:justify-center">
+          <div v-if="!depNodes.length" class="ka-empty ka-empty--compact tw:flex tw:flex-col tw:gap-1 tw:p-4 tw:text-center">
+            <div class="ka-empty-title tw:text-[13px] tw:font-[550] tw:text-content-secondary">{{ t('kanban.automations.noDeps') }}</div>
+            <div class="ka-empty-hint tw:mx-auto tw:max-w-[320px] tw:text-[11.5px] tw:leading-[1.5] tw:text-content-muted">{{ t('kanban.automations.noDepsHint') }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Templates section -->
+      <div class="ka-section tw:flex tw:flex-col tw:gap-2 tw:overflow-hidden tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle">
+        <div class="ka-section__head tw:flex tw:items-center tw:gap-2 tw:bg-[var(--hover,var(--surface-overlay))] tw:px-3.5 tw:py-[11px]">
+          <span class="ka-section__title tw:text-[10.5px] tw:font-semibold tw:tracking-[0.06em] tw:text-content-muted tw:uppercase">{{ t('kanban.automations.templates') }}</span>
+          <div class="ka-section__spacer tw:flex-1" />
+          <button type="button" class="nv-btn ka-section__action tw:inline-flex tw:h-6 tw:items-center tw:gap-1 tw:px-2 tw:text-[11px] tw:text-[var(--text-muted,var(--text-secondary))]">
+            <Plus :size="10" /> {{ t('kanban.automations.saveAs') }}
+          </button>
+        </div>
+
+        <div class="ka-templates-grid tw:grid tw:grid-cols-2 tw:gap-2 tw:px-3.5 tw:py-2.5">
+          <div
+            v-for="tmpl in templates"
+            :key="tmpl.id"
+            class="ka-template tw:flex tw:items-center tw:gap-2.5 tw:rounded-[calc(9px*var(--radius-scale,1))] tw:border tw:border-solid tw:px-3 tw:py-2.5 tw:cursor-pointer tw:transition-[border-color,background-color] tw:duration-[120ms] tw:hover:border-accent"
+            :class="selectedTemplate === tmpl.id
+              ? 'ka-template--selected tw:border-[color-mix(in_oklab,var(--accent)_42%,transparent)] tw:bg-[var(--accent-soft,rgb(161_98_7/0.10))]'
+              : 'tw:border-transparent tw:bg-surface-subtle'"
+            @click="selectedTemplate = tmpl.id"
+          >
+            <div
+              class="ka-template__icon tw:grid tw:size-8 tw:shrink-0 tw:place-items-center tw:rounded-[calc(8px*var(--radius-scale,1))] tw:[font-family:var(--font-serif,Georgia,serif)] tw:text-sm tw:italic"
+              :class="selectedTemplate === tmpl.id ? 'ka-template__icon--selected tw:bg-accent tw:text-white' : 'tw:bg-[var(--hover-strong,var(--surface-overlay))]'"
+            >{{ tmpl.icon }}</div>
+            <div class="ka-template__info tw:min-w-0 tw:flex-1">
+              <div class="ka-template__name tw:text-[12.5px] tw:font-[550] tw:text-content-primary">{{ tmpl.name }}</div>
+              <div class="ka-template__desc tw:mt-0.5 tw:text-[10.5px] tw:text-content-muted">{{ tmpl.description }}</div>
+            </div>
+            <span v-if="tmpl.shortcut" class="ka-kbd tw:shrink-0 tw:rounded-[calc(4px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-[var(--hover-strong,var(--surface-overlay))] tw:px-1 tw:py-px tw:font-nv-mono tw:text-[10px] tw:text-content-muted">{{ tmpl.shortcut }}</span>
+          </div>
+        </div>
+
+        <div v-if="selectedTemplate" class="ka-template-action tw:flex tw:gap-1.5 tw:px-3.5 tw:py-2.5">
+          <button type="button" class="nv-btn nv-btn--primary">
+            <Plus :size="11" /> {{ t('kanban.automations.insertTemplate') }}
+          </button>
+          <button type="button" class="nv-btn" @click="selectedTemplate = null">
+            {{ t('kanban.common.cancel') }}
+          </button>
+        </div>
+      </div>
     </div>
-  </Teleport>
+  </NvModal>
 </template>
-
-<style scoped>
-.ka-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 180;
-  background: oklch(0 0 0 / 0.35);
-  backdrop-filter: blur(3px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.ka-panel {
-  width: 680px;
-  max-width: 100%;
-  max-height: calc(100vh - 40px);
-  display: flex;
-  flex-direction: column;
-  background: var(--glass-3, var(--surface-1));
-  border: 1px solid var(--line-strong, var(--border-subtle));
-  border-radius: calc(14px * var(--radius-scale, 1));
-  box-shadow: 0 32px 80px -12px oklch(0 0 0 / 0.5);
-  overflow: hidden;
-  animation: ka-in 0.16s ease;
-}
-
-@keyframes ka-in {
-  from { opacity: 0; transform: scale(0.97); }
-  to   { opacity: 1; transform: scale(1); }
-}
-
-.ka-header {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 13px 18px;
-  border-bottom: 1px solid var(--line-1, var(--border-subtle));
-  background: var(--glass-titlebar, var(--surface-2));
-  flex-shrink: 0;
-}
-
-.ka-header-icon { color: var(--accent); }
-
-.ka-header-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-1, var(--text-primary));
-}
-
-.ka-header-spacer { flex: 1; }
-
-.ka-close-btn { color: var(--text-3, var(--text-secondary)); }
-
-.ka-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 18px 20px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-/* Section */
-.ka-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: var(--glass-2, var(--surface-1));
-  border: 1px solid var(--line-2, var(--border-subtle));
-  border-radius: calc(12px * var(--radius-scale, 1));
-  overflow: hidden;
-}
-
-.ka-section__head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 11px 14px;
-  border-bottom: 1px solid var(--line-1, var(--border-subtle));
-  background: var(--hover, var(--surface-2));
-}
-
-.ka-section__title {
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-4, var(--text-muted));
-}
-
-.ka-section__count {
-  font-size: 10.5px;
-  color: var(--text-4, var(--text-muted));
-  font-family: var(--font-mono, monospace);
-}
-
-.ka-section__spacer { flex: 1; }
-
-.ka-section__action {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 24px;
-  padding: 0 8px;
-  font-size: 11px;
-  color: var(--text-3, var(--text-secondary));
-}
-
-/* Empty state */
-.ka-empty {
-  padding: 24px 16px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.ka-empty--compact { padding: 16px; }
-
-.ka-empty-title {
-  font-size: 13px;
-  font-weight: 550;
-  color: var(--text-2, var(--text-secondary));
-}
-
-.ka-empty-hint {
-  font-size: 11.5px;
-  color: var(--text-4, var(--text-muted));
-  max-width: 320px;
-  margin: 0 auto;
-  line-height: 1.5;
-}
-
-/* Automation rule row */
-.ka-rule {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 11px 14px;
-  border-bottom: 1px solid var(--line-1, var(--border-subtle));
-  background: var(--hover, var(--surface-1));
-  transition: opacity 0.15s;
-}
-
-.ka-rule:last-of-type { border-bottom: none; }
-
-.ka-rule--off { opacity: 0.55; }
-
-.ka-rule__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.ka-rule__body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.ka-rule__text {
-  font-size: 13px;
-  color: var(--text-2, var(--text-secondary));
-  line-height: 1.4;
-}
-
-.ka-rule__then { color: var(--text-4, var(--text-muted)); }
-
-.ka-rule__runs {
-  font-size: 10.5px;
-  color: var(--text-4, var(--text-muted));
-  font-family: var(--font-mono, monospace);
-  flex-shrink: 0;
-}
-
-/* Toggle switch */
-.ka-toggle {
-  width: 30px;
-  height: 17px;
-  border-radius: 999px;
-  background: var(--hover-strong, var(--surface-2));
-  position: relative;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.2s;
-}
-
-.ka-toggle--on { background: var(--accent); }
-
-.ka-toggle__thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: white;
-  box-shadow: 0 1px 3px oklch(0 0 0 / 0.25);
-  transition: left 0.2s;
-}
-
-.ka-toggle--on .ka-toggle__thumb { left: 15px; }
-
-/* Dep area */
-.ka-dep-area {
-  min-height: 80px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Templates */
-.ka-templates-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding: 10px 14px;
-}
-
-.ka-template {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: calc(9px * var(--radius-scale, 1));
-  background: var(--glass-3, var(--surface-2));
-  border: 1px solid var(--line-1, var(--border-subtle));
-  cursor: pointer;
-  transition: border-color 0.12s, background 0.12s;
-}
-
-.ka-template:hover { border-color: var(--accent); }
-
-.ka-template--selected {
-  background: var(--accent-soft, rgb(161 98 7 / 0.10));
-  border-color: color-mix(in oklab, var(--accent) 42%, transparent);
-}
-
-.ka-template__icon {
-  width: 32px;
-  height: 32px;
-  border-radius: calc(8px * var(--radius-scale, 1));
-  background: var(--hover-strong, var(--surface-2));
-  display: grid;
-  place-items: center;
-  font-size: 14px;
-  flex-shrink: 0;
-  font-family: var(--font-serif, Georgia, serif);
-  font-style: italic;
-}
-
-.ka-template__icon--selected {
-  background: var(--accent);
-  color: white;
-}
-
-.ka-template__info { flex: 1; min-width: 0; }
-
-.ka-template__name {
-  font-size: 12.5px;
-  font-weight: 550;
-  color: var(--text-1, var(--text-primary));
-}
-
-.ka-template__desc {
-  font-size: 10.5px;
-  color: var(--text-4, var(--text-muted));
-  margin-top: 2px;
-}
-
-.ka-kbd {
-  font-size: 10px;
-  color: var(--text-4, var(--text-muted));
-  background: var(--hover-strong, var(--surface-2));
-  border: 1px solid var(--line-2, var(--border-subtle));
-  border-radius: calc(4px * var(--radius-scale, 1));
-  padding: 1px 4px;
-  font-family: var(--font-mono, monospace);
-  flex-shrink: 0;
-}
-
-.ka-template-action {
-  display: flex;
-  gap: 6px;
-  padding: 10px 14px;
-  border-top: 1px solid var(--line-1, var(--border-subtle));
-}
-</style>

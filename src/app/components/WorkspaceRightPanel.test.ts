@@ -1,11 +1,12 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import { createPinia, setActivePinia } from 'pinia'
-import { defineComponent } from 'vue'
+import { defineComponent, nextTick } from 'vue'
 import WorkspaceRightPanel from './WorkspaceRightPanel.vue'
 import en from '../../locales/en.json'
 import type { NoteDocument } from '../../types/note'
+import { useWorkspaceStore } from '../../stores/workspace'
 import { useNoteStore } from '../../stores/note'
 
 const SelectStub = defineComponent({
@@ -39,6 +40,11 @@ const DatePickerStub = defineComponent({
 })
 
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
+
+class ResizeObserverStub {
+  observe() {}
+  disconnect() {}
+}
 
 function createNote(): NoteDocument {
   return {
@@ -77,6 +83,11 @@ function mountPanel(note: NoteDocument) {
 describe('WorkspaceRightPanel', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    Object.defineProperty(globalThis, 'ResizeObserver', {
+      value: ResizeObserverStub,
+      configurable: true,
+      writable: true,
+    })
   })
 
   it('updates note type from properties select', async () => {
@@ -127,6 +138,50 @@ describe('WorkspaceRightPanel', () => {
     await wrapper.findAll('select')[1].setValue('waiting')
 
     expect(noteStore.activeNote?.properties?.status).toBe('waiting')
+    wrapper.unmount()
+  })
+
+  it('shows an embedded local graph in the Graph tab', async () => {
+    const wrapper = mountPanel(createNote())
+
+    await wrapper.get('#right-panel-tab-graph').trigger('click')
+    await flushPromises()
+    await vi.dynamicImportSettled()
+    await nextTick()
+
+    expect(wrapper.find('.right-panel__graph-button').exists()).toBe(false)
+    expect(wrapper.find('.right-panel__graph-canvas').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('switches tabs with the arrow keys and exposes tab semantics', async () => {
+    const wrapper = mountPanel(createNote())
+    const documentTab = wrapper.get('#right-panel-tab-document')
+
+    expect(documentTab.attributes('aria-selected')).toBe('true')
+    expect(wrapper.find('#right-panel-tabpanel-document').exists()).toBe(true)
+
+    await documentTab.trigger('keydown', { key: 'ArrowRight' })
+
+    expect(wrapper.get('#right-panel-tab-links').attributes('aria-selected')).toBe('true')
+    expect(wrapper.get('#right-panel-tab-links').attributes('tabindex')).toBe('0')
+    expect(documentTab.attributes('tabindex')).toBe('-1')
+    expect(wrapper.find('#right-panel-tabpanel-links').exists()).toBe(true)
+    expect(wrapper.find('#right-panel-tabpanel-document').exists()).toBe(false)
+
+    await wrapper.get('#right-panel-tab-links').trigger('keydown', { key: 'End' })
+    expect(wrapper.get('#right-panel-tab-graph').attributes('aria-selected')).toBe('true')
+    wrapper.unmount()
+  })
+
+  it('shows the last update as localized relative time', () => {
+    const note = { ...createNote(), updatedAt: new Date().toISOString() }
+    const wrapper = mountPanel(note)
+
+    // The panel must use the app's localized relative-time helper, not an
+    // English-only formatter.
+    const expected = useWorkspaceStore().getRelativeTime(note.updatedAt)
+    expect(wrapper.get('.right-panel__meta-value').text()).toBe(expected)
     wrapper.unmount()
   })
 })

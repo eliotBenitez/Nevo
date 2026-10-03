@@ -22,6 +22,7 @@ describe('useWorkspaceEditorPresentation', () => {
     const localGraphOpen = ref(false)
     const requestExport = vi.fn()
     const requestMarkdownImport = vi.fn()
+    const openFindInNote = vi.fn()
     const presentation = useWorkspaceEditorPresentation({
       getNote: note,
       getSettings: createDefaultWorkspaceSettings,
@@ -36,6 +37,7 @@ describe('useWorkspaceEditorPresentation', () => {
       emitTitle: vi.fn(),
       requestExport,
       requestMarkdownImport,
+      openFindInNote,
     })
 
     expect(presentation.noteCoverStyle.value).toEqual({
@@ -47,11 +49,13 @@ describe('useWorkspaceEditorPresentation', () => {
       'doc-body--scrollbar-dragging': true,
     })
 
-    const [exportMenu, importItem, graphItem] = presentation.breadcrumbMenuItems.value
+    const [findItem, exportMenu, importItem, graphItem] = presentation.breadcrumbMenuItems.value
+    findItem?.action?.()
     exportMenu?.items?.[0]?.action?.()
     importItem?.action?.()
     graphItem?.action?.()
 
+    expect(openFindInNote).toHaveBeenCalledOnce()
     expect(requestExport).toHaveBeenCalledWith('markdown')
     expect(requestMarkdownImport).toHaveBeenCalledOnce()
     expect(localGraphOpen.value).toBe(true)
@@ -75,6 +79,7 @@ describe('useWorkspaceEditorPresentation', () => {
       emitTitle,
       requestExport: vi.fn(),
       requestMarkdownImport: vi.fn(),
+      openFindInNote: vi.fn(),
     })
     const input = document.createElement('textarea')
     input.value = 'Renamed'
@@ -83,5 +88,73 @@ describe('useWorkspaceEditorPresentation', () => {
 
     expect(emitTitle).toHaveBeenCalledWith('Renamed')
     expect(titleInput.style.height).toBe('84px')
+  })
+
+  it('handles Enter keydown to invoke onTitleEnter and prevent default', () => {
+    const onTitleEnter = vi.fn()
+    const presentation = useWorkspaceEditorPresentation({
+      getNote: note,
+      getSettings: createDefaultWorkspaceSettings,
+      getContainerKind: () => null,
+      getContainerItems: () => [],
+      getScrollbarDragging: () => false,
+      workspaceAssetRefreshToken: ref(0),
+      resolveWorkspaceAssetSrc: (src) => src,
+      titleInputRef: ref(null),
+      localGraphOpen: ref(false),
+      translate: (key) => key,
+      emitTitle: vi.fn(),
+      requestExport: vi.fn(),
+      requestMarkdownImport: vi.fn(),
+      openFindInNote: vi.fn(),
+      onTitleEnter,
+    })
+
+    const enterEvent = {
+      key: 'Enter',
+      shiftKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      isComposing: false,
+      keyCode: 13,
+      preventDefault: vi.fn(),
+    } as unknown as KeyboardEvent
+
+    presentation.onTitleKeyDown(enterEvent)
+    expect(enterEvent.preventDefault).toHaveBeenCalledOnce()
+    expect(onTitleEnter).toHaveBeenCalledOnce()
+
+    // Shift+Enter should not trigger
+    const shiftEnterEvent = {
+      key: 'Enter',
+      shiftKey: true,
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      isComposing: false,
+      keyCode: 13,
+      preventDefault: vi.fn(),
+    } as unknown as KeyboardEvent
+
+    presentation.onTitleKeyDown(shiftEnterEvent)
+    expect(shiftEnterEvent.preventDefault).not.toHaveBeenCalled()
+    expect(onTitleEnter).toHaveBeenCalledOnce()
+
+    // IME composing Enter should not trigger
+    const composingEvent = {
+      key: 'Enter',
+      shiftKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      isComposing: true,
+      keyCode: 229,
+      preventDefault: vi.fn(),
+    } as unknown as KeyboardEvent
+
+    presentation.onTitleKeyDown(composingEvent)
+    expect(composingEvent.preventDefault).not.toHaveBeenCalled()
+    expect(onTitleEnter).toHaveBeenCalledOnce()
   })
 })

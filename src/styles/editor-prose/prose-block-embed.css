@@ -6,11 +6,14 @@
 
 .doc-editor .nv-prosemirror .nv-block-embed {
   margin: 16px 0;
-  border: 1px solid var(--line-2);
+  border: 1px solid transparent;
   border-radius: calc(12px * var(--radius-scale, 1));
-  background: var(--glass-2);
+  background: var(--surface-panel);
   overflow: hidden;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              border-width 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--shadow-sm);
 }
 .doc-editor .nv-prosemirror .nv-block-embed.ProseMirror-selectednode {
@@ -18,13 +21,13 @@
   outline-offset: 2px;
 }
 .doc-editor .nv-prosemirror .nv-block-embed:hover {
-  background: var(--glass-3);
-  border-color: var(--line-3);
+  background: var(--surface-subtle);
+  border-color: var(--border-strong);
   box-shadow: var(--shadow-md);
 }
 .doc-editor .nv-prosemirror .nv-block-embed[data-state='not-found'] {
-  border: 1.5px dashed var(--line-strong);
-  background: color-mix(in oklab, var(--glass-1) 40%, transparent);
+  border: 1.5px dashed var(--border-strong);
+  background: var(--surface-subtle);
   box-shadow: none;
 }
 
@@ -37,7 +40,7 @@
   /* Subtle accent wash on the header only — reads as "this card mirrors
      something live" without a loud color block covering the whole card. */
   background: color-mix(in oklab, var(--accent-soft, var(--accent)) 22%, transparent);
-  border-bottom: 1px solid var(--line-1);
+  border-bottom: 0;
 }
 .doc-editor .nv-prosemirror .nv-block-embed[data-state='not-found'] .nv-block-embed__header {
   background: transparent;
@@ -50,7 +53,7 @@
   opacity: 0.8;
 }
 .doc-editor .nv-prosemirror .nv-block-embed[data-state='not-found'] .nv-block-embed__icon {
-  color: var(--text-4);
+  color: var(--text-muted);
 }
 
 .doc-editor .nv-prosemirror .nv-block-embed__title {
@@ -76,7 +79,7 @@
   outline-offset: -2px;
 }
 .doc-editor .nv-prosemirror .nv-block-embed__title:disabled {
-  color: var(--text-3);
+  color: var(--text-muted);
   cursor: default;
   text-decoration: none;
 }
@@ -85,7 +88,7 @@
   padding: 10px 14px 14px;
   font-size: 13px;
   line-height: 1.6;
-  color: var(--text-2);
+  color: var(--text-secondary);
   pointer-events: none;
   user-select: none;
   max-width: 100%;
@@ -103,7 +106,7 @@
   align-items: center;
   gap: 7px;
   padding: 8px 0;
-  color: var(--text-4);
+  color: var(--text-muted);
   font-size: 12.5px;
 }
 
@@ -112,7 +115,7 @@
   align-items: center;
   justify-content: center;
   padding: 18px 0;
-  color: var(--text-4);
+  color: var(--text-muted);
 }
 
 .doc-editor .nv-prosemirror .nv-block-embed__spinner {

@@ -1,98 +1,36 @@
-/* src/app/components/WorkspaceSidebar.vue */
-.sidebar {
-  width: 272px;
-  flex: 0 0 272px;
-  container-type: inline-size;
-  height: 100%;
-  border-right: 1px solid var(--line-1);
-  background: color-mix(in oklab, var(--glass-1) 94%, var(--canvas-0));
-  backdrop-filter: blur(18px) saturate(110%);
-  -webkit-backdrop-filter: blur(18px) saturate(110%);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 10px;
-  position: relative;
-  z-index: 3;
-}
+/* Owning components: WorkspaceSidebar.vue (`.sidebar`) and its region
+   components under src/app/components/sidebar/ — SidebarWorkspaceHeader.vue
+   (`.workspace-head*`), SidebarActionBar.vue (`.sidebar-actionbar*`),
+   SidebarSystemNav.vue and SidebarPluginItems.vue (`.sidebar-system__item`,
+   `.sidebar-plugin-items`), SidebarTreeView.vue (`.tree-wrap`,
+   `.tree-root-drop-zone*`, `.tree-empty*`), SidebarTagPreview.vue
+   (`.tag-preview-*`), and SidebarBoardsSection.vue (`.sidebar-boards*`,
+   `.sidebar-board-item*`, `.sidebar-board-empty*`).
+
+   Base layout, typography, and default (idle) appearance for every element
+   above now live as `tw:` utilities on their owning template. What remains
+   here:
+   - Descendant rules reaching into another component's internal markup
+     (`.sidebar-actionbar__new-wrap .nv-popup-menu__trigger-wrap` targets
+     NvPopupMenu's own trigger wrapper, which this file's components don't
+     render themselves).
+   - State matrices where a `:hover`/`:focus-within` pseudo-class and a
+     sibling modifier class (`--active`, `--dragging`, `--drag-over`, ...)
+     compete for the same CSS property. Un-layered CSS always beats `@layer
+     utilities` regardless of declaration order, so converting only one side
+     of such a pair to a `tw:` utility would silently flip which one wins
+     when both apply at once (e.g. hovering an active/dragging row). Both
+     sides of every such pair stay here together, matching the tree-row and
+     titlebar-tabs precedent.
+   - The `.sidebar-board-item--empty` selector, which is unreferenced by any
+     current template — pre-existing dead CSS, left untouched as it's outside
+     this migration's scope.
+   - The narrow-sidebar `@container` query, kept untouched as a responsive
+     rule rather than translated to arbitrary Tailwind container variants. */
 
 .sidebar--tag-preview {
   width: 100%;
   flex-basis: 100%;
-}
-
-.workspace-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px;
-  border-radius: calc(10px * var(--radius-scale, 1));
-  background: color-mix(in oklab, var(--glass-2) 72%, transparent);
-  border: 1px solid var(--line-1);
-}
-
-.workspace-glyph {
-  width: 32px;
-  height: 32px;
-  border-radius: calc(9px * var(--radius-scale, 1));
-  background: linear-gradient(135deg, var(--canvas-1), color-mix(in oklab, var(--accent) 38%, var(--canvas-0)));
-  display: grid;
-  place-items: center;
-  color: var(--text-1);
-  font-size: 15px;
-  font-weight: 600;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14), 0 8px 20px -14px var(--accent-glow);
-}
-
-.workspace-meta {
-  min-width: 0;
-  flex: 1;
-}
-
-.workspace-head-back {
-  margin-left: auto;
-  flex-shrink: 0;
-  opacity: 0.4;
-  transition: opacity 0.15s;
-}
-.workspace-head-back:hover { opacity: 1; }
-.workspace-head-back:focus-visible,
-.sidebar-actionbar__new:focus-visible,
-.sidebar-actionbar__icon:focus-visible,
-.sidebar-boards__add:focus-visible,
-.sidebar-board-item:focus-visible,
-.sidebar-board-empty:focus-visible,
-.tag-preview-tag:focus-visible,
-.tag-preview-clear:focus-visible,
-.tag-preview-card:focus-visible,
-.sidebar-system__item:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--accent-soft), 0 0 0 1px var(--accent);
-}
-
-.workspace-name {
-  color: var(--text-1);
-  font-size: 13px;
-  font-weight: 560;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.workspace-subtitle {
-  color: var(--text-4);
-  font-size: 11px;
-}
-
-.sidebar-actionbar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.sidebar-actionbar__new-wrap {
-  flex: 1;
-  min-width: 0;
 }
 
 .sidebar-actionbar__new-wrap .nv-popup-menu__trigger-wrap {
@@ -100,65 +38,9 @@
   width: 100%;
 }
 
-.sidebar-actionbar__new {
-  width: 100%;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 0 10px;
-  border: 1px solid color-mix(in oklab, var(--accent) 26%, transparent);
-  border-radius: calc(9px * var(--radius-scale, 1));
-  background: color-mix(in oklab, var(--accent) 12%, transparent);
-  color: var(--accent);
-  font-size: 12.5px;
-  font-weight: 540;
-  cursor: pointer;
-  transition: background-color 140ms ease, border-color 140ms ease, transform 140ms ease;
-}
-
-.sidebar-actionbar__new:hover {
-  background: color-mix(in oklab, var(--accent) 18%, transparent);
-  border-color: color-mix(in oklab, var(--accent) 38%, transparent);
-}
-
-.sidebar-actionbar__new:active {
-  transform: translateY(1px);
-}
-
-.sidebar-actionbar__new span {
-  flex: 1;
-  text-align: left;
-}
-
-.sidebar-actionbar__caret {
-  opacity: 0.6;
-  flex-shrink: 0;
-}
-
-.sidebar-actionbar__tools {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.sidebar-actionbar__icon {
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  border: none;
-  border-radius: calc(8px * var(--radius-scale, 1));
-  background: transparent;
-  color: var(--text-3);
-  cursor: pointer;
-  transition: background-color 140ms ease, color 140ms ease;
-}
-
 .sidebar-actionbar__icon:hover {
   background: var(--hover);
-  color: var(--text-1);
+  color: var(--text-primary);
 }
 
 .sidebar-actionbar__icon.is-active {
@@ -166,75 +48,9 @@
   background: color-mix(in oklab, var(--accent) 12%, transparent);
 }
 
-.tree-wrap {
-  min-height: 0;
-  flex: 1;
-  overflow: auto;
-  overscroll-behavior: contain;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  /* Isolate paint so scrolling the tree doesn't repaint the rest of the sidebar. */
-  contain: paint;
-}
-
-.tree-root-drop-zone {
-  flex: 1 0 36px;
-  min-height: 36px;
-  border-radius: calc(8px * var(--radius-scale, 1));
-  border: 1px dashed transparent;
-  transition: background-color 140ms ease, border-color 140ms ease;
-}
-
-.tree-root-drop-zone--active {
-  background: color-mix(in oklab, var(--accent) 9%, transparent);
-  border-color: color-mix(in oklab, var(--accent) 36%, transparent);
-}
-
-.tag-preview-wrap {
-  min-height: 0;
-  flex: 1;
-  display: grid;
-  grid-template-columns: 128px minmax(0, 1fr);
-  gap: 8px;
-}
-
-.tag-preview-tags,
-.tag-preview-feed {
-  min-height: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
-  contain: paint;
-}
-
-.tag-preview-tags {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding-right: 2px;
-}
-
-.tag-preview-tag {
-  width: 100%;
-  min-height: 28px;
-  border: 1px solid transparent;
-  border-radius: calc(8px * var(--radius-scale, 1));
-  background: transparent;
-  color: var(--text-3);
-  cursor: pointer;
-  display: grid;
-  grid-template-columns: 12px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 6px;
-  padding: 0 7px;
-  font-size: 11.5px;
-  text-align: left;
-  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
-}
-
 .tag-preview-tag:hover {
   background: var(--hover);
-  color: var(--text-1);
+  color: var(--text-primary);
 }
 
 .tag-preview-tag--active {
@@ -243,84 +59,15 @@
   color: var(--accent);
 }
 
-.tag-preview-tag__label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tag-preview-tag__count {
-  min-width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  padding: 0 5px;
-  background: color-mix(in oklab, var(--glass-3) 82%, transparent);
-  color: var(--text-4);
-  font-size: 10.5px;
-  font-weight: 650;
-}
-
-.tag-preview-feed {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.tag-preview-feed__header {
-  min-height: 26px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-4);
-  font-size: 10.5px;
-  font-weight: 650;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.tag-preview-clear {
-  margin-left: auto;
-  border: none;
-  border-radius: calc(7px * var(--radius-scale, 1));
-  background: transparent;
-  color: var(--accent);
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 650;
-  padding: 4px 6px;
-}
-
-.tag-preview-clear:hover {
-  background: var(--hover);
-}
-
-.tag-preview-card {
-  width: 100%;
-  border: 1px solid var(--line-1);
-  border-radius: calc(8px * var(--radius-scale, 1));
-  background: color-mix(in oklab, var(--glass-2) 80%, transparent);
-  color: var(--text-2);
-  cursor: pointer;
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) 24px;
-  gap: 8px;
-  padding: 9px;
-  text-align: left;
-  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
-}
-
 .tag-preview-card:hover,
 .tag-preview-card:focus-within {
-  border-color: color-mix(in oklab, var(--accent) 28%, var(--line-1));
-  background: color-mix(in oklab, var(--glass-3) 86%, transparent);
-  color: var(--text-1);
+  border-color: color-mix(in oklab, var(--accent) 28%, var(--border-subtle));
+  background: color-mix(in oklab, var(--surface-overlay) 86%, transparent);
+  color: var(--text-primary);
 }
 
 .tag-preview-card--active {
-  border-color: color-mix(in oklab, var(--accent) 44%, var(--line-1));
+  border-color: color-mix(in oklab, var(--accent) 44%, var(--border-subtle));
   box-shadow: inset 2px 0 0 var(--accent);
 }
 
@@ -334,106 +81,6 @@
   box-shadow: 0 0 0 1px var(--accent-soft);
 }
 
-.tag-preview-card__open {
-  min-width: 0;
-  grid-column: 1 / 3;
-  border: none;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
-  gap: 8px;
-  padding: 0;
-  text-align: left;
-}
-
-.tag-preview-card__open:focus-visible {
-  outline: none;
-}
-
-.tag-preview-card__icon {
-  width: 24px;
-  height: 24px;
-  border-radius: calc(7px * var(--radius-scale, 1));
-  display: grid;
-  place-items: center;
-  background: var(--accent-soft);
-}
-
-.tag-preview-card__main,
-.tag-preview-card__top,
-.tag-preview-card__tags {
-  min-width: 0;
-  display: flex;
-}
-
-.tag-preview-card__main {
-  flex-direction: column;
-  gap: 4px;
-}
-
-.tag-preview-card__top {
-  align-items: baseline;
-  gap: 8px;
-}
-
-.tag-preview-card__title {
-  min-width: 0;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-1);
-  font-size: 12.5px;
-  font-weight: 650;
-}
-
-.tag-preview-card__date {
-  flex-shrink: 0;
-  color: var(--text-4);
-  font-size: 10.5px;
-}
-
-.tag-preview-card__path,
-.tag-preview-card__text {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-}
-
-.tag-preview-card__path {
-  -webkit-line-clamp: 1;
-  color: var(--text-4);
-  font-size: 10.5px;
-}
-
-.tag-preview-card__text {
-  -webkit-line-clamp: 2;
-  color: var(--text-3);
-  font-size: 11.5px;
-  line-height: 1.35;
-}
-
-.tag-preview-card__tags {
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.tag-preview-card__menu {
-  width: 24px;
-  height: 24px;
-  border: none;
-  border-radius: calc(7px * var(--radius-scale, 1));
-  background: transparent;
-  color: var(--text-4);
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  opacity: 0;
-  transition: opacity 140ms ease, background-color 140ms ease, color 140ms ease;
-}
-
 .tag-preview-card:hover .tag-preview-card__menu,
 .tag-preview-card:focus-within .tag-preview-card__menu {
   opacity: 1;
@@ -441,7 +88,7 @@
 
 .tag-preview-card__menu:hover {
   background: var(--hover);
-  color: var(--text-1);
+  color: var(--text-primary);
 }
 
 .tag-preview-card__menu:focus-visible {
@@ -450,253 +97,38 @@
   box-shadow: 0 0 0 2px var(--accent-soft), 0 0 0 1px var(--accent);
 }
 
-.tag-preview-card__tag {
-  max-width: 100%;
-  border-radius: 999px;
-  background: color-mix(in oklab, var(--accent) 11%, transparent);
-  color: var(--accent);
-  font-size: 10.5px;
-  font-weight: 620;
-  padding: 2px 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tag-preview-empty {
-  border: 1px dashed var(--line-1);
-  border-radius: calc(8px * var(--radius-scale, 1));
-  background: color-mix(in oklab, var(--glass-2) 72%, transparent);
-  padding: 12px 10px;
-}
-
-.tag-preview-empty__title {
-  color: var(--text-2);
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.tag-preview-empty__subtitle {
-  margin-top: 4px;
-  color: var(--text-4);
-  font-size: 11.5px;
-  line-height: 1.4;
-}
-
-.sidebar-boards {
-  padding: 4px 0;
-  border-top: 1px solid var(--line-1);
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.sidebar-boards__header {
-  display: flex;
-  align-items: center;
-  padding: 2px 10px 4px;
-}
-
-.sidebar-boards__label {
-  font-size: 10.5px;
-  font-weight: 600;
-  color: var(--text-4);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  flex: 1;
-}
-
-.sidebar-boards__add {
-  width: 24px;
-  height: 24px;
-  padding: 0 !important;
-  display: grid;
-  place-items: center;
-  color: var(--text-4);
-  border: none;
-  border-radius: calc(7px * var(--radius-scale, 1));
-  background: transparent;
-  transition: background-color 140ms ease, color 140ms ease;
-}
-
-.sidebar-boards__add:hover {
-  color: var(--text-1);
-  background: var(--hover);
-}
-
-.sidebar-board-item {
-  width: 100%;
-  height: 30px;
-  border: none;
-  background: transparent;
-  color: var(--text-2);
-  border-radius: calc(8px * var(--radius-scale, 1));
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 0 10px;
-  font-size: 12.5px;
-  text-align: left;
-  transition: background-color 140ms ease, color 140ms ease;
-}
-
 .sidebar-board-item:hover {
   background: var(--hover);
-  color: var(--text-1);
+  color: var(--text-primary);
 }
 
 .sidebar-board-item--active {
-  background: color-mix(in oklab, var(--glass-3) 88%, transparent);
-  color: var(--text-1);
-  box-shadow: inset 2px 0 0 var(--accent);
-}
-
-.sidebar-board-item__icon {
-  font-size: 13px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.sidebar-board-item__title {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  background: var(--island-bg);
+  color: var(--text-primary);
+  font-weight: 500;
+  box-shadow: var(--shadow-raised);
 }
 
 .sidebar-board-item--empty {
-  color: var(--text-4);
+  color: var(--text-muted);
   font-size: 12px;
   gap: 6px;
-}
-
-.sidebar-board-empty {
-  width: 100%;
-  min-height: 56px;
-  border: 1px dashed var(--line-2);
-  border-radius: calc(9px * var(--radius-scale, 1));
-  background: color-mix(in oklab, var(--glass-2) 74%, transparent);
-  color: var(--text-3);
-  cursor: pointer;
-  display: grid;
-  grid-template-columns: 26px minmax(0, 1fr);
-  gap: 8px;
-  padding: 8px 10px;
-  text-align: left;
-  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
-}
-
-.sidebar-board-empty:hover {
-  border-color: color-mix(in oklab, var(--accent) 38%, var(--line-2));
-  background: color-mix(in oklab, var(--accent) 8%, transparent);
-  color: var(--text-1);
-}
-
-.sidebar-board-empty__icon {
-  width: 26px;
-  height: 26px;
-  border-radius: calc(8px * var(--radius-scale, 1));
-  display: grid;
-  place-items: center;
-  color: var(--accent);
-  background: var(--accent-soft);
-}
-
-.sidebar-board-empty__copy {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.sidebar-board-empty__title {
-  color: var(--text-2);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.sidebar-board-empty__subtitle {
-  color: var(--text-4);
-  font-size: 11px;
-  line-height: 1.35;
-}
-
-.sidebar-board-empty__cta {
-  grid-column: 2;
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 650;
-}
-
-.sidebar-system {
-  margin-top: auto;
-  padding-top: 4px;
-  border-top: 1px solid var(--line-1);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.sidebar-plugin-items {
-  display: grid;
-  gap: 2px;
-  padding: 8px 10px;
-  border-top: 1px solid var(--border-subtle);
-}
-
-.sidebar-system__item {
-  width: 100%;
-  height: 32px;
-  border: none;
-  background: transparent;
-  color: var(--text-3);
-  border-radius: calc(9px * var(--radius-scale, 1));
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 10px;
-  font-size: 12.5px;
-  text-align: left;
-  transition: background-color 140ms ease, color 140ms ease;
 }
 
 .sidebar-system__item:hover {
   background: var(--hover);
-  color: var(--text-1);
+  color: var(--text-primary);
 }
 
 .sidebar-system__item--active {
-  background: color-mix(in oklab, var(--glass-3) 88%, transparent);
-  color: var(--text-1);
-  box-shadow: inset 2px 0 0 var(--accent);
+  background: var(--island-bg);
+  color: var(--text-primary);
+  font-weight: 500;
+  box-shadow: var(--shadow-raised);
 }
 
-.tree-empty {
-  padding: 12px 10px;
-  border: 1px dashed var(--line-1);
-  border-radius: calc(10px * var(--radius-scale, 1));
-  background: color-mix(in oklab, var(--glass-2) 72%, transparent);
-  color: var(--text-4);
-  font-size: 12px;
-}
-
-.tree-empty__title {
-  color: var(--text-2);
-  font-weight: 600;
-}
-
-.tree-empty__subtitle {
-  margin-top: 4px;
-  line-height: 1.4;
-}
-
-.tree-empty__actions {
-  display: flex;
-  gap: 6px;
-  margin-top: 10px;
-  flex-wrap: wrap;
+.sidebar-system__item--active svg {
+  color: var(--accent);
 }
 
 @container (max-width: 380px) {

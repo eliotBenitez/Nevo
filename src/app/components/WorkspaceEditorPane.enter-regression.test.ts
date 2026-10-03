@@ -17,10 +17,6 @@ vi.mock('../../tauri/commands', () => ({
   workspaceCommands: {
     cleanupOrphanedAssets: vi.fn(async () => undefined),
   },
-  collabCommands: {
-    loadYjsState: vi.fn(async () => new Uint8Array()),
-    saveYjsState: vi.fn(async () => undefined),
-  },
   noteCommands: {
     importImageAsset: vi.fn(async () => ({ src: '.nevo/assets/image.png' })),
     loadNote: vi.fn(),
@@ -38,6 +34,7 @@ vi.mock('../../composables/useDeviceLayout', () => {
   const mockRef = <T,>(value: T) => ({ value, __v_isRef: true })
   return {
     useDeviceLayout: () => ({
+      isPhone: mockRef(false),
       isTouch: mockRef(false),
       supportsHover: mockRef(true),
     }),
@@ -59,11 +56,6 @@ const workspaceStoreMocks = vi.hoisted(() => ({
   manifest: null,
 }))
 
-const collabStoreMocks = vi.hoisted(() => ({
-  leaveSession: vi.fn(async () => undefined),
-  sessionNoteId: null as string | null,
-}))
-
 vi.mock('../../stores/graph', () => ({
   useGraphStore: () => graphStoreMocks,
 }))
@@ -74,10 +66,6 @@ vi.mock('../../stores/tree', () => ({
 
 vi.mock('../../stores/workspace', () => ({
   useWorkspaceStore: () => workspaceStoreMocks,
-}))
-
-vi.mock('../../stores/collab', () => ({
-  useCollabStore: () => collabStoreMocks,
 }))
 
 const i18n = createI18n({
@@ -120,11 +108,11 @@ async function flushVue() {
   await nextTick()
 }
 
-function mountHarness() {
+function mountHarness(initialNote?: NoteDocument) {
   const Harness = defineComponent({
     components: { WorkspaceEditorPane },
     setup() {
-      const note = ref(createNote())
+      const note = ref(initialNote ?? createNote())
       const saveStatus = ref<'saved' | 'saving' | 'unsaved' | 'error'>('saved')
       const state = reactive({ settings })
 
@@ -184,7 +172,6 @@ describe('WorkspaceEditorPane Enter handling', () => {
   })
 
   it('splits a paragraph without surfacing an unhandled Vue update error', async () => {
-    vi.useFakeTimers()
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     const unhandled: unknown[] = []
     const onUnhandled = (event: PromiseRejectionEvent) => {
@@ -195,8 +182,11 @@ describe('WorkspaceEditorPane Enter handling', () => {
 
     const wrapper = mountHarness()
     wrappers.push(wrapper)
-    await flushVue()
+    await vi.waitFor(() => {
+      expect(wrapper.find('.ProseMirror').exists()).toBe(true)
+    })
 
+    vi.useFakeTimers()
     const editor = wrapper.get('.ProseMirror').element as HTMLElement
     editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
     await flushVue()
@@ -206,5 +196,49 @@ describe('WorkspaceEditorPane Enter handling', () => {
     window.removeEventListener('unhandledrejection', onUnhandled)
     expect(unhandled).toEqual([])
     expect(consoleError).not.toHaveBeenCalledWith(expect.stringContaining('emitsOptions'))
+  })
+
+  it('creates an empty block under the title on Enter when first block is non-empty', async () => {
+    const wrapper = mountHarness()
+    wrappers.push(wrapper)
+    await vi.waitFor(() => {
+      expect(wrapper.find('.ProseMirror').exists()).toBe(true)
+    })
+
+    const titleTextarea = wrapper.get('textarea.doc-title').element as HTMLTextAreaElement
+    const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+    titleTextarea.dispatchEvent(enterEvent)
+    await flushVue()
+
+    expect(enterEvent.defaultPrevented).toBe(true)
+    const paragraphs = wrapper.findAll('.ProseMirror p')
+    expect(paragraphs.length).toBe(2)
+    expect(paragraphs[0].text()).toBe('')
+    expect(paragraphs[1].text()).toBe('Alpha')
+  })
+
+  it('focuses existing empty block under the title on Enter without creating a new block', async () => {
+    const emptyNote: NoteDocument = {
+      ...createNote(),
+      content: {
+        type: 'doc',
+        content: [{ type: 'paragraph' }],
+      },
+    }
+    const wrapper = mountHarness(emptyNote)
+    wrappers.push(wrapper)
+    await vi.waitFor(() => {
+      expect(wrapper.find('.ProseMirror').exists()).toBe(true)
+    })
+
+    const titleTextarea = wrapper.get('textarea.doc-title').element as HTMLTextAreaElement
+    const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+    titleTextarea.dispatchEvent(enterEvent)
+    await flushVue()
+
+    expect(enterEvent.defaultPrevented).toBe(true)
+    const paragraphs = wrapper.findAll('.ProseMirror p')
+    expect(paragraphs.length).toBe(1)
+    expect(paragraphs[0].text()).toBe('')
   })
 })

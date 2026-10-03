@@ -141,18 +141,18 @@ describe('createWorkspaceEditorOverlayHandlers', () => {
     expect(fixture.mathPopover.latex).toBe('x^2')
   })
 
-  it('routes image requests for local and cloud workspaces', () => {
+  it('routes image requests through the native picker or the browser input fallback', () => {
     const local = createOptions(true)
     createWorkspaceEditorOverlayHandlers(local.options).requestImage()
 
     expect(local.pickAndInsertImage).toHaveBeenCalledOnce()
     expect(local.requestImagePicker).not.toHaveBeenCalled()
 
-    const cloud = createOptions(false)
-    createWorkspaceEditorOverlayHandlers(cloud.options).requestImage()
+    const noPathImport = createOptions(false)
+    createWorkspaceEditorOverlayHandlers(noPathImport.options).requestImage()
 
-    expect(cloud.requestImagePicker).toHaveBeenCalledOnce()
-    expect(cloud.clickImageInput).toHaveBeenCalledOnce()
-    expect(cloud.pickAndInsertImage).not.toHaveBeenCalled()
+    expect(noPathImport.requestImagePicker).toHaveBeenCalledOnce()
+    expect(noPathImport.clickImageInput).toHaveBeenCalledOnce()
+    expect(noPathImport.pickAndInsertImage).not.toHaveBeenCalled()
   })
 })

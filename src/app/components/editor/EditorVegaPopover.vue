@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { editorPopupInputClass } from './editorPopupClasses'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import EditorPopupPanel from './EditorPopupPanel.vue'
@@ -60,7 +61,7 @@ function onInput(event: Event) {
     <textarea
       id="vega-input"
       ref="textareaRef"
-      class="editor-popup-panel__input"
+      class="editor-popup-panel__input" :class="editorPopupInputClass"
       :value="spec"
       rows="12"
       :placeholder="placeholder"

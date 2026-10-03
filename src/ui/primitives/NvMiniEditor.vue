@@ -11,6 +11,7 @@ interface Props {
   workspacePath?: string | null
   pluginManifests?: PluginManifest[]
   settings?: WorkspaceSettings
+  showBlockHandle?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -18,6 +19,7 @@ const props = withDefaults(defineProps<Props>(), {
   workspacePath: null,
   pluginManifests: () => [],
   settings: () => createDefaultWorkspaceSettings(),
+  showBlockHandle: true,
 })
 
 const emit = defineEmits<{ 'update:modelValue': [value: unknown] }>()
@@ -79,7 +81,7 @@ const editorContent = computed<BlockNode>(() => {
 </script>
 
 <template>
-  <div class="nme-root">
+  <div class="nme-root tw:relative tw:rounded-[calc(10px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-[color:var(--border-default,var(--border-subtle))] tw:bg-[color:var(--surface-overlay,var(--surface-raised))] tw:py-[10px] tw:px-3 tw:transition-[border-color] tw:duration-[120ms] tw:focus-within:border-accent">
     <EditorSurface
       :content="editorContent"
       variant="compact"
@@ -88,22 +90,8 @@ const editorContent = computed<BlockNode>(() => {
       :workspace-path="workspacePath"
       :plugin-manifests="pluginManifests"
       :settings="settings"
+      :show-block-handle="showBlockHandle"
       @update:content="onEditorUpdate"
     />
   </div>
 </template>
-
-<style scoped>
-.nme-root {
-  position: relative;
-  border: 1px solid var(--line-2, var(--border-subtle));
-  border-radius: calc(10px * var(--radius-scale, 1));
-  background: var(--glass-3, var(--surface-1));
-  transition: border-color 0.12s;
-  padding: 10px 12px;
-}
-
-.nme-root:focus-within {
-  border-color: var(--accent);
-}
-</style>

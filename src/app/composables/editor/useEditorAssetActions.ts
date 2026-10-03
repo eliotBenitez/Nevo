@@ -1,9 +1,11 @@
-import { ref } from 'vue'
 import { noteCommands, workspaceCommands } from '../../../tauri/commands'
 import { mediaHttpUrl } from '../../../tauri/mediaServer'
-import { CloudBackend, CLOUD_ASSET_SCHEME, type WorkspaceBackend } from '../../../core/workspace-backend'
+import type { WorkspaceBackend } from '../../../core/workspace-backend'
 import { appLogger } from '../../../utils/logger'
 import { workspaceAssetUrl } from '../../../utils/workspaceAssetUrl'
+import { MAX_ASSET_MB, isWithinAssetLimit } from '../../../core/assets/assetLimits'
+import { useToast } from '../../../ui/composables/useToast'
+import { i18n } from '../../../i18n'
 
 interface EditorAssetActionsOptions {
   getWorkspacePath: () => string | null
@@ -14,43 +16,22 @@ interface EditorAssetActionsOptions {
 }
 
 export function useEditorAssetActions(options: EditorAssetActionsOptions) {
-  const cloudAssetRefreshToken = ref(0)
-  const pendingCloudAssetPrefetches = new Set<string>()
   const pendingCoverAssetCleanup = new Set<string>()
   let pendingAssetCleanup = false
 
-  function resolveCloudAsset(src: string): string {
-    const cloud = options.getBackend()
-    if (!(cloud instanceof CloudBackend)) return ''
-    const cached = cloud.assetUrl(src)
-    if (cached) return cached
-    if (!pendingCloudAssetPrefetches.has(src)) {
-      pendingCloudAssetPrefetches.add(src)
-      void cloud.prefetchAsset(src).then(() => {
-        if (cloud.assetUrl(src)) cloudAssetRefreshToken.value += 1
-      }).finally(() => {
-        pendingCloudAssetPrefetches.delete(src)
-      })
-    }
-    return ''
-  }
-
   function resolveWorkspaceAssetSrc(src: string): string | null {
-    if (src.startsWith(CLOUD_ASSET_SCHEME)) return resolveCloudAsset(src) || null
     if (!options.getWorkspacePath()) return null
     return workspaceAssetUrl(src)
   }
 
   function resolveEditorAssetSrc(src: string): string {
     if (/^(https?|data|blob):/.test(src)) return src
-    if (src.startsWith(CLOUD_ASSET_SCHEME)) return resolveCloudAsset(src)
     if (!options.getWorkspacePath()) return src
     return workspaceAssetUrl(src)
   }
 
   function resolveMediaAssetSrc(src: string): string | null {
     if (/^(https?|data|blob):/.test(src)) return src
-    if (src.startsWith(CLOUD_ASSET_SCHEME)) return resolveCloudAsset(src) || null
     const workspacePath = options.getWorkspacePath()
     if (!workspacePath) return null
     return mediaHttpUrl(`${workspacePath}/${src}`, src)
@@ -144,10 +125,26 @@ export function useEditorAssetActions(options: EditorAssetActionsOptions) {
     const input = event.target as HTMLInputElement
     const file = input.files?.[0]
     if (!file) return
+    if (!isWithinAssetLimit(file.size)) {
+      const { showToast } = useToast()
+      showToast({
+        variant: 'error',
+        message: i18n.global.t('editor.assets.tooLarge', { fileName: file.name, limit: `${MAX_ASSET_MB} MB` }),
+      })
+      void appLogger.warn({
+        source: 'frontend.editor',
+        event: 'import_cover_image',
+        message: 'Rejected a cover image import over the size limit',
+        workspacePath: options.getWorkspacePath(),
+        payload: { fileName: file.name, size: file.size },
+      })
+      input.value = ''
+      return
+    }
     try {
       const backend = options.getBackend()
       if (!backend) return
-      const bytes = Array.from(new Uint8Array(await file.arrayBuffer()))
+      const bytes = new Uint8Array(await file.arrayBuffer())
       const imported = await backend.importImageAsset(file.name, bytes)
       updateCover(`image:${imported.src}`)
     } catch (error) {
@@ -178,7 +175,6 @@ export function useEditorAssetActions(options: EditorAssetActionsOptions) {
   }
 
   return {
-    cloudAssetRefreshToken,
     resolveWorkspaceAssetSrc,
     resolveEditorAssetSrc,
     resolveMediaAssetSrc,

@@ -17,6 +17,14 @@ pub use gc::*;
 pub use import::*;
 pub use remote::*;
 
+// `import` is a private module (visible only within `assets` and its
+// descendants), so this re-export is needed to surface the helper at all.
+// `note`'s own `pub use assets::*;` then carries it one level further, so
+// it ends up reachable as `crate::commands::note::import_asset_by_path_with_limit`
+// for `commands::voice_recording`, which needs a larger size cap than the
+// generic `MAX_LOCAL_ASSET_BYTES` used by `import_asset_by_path_inner`.
+pub(crate) use import::import_asset_by_path_with_limit;
+
 use crate::commands::note::ImportedImageAsset;
 
 /// Store raw bytes into the workspace assets directory, reusing the same

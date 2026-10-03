@@ -1,16 +1,17 @@
 use chrono::Utc;
 use uuid::Uuid;
 
+use super::notebook::{validate_note_for_write, validate_serialized_size, DocumentFormat};
 use super::snapshots::store_note_snapshot;
 use super::{
     empty_doc, extract_note_from_tree, folder_exists, insert_note_in_folder, note_context,
-    note_error_context, note_exists_in_tree, note_path, update_note_meta_in_manifest, NoteDocument,
-    NoteProperties,
+    note_error_context, note_exists_in_tree, note_lock, note_path, update_note_meta_in_manifest,
+    NoteDocument, NoteProperties,
 };
 use crate::commands::folder::{load_manifest, manifest_lock, save_manifest};
 use crate::commands::note_index;
-use crate::commands::path_utils::{normalize_workspace_path, validate_id};
-use crate::commands::workspace::{self, NoteMeta};
+use crate::commands::path_utils::normalize_workspace_path;
+use crate::commands::workspace::{self, NoteMeta, CURRENT_WORKSPACE_SCHEMA_VERSION};
 use crate::logging::{LogContext, LogError};
 
 #[tauri::command]
@@ -75,6 +76,7 @@ pub(crate) fn create_note_impl(
         properties: Some(NoteProperties::empty()),
         content: empty_doc(),
         canvas: None,
+        extra: Default::default(),
     };
 
     let path = note_path(&workspace_path, &note.id)?;
@@ -105,6 +107,7 @@ pub(crate) fn create_note_impl(
         icon,
         folder_id: folder_id.clone(),
         updated_at: now,
+        extra: Default::default(),
     };
 
     if let Some(fid) = &folder_id {
@@ -238,7 +241,61 @@ pub(crate) fn save_note_impl(workspace_path: String, note: NoteDocument) -> Resu
     })?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let diagnostics_enabled = workspace::is_extended_diagnostics_enabled(&workspace_path);
+
+    // Serializes this whole write against a concurrent snapshot restore for
+    // the same note — see `note_lock`.
+    let note_write_lock = note_lock(&workspace_path, &note.id);
+    let _note_guard = note_write_lock.lock().map_err(|error| error.to_string())?;
+
+    let manifest_lock = manifest_lock(&workspace_path);
+    let _manifest_guard = manifest_lock.lock().map_err(|error| error.to_string())?;
+    let mut manifest = load_manifest(&workspace_path).inspect_err(|message| {
+        let _ = logger.error(
+            "tauri.note",
+            "save_note",
+            "Failed to load workspace manifest",
+            note_error_context(&workspace_path, "io", message.clone()),
+        );
+    })?;
+    if manifest.schema_version > CURRENT_WORKSPACE_SCHEMA_VERSION {
+        return Err(format!(
+            "workspace-schema-too-new:{}:{}",
+            manifest.schema_version, CURRENT_WORKSPACE_SCHEMA_VERSION
+        ));
+    }
     let path = note_path(&workspace_path, &note.id)?;
+    if path.exists() {
+        let current_raw = std::fs::read_to_string(&path).map_err(|error| {
+            format!("Unable to validate the current note before saving: {error}")
+        })?;
+        let current_value: serde_json::Value = serde_json::from_str(&current_raw)
+            .map_err(|error| format!("Refusing to overwrite a malformed note: {error}"))?;
+        let current_note: NoteDocument = serde_json::from_value(current_value)
+            .map_err(|error| format!("Refusing to overwrite an unreadable note: {error}"))?;
+        let current_format = validate_note_for_write(&current_note)
+            .map_err(|_| "unsupported-format: the existing note is read-only".to_string())?;
+        let requested_format = validate_note_for_write(&note)
+            .map_err(|error| format!("unsupported-format: {error}"))?;
+        if current_format != requested_format {
+            return Err(
+                "unsupported-format: note format changes require an explicit migration".to_string(),
+            );
+        }
+    }
+    let format = validate_note_for_write(&note)?;
+    let raw = serde_json::to_value(&note).map_err(|error| error.to_string())?;
+    if format == DocumentFormat::Notebook {
+        if !path.is_file() {
+            return Err(
+                "unsupported-format: notebooks must be created with create_notebook".to_string(),
+            );
+        }
+        validate_serialized_size(&raw)?;
+    }
+    if format == DocumentFormat::Notebook && manifest.schema_version < 2 {
+        return Err("Notebook workspace schema upgrade is required before saving".to_string());
+    }
+
     let content = serde_json::to_string(&note).map_err(|error| {
         let message = error.to_string();
         let _ = logger.error(
@@ -264,17 +321,6 @@ pub(crate) fn save_note_impl(workspace_path: String, note: NoteDocument) -> Resu
             "tauri.note",
             "save_note",
             "Failed to store note snapshot",
-            note_error_context(&workspace_path, "io", message.clone()),
-        );
-    })?;
-
-    let manifest_lock = manifest_lock(&workspace_path);
-    let _manifest_guard = manifest_lock.lock().map_err(|error| error.to_string())?;
-    let mut manifest = load_manifest(&workspace_path).inspect_err(|message| {
-        let _ = logger.error(
-            "tauri.note",
-            "save_note",
-            "Failed to load workspace manifest",
             note_error_context(&workspace_path, "io", message.clone()),
         );
     })?;
@@ -337,137 +383,6 @@ pub(crate) fn save_note_impl(workspace_path: String, note: NoteDocument) -> Resu
     Ok(())
 }
 
-/// Bumps a note's `updated_at` on the note file and its manifest entry without
-/// touching note content. Used by callers that mutate a note's Y.Doc directly
-/// (bypassing `save_note`), such as draw-canvas sync, so the workspace home
-/// "recently modified" list reflects the change. Deliberately NOT called from
-/// `save_yjs_state` itself: that command fires on every ordinary keystroke
-/// autosave (~2s cadence) where `save_note` already updates the manifest, and
-/// bumping here too would double-write the manifest and contend on its lock.
-#[tauri::command]
-pub async fn touch_note_updated_at(
-    workspace_path: String,
-    note_id: String,
-) -> Result<String, String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        touch_note_updated_at_impl(workspace_path, note_id)
-    })
-    .await
-    .map_err(|error| error.to_string())?
-}
-
-pub(crate) fn touch_note_updated_at_impl(
-    workspace_path: String,
-    note_id: String,
-) -> Result<String, String> {
-    let logger = crate::logging::logger();
-    let workspace_path = normalize_workspace_path(&workspace_path).inspect_err(|message| {
-        let _ = logger.error(
-            "tauri.note",
-            "touch_note_updated_at",
-            "Failed to normalize workspace path",
-            LogContext::default().with_error(LogError {
-                kind: Some("path".to_string()),
-                message: message.clone(),
-                details: None,
-            }),
-        );
-    })?;
-    let workspace_path = workspace_path.to_string_lossy().into_owned();
-    validate_id(&note_id)?;
-    let diagnostics_enabled = workspace::is_extended_diagnostics_enabled(&workspace_path);
-    let path = note_path(&workspace_path, &note_id)?;
-
-    let content = std::fs::read_to_string(&path).map_err(|error| {
-        let message = error.to_string();
-        let _ = logger.error(
-            "tauri.note",
-            "touch_note_updated_at",
-            "Failed to read note file",
-            note_error_context(&workspace_path, "io", message.clone()),
-        );
-        message
-    })?;
-    let mut note: NoteDocument = serde_json::from_str(&content).map_err(|error| {
-        let message = error.to_string();
-        let _ = logger.error(
-            "tauri.note",
-            "touch_note_updated_at",
-            "Failed to parse note file",
-            note_error_context(&workspace_path, "serde", message.clone()),
-        );
-        message
-    })?;
-
-    let now = Utc::now().to_rfc3339();
-    note.updated_at = now.clone();
-
-    let updated_content = serde_json::to_string(&note).map_err(|error| {
-        let message = error.to_string();
-        let _ = logger.error(
-            "tauri.note",
-            "touch_note_updated_at",
-            "Failed to serialize note",
-            note_error_context(&workspace_path, "serde", message.clone()),
-        );
-        message
-    })?;
-    crate::commands::path_utils::write_atomic(&path, updated_content.as_bytes()).map_err(
-        |error| {
-            let message = error.to_string();
-            let _ = logger.error(
-                "tauri.note",
-                "touch_note_updated_at",
-                "Failed to write note file",
-                note_error_context(&workspace_path, "io", message.clone()),
-            );
-            message
-        },
-    )?;
-
-    let manifest_lock = manifest_lock(&workspace_path);
-    let _manifest_guard = manifest_lock.lock().map_err(|error| error.to_string())?;
-    let mut manifest = load_manifest(&workspace_path).inspect_err(|message| {
-        let _ = logger.error(
-            "tauri.note",
-            "touch_note_updated_at",
-            "Failed to load workspace manifest",
-            note_error_context(&workspace_path, "io", message.clone()),
-        );
-    })?;
-
-    let updated = update_note_meta_in_manifest(
-        &mut manifest.root_notes,
-        &mut manifest.tree,
-        &note.id,
-        &note.title,
-        &note.icon,
-        &now,
-    );
-    if !updated {
-        let _ = logger.warn(
-            "tauri.note",
-            "touch_note_updated_at",
-            "Note was touched but its manifest entry was not found",
-            diagnostics_enabled,
-            note_context(&workspace_path).with_payload(serde_json::json!({
-                "noteId": note.id,
-                "folderId": note.folder_id,
-            })),
-        );
-    }
-    save_manifest(&workspace_path, &manifest).inspect_err(|message| {
-        let _ = logger.error(
-            "tauri.note",
-            "touch_note_updated_at",
-            "Failed to save workspace manifest",
-            note_error_context(&workspace_path, "io", message.clone()),
-        );
-    })?;
-
-    Ok(now)
-}
-
 #[tauri::command]
 pub async fn delete_note(workspace_path: String, note_id: String) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || delete_note_impl(workspace_path, note_id))
@@ -520,6 +435,13 @@ pub(crate) fn delete_note_impl(workspace_path: String, note_id: String) -> Resul
             deleted_at: Utc::now().to_rfc3339(),
             original_parent_id: meta.folder_id.clone(),
             icon: Some(meta.icon.clone()),
+            // Carry the note's unknown fields through the trash so a delete +
+            // restore in an older build does not drop what a newer one wrote
+            // (`restore_from_trash` hands them back to the rebuilt NoteMeta).
+            // A future TrashedItem field sharing a NoteMeta field's name would
+            // collide here; both shapes live in the same manifest schema, so
+            // that is a schema-version decision, not an accident to guard.
+            extra: meta.extra.clone(),
         });
 
         save_manifest(&workspace_path, &manifest).inspect_err(|message| {

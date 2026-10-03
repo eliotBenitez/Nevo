@@ -13,6 +13,7 @@ import {
 } from './viewportRenderController'
 
 import { transformMarkmap, type MarkmapInstance } from '../../utils/markmap/markmapCore'
+import { MAX_EMBED_SOURCE_CHARS } from './embedLimits'
 
 const BASE_OPTIONS = { autoFit: true, duration: 200, maxWidth: 320, fitRatio: 0.92 }
 
@@ -99,6 +100,21 @@ export function createMarkmapNodeView(node: PMNode, view: EditorView, getPos: No
       }
       placeholder.style.display = ''
       dom.dataset.error = 'false'
+      lastRenderedMarkdown = markdown
+      return
+    }
+
+    // markmap's transform has no input-size bound of its own; a huge source
+    // string (pasted/imported content) can hang the tab. Skip rendering and
+    // let the user shrink it — the block stays clickable/editable either way.
+    if (markdown.length > MAX_EMBED_SOURCE_CHARS) {
+      if (markmap) {
+        markmap.destroy()
+        markmap = null
+      }
+      placeholder.style.display = ''
+      placeholder.textContent = options?.t?.('editor.embeds.sourceTooLarge') ?? 'Source is too large to render — shorten it to continue'
+      dom.dataset.error = 'true'
       lastRenderedMarkdown = markdown
       return
     }

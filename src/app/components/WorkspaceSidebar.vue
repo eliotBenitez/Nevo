@@ -1,27 +1,33 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { watchDebounced } from '@vueuse/core'
-import { ArrowLeft, Download, FolderPen, History, House, Kanban, MoreHorizontal, Network, Pin, PinOff, Plus, Search, Settings, Tag, Trash2, Upload } from 'lucide-vue-next'
+import { Download, FolderPen, History, Pin, PinOff, Search, Trash2, Upload } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import type { SidebarNotePreview, TreeNode } from '../../types/note'
 import type { KanbanBoardMeta } from '../../types/kanban'
 import type { SidebarContentMode, WorkspaceHomeFavorite } from '../../types/workspace'
 import type { NevoSandboxSidebarItem } from '../../types/editor-plugin'
-import WorkspaceTreeNode from './WorkspaceTreeNode.vue'
 import SidebarActionBar from './SidebarActionBar.vue'
 import { collectFolderIds, filterTree, sortTree, type SortMode } from '../composables/useSidebarTree'
 import NvPopupMenu from '../../ui/primitives/NvPopupMenu.vue'
-import NvNoteIcon from '../../ui/primitives/NvNoteIcon.vue'
 import type { NvMenuItemDef } from '../../ui/primitives/menu-types'
 import NvMenuItem from '../../ui/primitives/NvMenuItem.vue'
 import NvMenuSeparator from '../../ui/primitives/NvMenuSeparator.vue'
-import WorkspaceMembersPanel from './WorkspaceMembersPanel.vue'
 import { useWorkspaceStore } from '../../stores/workspace'
 import { useTreeStore } from '../../stores/tree'
 import { filterSidebarPreviewsByTags, sortSidebarPreviews } from '../../utils/sidebar/sidebarNotePreviews'
 import { useSidebarDrag, type SidebarDragTarget, type SidebarDragSource } from '../composables/useSidebarDrag'
 import { workspaceHomeFavoriteKey } from '../../utils/workspace-settings'
+import { pluralChoice } from '../../utils/plural-index'
+import SidebarTagSection from './SidebarTagSection.vue'
+import SidebarStatusBar from './SidebarStatusBar.vue'
+import SidebarWorkspaceHeader from './sidebar/SidebarWorkspaceHeader.vue'
+import SidebarSystemNav from './sidebar/SidebarSystemNav.vue'
+import SidebarTreeView from './sidebar/SidebarTreeView.vue'
+import SidebarTagPreview, { type SidebarTagPreviewItem } from './sidebar/SidebarTagPreview.vue'
+import SidebarBoardsSection from './sidebar/SidebarBoardsSection.vue'
+import SidebarPluginItems from './sidebar/SidebarPluginItems.vue'
 
 interface Props {
   workspaceName: string
@@ -32,7 +38,7 @@ interface Props {
   boards?: KanbanBoardMeta[]
   activeBoardId?: string | null
   kanbanEnabled?: boolean
-  backendKind?: 'local' | 'cloud' | null
+  backendKind?: 'local' | null
   sidebarMode?: SidebarContentMode
   notePreviews?: SidebarNotePreview[]
   pluginItems?: NevoSandboxSidebarItem[]
@@ -56,6 +62,7 @@ type BoardMenuAction = 'rename' | 'delete'
 
 const emit = defineEmits<{
   'create-note': []
+  'create-notebook': []
   'create-folder': []
   'import-md': []
   'import-obsidian': []
@@ -77,8 +84,10 @@ const emit = defineEmits<{
   'open-home': []
   'toggle-home': [favorite: WorkspaceHomeFavorite]
   'back-to-onboarding': []
+  /** Asks the shell for a temporary tag-preview view; the stored sidebar mode is untouched. */
+  'preview-tags': []
 }>()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const workspaceStore = useWorkspaceStore()
 const treeStore = useTreeStore()
 const drag = useSidebarDrag()
@@ -176,6 +185,15 @@ const homeContextMenu = reactive<{
 const homeCursorPos = ref({ top: 0, left: 0 })
 const homeFavoriteKeySet = computed(() => new Set(props.homeFavoriteKeys ?? []))
 const isTreeEmpty = computed(() => !props.tree.length)
+// Fall back to the generic label while the manifest hasn't loaded yet — a "0 notes"
+// flash during startup would be a lie, not a placeholder.
+const workspaceSubtitle = computed(() => {
+  const noteCount = workspaceStore.noteCount
+  if (noteCount === undefined) return t('workspace.localWorkspace')
+  return t('workspace.sidebarSubtitle', pluralChoice(String(locale.value), noteCount), {
+    named: { notes: noteCount },
+  })
+})
 const selectedTags = ref<Set<string>>(new Set())
 const sidebarMode = computed(() => props.sidebarMode ?? 'tree')
 const sortMode = computed<SortMode>(() => workspaceStore.settings.workspace.sidebarSortMode)
@@ -196,6 +214,9 @@ const tagStats = computed(() => {
 })
 const filteredNotePreviews = computed(() =>
   filterSidebarPreviewsByTags(sortedNotePreviews.value, selectedTags.value),
+)
+const tagPreviewItems = computed<SidebarTagPreviewItem[]>(() =>
+  filteredNotePreviews.value.map((preview) => ({ ...preview, formattedDate: formatPreviewDate(preview.updatedAt) })),
 )
 const rootDropActive = ref(false)
 const tagPreviewEmptyKind = computed<'no-notes' | 'no-matches' | null>(() => {
@@ -330,16 +351,22 @@ function onSortModeChange(mode: SortMode) {
   })
 }
 
-function isTagSelected(tag: string) {
-  return selectedTags.value.has(tag.toLowerCase())
-}
-
 function toggleTag(tag: string) {
   const key = tag.toLowerCase()
   const next = new Set(selectedTags.value)
   if (next.has(key)) next.delete(key)
   else next.add(key)
   selectedTags.value = next
+}
+
+function previewTag(tag: string) {
+  selectedTags.value = new Set([tag.toLowerCase()])
+  emit('preview-tags')
+}
+
+function previewAllTags() {
+  selectedTags.value = new Set()
+  emit('preview-tags')
 }
 
 function clearSelectedTags() {
@@ -492,19 +519,13 @@ function toggleGenericHome() {
 </script>
 
 <template>
-  <aside class="sidebar" :class="{ 'sidebar--tag-preview': sidebarMode === 'tag-preview' }">
-    <div class="workspace-head">
-      <div class="workspace-glyph"><NvNoteIcon :value="workspaceGlyph" :size="16" /></div>
-      <div class="workspace-meta">
-        <div class="workspace-name">{{ workspaceName }}</div>
-        <div class="workspace-subtitle">{{ backendKind === 'cloud' ? t('workspace.cloudWorkspace') : t('workspace.localWorkspace') }}</div>
-      </div>
-      <button type="button" class="workspace-head-back nv-btn" :title="t('workspace.back')" @click="emit('back-to-onboarding')">
-        <ArrowLeft :size="13" />
-      </button>
-    </div>
-
-    <WorkspaceMembersPanel v-if="backendKind === 'cloud'" />
+  <aside class="sidebar tw:w-[272px] tw:flex-[0_0_272px] tw:[container-type:inline-size] tw:h-full tw:border-r-0 tw:bg-(--frame-bg) tw:flex tw:flex-col tw:gap-3 tw:p-2.5 tw:relative tw:z-[3]" :class="{ 'sidebar--tag-preview': sidebarMode === 'tag-preview' }">
+    <SidebarWorkspaceHeader
+      :glyph="workspaceGlyph"
+      :name="workspaceName"
+      :subtitle="workspaceSubtitle"
+      @back="emit('back-to-onboarding')"
+    />
 
     <SidebarActionBar
       :kanban-enabled="kanbanEnabled"
@@ -512,6 +533,7 @@ function toggleGenericHome() {
       :sort-mode="sortMode"
       :backend-kind="backendKind"
       @create-note="emit('create-note')"
+      @create-notebook="emit('create-notebook')"
       @create-folder="emit('create-folder')"
       @create-board="emit('create-board')"
       @import-md="emit('import-md')"
@@ -521,33 +543,31 @@ function toggleGenericHome() {
       @update:sort-mode="onSortModeChange"
     />
 
-    <div v-if="sidebarMode === 'tree'" class="tree-wrap" @dragend="resetTreeDragState">
-      <div v-if="isTreeEmpty" class="tree-empty">
-        <div class="tree-empty__title">{{ t('workspace.emptyTree.title') }}</div>
-        <div class="tree-empty__subtitle">{{ t('workspace.emptyTree.subtitle') }}</div>
-        <div class="tree-empty__actions">
-          <button type="button" class="nv-btn nv-btn--primary" @click="emit('create-note')">
-            <Plus :size="12" />
-            <span>{{ t('workspace.actions.newNote') }}</span>
-          </button>
-          <button type="button" class="nv-btn" @click="emit('create-folder')">
-            <FolderPen :size="12" />
-            <span>{{ t('workspace.actions.newFolder') }}</span>
-          </button>
-        </div>
-      </div>
+    <SidebarSystemNav
+      :is-home-active="isHomeActive"
+      :is-graph-active="isGraphActive"
+      @open-home="emit('open-home')"
+      @open-graph="emit('open-graph')"
+      @open-history="emit('open-history')"
+      @open-trash="emit('open-trash')"
+      @open-settings="emit('open-settings')"
+      @graph-contextmenu="(event) => openHomeContextMenu(event, { kind: 'graph' })"
+    />
 
-      <WorkspaceTreeNode
-        v-for="node in sortedTree"
-        :key="node.meta.id"
-        :node="node"
-        :depth="0"
+    <div v-if="sidebarMode === 'tree'" class="tw:min-h-0 tw:flex-1 tw:flex tw:flex-col" data-tour="tree">
+      <SidebarTreeView
+        :tree="sortedTree"
+        :is-empty="isTreeEmpty"
         :active-note-id="activeNoteId"
         :active-folder-id="activeFolderId"
         :collapsed-folders="collapsedFolders"
         :drag-enabled="dragEnabled"
         :dragged-id="drag.draggedSource.value?.id ?? null"
         :drag-over="drag.dragOver.value"
+        :root-drop-active="rootDropActive"
+        @create-note="emit('create-note')"
+        @create-notebook="emit('create-notebook')"
+        @create-folder="emit('create-folder')"
         @toggle-folder="onToggleFolder"
         @open-folder="emit('open-folder', $event)"
         @open-note="emit('open-note', $event)"
@@ -558,166 +578,60 @@ function toggleGenericHome() {
         @drag-enter="onTreeNodeDragEnter"
         @drag-leave="onTreeNodeDragLeave"
         @drop="onTreeNodeDrop"
-      />
-
-      <div
-        class="tree-root-drop-zone"
-        :class="{ 'tree-root-drop-zone--active': rootDropActive }"
-        @dragover.stop.prevent="onTreeRootDragOver"
-        @dragleave="onTreeRootDragLeave"
-        @drop.stop.prevent="onTreeRootDrop"
+        @root-drag-over="onTreeRootDragOver"
+        @root-drag-leave="onTreeRootDragLeave"
+        @root-drop="onTreeRootDrop"
+        @dragend="resetTreeDragState"
       />
     </div>
 
-    <div v-else class="tag-preview-wrap">
-      <div class="tag-preview-tags" :aria-label="t('workspace.sidebarPreview.tagsLabel')">
-        <button
-          v-for="tag in tagStats"
-          :key="tag.label"
-          type="button"
-          class="tag-preview-tag"
-          :class="{ 'tag-preview-tag--active': isTagSelected(tag.label) }"
-          @click="toggleTag(tag.label)"
-        >
-          <Tag :size="11" />
-          <span class="tag-preview-tag__label">{{ tag.label }}</span>
-          <span class="tag-preview-tag__count">{{ tag.count }}</span>
-        </button>
-      </div>
+    <SidebarTagPreview
+      v-else
+      :tag-stats="tagStats"
+      :selected-tags="selectedTags"
+      :previews="tagPreviewItems"
+      :active-note-id="activeNoteId"
+      :drag-enabled="tagPreviewDragEnabled"
+      :dragged-id="drag.draggedSource.value?.id ?? null"
+      :drag-over-id="drag.dragOver.value?.id ?? null"
+      :empty-kind="tagPreviewEmptyKind"
+      @toggle-tag="toggleTag"
+      @clear-tags="clearSelectedTags"
+      @card-click="onPreviewCardClick"
+      @preview-contextmenu="onPreviewContextMenu"
+      @drag-start="onPreviewDragStart"
+      @drag-over="onPreviewDragOver"
+      @drag-enter="onPreviewDragEnter"
+      @drag-leave="onPreviewDragLeave"
+      @drop="onPreviewDrop"
+      @dragend="drag.resetDragState(false)"
+    />
 
-      <div class="tag-preview-feed" @dragend="drag.resetDragState(false)">
-        <div class="tag-preview-feed__header">
-          <span>{{ selectedTags.size ? t('workspace.sidebarPreview.selectedTitle') : t('workspace.sidebarPreview.allNotesTitle') }}</span>
-          <button v-if="selectedTags.size" type="button" class="tag-preview-clear" @click="clearSelectedTags">
-            {{ t('workspace.sidebarPreview.clear') }}
-          </button>
-        </div>
+    <SidebarTagSection
+      v-if="sidebarMode === 'tree'"
+      :tags="tagStats"
+      @select-tag="previewTag"
+      @show-all="previewAllTags"
+    />
 
-        <div
-          v-for="preview in filteredNotePreviews"
-          :key="preview.noteId"
-          class="tag-preview-card"
-          :class="{
-            'tag-preview-card--active': activeNoteId === preview.noteId,
-            'tag-preview-card--dragging': drag.draggedSource.value?.id === preview.noteId,
-            'tag-preview-card--drag-over': drag.dragOver.value?.id === preview.noteId && drag.draggedSource.value?.id !== preview.noteId,
-          }"
-          :draggable="tagPreviewDragEnabled ? true : undefined"
-          @contextmenu.prevent="onPreviewContextMenu($event, preview)"
-          @dragstart="onPreviewDragStart($event, preview)"
-          @dragover="onPreviewDragOver($event, preview)"
-          @dragenter="onPreviewDragEnter(preview)"
-          @dragleave="onPreviewDragLeave(preview)"
-          @drop.prevent="onPreviewDrop($event, preview)"
-        >
-          <button
-            type="button"
-            class="tag-preview-card__open"
-            draggable="false"
-            @click="onPreviewCardClick(preview)"
-          >
-            <span class="tag-preview-card__icon"><NvNoteIcon :value="preview.icon" :size="15" /></span>
-            <span class="tag-preview-card__main">
-              <span class="tag-preview-card__top">
-                <span class="tag-preview-card__title">{{ preview.title }}</span>
-                <span class="tag-preview-card__date">{{ formatPreviewDate(preview.updatedAt) }}</span>
-              </span>
-              <span v-if="preview.folderPath" class="tag-preview-card__path">{{ preview.folderPath }}</span>
-              <span class="tag-preview-card__text">{{ preview.previewText || t('workspace.sidebarPreview.emptyPreview') }}</span>
-              <span class="tag-preview-card__tags">
-                <span v-for="tag in preview.tags" :key="`${preview.noteId}-${tag}`" class="tag-preview-card__tag">{{ tag }}</span>
-              </span>
-            </span>
-          </button>
-          <button
-            type="button"
-            class="tag-preview-card__menu"
-            :aria-label="t('workspace.context.openNoteMenu')"
-            :title="t('workspace.context.openNoteMenu')"
-            @click.stop="onPreviewContextMenu($event, preview)"
-          >
-            <MoreHorizontal :size="14" />
-          </button>
-        </div>
+    <SidebarBoardsSection
+      v-if="kanbanEnabled !== false"
+      :boards="boards"
+      :active-board-id="activeBoardId"
+      @create-board="emit('create-board')"
+      @open-board="emit('open-board', $event)"
+      @board-contextmenu="onBoardContextMenu"
+    />
 
-        <div v-if="tagPreviewEmptyKind" class="tag-preview-empty">
-          <div class="tag-preview-empty__title">{{ t(`workspace.sidebarPreview.empty.${tagPreviewEmptyKind}.title`) }}</div>
-          <div class="tag-preview-empty__subtitle">{{ t(`workspace.sidebarPreview.empty.${tagPreviewEmptyKind}.subtitle`) }}</div>
-        </div>
-      </div>
-    </div>
+    <SidebarPluginItems
+      v-if="pluginItems?.length"
+      :items="pluginItems"
+      :active-route-path="route.path"
+      @open-item="emit('open-plugin-item', $event)"
+      @item-contextmenu="(event, item) => openHomeContextMenu(event, { kind: 'pluginView', pluginId: item.pluginId, contributionId: item.id })"
+    />
 
-    <div v-if="kanbanEnabled !== false" class="sidebar-boards">
-      <div class="sidebar-boards__header">
-        <span class="sidebar-boards__label">{{ t('workspace.boards.title') }}</span>
-        <button type="button" class="nv-btn sidebar-boards__add" :title="t('workspace.boards.new')" :aria-label="t('workspace.boards.new')" @click="emit('create-board')">
-          <Plus :size="12" />
-        </button>
-      </div>
-      <button
-        v-for="board in boards"
-        :key="board.id"
-        type="button"
-        class="sidebar-board-item"
-        :class="{ 'sidebar-board-item--active': activeBoardId === board.id }"
-        @click="emit('open-board', board.id)"
-        @contextmenu.prevent="onBoardContextMenu($event, board)"
-      >
-        <span class="sidebar-board-item__icon">{{ board.icon }}</span>
-        <span class="sidebar-board-item__title">{{ board.title }}</span>
-      </button>
-      <button
-        v-if="!boards?.length"
-        type="button"
-        class="sidebar-board-empty"
-        @click="emit('create-board')"
-      >
-        <span class="sidebar-board-empty__icon"><Kanban :size="14" /></span>
-        <span class="sidebar-board-empty__copy">
-          <span class="sidebar-board-empty__title">{{ t('workspace.boards.emptyTitle') }}</span>
-          <span class="sidebar-board-empty__subtitle">{{ t('workspace.boards.emptySubtitle') }}</span>
-        </span>
-        <span class="sidebar-board-empty__cta">{{ t('workspace.boards.new') }}</span>
-      </button>
-    </div>
-
-    <div v-if="pluginItems?.length" class="sidebar-plugin-items">
-      <button
-        v-for="item in pluginItems"
-        :key="item.id"
-        type="button"
-        class="sidebar-system__item"
-        :class="{ 'sidebar-system__item--active': route.path === item.route }"
-        @click="emit('open-plugin-item', item)"
-        @contextmenu="openHomeContextMenu($event, { kind: 'pluginView', pluginId: item.pluginId, contributionId: item.id })"
-      >
-        <NvNoteIcon :value="item.icon ?? 'lucide:blocks'" :size="14" />
-        <span>{{ item.title }}</span>
-      </button>
-    </div>
-
-    <div class="sidebar-system">
-      <button type="button" class="sidebar-system__item" :class="{ 'sidebar-system__item--active': isHomeActive }" @click="emit('open-home')">
-        <House :size="14" />
-        <span>{{ t('workspace.system.home') }}</span>
-      </button>
-      <button type="button" class="sidebar-system__item" :class="{ 'sidebar-system__item--active': isGraphActive }" @click="emit('open-graph')" @contextmenu="openHomeContextMenu($event, { kind: 'graph' })">
-        <Network :size="14" />
-        <span>{{ t('workspace.system.graph') }}</span>
-      </button>
-      <button type="button" class="sidebar-system__item" @click="emit('open-history')">
-        <History :size="14" />
-        <span>{{ t('workspace.system.history') }}</span>
-      </button>
-      <button type="button" class="sidebar-system__item" @click="emit('open-trash')">
-        <Trash2 :size="14" />
-        <span>{{ t('workspace.system.trash') }}</span>
-      </button>
-      <button type="button" class="sidebar-system__item" @click="emit('open-settings')">
-        <Settings :size="14" />
-        <span>{{ t('workspace.system.settings') }}</span>
-      </button>
-    </div>
+    <SidebarStatusBar />
   </aside>
 
   <NvPopupMenu v-model:open="contextMenu.open" :position="cursorPos" width="200px">

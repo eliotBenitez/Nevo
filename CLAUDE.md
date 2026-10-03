@@ -5,7 +5,7 @@
 Use different Claude models for different tasks to combine high-quality planning with execution cost savings.
 
 ### Roles
-- **Claude Opus 4.8 (`claude-opus-4-8`) — Planner and Verifier.** The main (lead) agent runs on this model. It:
+- **Claude Opus 5 (`claude-opus-5`) — Planner and Verifier.** The main (lead) agent runs on this model. It:
   - analyzes the task, designs the architecture and the change plan;
   - makes decisions on delegation and breaks work down into subtasks;
   - checks (verifies) the executor's result: reads the diff, compares it with the plan, runs tests/type checks, catches regressions;
@@ -16,7 +16,7 @@ Use different Claude models for different tasks to combine high-quality planning
   - localization (`src/locales/en.json` + `ru.json`), routine UI/store changes.
 
 ### Practical Application
-1. The lead agent (Opus 4.8) first builds a plan. For non-trivial tasks, this is done via `EnterPlanMode`/`ExitPlanMode`.
+1. The lead agent (Opus 5.5) first builds a plan. For non-trivial tasks, this is done via `EnterPlanMode`/`ExitPlanMode`.
 2. Delegate execution to subagents via `Agent` with `model: "sonnet"` and a detailed, self-contained prompt (context, affected files, expected result, requirements from `AGENTS.md`).
 3. After the subagent returns, Opus 4.8 **must verify** the result: reads the changes, runs `pnpm test:run` (and `cargo test --manifest-path src-tauri/Cargo.toml` for changes in `src-tauri`), and checks `pnpm build` (vue-tsc) if necessary.
 4. If the executor made a mistake, Opus clarifies the plan and resends the task to the subagent (via `SendMessage` to the same agent to preserve context), rather than silently rewriting everything itself.

@@ -2,7 +2,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::commands::workspace::WorkspaceManifest;
+use crate::commands::workspace::{WorkspaceManifest, CURRENT_WORKSPACE_SCHEMA_VERSION};
 
 /// Name of the manifest entry written at the root of every `.nevoz` archive.
 pub(super) const NEVO_EXPORT_HEADER: &str = "nevo-export.json";
@@ -69,6 +69,16 @@ pub(super) fn validate_header(bytes: &[u8]) -> Result<ExportHeader, String> {
         return Err(format!(
             "This Nevo archive was created by an incompatible app version (format {}, expected {})",
             header.format_version, EXPORT_FORMAT_VERSION
+        ));
+    }
+    // Refuse an archive whose workspace was created by a newer Nevo build
+    // rather than half-importing it — same gate as `open_workspace` (see
+    // `commands/workspace/manifest.rs`), using the same machine-readable
+    // error prefix so the frontend can match either path identically.
+    if header.workspace.schema_version > CURRENT_WORKSPACE_SCHEMA_VERSION {
+        return Err(format!(
+            "workspace-schema-too-new:{}:{}",
+            header.workspace.schema_version, CURRENT_WORKSPACE_SCHEMA_VERSION
         ));
     }
     Ok(header)

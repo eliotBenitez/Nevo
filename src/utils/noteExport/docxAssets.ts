@@ -1,11 +1,8 @@
 /**
  * docxAssets — webview-зависимые хелперы для экспорта в .docx: загрузка
- * ассетов изображений (локальный диск через convertFileSrc или облако через
- * CloudBackend) и растеризация SVG. Вынесены из сериализатора, чтобы тот
- * оставался чистым и тестируемым.
+ * ассетов изображений (локальный диск через convertFileSrc) и растеризация
+ * SVG. Вынесены из сериализатора, чтобы тот оставался чистым и тестируемым.
  */
-import { CloudBackend, CLOUD_ASSET_SCHEME } from '../../core/workspace-backend'
-import { useWorkspaceStore } from '../../stores/workspace'
 import { sniffImageMime } from '../draw/imageAsset'
 import { rasterizeSvgToPng, type RasterPng } from './svgRaster'
 import type { DocxExportHelpers, DocxImageType, LoadedDocxImage } from './docxSerializer'
@@ -61,19 +58,7 @@ async function rasterizeBitmap(blob: Blob): Promise<LoadedDocxImage | null> {
 }
 
 export function createDocxExportHelpers(workspacePath: string): DocxExportHelpers {
-  const store = useWorkspaceStore()
-
   async function resolveUrl(src: string): Promise<string | null> {
-    if (src.startsWith(CLOUD_ASSET_SCHEME)) {
-      const backend = store.backend
-      if (!(backend instanceof CloudBackend)) return null
-      let url = backend.assetUrl(src)
-      if (!url) {
-        await backend.prefetchAsset(src)
-        url = backend.assetUrl(src)
-      }
-      return url
-    }
     if (!workspacePath) return null
     return workspaceAssetUrl(src)
   }

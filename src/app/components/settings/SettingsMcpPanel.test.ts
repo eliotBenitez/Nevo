@@ -1,16 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import { createPinia, setActivePinia } from 'pinia'
 import SettingsMcpPanel from './SettingsMcpPanel.vue'
 import en from '../../../locales/en.json'
 import { useWorkspaceStore } from '../../../stores/workspace'
-import type { McpMode } from '../../../types/workspace'
+import type { AppMetadata, McpMode } from '../../../types/workspace'
 
 const getMcpBridgeInfo = vi.fn()
+const getMcpAgentStatus = vi.fn()
+const connectMcpAgent = vi.fn()
+const disconnectMcpAgent = vi.fn()
 
 vi.mock('../../../tauri/mcp', () => ({
   getMcpBridgeInfo: (...args: unknown[]) => getMcpBridgeInfo(...args),
+  getMcpAgentStatus: (...args: unknown[]) => getMcpAgentStatus(...args),
+  connectMcpAgent: (...args: unknown[]) => connectMcpAgent(...args),
+  disconnectMcpAgent: (...args: unknown[]) => disconnectMcpAgent(...args),
 }))
 
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
@@ -24,7 +30,12 @@ function openLocalWorkspace(mode: McpMode = 'off', autoSnapshot = true) {
   const store = useWorkspaceStore()
   store.activeHandle = { kind: 'local', path: '/home/u/vault' }
   store.settings = { ...store.settings, mcp: { mode, autoSnapshot } }
+  store.appMetadata = { runtime: 'desktop' } as AppMetadata
   return store
+}
+
+function agentRow(wrapper: ReturnType<typeof mountPanel>, agent: string) {
+  return wrapper.find(`[data-mcp-agent="${agent}"]`)
 }
 
 describe('SettingsMcpPanel', () => {
@@ -32,6 +43,13 @@ describe('SettingsMcpPanel', () => {
     setActivePinia(createPinia())
     getMcpBridgeInfo.mockReset()
     getMcpBridgeInfo.mockResolvedValue(null)
+    getMcpAgentStatus.mockReset()
+    getMcpAgentStatus.mockResolvedValue({
+      codex: { kind: 'notConfigured', message: null },
+      claudeCode: { kind: 'notConfigured', message: null },
+    })
+    connectMcpAgent.mockReset()
+    disconnectMcpAgent.mockReset()
   })
 
   it('reports the bridge as not running while the mode is off', async () => {
@@ -58,9 +76,9 @@ describe('SettingsMcpPanel', () => {
     expect(wrapper.text()).not.toContain('secret')
   })
 
-  it('disables the controls on a cloud workspace, which the bridge cannot serve', async () => {
+  it('disables the controls when there is no open local workspace', async () => {
     const store = useWorkspaceStore()
-    store.activeHandle = { kind: 'cloud', storageId: 'remote-1' }
+    store.activeHandle = null
 
     const wrapper = mountPanel()
     await Promise.resolve()
@@ -95,5 +113,83 @@ describe('SettingsMcpPanel', () => {
     const auto = mountPanel()
     await Promise.resolve()
     expect(auto.findComponent({ name: 'NvToggle' }).props('disabled')).toBe(false)
+  })
+
+  it('shows independent Codex and Claude Code statuses without enabling access', async () => {
+    openLocalWorkspace('off')
+    getMcpAgentStatus.mockResolvedValue({
+      codex: { kind: 'connected', message: null },
+      claudeCode: { kind: 'notConfigured', message: null },
+    })
+
+    const wrapper = mountPanel()
+    await flushPromises()
+
+    expect(agentRow(wrapper, 'codex').text()).toContain('Connected')
+    expect(agentRow(wrapper, 'claudeCode').text()).toContain('Not connected')
+    expect(agentRow(wrapper, 'claudeCode').find('button').attributes('aria-label')).toBe('Connect Claude Code')
+    expect(wrapper.text()).toContain('Not running')
+  })
+
+  it('connects only the selected agent and refreshes its status', async () => {
+    openLocalWorkspace('off')
+    connectMcpAgent.mockResolvedValue({ kind: 'connected', message: null })
+    getMcpAgentStatus.mockResolvedValueOnce({
+      codex: { kind: 'notConfigured', message: null },
+      claudeCode: { kind: 'notConfigured', message: null },
+    }).mockResolvedValueOnce({
+      codex: { kind: 'connected', message: null },
+      claudeCode: { kind: 'notConfigured', message: null },
+    })
+
+    const wrapper = mountPanel()
+    await flushPromises()
+    await agentRow(wrapper, 'codex').find('button').trigger('click')
+    await flushPromises()
+
+    expect(connectMcpAgent).toHaveBeenCalledWith('codex', false)
+    expect(agentRow(wrapper, 'codex').text()).toContain('Connected')
+    expect(agentRow(wrapper, 'claudeCode').text()).toContain('Not connected')
+    expect(useWorkspaceStore().settings.mcp.mode).toBe('off')
+  })
+
+  it('requires a second explicit action before replacing a conflicting entry', async () => {
+    openLocalWorkspace()
+    getMcpAgentStatus.mockResolvedValue({
+      codex: { kind: 'conflict', message: null },
+      claudeCode: { kind: 'notConfigured', message: null },
+    })
+    connectMcpAgent.mockResolvedValue({ kind: 'connected', message: null })
+
+    const wrapper = mountPanel()
+    await flushPromises()
+    const row = agentRow(wrapper, 'codex')
+    await row.find('button').trigger('click')
+    expect(connectMcpAgent).not.toHaveBeenCalled()
+    expect(row.text()).toContain('Replace existing entry?')
+    await row.find('[data-mcp-confirm]').trigger('click')
+    expect(connectMcpAgent).toHaveBeenCalledWith('codex', true)
+  })
+
+  it('shows a safe error when registration fails', async () => {
+    openLocalWorkspace()
+    connectMcpAgent.mockRejectedValue('Configuration changed; try again')
+    const wrapper = mountPanel()
+    await flushPromises()
+    await agentRow(wrapper, 'codex').find('button').trigger('click')
+    await flushPromises()
+
+    expect(agentRow(wrapper, 'codex').text()).toContain('Configuration changed; try again')
+  })
+
+  it('does not offer registration on mobile', async () => {
+    const store = openLocalWorkspace()
+    store.appMetadata = { runtime: 'android' } as AppMetadata
+    const wrapper = mountPanel()
+    await flushPromises()
+
+    expect(getMcpAgentStatus).not.toHaveBeenCalled()
+    expect(agentRow(wrapper, 'codex').find('button').exists()).toBe(false)
+    expect(wrapper.text()).toContain('desktop app')
   })
 })

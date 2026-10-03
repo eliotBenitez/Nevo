@@ -41,8 +41,6 @@ function mountInteraction() {
         getEditorView: () => null,
         panBy,
         zoomAt,
-        publishSelection: vi.fn(),
-        publishCursor: vi.fn(),
       })
       return () => null
     },

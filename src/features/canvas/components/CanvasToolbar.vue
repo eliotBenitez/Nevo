@@ -45,7 +45,11 @@ defineEmits<{
 </script>
 
 <template>
-  <div class="canvas-toolbar" role="toolbar" :aria-label="labels.toolbar">
+  <div
+    class="canvas-toolbar tw:absolute tw:z-30 tw:top-4 tw:left-1/2 tw:flex tw:max-w-[calc(100%-32px)] tw:items-center tw:gap-0.5 tw:min-h-11 tw:p-[5px] tw:overflow-x-auto tw:rounded-[14px] tw:border tw:border-solid tw:border-(--border-subtle) tw:bg-[color-mix(in_srgb,var(--surface-canvas)_88%,transparent)] tw:shadow-(--shadow-raised) tw:-translate-x-1/2 tw:[scrollbar-width:none] tw:max-[760px]:top-auto tw:max-[760px]:right-[calc(12px+max(var(--safe-area-right),0px))] tw:max-[760px]:bottom-[calc(16px+max(var(--safe-area-bottom),0px))] tw:max-[760px]:left-[calc(12px+max(var(--safe-area-left),0px))] tw:max-[760px]:max-w-none tw:max-[760px]:min-h-14 tw:max-[760px]:p-1.5 tw:max-[760px]:rounded-[18px] tw:max-[760px]:bg-[color-mix(in_srgb,var(--surface-canvas)_90%,transparent)] tw:max-[760px]:shadow-[0_18px_44px_-18px_var(--shadow)] tw:max-[760px]:translate-x-0 tw:max-[760px]:[scroll-snap-type:x_proximity]"
+    role="toolbar"
+    :aria-label="labels.toolbar"
+  >
     <button
       v-for="item in [
         { tool: 'select', icon: MousePointer2 },
@@ -58,7 +62,10 @@ defineEmits<{
       ] as const"
       :key="item.tool"
       type="button"
-      :class="{ 'is-active': activeTool === item.tool }"
+      class="tw:grid tw:size-[34px] tw:min-w-[34px] tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[9px] tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-accent tw:disabled:opacity-40 tw:disabled:cursor-not-allowed tw:max-[760px]:size-11 tw:max-[760px]:min-w-11 tw:max-[760px]:[scroll-snap-align:center]"
+      :class="activeTool === item.tool
+        ? 'is-active tw:text-accent tw:bg-[color-mix(in_srgb,var(--text-secondary)_12%,transparent)] tw:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_30%,transparent)]'
+        : 'tw:text-content-secondary tw:bg-transparent tw:hover:text-content-primary tw:hover:bg-[color-mix(in_srgb,var(--text-secondary)_12%,transparent)]'"
       :title="labels[item.tool]"
       :aria-label="labels[item.tool]"
       :aria-pressed="activeTool === item.tool"
@@ -81,7 +88,10 @@ defineEmits<{
       ] as const"
       :key="item.tool"
       type="button"
-      :class="{ 'is-active': activeTool === item.tool }"
+      class="tw:grid tw:size-[34px] tw:min-w-[34px] tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[9px] tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-accent tw:disabled:opacity-40 tw:disabled:cursor-not-allowed tw:max-[760px]:size-11 tw:max-[760px]:min-w-11 tw:max-[760px]:[scroll-snap-align:center]"
+      :class="activeTool === item.tool
+        ? 'is-active tw:text-accent tw:bg-[color-mix(in_srgb,var(--text-secondary)_12%,transparent)] tw:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_30%,transparent)]'
+        : 'tw:text-content-secondary tw:bg-transparent tw:hover:text-content-primary tw:hover:bg-[color-mix(in_srgb,var(--text-secondary)_12%,transparent)]'"
       :title="labels[item.tool]"
       :aria-label="labels[item.tool]"
       :aria-pressed="activeTool === item.tool"
@@ -89,129 +99,83 @@ defineEmits<{
     >
       <component :is="item.icon" :size="17" />
     </button>
-    <span class="canvas-toolbar__separator" aria-hidden="true" />
-    <button type="button" :title="labels.undo" :aria-label="labels.undo" @click="$emit('undo')">
+    <span class="canvas-toolbar__separator tw:h-[22px] tw:w-px tw:min-w-px tw:mx-0.5 tw:bg-(--border-subtle)" aria-hidden="true" />
+    <button
+      type="button"
+      class="tw:grid tw:size-[34px] tw:min-w-[34px] tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[9px] tw:text-content-secondary tw:bg-transparent tw:hover:text-content-primary tw:hover:bg-[color-mix(in_srgb,var(--text-secondary)_12%,transparent)] tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-accent tw:disabled:opacity-40 tw:disabled:cursor-not-allowed tw:max-[760px]:size-11 tw:max-[760px]:min-w-11 tw:max-[760px]:[scroll-snap-align:center]"
+      :title="labels.undo"
+      :aria-label="labels.undo"
+      @click="$emit('undo')"
+    >
       <Undo2 :size="17" />
     </button>
-    <button type="button" :title="labels.redo" :aria-label="labels.redo" @click="$emit('redo')">
+    <button
+      type="button"
+      class="tw:grid tw:size-[34px] tw:min-w-[34px] tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[9px] tw:text-content-secondary tw:bg-transparent tw:hover:text-content-primary tw:hover:bg-[color-mix(in_srgb,var(--text-secondary)_12%,transparent)] tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-accent tw:disabled:opacity-40 tw:disabled:cursor-not-allowed tw:max-[760px]:size-11 tw:max-[760px]:min-w-11 tw:max-[760px]:[scroll-snap-align:center]"
+      :title="labels.redo"
+      :aria-label="labels.redo"
+      @click="$emit('redo')"
+    >
       <Redo2 :size="17" />
     </button>
-    <span class="canvas-toolbar__separator" aria-hidden="true" />
-    <button type="button" :title="labels.zoomOut" :aria-label="labels.zoomOut" @click="$emit('zoom-out')">
+    <span class="canvas-toolbar__separator tw:h-[22px] tw:w-px tw:min-w-px tw:mx-0.5 tw:bg-(--border-subtle)" aria-hidden="true" />
+    <button
+      type="button"
+      class="tw:grid tw:size-[34px] tw:min-w-[34px] tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[9px] tw:text-content-secondary tw:bg-transparent tw:hover:text-content-primary tw:hover:bg-[color-mix(in_srgb,var(--text-secondary)_12%,transparent)] tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-accent tw:disabled:opacity-40 tw:disabled:cursor-not-allowed tw:max-[760px]:size-11 tw:max-[760px]:min-w-11 tw:max-[760px]:[scroll-snap-align:center]"
+      :title="labels.zoomOut"
+      :aria-label="labels.zoomOut"
+      @click="$emit('zoom-out')"
+    >
       <Minus :size="17" />
     </button>
-    <output class="canvas-toolbar__zoom">{{ Math.round(zoom * 100) }}%</output>
-    <button type="button" :title="labels.zoomIn" :aria-label="labels.zoomIn" @click="$emit('zoom-in')">
+    <output class="canvas-toolbar__zoom tw:min-w-12 tw:text-content-secondary tw:text-xs tw:text-center">{{ Math.round(zoom * 100) }}%</output>
+    <button
+      type="button"
+      class="tw:grid tw:size-[34px] tw:min-w-[34px] tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[9px] tw:text-content-secondary tw:bg-transparent tw:hover:text-content-primary tw:hover:bg-[color-mix(in_srgb,var(--text-secondary)_12%,transparent)] tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-accent tw:disabled:opacity-40 tw:disabled:cursor-not-allowed tw:max-[760px]:size-11 tw:max-[760px]:min-w-11 tw:max-[760px]:[scroll-snap-align:center]"
+      :title="labels.zoomIn"
+      :aria-label="labels.zoomIn"
+      @click="$emit('zoom-in')"
+    >
       <Plus :size="17" />
     </button>
-    <button type="button" :title="labels.fit" :aria-label="labels.fit" @click="$emit('fit')">
+    <button
+      type="button"
+      class="tw:grid tw:size-[34px] tw:min-w-[34px] tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[9px] tw:text-content-secondary tw:bg-transparent tw:hover:text-content-primary tw:hover:bg-[color-mix(in_srgb,var(--text-secondary)_12%,transparent)] tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-accent tw:disabled:opacity-40 tw:disabled:cursor-not-allowed tw:max-[760px]:size-11 tw:max-[760px]:min-w-11 tw:max-[760px]:[scroll-snap-align:center]"
+      :title="labels.fit"
+      :aria-label="labels.fit"
+      @click="$emit('fit')"
+    >
       <Focus :size="17" />
     </button>
-    <span class="canvas-toolbar__separator" aria-hidden="true" />
-    <button type="button" :title="labels.fullscreen" :aria-label="labels.fullscreen" @click="$emit('fullscreen')">
+    <span class="canvas-toolbar__separator tw:h-[22px] tw:w-px tw:min-w-px tw:mx-0.5 tw:bg-(--border-subtle)" aria-hidden="true" />
+    <button
+      type="button"
+      class="tw:grid tw:size-[34px] tw:min-w-[34px] tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[9px] tw:text-content-secondary tw:bg-transparent tw:hover:text-content-primary tw:hover:bg-[color-mix(in_srgb,var(--text-secondary)_12%,transparent)] tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-accent tw:disabled:opacity-40 tw:disabled:cursor-not-allowed tw:max-[760px]:size-11 tw:max-[760px]:min-w-11 tw:max-[760px]:[scroll-snap-align:center]"
+      :title="labels.fullscreen"
+      :aria-label="labels.fullscreen"
+      @click="$emit('fullscreen')"
+    >
       <Maximize2 :size="17" />
     </button>
-    <button type="button" :title="labels.present" :aria-label="labels.present" :disabled="!canPresent" @click="$emit('present')">
+    <button
+      type="button"
+      data-hint="canvasPresent"
+      class="tw:grid tw:size-[34px] tw:min-w-[34px] tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[9px] tw:text-content-secondary tw:bg-transparent tw:hover:text-content-primary tw:hover:bg-[color-mix(in_srgb,var(--text-secondary)_12%,transparent)] tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-accent tw:disabled:opacity-40 tw:disabled:cursor-not-allowed tw:max-[760px]:size-11 tw:max-[760px]:min-w-11 tw:max-[760px]:[scroll-snap-align:center]"
+      :title="labels.present"
+      :aria-label="labels.present"
+      :disabled="!canPresent"
+      @click="$emit('present')"
+    >
       <Presentation :size="17" />
     </button>
-    <button type="button" :title="labels.export" :aria-label="labels.export" @click="$emit('export')">
+    <button
+      type="button"
+      class="tw:grid tw:size-[34px] tw:min-w-[34px] tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[9px] tw:text-content-secondary tw:bg-transparent tw:hover:text-content-primary tw:hover:bg-[color-mix(in_srgb,var(--text-secondary)_12%,transparent)] tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-accent tw:disabled:opacity-40 tw:disabled:cursor-not-allowed tw:max-[760px]:size-11 tw:max-[760px]:min-w-11 tw:max-[760px]:[scroll-snap-align:center]"
+      :title="labels.export"
+      :aria-label="labels.export"
+      @click="$emit('export')"
+    >
       <Download :size="17" />
     </button>
   </div>
 </template>
-
-<style scoped>
-.canvas-toolbar {
-  position: absolute;
-  z-index: 30;
-  top: 16px;
-  left: 50%;
-  display: flex;
-  max-width: calc(100% - 32px);
-  align-items: center;
-  gap: 2px;
-  min-height: 44px;
-  padding: 5px;
-  overflow-x: auto;
-  border: 1px solid var(--border-subtle);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--canvas-1) 88%, transparent);
-  box-shadow: var(--shadow-2);
-  backdrop-filter: blur(18px);
-  transform: translateX(-50%);
-  scrollbar-width: none;
-}
-
-:deep(button) {
-  display: grid;
-  width: 34px;
-  min-width: 34px;
-  height: 34px;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: 9px;
-  color: var(--text-secondary);
-  background: transparent;
-}
-
-:deep(button:hover),
-:deep(button.is-active) {
-  color: var(--text-primary);
-  background: color-mix(in srgb, var(--text-secondary) 12%, transparent);
-}
-
-:deep(button.is-active) {
-  color: var(--accent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
-}
-
-:deep(button:focus-visible) {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-:deep(button:disabled) {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.canvas-toolbar__separator {
-  width: 1px;
-  min-width: 1px;
-  height: 22px;
-  margin: 0 2px;
-  background: var(--border-subtle);
-}
-
-.canvas-toolbar__zoom {
-  min-width: 48px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  text-align: center;
-}
-
-@media (max-width: 760px) {
-  .canvas-toolbar {
-    top: auto;
-    right: calc(12px + max(var(--safe-area-right), 0px));
-    bottom: calc(16px + max(var(--safe-area-bottom), 0px));
-    left: calc(12px + max(var(--safe-area-left), 0px));
-    max-width: none;
-    min-height: 56px;
-    padding: 6px;
-    border-radius: 18px;
-    background: color-mix(in srgb, var(--canvas-1) 90%, transparent);
-    box-shadow: 0 18px 44px -18px var(--shadow);
-    transform: none;
-    scroll-snap-type: x proximity;
-  }
-
-  :deep(button) {
-    width: 44px;
-    min-width: 44px;
-    height: 44px;
-    scroll-snap-align: center;
-  }
-}
-</style>

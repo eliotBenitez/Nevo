@@ -25,8 +25,9 @@ const endpoints = computed(() => (['from', 'to'] as const).map(endpoint => ({
     v-for="item in endpoints"
     :key="item.endpoint"
     type="button"
-    class="canvas-connector-handle"
+    class="canvas-connector-handle tw:absolute tw:z-22 tw:size-3.5 tw:-translate-1/2 tw:cursor-crosshair tw:rounded-full tw:border-2 tw:border-solid tw:border-accent tw:bg-surface-canvas tw:p-0 tw:data-[bound=true]:bg-accent"
     :class="{ 'is-bound': item.point.binding }"
+    :data-bound="!!item.point.binding"
     :style="{
       left: `${(item.point.x - camera.x) * camera.zoom}px`,
       top: `${(item.point.y - camera.y) * camera.zoom}px`,
@@ -36,22 +37,3 @@ const endpoints = computed(() => (['from', 'to'] as const).map(endpoint => ({
     @pointerdown.stop="$emit('endpoint', item.endpoint, $event)"
   />
 </template>
-
-<style scoped>
-.canvas-connector-handle {
-  position: absolute;
-  z-index: 22;
-  width: 14px;
-  height: 14px;
-  padding: 0;
-  border: 2px solid var(--accent);
-  border-radius: 50%;
-  background: var(--canvas-1);
-  transform: translate(-50%, -50%);
-  cursor: crosshair;
-}
-
-.canvas-connector-handle.is-bound {
-  background: var(--accent);
-}
-</style>

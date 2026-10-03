@@ -1,5 +1,10 @@
 use serde::{Deserialize, Serialize};
 
+/// Highest workspace schema understood by this build. New workspaces stay on
+/// schema 1 until their first notebook is created.
+pub const CURRENT_WORKSPACE_SCHEMA_VERSION: u32 = 2;
+pub const INITIAL_WORKSPACE_SCHEMA_VERSION: u32 = 1;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct NoteMeta {
     pub id: String,
@@ -9,6 +14,12 @@ pub struct NoteMeta {
     pub folder_id: Option<String>,
     #[serde(rename = "updatedAt")]
     pub updated_at: String,
+    /// Fields written by a newer Nevo build that this build doesn't know
+    /// about. Preserved verbatim on load->save round trips instead of being
+    /// silently dropped — see the workspace-schema-version gate in
+    /// `manifest.rs`.
+    #[serde(default, flatten, skip_serializing_if = "serde_json::Map::is_empty")]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -21,6 +32,9 @@ pub struct FolderMeta {
     pub order: i32,
     pub children: Vec<FolderMeta>,
     pub notes: Vec<NoteMeta>,
+    /// See `NoteMeta::extra`.
+    #[serde(default, flatten, skip_serializing_if = "serde_json::Map::is_empty")]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -35,6 +49,9 @@ pub struct TrashedItem {
     pub original_parent_id: Option<String>,
     #[serde(default)]
     pub icon: Option<String>,
+    /// See `NoteMeta::extra`.
+    #[serde(default, flatten, skip_serializing_if = "serde_json::Map::is_empty")]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -58,6 +75,9 @@ pub struct WorkspaceManifest {
     /// Backward-compatible: absent on old manifests deserializes to an empty vec.
     #[serde(default, rename = "sidebarNoteOrder")]
     pub sidebar_note_order: Vec<String>,
+    /// See `NoteMeta::extra`.
+    #[serde(default, flatten, skip_serializing_if = "serde_json::Map::is_empty")]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -150,6 +170,8 @@ pub struct AppearanceSettings {
     pub custom_css_enabled: bool,
     #[serde(rename = "customCssFileName", default = "default_custom_css_filename")]
     pub custom_css_filename: String,
+    #[serde(rename = "accentColoredHeadings", default)]
+    pub accent_colored_headings: bool,
 }
 
 fn default_custom_css_filename() -> String {
@@ -159,9 +181,9 @@ fn default_custom_css_filename() -> String {
 impl Default for AppearanceSettings {
     fn default() -> Self {
         Self {
-            accent_preset: "violet".to_string(),
+            accent_preset: "mineral".to_string(),
             background_scene: "aurora".to_string(),
-            surface_style: "glass".to_string(),
+            surface_style: "solid".to_string(),
             contrast_mode: "balanced".to_string(),
             sidebar_style: "floating".to_string(),
             editor_font_family: "ui".to_string(),
@@ -169,6 +191,7 @@ impl Default for AppearanceSettings {
             editor_line_width: "medium".to_string(),
             custom_css_enabled: false,
             custom_css_filename: "custom.css".to_string(),
+            accent_colored_headings: false,
         }
     }
 }
@@ -189,6 +212,12 @@ pub struct EditorSettings {
     pub tab_key_behavior: String,
     #[serde(rename = "autosavePolicy")]
     pub autosave_policy: String,
+    #[serde(rename = "slashMenuLayout", default = "default_slash_menu_layout")]
+    pub slash_menu_layout: String,
+}
+
+fn default_slash_menu_layout() -> String {
+    "list".to_string()
 }
 
 impl Default for EditorSettings {
@@ -201,6 +230,7 @@ impl Default for EditorSettings {
             caret_animation: "system".to_string(),
             tab_key_behavior: "indent".to_string(),
             autosave_policy: "immediate".to_string(),
+            slash_menu_layout: default_slash_menu_layout(),
         }
     }
 }

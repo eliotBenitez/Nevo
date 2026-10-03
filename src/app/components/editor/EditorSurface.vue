@@ -9,7 +9,6 @@ import { appLogger } from '../../../utils/logger'
 import { workspaceAssetUrl } from '../../../utils/workspaceAssetUrl'
 import { blockNode } from '../../../utils/noteExport/htmlSerializer'
 import { createDefaultWorkspaceSettings, EDITOR_LINE_WIDTHS, resolveEditorFontFamilyCss } from '../../../utils/workspace-settings'
-import { CloudBackend, CLOUD_ASSET_SCHEME } from '../../../core/workspace-backend'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { useTreeStore } from '../../../stores/tree'
 import type { BlockNode } from '../../../types/note'
@@ -33,6 +32,8 @@ import { useCalloutIconPicker } from '../../composables/editor/useCalloutIconPic
 import { useImageUpload } from '../../composables/editor/useImageUpload'
 import { useFileUpload } from '../../composables/editor/useFileUpload'
 import { useMediaUpload } from '../../composables/editor/useMediaUpload'
+import { useVoiceRecording } from '../../composables/editor/useVoiceRecording'
+import { isVoiceRecordingSupported } from '../../../tauri/voiceRecording'
 import { useBlockHandle } from '../../composables/editor/useBlockHandle'
 import { useDeviceLayout } from '../../../composables/useDeviceLayout'
 import NvPopupMenu from '../../../ui/primitives/NvPopupMenu.vue'
@@ -48,6 +49,7 @@ interface Props {
   documentId?: string
   currentNoteId?: string | null
   placeholder?: string
+  showBlockHandle?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -58,6 +60,7 @@ const props = withDefaults(defineProps<Props>(), {
   documentId: 'editor-surface',
   currentNoteId: null,
   placeholder: '',
+  showBlockHandle: true,
 })
 
 const emit = defineEmits<{
@@ -117,6 +120,11 @@ const blockHandleComposable = useBlockHandle(core, {
   getCurrentNoteId: () => props.currentNoteId ?? null,
 })
 const { blockHandle } = blockHandleComposable
+
+function syncBlockHandle() {
+  if (props.showBlockHandle) blockHandleComposable.mount()
+  else blockHandleComposable.unmount()
+}
 const { isTouch } = useDeviceLayout()
 
 const overlays = useEditorOverlays(core, {
@@ -128,9 +136,11 @@ const overlays = useEditorOverlays(core, {
 const { slashOverlay, toolbarOverlay, tableMenuOverlay, linkPopover, highlightPicker, textColorPicker, mathPopover, formulaPopover, mermaidPopover, queryPopover, markmapPopover, vegaPopover, pluginNodePopover, linkPickerOverlay, activeMarkNames } = overlays
 
 const { imageCtxMenu, imageMenuItems, openImageContextMenu } = useImageContextMenu(() => props.workspacePath)
+
 const imageUpload = useImageUpload(core, () => props.workspacePath, overlays.updateOverlays)
 const fileUpload = useFileUpload(core, () => props.workspacePath, overlays.updateOverlays)
 const mediaUpload = useMediaUpload(core, () => props.workspacePath, overlays.updateOverlays)
+const voiceRecording = useVoiceRecording(core, () => props.workspacePath, overlays.updateOverlays)
 
 const {
   embedUrlPopover,
@@ -259,25 +269,17 @@ const linkEditor = useLinkEditor(
 
 function refreshIsEmpty() {
   const doc = core.editorView?.state.doc
-  isEmpty.value = !doc || (doc.childCount === 1 && doc.firstChild?.type.name === 'paragraph' && doc.firstChild.content.size === 0)
-}
-
-function resolveCloudAsset(src: string): string {
-  const cloud = workspaceStore.backend
-  if (!(cloud instanceof CloudBackend)) return ''
-  return cloud.assetUrl(src) ?? ''
+  isEmpty.value = !doc || doc.childCount === 0 || (doc.childCount === 1 && doc.firstChild?.type.name === 'paragraph' && doc.firstChild.content.size === 0)
 }
 
 function resolveAssetSrc(src: string): string {
   if (/^(https?|data|blob):/.test(src)) return src
-  if (src.startsWith(CLOUD_ASSET_SCHEME)) return resolveCloudAsset(src) || src
   if (!props.workspacePath) return src
   return workspaceAssetUrl(src)
 }
 
 function resolveMediaSrc(src: string): string | null {
   if (/^(https?|data|blob):/.test(src)) return src
-  if (src.startsWith(CLOUD_ASSET_SCHEME)) return resolveCloudAsset(src) || null
   const wp = props.workspacePath
   if (!wp) return null
   return mediaHttpUrl(`${wp}/${src}`, src)
@@ -349,6 +351,7 @@ const editorSetup = useEditorCore(core, {
   },
   onImagePaste: (event) => imageUpload.onEditorPaste(event),
   onImageContextMenuRequest: openImageContextMenu,
+  
   onFilePickerRequest: (pos) => {
     if (backendSupportsPathImport()) {
       void fileUpload.pickAndInsertFile(pos)
@@ -361,13 +364,14 @@ const editorSetup = useEditorCore(core, {
     void openFileAsset(src)
   },
   onMediaPickerRequest: (pos, kind) => mediaUpload.requestMediaPicker(pos, kind),
+  voiceRecording: isVoiceRecordingSupported() ? voiceRecording.bindings : undefined,
   onNoteEmbedPickRequest: (pos, anchorRect) => openNoteEmbedPicker(pos, anchorRect),
   onEmbedUrlRequest: (pos, anchorRect) => openEmbedUrlPopover(pos, anchorRect),
   onNoteEmbedContentLoad: async ({ noteId, setHtml, setLoading }) => {
     setLoading(true)
     try {
-      // Through the backend: a cloud workspace has no path, and its note
-      // bodies are not part of `loadNote` (see loadNoteWithContent).
+      // Through the backend: a note's body is not part of `loadNote` (see
+      // loadNoteWithContent).
       const backend = workspaceStore.backend
       if (!backend) throw new Error('No workspace')
       const doc = await backend.loadNoteWithContent(noteId)
@@ -377,7 +381,6 @@ const editorSetup = useEditorCore(core, {
         /\bsrc="__EMBED__\/([^"]+)"/g,
         (_, filename: string) => {
           const original = ctx.assetSrcs.find(s => s.endsWith(filename)) ?? filename
-          // A cloud asset resolves to a cached object URL, not a workspace path.
           return `src="${resolveAssetSrc(original)}"`
         },
       )
@@ -663,7 +666,7 @@ async function setupSurfaceEditor() {
   await nextTick()
   if (editorRoot.value) {
     await editorSetup.setupEditorForDocument(props.content, props.documentId, editorRoot.value, props.settings)
-    blockHandleComposable.mount()
+    syncBlockHandle()
     refreshIsEmpty()
   }
   hasInitializedPluginHost.value = true
@@ -715,7 +718,7 @@ watch(
     await nextTick()
     if (editorRoot.value) {
       await editorSetup.setupEditorForDocument(content, documentId, editorRoot.value, props.settings)
-      blockHandleComposable.mount()
+      syncBlockHandle()
       refreshIsEmpty()
     }
   },
@@ -753,8 +756,10 @@ watch(
 watch(isTouch, () => {
   // mount() binds both mouse and touch handling and is idempotent, so a
   // pointer-type change just re-ensures the (single) binding.
-  blockHandleComposable.mount()
+  syncBlockHandle()
 })
+
+watch(() => props.showBlockHandle, syncBlockHandle)
 
 watch(
   () => slashOverlay.open,
@@ -811,17 +816,19 @@ defineExpose({
 
     <input
       ref="imageInputRef"
-      class="image-file-input"
+      class="image-file-input tw:hidden"
       type="file"
       accept="image/*"
       @change="imageUpload.onImageInputChange"
     />
     <input
       ref="fileInputRef"
-      class="image-file-input"
+      class="image-file-input tw:hidden"
       type="file"
       @change="fileUpload.onFileInputChange"
     />
+
+
 
     <NvPopupMenu
       v-model:open="imageCtxMenu.open"
@@ -833,27 +840,27 @@ defineExpose({
     <div
       v-if="noteEmbedPicker.open"
       ref="noteEmbedPickerRef"
-      class="note-embed-picker"
+      class="note-embed-picker tw:fixed tw:z-60 tw:flex tw:max-h-[min(340px,calc(100vh-24px))] tw:w-[280px] tw:max-w-[min(280px,calc(100vw-24px))] tw:flex-col tw:overflow-hidden tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--menu-bg) tw:shadow-(--shadow-overlay)"
       :style="{ top: `${noteEmbedPicker.position.top}px`, left: `${noteEmbedPicker.position.left}px` }"
     >
       <input
         v-model="noteEmbedPicker.query"
-        class="note-embed-picker__search"
+        class="note-embed-picker__search tw:w-full tw:shrink-0 tw:rounded-none tw:border-0 tw:bg-transparent tw:px-3.5 tw:py-2.5 tw:font-nv-ui tw:text-[13px] tw:leading-none tw:text-content-primary tw:outline-none tw:placeholder:text-content-muted"
         type="text"
         :placeholder="$t('noteEmbed.searchPlaceholder')"
         autofocus
       />
-      <ul class="note-embed-picker__list">
+      <ul class="note-embed-picker__list tw:min-h-0 tw:flex-1 tw:overflow-x-hidden tw:overflow-y-auto tw:px-0 tw:py-1">
         <li
           v-for="embedNote in noteEmbedFilteredNotes"
           :key="embedNote.id"
-          class="note-embed-picker__item"
+          class="note-embed-picker__item tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-[9px] tw:rounded-none tw:border-0 tw:bg-transparent tw:px-3 tw:py-[7px] tw:text-left tw:font-nv-ui tw:text-[13px] tw:leading-[1.35] tw:text-content-secondary tw:transition-colors tw:duration-120 tw:hover:bg-(--accent-soft)"
           @mousedown.prevent="selectNoteForEmbed(embedNote.id, embedNote.title, embedNote.icon)"
         >
-          <NvNoteIcon :value="embedNote.icon || '📄'" :size="16" class="note-embed-picker__icon" />
-          <span class="note-embed-picker__title">{{ embedNote.title || $t('noteEmbed.untitled') }}</span>
+          <NvNoteIcon :value="embedNote.icon || '📄'" :size="16" class="note-embed-picker__icon tw:flex-[0_0_18px] tw:text-center tw:text-sm tw:leading-none" />
+          <span class="note-embed-picker__title tw:min-w-0 tw:truncate tw:text-[13px] tw:font-medium tw:text-content-primary">{{ embedNote.title || $t('noteEmbed.untitled') }}</span>
         </li>
-        <li v-if="!noteEmbedFilteredNotes.length" class="note-embed-picker__empty">{{ $t('noteEmbed.noNotesFound') }}</li>
+        <li v-if="!noteEmbedFilteredNotes.length" class="note-embed-picker__empty tw:px-3.5 tw:py-5 tw:text-center tw:font-nv-ui tw:text-[12.5px] tw:leading-[1.4] tw:text-content-muted">{{ $t('noteEmbed.noNotesFound') }}</li>
       </ul>
     </div>
   </div>
@@ -882,6 +889,7 @@ defineExpose({
     :plugin-actions="core.toolbarPluginActions"
     :current-note-id="currentNoteId ?? undefined"
     :slash-emoji-picker-open="slashEmojiPickerOpen"
+    :slash-menu-layout="settings.editor.slashMenuLayout"
     :handlers="overlayHandlers"
   />
 </template>
@@ -904,7 +912,7 @@ defineExpose({
   position: absolute;
   top: 0;
   left: 0;
-  color: var(--text-4, var(--text-muted));
+  color: var(--text-muted, var(--text-muted));
   font-size: var(--workspace-editor-font-size);
   line-height: 1.6;
   pointer-events: none;

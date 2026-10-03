@@ -4,22 +4,80 @@ import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { useThemeStore } from '../../../stores/theme'
-import type { ThemeMode } from '../../../types/workspace'
-import { createDefaultAppConfig } from '../../../utils/workspace-settings'
+import { useOnboardingStore } from '../../../stores/onboarding'
+import type { ContrastMode, InterfaceDensity, InterfaceRoundness, ThemeMode } from '../../../types/workspace'
+import { ACCENT_PRESETS, createDefaultAppConfig } from '../../../utils/workspace-settings'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import NvToggle from '../../../ui/primitives/NvToggle.vue'
+import NvColorPicker from '../../../ui/primitives/NvColorPicker.vue'
+import SettingsSectionHeader from './ui/SettingsSectionHeader.vue'
+import SettingsGroup from './ui/SettingsGroup.vue'
+import SettingsRow from './ui/SettingsRow.vue'
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
 const themeStore = useThemeStore()
-const { appConfig } = storeToRefs(workspaceStore)
+const onboardingStore = useOnboardingStore()
+const { appConfig, settings } = storeToRefs(workspaceStore)
 
-const themeModes = computed<Array<{ id: ThemeMode; label: string; symbol: string }>>(() => [
-  { id: 'light', label: t('settings.options.theme.light'), symbol: '☀' },
-  { id: 'dark', label: t('settings.options.theme.dark'), symbol: '☾' },
-  { id: 'system', label: t('settings.options.theme.system'), symbol: '◐' },
+function onThemeModeClick(mode: ThemeMode) {
+  themeStore.setTheme(mode)
+  void onboardingStore.markFirstStep('chooseAppearance')
+}
+
+const themeModes = computed<Array<{ id: ThemeMode; label: string }>>(() => [
+  { id: 'system', label: t('settings.options.theme.system') },
+  { id: 'light', label: t('settings.options.theme.light') },
+  { id: 'dark', label: t('settings.options.theme.dark') },
 ])
+
+const contrastModes = computed<Array<{ id: ContrastMode; label: string }>>(() => [
+  { id: 'soft', label: t('settings.options.contrastMode.soft') },
+  { id: 'balanced', label: t('settings.options.contrastMode.balanced') },
+  { id: 'high', label: t('settings.options.contrastMode.high') },
+])
+
+const densityModes = computed<Array<{ id: InterfaceDensity; label: string }>>(() => [
+  { id: 'comfortable', label: t('settings.options.density.comfortable') },
+  { id: 'compact', label: t('settings.options.density.compact') },
+])
+
+const accentLabelKeys: Record<string, string> = {
+  mineral: 'settings.options.accent.mineral',
+  azure: 'settings.options.accent.azure',
+  violet: 'settings.options.accent.violet',
+  ember: 'settings.options.accent.ember',
+  sage: 'settings.options.accent.sage',
+  ocean: 'settings.options.accent.ocean',
+  rose: 'settings.options.accent.rose',
+}
+
+function accentLabel(preset: string): string {
+  return accentLabelKeys[preset] ? t(accentLabelKeys[preset]) : preset
+}
+
+const accentColors = Object.entries(ACCENT_PRESETS).map(([id, tokens]) => ({
+  color: tokens.accent,
+  label: accentLabel(id),
+  id,
+}))
+
+const currentAccentColor = computed(() => {
+  const preset = ACCENT_PRESETS[settings.value.appearance.accentPreset]
+  return preset ? preset.accent : settings.value.appearance.accentPreset
+})
+
+function onAccentChange(color: string | null) {
+  if (!color) return
+  const preset = accentColors.find(c => c.color === color)
+  if (preset) {
+    workspaceStore.updateSettings((draft) => {
+      draft.appearance.accentPreset = preset.id as any
+    })
+    void onboardingStore.markFirstStep('chooseAppearance')
+  }
+}
 
 function opt(key: string, value: string): string {
   return t(`settings.options.${key}.${value}`)
@@ -33,219 +91,250 @@ function resetAppGlobal() {
   themeStore.setFocusRingStyle(d.focusRingStyle)
   themeStore.setWindowChromeStyle(d.windowChromeStyle)
   themeStore.setInterfaceZoom(d.interfaceZoom)
-  themeStore.setReduceTransparency(d.reduceTransparency)
   themeStore.setInterfaceRoundness(d.interfaceRoundness)
   themeStore.setThemeSchedule(d.themeSchedule)
 }
 
-const densityOptions = ['compact', 'comfortable'].map(v => ({ value: v, label: opt('density', v) }))
 const motionOptions = ['system', 'reduce', 'full'].map(v => ({
   value: v,
   label: v === 'system' ? t('settings.options.theme.system') : opt('reducedMotion', v),
 }))
 const scrollbarOptions = ['hidden', 'thin', 'system'].map(v => ({ value: v, label: opt('scrollbarVisibility', v) }))
-const focusRingOptions = ['accent', 'high-contrast'].map(v => ({ value: v, label: opt('focusRingStyle', v) }))
-const windowChromeOptions = ['default', 'immersive', 'minimal'].map(v => ({ value: v, label: opt('windowChromeStyle', v) }))
-const roundnessOptions = ['sharp', 'default', 'soft'].map(v => ({ value: v, label: opt('roundness', v) }))
+
+const fontOptions = [
+  { value: 'ui', label: 'Geist' },
+  { value: 'serif', label: 'Instrument Serif' },
+  { value: 'mono', label: 'Geist Mono' },
+]
+
+const roundnessLevels: InterfaceRoundness[] = ['sharp', 'default', 'soft']
+const roundnessLabels: Record<InterfaceRoundness, string> = {
+  sharp: '× 0,7',
+  default: '× 1,0',
+  soft: '× 1,3',
+}
+
+const roundnessIndex = computed({
+  get: () => Math.max(0, roundnessLevels.indexOf(appConfig.value.interfaceRoundness)),
+  set: (idx: number) => {
+    const next = roundnessLevels[idx] ?? 'default'
+    themeStore.setInterfaceRoundness(next)
+  },
+})
 </script>
 
 <template>
-  <section class="panel settings-appearance-panel">
-    <header class="panel-header">
-      <div>
-        <h2 class="panel-title">{{ t('settings.sections.appearance') }}</h2>
-        <p class="panel-sub">{{ t('settings.appearance.description') }}</p>
-      </div>
-    </header>
+  <section class="panel tw:flex tw:h-full tw:min-h-0 tw:flex-col settings-appearance-panel">
+    <SettingsSectionHeader
+      :title="t('settings.sections.appearance')"
+      :description="t('settings.appearance.description')"
+    >
+      <template #actions>
+        <NvButton variant="ghost" size="xs" @click="resetAppGlobal">
+          {{ t('settings.common.resetToDefaults') }}
+        </NvButton>
+      </template>
+    </SettingsSectionHeader>
 
-    <div class="panel-body">
-      <!-- ── Application group ─────────────────────── -->
-      <div class="group">
-        <div class="group-header">
-          <div class="group-label">{{ t('settings.appearance.groups.application') }}</div>
-          <NvButton variant="ghost" size="xs" @click="resetAppGlobal">{{ t('settings.common.resetToDefaults') }}</NvButton>
-        </div>
-        <div class="settings-card">
-          <!-- Theme mode -->
-          <div class="settings-row">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.appearance.mode.title') }}</div>
-              <div class="row-sub">{{ t('settings.appearance.mode.description') }}</div>
-            </div>
-            <div class="mode-picker">
-              <button
-                v-for="mode in themeModes"
-                :key="mode.id"
-                type="button"
-                class="mode-card"
-                :class="{ 'mode-card--active': themeStore.theme === mode.id }"
-                @click="themeStore.setTheme(mode.id)"
-              >
-                <span class="mode-card__icon">{{ mode.symbol }}</span>
-                <span class="mode-card__label">{{ mode.label }}</span>
-              </button>
-            </div>
+    <div class="panel-body tw:flex tw:min-h-0 tw:flex-1 tw:flex-col tw:gap-5 tw:overflow-auto tw:overscroll-contain tw:px-[30px] tw:pt-[18px] tw:pb-[30px]">
+      <!-- ── Theme group ─────────────────────────────── -->
+      <SettingsGroup :title="t('settings.appearance.groups.application')">
+        <!-- Theme Mode -->
+        <SettingsRow
+          :title="t('settings.appearance.mode.title')"
+          :description="t('settings.appearance.mode.description')"
+        >
+          <div class="segmented" role="group" :aria-label="t('settings.appearance.mode.title')">
+            <button
+              v-for="mode in themeModes"
+              :key="mode.id"
+              type="button"
+              class="segmented__item"
+              :class="{ 'is-active': themeStore.theme === mode.id }"
+              :aria-pressed="themeStore.theme === mode.id"
+              @click="onThemeModeClick(mode.id)"
+            >
+              {{ mode.label }}
+            </button>
           </div>
+        </SettingsRow>
 
-          <!-- Theme schedule -->
-          <div class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.appearance.themeSchedule.title') }}</div>
-              <div class="row-sub">{{ t('settings.appearance.themeSchedule.description') }}</div>
-            </div>
-            <NvToggle
-              :model-value="appConfig.themeSchedule.enabled"
-              @update:model-value="v => themeStore.setThemeSchedule({ enabled: v })"
-            />
+        <!-- Accent Color -->
+        <SettingsRow
+          :title="t('settings.appearance.accent.title')"
+          :description="t('settings.appearance.accent.description')"
+        >
+          <NvColorPicker
+            class="accent-picker tw:flex tw:items-center tw:gap-2"
+            :model-value="currentAccentColor"
+            :colors="accentColors"
+            display="inline"
+            hide-custom
+            @update:model-value="onAccentChange"
+          />
+        </SettingsRow>
+
+        <!-- Contrast Mode -->
+        <SettingsRow
+          :title="t('settings.appearance.contrastMode.title')"
+          :description="t('settings.appearance.contrastMode.description')"
+        >
+          <div class="segmented" role="group" :aria-label="t('settings.appearance.contrastMode.title')">
+            <button
+              v-for="mode in contrastModes"
+              :key="mode.id"
+              type="button"
+              class="segmented__item"
+              :class="{ 'is-active': settings.appearance.contrastMode === mode.id }"
+              :aria-pressed="settings.appearance.contrastMode === mode.id"
+              @click="workspaceStore.updateSettings(draft => { draft.appearance.contrastMode = mode.id })"
+            >
+              {{ mode.label }}
+            </button>
           </div>
-          <div
-            v-if="appConfig.themeSchedule.enabled"
-            class="settings-row settings-row--border"
+        </SettingsRow>
+
+        <!-- Theme schedule -->
+        <SettingsRow
+          :title="t('settings.appearance.themeSchedule.title')"
+          :description="t('settings.appearance.themeSchedule.description')"
+        >
+          <NvToggle
+            :aria-label="t('settings.appearance.themeSchedule.title')"
+            :model-value="appConfig.themeSchedule.enabled"
+            @update:model-value="v => themeStore.setThemeSchedule({ enabled: v })"
+          />
+        </SettingsRow>
+
+        <SettingsRow
+          v-if="appConfig.themeSchedule.enabled"
+          :title="t('settings.appearance.themeSchedule.lightLabel')"
+        >
+          <input
+            class="ui-input ui-input--time"
+            type="time"
+            :value="appConfig.themeSchedule.lightTime"
+            @change="themeStore.setThemeSchedule({ lightTime: ($event.target as HTMLInputElement).value })"
           >
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.appearance.themeSchedule.lightLabel') }}</div>
-            </div>
+        </SettingsRow>
+
+        <SettingsRow
+          v-if="appConfig.themeSchedule.enabled"
+          :title="t('settings.appearance.themeSchedule.darkLabel')"
+        >
+          <input
+            class="ui-input ui-input--time"
+            type="time"
+            :value="appConfig.themeSchedule.darkTime"
+            @change="themeStore.setThemeSchedule({ darkTime: ($event.target as HTMLInputElement).value })"
+          >
+        </SettingsRow>
+      </SettingsGroup>
+
+      <!-- ── Density & shape group ───────────────────── -->
+      <SettingsGroup :title="t('settings.appearance.groups.comfort')">
+        <!-- Density -->
+        <SettingsRow
+          :title="t('settings.appearance.interfaceDensity.title')"
+          :description="t('settings.appearance.interfaceDensity.description')"
+        >
+          <div class="segmented" role="group" :aria-label="t('settings.appearance.interfaceDensity.title')">
+            <button
+              v-for="density in densityModes"
+              :key="density.id"
+              type="button"
+              class="segmented__item"
+              :class="{ 'is-active': appConfig.interfaceDensity === density.id }"
+              :aria-pressed="appConfig.interfaceDensity === density.id"
+              @click="themeStore.setDensity(density.id)"
+            >
+              {{ density.label }}
+            </button>
+          </div>
+        </SettingsRow>
+
+        <!-- Roundness -->
+        <SettingsRow
+          :title="t('settings.appearance.interfaceRoundness.title')"
+        >
+          <template #description>
+            <span class="mono">{{ roundnessLabels[appConfig.interfaceRoundness] ?? '× 1,0' }}</span>
+          </template>
+          <div class="slider-wrap tw:flex tw:items-center tw:gap-2.5">
             <input
-              class="ui-input ui-input--time"
-              type="time"
-              :value="appConfig.themeSchedule.lightTime"
-              @change="themeStore.setThemeSchedule({ lightTime: ($event.target as HTMLInputElement).value })"
+              class="ui-range tw:w-[190px] tw:accent-[var(--accent)]"
+              type="range"
+              min="0"
+              max="2"
+              step="1"
+              :value="roundnessIndex"
+              :aria-label="t('settings.appearance.interfaceRoundness.title')"
+              @input="roundnessIndex = Number(($event.target as HTMLInputElement).value)"
             >
           </div>
-          <div
-            v-if="appConfig.themeSchedule.enabled"
-            class="settings-row settings-row--border"
-          >
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.appearance.themeSchedule.darkLabel') }}</div>
-            </div>
+        </SettingsRow>
+
+        <!-- Document Font -->
+        <SettingsRow
+          :title="t('settings.editor.font.title')"
+          :description="t('settings.editor.font.description')"
+        >
+          <NvSelect
+            :model-value="settings.appearance.editorFontFamily || 'ui'"
+            :options="fontOptions"
+            :min-width="150"
+            @update:model-value="v => workspaceStore.updateSettings(draft => { draft.appearance.editorFontFamily = v as any })"
+          />
+        </SettingsRow>
+
+        <!-- Animations / Motion -->
+        <SettingsRow
+          :title="t('settings.appearance.reducedMotion.title')"
+          :description="t('settings.appearance.reducedMotion.description')"
+        >
+          <NvSelect
+            :model-value="appConfig.reducedMotion"
+            :options="motionOptions"
+            :min-width="150"
+            @update:model-value="v => themeStore.setReducedMotion(v as any)"
+          />
+        </SettingsRow>
+
+        <!-- Interface zoom -->
+        <SettingsRow
+          :title="t('settings.appearance.interfaceZoom.title')"
+        >
+          <template #description>
+            <span class="mono">{{ appConfig.interfaceZoom }} %</span>
+          </template>
+          <div class="slider-wrap tw:flex tw:items-center tw:gap-2.5">
             <input
-              class="ui-input ui-input--time"
-              type="time"
-              :value="appConfig.themeSchedule.darkTime"
-              @change="themeStore.setThemeSchedule({ darkTime: ($event.target as HTMLInputElement).value })"
+              class="ui-range tw:w-[190px] tw:accent-[var(--accent)]"
+              type="range"
+              min="80"
+              max="120"
+              step="5"
+              :value="appConfig.interfaceZoom"
+              :aria-label="t('settings.appearance.interfaceZoom.title')"
+              @input="themeStore.setInterfaceZoom(Number(($event.target as HTMLInputElement).value))"
             >
           </div>
+        </SettingsRow>
 
-          <!-- Density -->
-          <div class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.appearance.interfaceDensity.title') }}</div>
-              <div class="row-sub">{{ t('settings.appearance.interfaceDensity.description') }}</div>
-            </div>
-            <NvSelect
-              :model-value="appConfig.interfaceDensity"
-              :options="densityOptions"
-              @update:model-value="v => themeStore.setDensity(v as any)"
-            />
-          </div>
+        <!-- Scrollbars -->
+        <SettingsRow
+          :title="t('settings.appearance.scrollbarVisibility.title')"
+          :description="t('settings.appearance.scrollbarVisibility.description')"
+        >
+          <NvSelect
+            :model-value="appConfig.scrollbarVisibility"
+            :options="scrollbarOptions"
+            :min-width="150"
+            @update:model-value="v => themeStore.setScrollbarVisibility(v as any)"
+          />
+        </SettingsRow>
 
-          <!-- Motion -->
-          <div class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.appearance.reducedMotion.title') }}</div>
-              <div class="row-sub">{{ t('settings.appearance.reducedMotion.description') }}</div>
-            </div>
-            <NvSelect
-              :model-value="appConfig.reducedMotion"
-              :options="motionOptions"
-              @update:model-value="v => themeStore.setReducedMotion(v as any)"
-            />
-          </div>
-
-          <!-- Scrollbars -->
-          <div class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.appearance.scrollbarVisibility.title') }}</div>
-              <div class="row-sub">{{ t('settings.appearance.scrollbarVisibility.description') }}</div>
-            </div>
-            <NvSelect
-              :model-value="appConfig.scrollbarVisibility"
-              :options="scrollbarOptions"
-              @update:model-value="v => themeStore.setScrollbarVisibility(v as any)"
-            />
-          </div>
-
-          <!-- Focus ring -->
-          <div class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.appearance.focusRingStyle.title') }}</div>
-              <div class="row-sub">{{ t('settings.appearance.focusRingStyle.description') }}</div>
-            </div>
-            <NvSelect
-              :model-value="appConfig.focusRingStyle"
-              :options="focusRingOptions"
-              @update:model-value="v => themeStore.setFocusRingStyle(v as any)"
-            />
-          </div>
-
-          <!-- Window chrome -->
-          <div class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.appearance.windowChromeStyle.title') }}</div>
-              <div class="row-sub">{{ t('settings.appearance.windowChromeStyle.description') }}</div>
-            </div>
-            <NvSelect
-              :model-value="appConfig.windowChromeStyle"
-              :options="windowChromeOptions"
-              @update:model-value="v => themeStore.setWindowChromeStyle(v as any)"
-            />
-          </div>
-        </div>
-      </div>
-
-      <!-- ── Comfort & accessibility group ─────────── -->
-      <div class="group">
-        <div class="group-header">
-          <div class="group-label">{{ t('settings.appearance.groups.comfort') }}</div>
-        </div>
-        <div class="settings-card">
-          <!-- Interface zoom -->
-          <div class="settings-row">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.appearance.interfaceZoom.title') }}</div>
-              <div class="row-sub">{{ t('settings.appearance.interfaceZoom.description') }}</div>
-            </div>
-            <div class="slider-wrap">
-              <input
-                class="ui-range"
-                type="range"
-                min="80"
-                max="120"
-                step="5"
-                :value="appConfig.interfaceZoom"
-                @input="themeStore.setInterfaceZoom(Number(($event.target as HTMLInputElement).value))"
-              >
-              <span class="slider-value">{{ appConfig.interfaceZoom }} %</span>
-            </div>
-          </div>
-
-          <!-- Reduce transparency -->
-          <div class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.appearance.reduceTransparency.title') }}</div>
-              <div class="row-sub">{{ t('settings.appearance.reduceTransparency.description') }}</div>
-            </div>
-            <NvToggle
-              :model-value="themeStore.reduceTransparencyEnabled"
-              @update:model-value="v => themeStore.setReduceTransparency(v)"
-            />
-          </div>
-
-          <!-- Roundness -->
-          <div class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.appearance.interfaceRoundness.title') }}</div>
-              <div class="row-sub">{{ t('settings.appearance.interfaceRoundness.description') }}</div>
-            </div>
-            <NvSelect
-              :model-value="appConfig.interfaceRoundness"
-              :options="roundnessOptions"
-              @update:model-value="v => themeStore.setInterfaceRoundness(v as any)"
-            />
-          </div>
-        </div>
-      </div>
+      </SettingsGroup>
     </div>
   </section>
 </template>

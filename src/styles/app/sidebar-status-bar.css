@@ -1,0 +1,24 @@
+/* src/app/components/SidebarStatusBar.vue */
+/* Base layout, spacing, and typography now live as `tw:` utilities on the
+   template. Kept in CSS: the per-status color (a dynamically built
+   `sidebar-status__state--${saveStatus}` class, which the migration's
+   static-literal rule says not to pair with a `tw:` class per branch),
+   the saving-dot pulse animation and its ancestor-scoped trigger, and the
+   reduced-motion override. */
+.sidebar-status__state--saved { color: var(--text-muted); }
+.sidebar-status__state--saving { color: var(--accent); }
+.sidebar-status__state--unsaved { color: var(--text-muted); }
+.sidebar-status__state--error { color: var(--danger); }
+
+/* The saving dot is the only moving part here; a workspace-wide pulse would be noise. */
+.sidebar-status__state--saving .sidebar-status__dot {
+  animation: sidebar-status-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes sidebar-status-pulse {
+  50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-status__state--saving .sidebar-status__dot { animation: none; }
+}

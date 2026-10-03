@@ -1,0 +1,16 @@
+/* src/app/components/home/HomeRecent.vue */
+/* Layout, typography, idle/hover/active/focus-visible colors and the
+   719px breakpoint overrides now live as `tw:` utilities on the template.
+   Only the reduced-motion override
+   remains, since the transition and active-state translate are still
+   present as utilities. */
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-home__recent {
+    transition-duration: 0.01ms;
+  }
+
+  .workspace-home__recent:active {
+    transform: none;
+  }
+}

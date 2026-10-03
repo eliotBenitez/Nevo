@@ -172,8 +172,8 @@ watch(() => props.template, (newTpl) => {
 </script>
 
 <template>
-  <section class="template-editor" role="dialog" aria-modal="true" :aria-label="t('templates.editorTitle')">
-    <header class="template-editor__header">
+  <section class="template-editor tw:fixed tw:inset-0 tw:z-[var(--z-popover)] tw:m-auto tw:w-[min(760px,calc(100vw-32px))] tw:max-h-[min(820px,calc(100vh-32px))] tw:flex tw:flex-col tw:border tw:border-solid tw:border-border-subtle tw:rounded-[calc(8px*var(--radius-scale,1))] tw:bg-surface-raised tw:text-content-primary tw:shadow-2xl tw:overflow-hidden" role="dialog" aria-modal="true" :aria-label="t('templates.editorTitle')">
+    <header class="template-editor__header tw:flex tw:items-center tw:justify-between tw:gap-3 tw:px-4 tw:py-3.5 tw:border-b tw:border-solid tw:border-border-subtle [&_h2]:tw:m-0 [&_h2]:tw:text-[15px] [&_p]:tw:mt-[3px] [&_p]:tw:mb-0 [&_p]:tw:text-content-secondary [&_p]:tw:text-xs">
       <div>
         <h2>{{ t('templates.editorTitle') }}</h2>
         <p>{{ t('templates.editorSubtitle') }}</p>
@@ -183,26 +183,26 @@ watch(() => props.template, (newTpl) => {
       </NvButton>
     </header>
 
-    <div class="template-editor__body">
-      <div class="template-editor__grid">
-        <label class="template-field">
+    <div class="template-editor__body tw:overflow-y-auto tw:flex tw:flex-col">
+      <div class="template-editor__grid tw:p-4 tw:grid tw:grid-cols-[1fr_1fr_auto] tw:gap-3 max-[760px]:tw:grid-cols-1">
+        <label class="template-field tw:grid tw:gap-1.5 tw:text-xs tw:text-content-secondary [&_input]:tw:w-full [&_input]:tw:border [&_input]:tw:border-solid [&_input]:tw:border-border-subtle [&_input]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_input]:tw:bg-surface-overlay [&_input]:tw:text-content-primary [&_input]:tw:py-[7px] [&_input]:tw:px-[9px] [&_input]:tw:font-inherit [&_textarea]:tw:w-full [&_textarea]:tw:border [&_textarea]:tw:border-solid [&_textarea]:tw:border-border-subtle [&_textarea]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_textarea]:tw:bg-surface-overlay [&_textarea]:tw:text-content-primary [&_textarea]:tw:py-[7px] [&_textarea]:tw:px-[9px] [&_textarea]:tw:font-inherit">
           <span>{{ t('templates.name') }}</span>
           <input v-model="editingTemplate.name" type="text" />
         </label>
-        <label class="template-field">
+        <label class="template-field tw:grid tw:gap-1.5 tw:text-xs tw:text-content-secondary [&_input]:tw:w-full [&_input]:tw:border [&_input]:tw:border-solid [&_input]:tw:border-border-subtle [&_input]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_input]:tw:bg-surface-overlay [&_input]:tw:text-content-primary [&_input]:tw:py-[7px] [&_input]:tw:px-[9px] [&_input]:tw:font-inherit [&_textarea]:tw:w-full [&_textarea]:tw:border [&_textarea]:tw:border-solid [&_textarea]:tw:border-border-subtle [&_textarea]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_textarea]:tw:bg-surface-overlay [&_textarea]:tw:text-content-primary [&_textarea]:tw:py-[7px] [&_textarea]:tw:px-[9px] [&_textarea]:tw:font-inherit">
           <span>{{ t('templates.id') }}</span>
           <input v-model="editingTemplate.id" type="text" :disabled="mode === 'edit'" />
         </label>
-        <div class="template-field">
+        <div class="template-field tw:grid tw:gap-1.5 tw:text-xs tw:text-content-secondary [&_input]:tw:w-full [&_input]:tw:border [&_input]:tw:border-solid [&_input]:tw:border-border-subtle [&_input]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_input]:tw:bg-surface-overlay [&_input]:tw:text-content-primary [&_input]:tw:py-[7px] [&_input]:tw:px-[9px] [&_input]:tw:font-inherit [&_textarea]:tw:w-full [&_textarea]:tw:border [&_textarea]:tw:border-solid [&_textarea]:tw:border-border-subtle [&_textarea]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_textarea]:tw:bg-surface-overlay [&_textarea]:tw:text-content-primary [&_textarea]:tw:py-[7px] [&_textarea]:tw:px-[9px] [&_textarea]:tw:font-inherit">
           <span>{{ t('templates.icon') }}</span>
-          <div class="template-icon-picker-anchor">
-            <button ref="iconPickerTriggerRef" type="button" class="template-icon-trigger" @click="toggleIconPicker">
+          <div class="template-icon-picker-anchor tw:relative">
+            <button ref="iconPickerTriggerRef" type="button" class="template-icon-trigger tw:grid tw:place-items-center tw:w-full tw:h-[34px] tw:border tw:border-solid tw:border-border-subtle tw:rounded-[calc(6px*var(--radius-scale,1))] tw:bg-surface-overlay tw:text-content-primary tw:text-base tw:cursor-pointer" @click="toggleIconPicker">
               {{ editingTemplate.icon }}
             </button>
             <Teleport to="body">
               <div
                 v-if="iconPickerOpen"
-                class="template-icon-picker-popover"
+                class="template-icon-picker-popover tw:fixed tw:z-[3000] tw:w-[320px] tw:h-[400px] tw:border tw:border-solid tw:border-border-subtle tw:rounded-[calc(8px*var(--radius-scale,1))] tw:bg-surface-raised tw:shadow-xl tw:overflow-hidden"
                 :style="{ top: `${iconPickerPosition.top}px`, left: `${iconPickerPosition.left}px` }"
               >
                 <NvIconPicker
@@ -214,57 +214,57 @@ watch(() => props.template, (newTpl) => {
             </Teleport>
           </div>
         </div>
-        <label class="template-field template-field--wide">
+        <label class="template-field template-field--wide tw:col-span-full tw:grid tw:gap-1.5 tw:text-xs tw:text-content-secondary [&_input]:tw:w-full [&_input]:tw:border [&_input]:tw:border-solid [&_input]:tw:border-border-subtle [&_input]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_input]:tw:bg-surface-overlay [&_input]:tw:text-content-primary [&_input]:tw:py-[7px] [&_input]:tw:px-[9px] [&_input]:tw:font-inherit [&_textarea]:tw:w-full [&_textarea]:tw:border [&_textarea]:tw:border-solid [&_textarea]:tw:border-border-subtle [&_textarea]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_textarea]:tw:bg-surface-overlay [&_textarea]:tw:text-content-primary [&_textarea]:tw:py-[7px] [&_textarea]:tw:px-[9px] [&_textarea]:tw:font-inherit">
           <span>{{ t('templates.description') }}</span>
           <input v-model="editingTemplate.description" type="text" />
         </label>
-        <label class="template-field template-field--wide">
+        <label class="template-field template-field--wide tw:col-span-full tw:grid tw:gap-1.5 tw:text-xs tw:text-content-secondary [&_input]:tw:w-full [&_input]:tw:border [&_input]:tw:border-solid [&_input]:tw:border-border-subtle [&_input]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_input]:tw:bg-surface-overlay [&_input]:tw:text-content-primary [&_input]:tw:py-[7px] [&_input]:tw:px-[9px] [&_input]:tw:font-inherit [&_textarea]:tw:w-full [&_textarea]:tw:border [&_textarea]:tw:border-solid [&_textarea]:tw:border-border-subtle [&_textarea]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_textarea]:tw:bg-surface-overlay [&_textarea]:tw:text-content-primary [&_textarea]:tw:py-[7px] [&_textarea]:tw:px-[9px] [&_textarea]:tw:font-inherit">
           <span>{{ t('templates.content') }}</span>
           <textarea v-model="editingPlainText" rows="8" :placeholder="t('templates.contentPlaceholder')" />
         </label>
       </div>
 
-      <div class="template-editor__fields">
-        <div class="template-editor__section-head">
+      <div class="template-editor__fields tw:p-4 tw:grid tw:gap-3">
+        <div class="template-editor__section-head tw:flex tw:justify-between tw:items-center tw:mb-1 [&_h3]:tw:m-0 [&_h3]:tw:text-[15px]">
           <h3>{{ t('templates.fields') }}</h3>
           <NvButton variant="ghost" size="xs" @click="addField">
             <Plus :size="13" />{{ t('templates.addField') }}
           </NvButton>
         </div>
         
-        <p v-if="error" class="template-error">{{ error }}</p>
+        <p v-if="error" class="template-error tw:text-danger tw:text-xs tw:m-0 tw:mb-2">{{ error }}</p>
 
-        <div v-for="(field, index) in editingTemplate.fields" :key="`${field.id}-${index}`" class="template-field-card">
-          <div class="template-field-card__main">
-            <div class="template-field-group">
-              <span class="template-field-label">{{ t('templates.fieldLabel') }}</span>
+        <div v-for="(field, index) in editingTemplate.fields" :key="`${field.id}-${index}`" class="template-field-card tw:relative tw:flex tw:flex-col tw:gap-3 tw:p-4 tw:pr-12 tw:border tw:border-solid tw:border-border-subtle tw:rounded-[calc(8px*var(--radius-scale,1))] tw:bg-surface-overlay max-[760px]:tw:pr-4 max-[760px]:tw:pb-14">
+          <div class="template-field-card__main tw:grid tw:grid-cols-[1fr_1fr_1.2fr] tw:gap-4 max-[760px]:tw:grid-cols-1">
+            <div class="template-field-group tw:flex tw:flex-col tw:gap-1.5 [&_input]:tw:w-full [&_input]:tw:border [&_input]:tw:border-solid [&_input]:tw:border-border-subtle [&_input]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_input]:tw:bg-surface-overlay [&_input]:tw:text-content-primary [&_input]:tw:py-[7px] [&_input]:tw:px-[9px] [&_input]:tw:font-inherit [&_textarea]:tw:w-full [&_textarea]:tw:border [&_textarea]:tw:border-solid [&_textarea]:tw:border-border-subtle [&_textarea]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_textarea]:tw:bg-surface-overlay [&_textarea]:tw:text-content-primary [&_textarea]:tw:py-[7px] [&_textarea]:tw:px-[9px] [&_textarea]:tw:font-inherit">
+              <span class="template-field-label tw:text-[11px] tw:font-semibold tw:text-content-secondary tw:uppercase tw:tracking-[0.02em]">{{ t('templates.fieldLabel') }}</span>
               <input v-model="field.label" :placeholder="t('templates.fieldLabel')" />
             </div>
-            <div class="template-field-group">
-              <span class="template-field-label">{{ t('templates.fieldId') }}</span>
+            <div class="template-field-group tw:flex tw:flex-col tw:gap-1.5 [&_input]:tw:w-full [&_input]:tw:border [&_input]:tw:border-solid [&_input]:tw:border-border-subtle [&_input]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_input]:tw:bg-surface-overlay [&_input]:tw:text-content-primary [&_input]:tw:py-[7px] [&_input]:tw:px-[9px] [&_input]:tw:font-inherit [&_textarea]:tw:w-full [&_textarea]:tw:border [&_textarea]:tw:border-solid [&_textarea]:tw:border-border-subtle [&_textarea]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_textarea]:tw:bg-surface-overlay [&_textarea]:tw:text-content-primary [&_textarea]:tw:py-[7px] [&_textarea]:tw:px-[9px] [&_textarea]:tw:font-inherit">
+              <span class="template-field-label tw:text-[11px] tw:font-semibold tw:text-content-secondary tw:uppercase tw:tracking-[0.02em]">{{ t('templates.fieldId') }}</span>
               <input v-model="field.id" :placeholder="t('templates.fieldId')" />
             </div>
-            <div class="template-field-group">
-              <span class="template-field-label">{{ t('templates.type') }}</span>
-              <div class="template-field-type-row">
+            <div class="template-field-group tw:flex tw:flex-col tw:gap-1.5 [&_input]:tw:w-full [&_input]:tw:border [&_input]:tw:border-solid [&_input]:tw:border-border-subtle [&_input]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_input]:tw:bg-surface-overlay [&_input]:tw:text-content-primary [&_input]:tw:py-[7px] [&_input]:tw:px-[9px] [&_input]:tw:font-inherit [&_textarea]:tw:w-full [&_textarea]:tw:border [&_textarea]:tw:border-solid [&_textarea]:tw:border-border-subtle [&_textarea]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_textarea]:tw:bg-surface-overlay [&_textarea]:tw:text-content-primary [&_textarea]:tw:py-[7px] [&_textarea]:tw:px-[9px] [&_textarea]:tw:font-inherit">
+              <span class="template-field-label tw:text-[11px] tw:font-semibold tw:text-content-secondary tw:uppercase tw:tracking-[0.02em]">{{ t('templates.type') }}</span>
+              <div class="template-field-type-row tw:flex tw:items-center tw:gap-3 [&_.nv-select]:tw:flex-1">
                 <NvSelect v-model="field.type" :options="fieldTypeOptions" />
                 <NvCheckbox v-model="field.required" :label="t('templates.requiredShort')" />
               </div>
             </div>
           </div>
 
-          <div v-if="field.type !== 'checkbox'" class="template-field-card__extra">
-            <div class="template-field-group">
-              <span class="template-field-label">{{ t('templates.defaultValue') }}</span>
+          <div v-if="field.type !== 'checkbox'" class="template-field-card__extra tw:grid tw:grid-cols-2 tw:gap-4 tw:pt-3 tw:border-t tw:border-dashed tw:border-border-subtle max-[760px]:tw:grid-cols-1">
+            <div class="template-field-group tw:flex tw:flex-col tw:gap-1.5 [&_input]:tw:w-full [&_input]:tw:border [&_input]:tw:border-solid [&_input]:tw:border-border-subtle [&_input]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_input]:tw:bg-surface-overlay [&_input]:tw:text-content-primary [&_input]:tw:py-[7px] [&_input]:tw:px-[9px] [&_input]:tw:font-inherit [&_textarea]:tw:w-full [&_textarea]:tw:border [&_textarea]:tw:border-solid [&_textarea]:tw:border-border-subtle [&_textarea]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_textarea]:tw:bg-surface-overlay [&_textarea]:tw:text-content-primary [&_textarea]:tw:py-[7px] [&_textarea]:tw:px-[9px] [&_textarea]:tw:font-inherit">
+              <span class="template-field-label tw:text-[11px] tw:font-semibold tw:text-content-secondary tw:uppercase tw:tracking-[0.02em]">{{ t('templates.defaultValue') }}</span>
               <input v-model="field.defaultValue" :placeholder="t('templates.defaultValue')" />
             </div>
-            <div v-if="field.type === 'select'" class="template-field-group">
-              <span class="template-field-label">{{ t('templates.options') }}</span>
+            <div v-if="field.type === 'select'" class="template-field-group tw:flex tw:flex-col tw:gap-1.5 [&_input]:tw:w-full [&_input]:tw:border [&_input]:tw:border-solid [&_input]:tw:border-border-subtle [&_input]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_input]:tw:bg-surface-overlay [&_input]:tw:text-content-primary [&_input]:tw:py-[7px] [&_input]:tw:px-[9px] [&_input]:tw:font-inherit [&_textarea]:tw:w-full [&_textarea]:tw:border [&_textarea]:tw:border-solid [&_textarea]:tw:border-border-subtle [&_textarea]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_textarea]:tw:bg-surface-overlay [&_textarea]:tw:text-content-primary [&_textarea]:tw:py-[7px] [&_textarea]:tw:px-[9px] [&_textarea]:tw:font-inherit">
+              <span class="template-field-label tw:text-[11px] tw:font-semibold tw:text-content-secondary tw:uppercase tw:tracking-[0.02em]">{{ t('templates.options') }}</span>
               <textarea :value="(field.options ?? []).join('\n')" rows="2" :placeholder="t('templates.options')" @input="updateSelectOptions(field, ($event.target as HTMLTextAreaElement).value)" />
             </div>
           </div>
 
-          <div class="template-field-card__actions">
+          <div class="template-field-card__actions tw:absolute tw:top-3 tw:right-3 tw:flex tw:flex-col tw:gap-1.5 max-[760px]:tw:static max-[760px]:tw:flex-row max-[760px]:tw:justify-end max-[760px]:tw:mt-3">
             <NvButton variant="ghost" size="xs" icon :title="t('workspace.context.moveUp')" @click="moveField(index, -1)">
               <ChevronUp :size="13" />
             </NvButton>
@@ -279,241 +279,9 @@ watch(() => props.template, (newTpl) => {
       </div>
     </div>
 
-    <footer class="template-editor__footer">
+    <footer class="template-editor__footer tw:flex tw:items-center tw:justify-end tw:gap-3 tw:px-4 tw:py-3.5 tw:border-t tw:border-solid tw:border-border-subtle">
       <NvButton variant="ghost" @click="emit('close')">{{ t('workspace.context.cancel') }}</NvButton>
       <NvButton :disabled="saving" @click="saveEditableTemplate">{{ t('templates.save') }}</NvButton>
     </footer>
   </section>
 </template>
-
-<style scoped>
-.template-editor {
-  position: fixed;
-  width: min(760px, calc(100vw - 32px));
-  max-height: min(820px, calc(100vh - 32px));
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--border-subtle);
-  border-radius: calc(8px * var(--radius-scale, 1));
-  background: var(--surface-1);
-  color: var(--text-primary);
-  box-shadow: var(--shadow-2xl);
-  overflow: hidden;
-}
-
-.template-editor__header,
-.template-editor__footer {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.template-editor__header {
-  justify-content: space-between;
-}
-
-.template-editor__header h2,
-.template-editor__section-head h3 {
-  margin: 0;
-  font-size: 15px;
-}
-
-.template-editor__header p {
-  margin: 3px 0 0;
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-
-.template-editor__body {
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-}
-
-.template-editor__grid,
-.template-editor__fields {
-  padding: 14px 16px;
-}
-
-.template-editor__grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 12px;
-}
-
-.template-editor__fields {
-  display: grid;
-  gap: 12px;
-}
-
-.template-editor__section-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.template-field-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  padding-right: 48px;
-  border: 1px solid var(--border-subtle);
-  border-radius: calc(8px * var(--radius-scale, 1));
-  background: var(--surface-2);
-}
-
-.template-field-card__main {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1.2fr;
-  gap: 16px;
-}
-
-.template-field-card__extra {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  padding-top: 12px;
-  border-top: 1px dashed var(--border-subtle);
-}
-
-.template-field-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.template-field-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.template-field {
-  display: grid;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.template-field input,
-.template-field textarea,
-.template-field-group input,
-.template-field-group textarea {
-  width: 100%;
-  border: 1px solid var(--border-subtle);
-  border-radius: calc(6px * var(--radius-scale, 1));
-  background: var(--surface-2);
-  color: var(--text-primary);
-  padding: 7px 9px;
-  font: inherit;
-}
-
-.template-field--wide {
-  grid-column: 1 / -1;
-}
-
-.template-field-type-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.template-field-type-row :deep(.nv-select) {
-  flex: 1;
-}
-
-.template-field-card__actions {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.template-icon-btn {
-  display: inline-grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--border-subtle);
-  border-radius: calc(6px * var(--radius-scale, 1));
-  background: var(--surface-2);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.template-icon-btn--danger:hover {
-  background: var(--danger-soft, #ff6b6b22);
-  color: var(--danger, #ff6b6b);
-  border-color: var(--danger, #ff6b6b);
-}
-
-.template-icon-picker-anchor {
-  position: relative;
-}
-
-.template-icon-trigger {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 34px;
-  border: 1px solid var(--border-subtle);
-  border-radius: calc(6px * var(--radius-scale, 1));
-  background: var(--surface-2);
-  color: var(--text-primary);
-  font-size: 16px;
-  cursor: pointer;
-}
-
-.template-icon-picker-popover {
-  position: fixed;
-  z-index: 3000;
-  width: 320px;
-  height: 400px;
-  border: 1px solid var(--border-subtle);
-  border-radius: calc(8px * var(--radius-scale, 1));
-  background: var(--surface-1);
-  box-shadow: var(--shadow-xl);
-  overflow: hidden;
-}
-
-.template-editor__footer {
-  justify-content: flex-end;
-  border-top: 1px solid var(--border-subtle);
-  border-bottom: 0;
-}
-
-.template-error {
-  color: var(--danger, #ff6b6b);
-  font-size: 12px;
-  margin: 0 0 8px;
-}
-
-@media (max-width: 760px) {
-  .template-editor__grid,
-  .template-field-card__main,
-  .template-field-card__extra {
-    grid-template-columns: 1fr;
-  }
-
-  .template-field-card {
-    padding-right: 16px;
-    padding-bottom: 56px;
-  }
-
-  .template-field-card__actions {
-    position: static;
-    flex-direction: row;
-    justify-content: flex-end;
-    margin-top: 12px;
-  }
-}
-</style>

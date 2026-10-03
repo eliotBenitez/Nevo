@@ -6,10 +6,6 @@ import { history } from 'prosemirror-history'
 import { Schema, type Node as PMNode } from 'prosemirror-model'
 import type { NodeViewConstructor } from 'prosemirror-view'
 import { columnResizing, tableEditing } from 'prosemirror-tables'
-import type { XmlFragment } from 'yjs'
-import type { Awareness } from 'y-protocols/awareness'
-import { ySyncPlugin, yUndoPlugin, undoCommand as yUndoCommand, redoCommand as yRedoCommand } from 'y-prosemirror'
-import { safeYCursorPlugin } from './collaboration/safeCursorPlugin'
 import type { BlockNode } from '../types/note'
 import type { NevoSlashItem } from '../types/editor-plugin'
 import { createCoreCommands, type NevoCoreCommands } from './commands'
@@ -30,6 +26,8 @@ import { createToggleFoldingPlugin } from './plugins/toggle-folding'
 import { createTableFormulaPlugin } from './plugins/table-formula'
 import { createAiStreamingPlugin } from './plugins/ai-streaming'
 import { createBrokenLinkDecorationPlugin } from './plugins/broken-link-decoration'
+import { createFindInNotePlugin } from './plugins/find-in-note'
+import { createVoiceRecordingPlaceholderPlugin, type VoiceRecordingPlaceholderOptions } from './plugins/voice-recording-placeholder'
 
 export interface CreateNevoEditorStateOptions {
   schema: Schema
@@ -37,14 +35,23 @@ export interface CreateNevoEditorStateOptions {
   pluginHost?: EditorPluginHost
   nodeViewOptions?: CoreNodeViewOptions
   enableSlashCommands?: boolean
+  /** See `SlashCommandPluginOptions.getGridColumns`. */
+  getSlashGridColumns?: () => number
+  getSlashSearchTerms?: (item: NevoSlashItem) => string[]
   enableMarkdownShortcuts?: boolean
   tabBehavior?: 'indent' | 'focus'
   onTemplateInsertRequest?: () => void
+  /** Adds the `voice-recording` slash item; the host owns the session. */
+  onVoiceRecordingRequest?: () => void
+  voiceRecordingPlaceholder?: VoiceRecordingPlaceholderOptions
   enableVega?: boolean
   enableMarkmap?: boolean
   enableDraw?: boolean
-  yFragment?: XmlFragment
-  awareness?: Awareness
+  /** Reuse an already-parsed ProseMirror doc instead of parsing `content`
+   *  again. Must have been produced from the same `content` against the same
+   *  schema (callers use `parseNoteContentToDocSafe`, which keeps the
+   *  degraded/plain-text fallback observable to the persistence gates). */
+  preParsedDoc?: PMNode
   aiSlashItems?: NevoSlashItem[]
   /** Existence check for `internal_link` marks; when provided, links pointing
    *  at non-existent notes are decorated with the `.is-broken` class. */
@@ -172,21 +179,18 @@ export function createNevoEditorState(options: CreateNevoEditorStateOptions): Ne
 
   const plugins: Plugin[] = options.enableMarkdownShortcuts !== false ? [createMarkdownInputRules(options.schema)] : []
 
-  if (options.yFragment) {
-    plugins.push(ySyncPlugin(options.yFragment))
-    if (options.awareness) {
-      plugins.push(safeYCursorPlugin(options.awareness))
-    }
-    plugins.push(yUndoPlugin())
-    commandRegistry.set('core.undo', yUndoCommand)
-    commandRegistry.set('core.redo', yRedoCommand)
-  } else {
-    plugins.push(history())
-  }
+  plugins.push(history())
 
   if (options.onTemplateInsertRequest) {
     commandRegistry.set('core.template.insert', () => {
       options.onTemplateInsertRequest?.()
+      return true
+    })
+  }
+
+  if (options.onVoiceRecordingRequest) {
+    commandRegistry.set('core.voiceRecording.start', () => {
+      options.onVoiceRecordingRequest?.()
       return true
     })
   }
@@ -234,6 +238,18 @@ export function createNevoEditorState(options: CreateNevoEditorStateOptions): Ne
       },
     })
   }
+  if (commandRegistry.has('core.voiceRecording.start')) {
+    const audioIdx = slashItems.findIndex(item => item.id === 'audio')
+    slashItems.splice(audioIdx === -1 ? slashItems.length : audioIdx + 1, 0, {
+      id: 'voice-recording',
+      title: 'Voice recording',
+      category: 'media',
+      keywords: ['record', 'microphone', 'mic', 'voice', 'dictaphone'],
+      run: ({ state, dispatch }) => {
+        commandRegistry.get('core.voiceRecording.start')?.(state, dispatch)
+      },
+    })
+  }
   if (host) {
     const pluginSlashItems = host.listSlashItems()
     for (const pluginItem of pluginSlashItems) {
@@ -257,18 +273,25 @@ export function createNevoEditorState(options: CreateNevoEditorStateOptions): Ne
   plugins.push(createActiveBlockEmphasisPlugin())
   plugins.push(createListMarkerPlugin())
   plugins.push(createAiStreamingPlugin())
+  if (options.voiceRecordingPlaceholder) {
+    plugins.push(createVoiceRecordingPlaceholderPlugin(options.voiceRecordingPlaceholder))
+  }
   plugins.push(headingFoldingPlugin)
   plugins.push(createToggleFoldingPlugin())
   if (options.enableSlashCommands !== false) {
-    plugins.push(createSlashCommandPlugin(() => slashItems))
+    plugins.push(createSlashCommandPlugin(() => slashItems, {
+      getGridColumns: options.getSlashGridColumns,
+      getSearchTerms: options.getSlashSearchTerms,
+    }))
   }
   plugins.push(createLinkPickerPlugin())
   if (options.internalLinkExists) {
     plugins.push(createBrokenLinkDecorationPlugin({ exists: options.internalLinkExists }))
   }
+  plugins.push(createFindInNotePlugin())
   plugins.push(keymap(baseKeymap))
 
-  const doc = parseNoteContentToDoc(options.schema, options.content)
+  const doc = options.preParsedDoc ?? parseNoteContentToDoc(options.schema, options.content)
   const initialSelection = createInitialSelection(doc)
 
   const state = EditorState.create({

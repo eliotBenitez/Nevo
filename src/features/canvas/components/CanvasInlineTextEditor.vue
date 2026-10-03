@@ -38,7 +38,7 @@ onMounted(() => {
   <textarea
     ref="input"
     v-model="value"
-    class="canvas-inline-text-editor"
+    class="canvas-inline-text-editor tw:absolute tw:z-45 tw:min-w-[60px] tw:min-h-9 tw:resize-none tw:rounded-lg tw:border tw:border-solid tw:border-accent tw:text-content-primary tw:bg-[color-mix(in_srgb,var(--surface-canvas)_94%,transparent)] tw:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_18%,transparent)] tw:font-[inherit] tw:leading-[1.35] tw:outline-0"
     :style="style"
     :aria-label="label"
     @blur="$emit('commit', value)"
@@ -46,21 +46,3 @@ onMounted(() => {
     @pointerdown.stop
   />
 </template>
-
-<style scoped>
-.canvas-inline-text-editor {
-  position: absolute;
-  z-index: 45;
-  min-width: 60px;
-  min-height: 36px;
-  resize: none;
-  border: 1px solid var(--accent);
-  border-radius: 8px;
-  outline: 0;
-  color: var(--text-primary);
-  background: color-mix(in srgb, var(--canvas-1) 94%, transparent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
-  font: inherit;
-  line-height: 1.35;
-}
-</style>

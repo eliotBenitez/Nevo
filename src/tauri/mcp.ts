@@ -20,6 +20,30 @@ export function getMcpBridgeInfo(): Promise<McpBridgeInfo | null> {
   return invoke<McpBridgeInfo | null>('get_mcp_bridge_info')
 }
 
+export type McpAgent = 'codex' | 'claudeCode'
+
+export interface McpAgentStatus {
+  kind: 'notConfigured' | 'connected' | 'needsReconnect' | 'conflict' | 'error'
+  message: string | null
+}
+
+export interface McpAgentStatuses {
+  codex: McpAgentStatus
+  claudeCode: McpAgentStatus
+}
+
+export function getMcpAgentStatus(): Promise<McpAgentStatuses> {
+  return invoke<McpAgentStatuses>('get_mcp_agent_status')
+}
+
+export function connectMcpAgent(agent: McpAgent, replaceConflict = false): Promise<McpAgentStatus> {
+  return invoke<McpAgentStatus>('connect_mcp_agent', { agent, replaceConflict })
+}
+
+export function disconnectMcpAgent(agent: McpAgent): Promise<McpAgentStatus> {
+  return invoke<McpAgentStatus>('disconnect_mcp_agent', { agent })
+}
+
 export function stopMcpBridge(): Promise<void> {
   return invoke<void>('stop_mcp_bridge')
 }

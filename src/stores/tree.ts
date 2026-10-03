@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed } from 'vue'
 import type { FolderMeta, NoteMeta, TreeNode } from '../types/note'
 import type { TemplateFieldValues } from '../types/template'
+import type { NotebookPaperKind } from '../core/notebook/types'
 import { useWorkspaceStore } from './workspace'
 import { moveItemInArray } from '../utils/sidebar/reorder'
 
@@ -117,6 +118,17 @@ export const useTreeStore = defineStore('tree', () => {
     }
     void workspaceStore.refreshSidebarNotePreviews()
     return note
+  }
+
+  async function createNotebook(folderId: string | null, title: string, icon: string, paper: NotebookPaperKind) {
+    const backend = workspaceStore.backend
+    if (!backend || !workspaceStore.manifest) return null
+    const notebook = await backend.createNotebook(folderId, title, icon, paper)
+    // Native creation upgrades the workspace schema before writing the note.
+    // Re-read the complete manifest only after that transaction succeeds so
+    // the tree never predicts metadata from a partially completed upgrade.
+    await workspaceStore.refreshManifest()
+    return notebook
   }
 
   async function createNoteFromTemplate(templateId: string, folderId: string | null, title = 'Untitled', icon = '📄', fieldValues: TemplateFieldValues = {}) {
@@ -341,7 +353,7 @@ export const useTreeStore = defineStore('tree', () => {
     return null
   }
 
-  return { tree, folderById, noteById, resolveNoteIdByTitle, createFolder, renameFolder, deleteFolder, createNote, createNoteFromTemplate, renameNote, syncNoteMeta, deleteNote, moveNote, moveNoteToPosition, reorderItem, setSidebarNoteOrder, restoreFromTrash, permanentlyDeleteFromTrash, emptyTrash }
+  return { tree, folderById, noteById, resolveNoteIdByTitle, createFolder, renameFolder, deleteFolder, createNote, createNotebook, createNoteFromTemplate, renameNote, syncNoteMeta, deleteNote, moveNote, moveNoteToPosition, reorderItem, setSidebarNoteOrder, restoreFromTrash, permanentlyDeleteFromTrash, emptyTrash }
 })
 
 // --- tree mutation helpers ---

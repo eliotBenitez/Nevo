@@ -1,5 +1,6 @@
 use super::super::types::PluginManifest;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -67,6 +68,10 @@ pub struct MarketplacePreparedPlugin {
 pub struct MarketplaceMigrationBundle {
     pub workspace_storage: Option<serde_json::Value>,
     pub plugin_registry: Option<serde_json::Value>,
+    /// Migrated note content, keyed by note id — each value is a full
+    /// ProseMirror document to write into that note's `note.json`. Replaces
+    /// the pre-Phase-5 `collab_states_base64` (base64-encoded `.yjs` bytes)
+    /// now that `note.json` (not a per-note Y.Doc) is a note's source of truth.
     #[serde(default)]
-    pub collab_states_base64: BTreeMap<String, String>,
+    pub migrated_content: BTreeMap<String, Value>,
 }

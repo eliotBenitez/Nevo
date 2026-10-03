@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { editorPopupInputClass } from './editorPopupClasses'
 import { nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import EditorPopupPanel from './EditorPopupPanel.vue'
@@ -56,7 +57,7 @@ function onInput(event: Event) {
     <textarea
       id="markmap-input"
       ref="textareaRef"
-      class="editor-popup-panel__input"
+      class="editor-popup-panel__input" :class="editorPopupInputClass"
       :value="markdown"
       rows="8"
       :placeholder="t('editor.markmap.placeholder')"

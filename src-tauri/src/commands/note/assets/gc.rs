@@ -38,11 +38,35 @@ fn collect_asset_refs_recursive(path: &Path, refs: &mut HashSet<String>) {
     }
 }
 
+/// Scans `.nevo/collab` (a not-yet-migrated workspace's legacy Y.Doc state)
+/// and every `.nevo/collab-legacy-*` directory (a migrated workspace's
+/// archived backup — see `collab.rs`'s `archive_legacy_collab_dir`) for asset
+/// references. Neither is note content's source of truth any more, but an
+/// asset referenced only from one of them must survive until the legacy
+/// migration folds it into `note.json` (or the user deletes the backup
+/// themselves) — so GC keeps scanning both for as long as they exist on disk.
+fn collect_legacy_collab_asset_refs(nevo_dir: &Path, refs: &mut HashSet<String>) {
+    collect_asset_refs_recursive(&nevo_dir.join("collab"), refs);
+    let Ok(entries) = std::fs::read_dir(nevo_dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let is_legacy_backup = entry
+            .file_name()
+            .to_str()
+            .map(|name| name.starts_with("collab-legacy-"))
+            .unwrap_or(false);
+        if is_legacy_backup {
+            collect_asset_refs_recursive(&entry.path(), refs);
+        }
+    }
+}
+
 fn collect_current_asset_refs(workspace_path: &str) -> HashSet<String> {
     let mut refs = HashSet::new();
     collect_asset_refs_recursive(&Path::new(workspace_path).join("notes"), &mut refs);
     let nevo_dir = Path::new(workspace_path).join(".nevo");
-    collect_asset_refs_recursive(&nevo_dir.join("collab"), &mut refs);
+    collect_legacy_collab_asset_refs(&nevo_dir, &mut refs);
     collect_asset_refs_recursive(&nevo_dir.join("boards"), &mut refs);
     // Drawings and visual mind maps can keep nested asset references inside
     // their JSON payloads (in `.nevo/assets/`), which the scanners above never

@@ -22,7 +22,7 @@ vi.mock('../../../utils/logger', () => ({
 
 function backend(overrides: Partial<WorkspaceBackend>): WorkspaceBackend {
   return {
-    handle: { kind: 'cloud', storageId: 'storage-1' },
+    handle: { kind: 'local', path: '/workspace' },
     ...overrides,
   } as WorkspaceBackend
 }
@@ -64,9 +64,9 @@ describe('useEditorAssetActions', () => {
     expect(emitCover).toHaveBeenCalledWith('image:.nevo/assets/local-cover.png')
   })
 
-  it('uploads a cloud cover as bytes through the backend', async () => {
+  it('uploads a cover as bytes through the backend when no workspace path is available', async () => {
     const importImageAsset = vi.fn(async () => ({
-      src: 'nevo-cloud-asset://storage-1/cover',
+      src: '.nevo/assets/cover.jpg',
       hash: 'hash',
       deduplicated: false,
       bytes: 3,
@@ -85,8 +85,31 @@ describe('useEditorAssetActions', () => {
 
     await actions.onCoverImageInputChange({ target: input } as unknown as Event)
 
-    expect(importImageAsset).toHaveBeenCalledWith('cover.jpg', [97, 98, 99])
-    expect(emitCover).toHaveBeenCalledWith('image:nevo-cloud-asset://storage-1/cover')
+    expect(importImageAsset).toHaveBeenCalledWith('cover.jpg', new Uint8Array([97, 98, 99]))
+    expect(emitCover).toHaveBeenCalledWith('image:.nevo/assets/cover.jpg')
+    expect(input.value).toBe('')
+  })
+
+  it('rejects a cover image over the size limit without reading its bytes', async () => {
+    const importImageAsset = vi.fn()
+    const emitCover = vi.fn()
+    const actions = useEditorAssetActions({
+      getWorkspacePath: () => null,
+      getBackend: () => backend({ importImageAsset }),
+      getCover: () => null,
+      emitCover,
+      clickCoverInput: vi.fn(),
+    })
+    const input = document.createElement('input')
+    const oversized = new File([new Uint8Array(101 * 1024 * 1024)], 'huge.jpg', { type: 'image/jpeg' })
+    const arrayBuffer = vi.spyOn(oversized, 'arrayBuffer')
+    Object.defineProperty(input, 'files', { configurable: true, value: [oversized] })
+
+    await actions.onCoverImageInputChange({ target: input } as unknown as Event)
+
+    expect(arrayBuffer).not.toHaveBeenCalled()
+    expect(importImageAsset).not.toHaveBeenCalled()
+    expect(emitCover).not.toHaveBeenCalled()
     expect(input.value).toBe('')
   })
 

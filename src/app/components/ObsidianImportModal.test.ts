@@ -104,16 +104,17 @@ describe('ObsidianImportModal', () => {
     const wrapper = mountModal()
     await flush()
 
-    const backdrop = wrapper.find('.obsidian-import-backdrop')
-    await backdrop.trigger('keydown', { key: 'Escape' })
-    await backdrop.trigger('click')
+    const panel = wrapper.find('.nv-modal__panel')
+    const scrim = wrapper.find('.nv-modal__scrim')
+    await panel.trigger('keydown', { key: 'Escape' })
+    await scrim.trigger('click')
     expect(wrapper.emitted('close')).toBeFalsy()
 
     mockImporting.value = false
     mockProgress.value = createIdleProgress()
     await flush()
 
-    await backdrop.trigger('keydown', { key: 'Escape' })
+    await panel.trigger('keydown', { key: 'Escape' })
     expect(wrapper.emitted('close')).toBeTruthy()
   })
 

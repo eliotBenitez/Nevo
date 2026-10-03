@@ -1,0 +1,60 @@
+/* Reusable surface contracts for the borderless frame-and-island design
+   (redesign spec §5, §6.3, §7). This file owns opaque surface presentation
+   only — layout, spacing, and feature-specific styling stay in their own
+   modules. Borders are written as `transparent`, not `0`, so Windows
+   forced-colors mode still renders a visible boundary (spec §10.3).
+   Declared on the theme classes too: a var()-based custom property resolves on
+   the element that declares it, so a nested theme scope must re-declare it. */
+
+:root,
+.theme-light,
+.theme-dark {
+  --frame-bg: var(--surface-navigation);
+  --island-bg: var(--surface-canvas);
+  --island-radius: 16px;
+  --island-inset: 8px;
+  --menu-bg: var(--surface-overlay);
+  --menu-shadow: var(--shadow-overlay);
+  --modal-bg: var(--surface-overlay);
+  --modal-shadow: var(--shadow-overlay);
+  --input-bg: var(--surface-subtle);
+  --input-ring: var(--accent);
+}
+
+.nv-frame {
+  background: var(--frame-bg);
+}
+
+.nv-island {
+  background: var(--island-bg);
+  border-radius: var(--island-radius);
+  border: 1px solid transparent;
+}
+
+.nv-raised {
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-raised);
+  border-radius: 12px;
+  border: 1px solid transparent;
+}
+
+.nv-overlay {
+  background: var(--surface-overlay);
+  box-shadow: var(--shadow-overlay);
+  border-radius: 12px;
+  border: 1px solid transparent;
+}
+
+/* Legacy utility class kept for parity with .nv-frame; no component currently
+   applies it, but it is styled here so it renders correctly on adoption. */
+.nv-sidebar {
+  background: var(--surface-navigation);
+}
+
+@media (forced-colors: active) {
+  .nv-island,
+  .nv-overlay,
+  .nv-raised {
+    border-color: CanvasText;
+  }
+}

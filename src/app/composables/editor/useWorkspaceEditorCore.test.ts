@@ -12,9 +12,7 @@ const editorCoreMock = vi.hoisted(() => ({
   setup: { marker: 'editor-setup' },
 }))
 
-// Note embeds read the referenced note through the workspace backend, so that a
-// cloud workspace — which has no path and keeps bodies in separate documents —
-// renders previews the same way a local one does.
+// Note embeds read the referenced note through the workspace backend.
 const backendMock = vi.hoisted(() => ({ loadNoteWithContent: vi.fn() }))
 vi.mock('../../../stores/workspace', () => ({
   useWorkspaceStore: () => ({ backend: backendMock }),

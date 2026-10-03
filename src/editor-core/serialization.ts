@@ -84,9 +84,18 @@ function normalizeNoteContent(content: unknown): unknown {
   return normalizeBlockNode(content as BlockNode)
 }
 
-export function parseNoteContentToDoc(schema: Schema, content: unknown): PMNode {
+export interface ParsedNoteContentToDoc {
+  doc: PMNode
+  /** True when `schema.nodeFromJSON` rejected the (normalized) content and the
+   *  returned `doc` is the plain-text fallback rather than the real content.
+   *  Callers that persist documents back to disk must treat this as "do not
+   *  save over the original" — see `useEditorCore`'s note-open path. */
+  degraded: boolean
+}
+
+export function parseNoteContentToDocSafe(schema: Schema, content: unknown): ParsedNoteContentToDoc {
   try {
-    return schema.nodeFromJSON(normalizeNoteContent(content))
+    return { doc: schema.nodeFromJSON(normalizeNoteContent(content)), degraded: false }
   } catch (error) {
     // A failing `nodeFromJSON` collapses the whole note to a single empty
     // paragraph below, which surfaces as a "one giant block" / truncated note
@@ -99,8 +108,12 @@ export function parseNoteContentToDoc(schema: Schema, content: unknown): PMNode 
           ? (content as { type?: unknown }).type
           : typeof content,
     })
-    return schema.nodeFromJSON(fallbackDocFromUnknown(content))
+    return { doc: schema.nodeFromJSON(fallbackDocFromUnknown(content)), degraded: true }
   }
+}
+
+export function parseNoteContentToDoc(schema: Schema, content: unknown): PMNode {
+  return parseNoteContentToDocSafe(schema, content).doc
 }
 
 /**

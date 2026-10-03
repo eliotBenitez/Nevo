@@ -46,6 +46,36 @@ describe('renderVegaToSvg', () => {
     expect(document.body.contains(renderedContainer as HTMLElement)).toBe(false)
   })
 
+  it('removes the renderer background while preserving explicit chart fills and dimensions', async () => {
+    vegaEmbedMock.mockImplementationOnce(async (container: HTMLElement) => {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      svg.setAttribute('width', '240')
+      svg.setAttribute('height', '160')
+      svg.style.backgroundColor = 'rgb(0, 0, 255)'
+
+      const plot = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+      plot.setAttribute('fill', '#eef2ff')
+      plot.setAttribute('stroke', '#334155')
+      const mark = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+      mark.setAttribute('fill', '#2563eb')
+      mark.setAttribute('stroke', '#1e3a8a')
+      svg.append(plot, mark)
+      container.appendChild(svg)
+      return { view: { finalize: finalizeMock } }
+    })
+
+    const markup = await renderVegaToSvg('{"mark":"bar"}')
+    const exportedSvg = new DOMParser().parseFromString(markup ?? '', 'image/svg+xml').documentElement
+
+    expect(exportedSvg.style.backgroundColor).toBe('transparent')
+    expect(exportedSvg.getAttribute('width')).toBe('240')
+    expect(exportedSvg.getAttribute('height')).toBe('160')
+    expect(exportedSvg.querySelector('rect')?.getAttribute('fill')).toBe('#eef2ff')
+    expect(exportedSvg.querySelector('rect')?.getAttribute('stroke')).toBe('#334155')
+    expect(exportedSvg.querySelector('path')?.getAttribute('fill')).toBe('#2563eb')
+    expect(exportedSvg.querySelector('path')?.getAttribute('stroke')).toBe('#1e3a8a')
+  })
+
   it('returns null for empty, default and invalid specs', async () => {
     await expect(renderVegaToSvg('')).resolves.toBeNull()
     await expect(renderVegaToSvg('   ')).resolves.toBeNull()

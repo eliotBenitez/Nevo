@@ -4,6 +4,12 @@
     "delete": "Delete",
     "discard": "Discard changes"
   },
+  "closeGuard": {
+    "saveFailedTitle": "Couldn't save your changes",
+    "saveFailedMessage": "Nevo couldn't confirm your latest changes were saved. Closing now may lose recent edits.",
+    "closeAnyway": "Close anyway",
+    "stay": "Stay"
+  },
   "updater": {
     "availableTitle": "Version {version} available",
     "whatsNew": "What's new",
@@ -22,23 +28,26 @@
     "checking": "Checking…"
   },
   "onboarding": {
+    "noteCount": "{count} note | {count} notes",
     "welcome": {
       "title": "Welcome to",
       "brand": "Nevo",
-      "subtitle": "A quiet, local-first workspace for thinking, writing, and connecting ideas. Your notes stay on your device — always.",
+      "subtitle": "A quiet, local-first workspace for thinking, writing, and connecting ideas. Your notes stay in a folder on your device.",
       "createWorkspace": "Create a workspace",
       "createSub": "Start fresh — pick a folder, choose a template.",
       "openExisting": "Open existing",
       "openSub": "Point Nevo at any folder on disk.",
       "recent": "Recent",
-      "pages": "pages",
-      "localFirst": "Local-first · nothing leaves this device"
+      "localFirst": "Local-first · stored on this device by default",
+      "language": "Language: {language}"
     },
     "create": {
       "titlebar": "Create workspace",
       "title": "Create your workspace",
       "subtitle": "Pick a name, a colour, and where to keep it. You can rename or move it later.",
       "step": "Step {n} of {total}",
+      "next": "Next",
+      "stepsLabel": "Creation steps",
       "steps": {
         "name": "Name & icon",
         "location": "Choose location",
@@ -46,6 +55,8 @@
       },
       "sideTitle": "A space for your thinking.",
       "sideBody": "Workspaces are plain folders on disk. You can copy them, sync them with iCloud or Dropbox, and open them in any text editor.",
+      "previewLabel": "Preview",
+      "previewMeta": "{template} · local",
       "nameLabel": "Name",
       "nameHint": "Shown in the sidebar and across the app",
       "namePlaceholder": "My Workspace",
@@ -54,8 +65,12 @@
       "glyphLabel": "Glyph",
       "colourLabel": "Colour",
       "locationLabel": "Location",
-      "locationHint": "Where files live on your machine",
+      "locationHint": "Where files are stored on your device. A workspace is a plain folder: you can copy and sync it.",
       "locationBrowse": "Browse…",
+      "locationNote": {
+        "lead": "Will be created:",
+        "and": "and the service folder"
+      },
       "templateLabel": "Template",
       "templateHint": "Optional — adds a few starter pages",
       "templates": {
@@ -100,10 +115,6 @@
         "storageSubtitle": "Start locally. You can turn on sync later in settings.",
         "deviceTitle": "On this device",
         "deviceSubtitle": "Recommended · no account required",
-        "cloudTitle": "Nevo Cloud",
-        "cloudSubtitle": "Access on all your devices",
-        "signIn": "Sign in",
-        "cloudUnavailable": "Cloud sign-in is not available during mobile setup yet",
         "privacyTitle": "Your notes belong to you",
         "privacyBody": "A local workspace works offline and stays in the app's protected storage.",
         "storageInfoAction": "How does storage work?",
@@ -118,15 +129,18 @@
         "createNamed": "Create {name}",
         "createError": "Could not create the workspace. Please try again."
       },
-      "serverLabel": "Server URL",
-      "serverHint": "Base URL of your self-hosted relay",
-      "serverPlaceholder": "http://localhost:8080",
-      "serverCheck": "Test connection",
-      "serverChecking": "Checking…",
-      "serverOk": "Connected",
-      "serverFail": "Unreachable",
       "back": "Back",
-      "encryption": "Encrypted at rest",
+      "nameRequired": "Enter a workspace name",
+      "storageLocalHint": "Local: notes are stored in the folder you choose on this device.",
+      "glyphOption": "Glyph {n}",
+      "colourNames": {
+        "violet": "Violet",
+        "coral": "Coral",
+        "sage": "Sage",
+        "amber": "Amber",
+        "slate": "Slate",
+        "sky": "Sky"
+      },
       "create": "Create workspace"
     },
     "open": {
@@ -139,24 +153,146 @@
       "new": "New workspace",
       "filter": "Filter workspaces…",
       "recent": "Recent",
+      "sortName": "Name",
+      "sortBy": "Sort: {order}",
       "dropHint": "Drop a folder anywhere in this window to open it.",
       "open": "Open",
-      "pages": "pages",
       "unread": "unread",
       "dropTitle": "Drop to open as workspace",
       "moreOptions": "More options",
       "removeRecent": "Remove from recents",
       "removeRecentConfirm": "Remove \"{name}\" from recents? Files stay on disk.",
-      "deleteStorage": "Delete storage",
-      "deleteStorageConfirm": "Delete \"{name}\"? This action can't be undone.",
       "deleteFailed": "Could not delete the storage. Please try again.",
       "emptyTitle": "No recent workspaces",
       "emptySubtitle": "Select a workspace folder to open it on this device."
+    },
+    "starterNote": {
+      "title": "Getting started",
+      "intro": "This is a regular note — you can edit it, move it, or delete it. Try it right here.",
+      "callout": "Type / on an empty line to insert a task, table, database, diagram, or formula.",
+      "checklistCheck": "Check off this task",
+      "checklistLink": "Type [[ and a note name to link notes",
+      "checklistGraph": "Open the connections graph in the sidebar",
+      "closing": "You can go through this tour again anytime in Settings → General."
+    },
+    "tour": {
+      "step": "Step {n} of {total}",
+      "closeAria": "Close the tour",
+      "back": "Back",
+      "next": "Next",
+      "finish": "Finish",
+      "liveStep": "Step {n} of {total}. {title}",
+      "welcome": {
+        "eyebrow": "First tour",
+        "titleLead": "Your workspace is ready.",
+        "titleEmphasis": "Take a look around?",
+        "text": "Five short tips, about a minute. You can skip them and open this again from Settings.",
+        "listNewNote": "Notes, folders, and search",
+        "listBlocks": "Blocks and links between notes",
+        "listGraph": "The connections graph",
+        "keysHint": "Arrow keys move between steps, Esc exits.",
+        "later": "Later",
+        "start": "Start"
+      },
+      "done": {
+        "eyebrow": "Done",
+        "titleLead": "From here —",
+        "titleEmphasis": "at your own pace",
+        "text": "\"First steps\" stays on Home until you finish or hide it. You can take this tour again anytime in Settings → General.",
+        "close": "Close",
+        "openStarter": "Open \"Getting started\""
+      },
+      "steps": {
+        "newNote": {
+          "title": "New note",
+          "text": "Creates a note in the current folder. Same as Ctrl+N. Everything saves to a folder on disk by itself."
+        },
+        "tree": {
+          "title": "Pages and folders",
+          "text": "Drag to reorder or nest. Right-click to rename, move, or send to the archive."
+        },
+        "search": {
+          "title": "Search across the whole workspace",
+          "text": "Ctrl+P finds notes, folders, and settings. Opens from anywhere."
+        },
+        "starter": {
+          "title": "Try it in \"Getting started\"",
+          "text": "Type / on an empty line to insert a block, and [[ to link notes."
+        },
+        "graph": {
+          "title": "Connections show up on the graph",
+          "text": "Every link between notes becomes an edge. A note's local graph is in the right panel."
+        },
+        "mobileNotes": {
+          "title": "Notes are always at hand",
+          "text": "All of the workspace's pages and folders live here."
+        },
+        "mobileSearch": {
+          "title": "Search is always at the bottom",
+          "text": "Finds notes, folders, and workspace settings."
+        },
+        "mobileBoards": {
+          "title": "Boards nearby",
+          "text": "Open Kanban boards with one tap."
+        }
+      }
+    },
+    "firstSteps": {
+      "title": "First steps",
+      "progress": "{done} of {total}",
+      "progressAria": "{done} of {total} done",
+      "hide": "Hide \"First steps\"",
+      "items": {
+        "createWorkspace": {
+          "label": "Create a workspace"
+        },
+        "takeTour": {
+          "label": "Take the tour",
+          "hint": "About a minute"
+        },
+        "insertBlock": {
+          "label": "Insert a block via /",
+          "hint": "Tasks, a table, a database"
+        },
+        "openGraph": {
+          "label": "Open the connections graph",
+          "hint": "Links between notes"
+        },
+        "chooseAppearance": {
+          "label": "Choose a theme and accent",
+          "hint": "Settings → Appearance"
+        }
+      }
+    },
+    "hints": {
+      "gotIt": "Got it",
+      "disable": "Don't show hints",
+      "editorCanvas": {
+        "title": "A note can become a canvas",
+        "text": "Switch to \"Canvas\" to lay out blocks, shapes, and connections on an endless board. The note's text stays the same."
+      },
+      "kanbanViews": {
+        "title": "One board, three views",
+        "text": "See the same cards as a table or a calendar by date. Filters and sorting work in every view."
+      },
+      "graphFilters": {
+        "title": "Keep only the connections you need",
+        "text": "Filters show links, embeds, and mentions separately. Clicking a node focuses the graph on it."
+      },
+      "historyRestore": {
+        "title": "Restore or copy",
+        "text": "Restoring replaces the note's current text with this version. To avoid losing anything, choose \"Copy\" instead — the version opens as a separate note."
+      },
+      "canvasPresent": {
+        "title": "A canvas as a presentation",
+        "text": "Add frames, then click here to show them one after another like slides."
+      }
     }
   },
   "common": {
+    "close": "Close",
     "back": "Back",
-    "loading": "Loading...",
+    "loading": "Loading…",
     "keyboard": {
       "esc": "Esc",
       "ctrlCmdEnter": "Ctrl/Cmd + Enter"
@@ -165,7 +301,7 @@
   "workspace": {
     "back": "Workspaces",
     "localWorkspace": "Local workspace",
-    "cloudWorkspace": "Cloud storage",
+    "sidebarSubtitle": "{notes} note · locally | {notes} notes · locally",
     "canvas": {
       "document": "Document",
       "canvas": "Canvas",
@@ -293,7 +429,6 @@
       "title": "Import Notion export",
       "description": "Choose a Notion Markdown & CSV ZIP. Pages, subpages, databases, attachments and internal links are copied into a new folder.",
       "localOnly": "Available for local desktop workspaces. Existing notes are never replaced.",
-      "localOnlyShort": "Import Notion ZIP (local only)",
       "selectZip": "Select Notion ZIP…",
       "cancel": "Cancel",
       "close": "Close",
@@ -343,12 +478,19 @@
     "home": {
       "eyebrow": "Workspace home",
       "subtitle": "A quiet place to pick up your work.",
-      "search": "Search notes, folders and settings",
+      "meta": "{notes} note · {size} | {notes} notes · {size}",
+      "search": "Search",
       "searchShortcut": "Ctrl P",
       "quickActions": "Quick actions",
       "addToHome": "Add to Home",
       "removeFromHome": "Remove from Home",
-      "types": { "note": "Note", "folder": "Folder", "board": "Board", "graph": "Graph", "pluginView": "Plugin view" },
+      "types": {
+        "note": "Note",
+        "folder": "Folder",
+        "board": "Board",
+        "graph": "Graph",
+        "pluginView": "Plugin view"
+      },
       "empty": {
         "title": "Your workspace is ready",
         "subtitle": "Create the first note, then shape this Home around the work that matters.",
@@ -363,7 +505,10 @@
         "choose": "Choose favorites",
         "loadingPlugin": "Loading plugin view…"
       },
-      "recent": { "kicker": "Across your workspace", "title": "Recently updated" },
+      "recent": {
+        "kicker": "Across your workspace",
+        "title": "Recent"
+      },
       "manager": {
         "title": "Manage Home favorites",
         "subtitle": "Choose up to eight destinations and arrange them in your preferred order.",
@@ -371,7 +516,14 @@
         "library": "Available items",
         "search": "Search items…",
         "filters": "Filter item types",
-        "filter": { "all": "All", "note": "Notes", "folder": "Folders", "board": "Boards", "graph": "Graph", "pluginView": "Plugins" },
+        "filter": {
+          "all": "All",
+          "note": "Notes",
+          "folder": "Folders",
+          "board": "Boards",
+          "graph": "Graph",
+          "pluginView": "Plugins"
+        },
         "unavailable": "Unavailable — remove manually",
         "noFavorites": "No favorites yet.",
         "noResults": "No matching items.",
@@ -438,7 +590,6 @@
         "title": "More",
         "workspace": "Workspace",
         "management": "Management",
-        "cloud": "Cloud workspace",
         "onDevice": "Stored on this device",
         "import": "Import",
         "switchWorkspace": "Switch workspace"
@@ -464,6 +615,13 @@
       "sortUpdated": "Recently updated"
     },
     "rightPanel": {
+      "tabs": {
+        "label": "Context panel sections",
+        "document": "Document",
+        "links": "Links",
+        "graph": "Graph"
+      },
+      "graphHint": "See how this note connects to the rest of the workspace.",
       "outline": "Outline",
       "noHeadings": "No headings yet",
       "backlinks": "Backlinks",
@@ -477,7 +635,7 @@
         "datePlaceholder": "No date",
         "tags": "Tags",
         "addTag": "Add tag",
-        "tagsPlaceholder": "Tags...",
+        "tagsPlaceholder": "Tags…",
         "removeTag": "Remove tag {tag}",
         "types": {
           "note": "Note",
@@ -529,6 +687,16 @@
         }
       }
     },
+    "statusBar": {
+      "saved": "Saved",
+      "saving": "Saving…",
+      "unsaved": "Unsaved changes",
+      "error": "Save failed"
+    },
+    "tagsSection": {
+      "title": "Tags",
+      "showAll": "Show all tags"
+    },
     "boards": {
       "title": "Boards",
       "new": "New board",
@@ -575,7 +743,7 @@
       }
     },
     "titlePlaceholder": "Untitled",
-    "contentPlaceholder": "Write your thoughts here...",
+    "contentPlaceholder": "Write your thoughts here…",
     "linkUrlLabel": "Link URL",
     "linkPlaceholder": "https://example.com",
     "linkApply": "Apply link",
@@ -616,21 +784,37 @@
       "home": "Home",
       "graph": "Graph",
       "history": "History",
-      "trash": "Trash",
+      "trash": "Archive",
       "plugins": "Plugins",
       "settings": "Settings"
     },
+    "systemView": {
+      "backToWorkspace": "Back to workspace"
+    },
     "trash": {
-      "title": "Trash",
+      "title": "Archive",
       "description": "Restore deleted items or remove them permanently.",
-      "countLabel": "Items in trash: {count}",
-      "searchLabel": "Search trash",
-      "emptyAction": "Empty Trash",
-      "emptyTitle": "Trash is empty",
+      "countLabel": "Items in archive: {count}",
+      "searchLabel": "Search archive",
+      "emptyAction": "Empty archive",
+      "emptyTitle": "Archive is empty",
       "emptyState": "Deleted notes and folders will appear here.",
       "noResultsTitle": "Nothing found",
       "noResultsDescription": "Try another title or clear the search field.",
-      "deletedAt": "Deleted at: {date}",
+      "groups": {
+        "today": "Today",
+        "thisWeek": "This week",
+        "earlier": "Earlier"
+      },
+      "deletedAt": "Deleted {date}",
+      "purgeIn": "Permanently deleted in {days} d",
+      "from": "From: {place}",
+      "noUndoHint": "Can’t be undone",
+      "previewLabel": "Preview · read-only",
+      "previewMore": "{count} more blocks",
+      "previewUnavailable": "Preview unavailable",
+      "folderPreview": "The folder is restored with its contents.",
+      "selectPrompt": "Select an item to preview it",
       "folderType": "Folder",
       "noteType": "Note",
       "itemActions": "Actions for {title}",
@@ -638,16 +822,21 @@
       "restoreItem": "Restore {title}",
       "deletePermanently": "Delete Permanently",
       "deleteItem": "Delete {title} permanently",
-      "actionHint": "Permanent deletion cannot be undone.",
       "deletePermanentlyConfirm": "Are you sure you want to permanently delete this note? This action cannot be undone.",
-      "emptyConfirm": "Are you sure you want to empty the trash? All items will be permanently deleted."
+      "emptyConfirm": "Empty the archive? All items will be permanently deleted.",
+      "retentionDays": "Kept for {days} days, then deleted permanently.",
+      "retentionForever": "Kept until you delete them.",
+      "daysLeft": "{days} d",
+      "deletedRelative": "deleted {time}",
+      "rootFolder": "Workspace root",
+      "emptyConfirmCount": "Empty the archive? {count} items will be permanently deleted."
     },
     "titlebarSearch": {
-      "placeholder": "Search notes, blocks, settings...",
+      "placeholder": "Search",
       "rootLabel": "Workspace root",
-      "loading": "Searching note content across the workspace...",
-      "loadingShort": "Searching note content...",
-      "loadingTitle": "Searching...",
+      "loading": "Searching note content across the workspace…",
+      "loadingShort": "Searching note content…",
+      "loadingTitle": "Searching…",
       "idleTitle": "Global workspace search",
       "idleDescription": "Search notes, folders, note blocks, and settings from one field.",
       "emptyTitle": "No matches found",
@@ -663,68 +852,102 @@
       "close": "Close search"
     },
     "history": {
-      "title": "File history",
-      "description": "Review saved snapshots, compare changes, and restore a previous version.",
-      "files": "Files",
-      "filesHint": "Notes with saved snapshots",
-      "versions": "Versions",
-      "versionsHint": "Snapshots for the selected note",
-      "previewCompare": "Preview / Compare",
-      "previewCompareHint": "Inspect the snapshot or compare it with the live note",
-      "preview": "Preview",
-      "compare": "Compare",
-      "searchLabel": "Search history notes",
-      "searchPlaceholder": "Search notes...",
-      "snapshotCount": "{count} snapshots",
-      "latestSnapshotAt": "Latest {value}",
-      "noteUpdatedAt": "Note updated {value}",
-      "updatedAt": "Updated {value}",
-      "snapshotCreatedAt": "Snapshot from {value}",
-      "noSnapshotSelection": "No version selected",
-      "restore": "Restore snapshot",
-      "restoreSelectionHint": "Restoring replaces the current note with the selected snapshot.",
-      "restoreConfirm": "Restore this snapshot to the live note?",
+      "emptyWorkspace": "No note has a saved version yet.",
+      "pickerTitle": "Version history",
+      "pickerSubtitle": "Choose a note to view its saved versions.",
+      "pickerLoading": "Loading notes with saved versions…",
+      "pickerRailLabel": "Saved versions",
+      "pickerRailDescription": "Each note keeps its recent saved versions. Choose one to compare or restore a previous version.",
+      "pickerSearchLabel": "Search notes",
+      "pickerSearchPlaceholder": "Find a note by title",
+      "pickerClearSearch": "Clear search",
+      "pickerListLabel": "Notes",
+      "pickerResultCount": "{count} notes",
+      "pickerNoSearchResults": "No notes match your search.",
+      "pickerEmptyTitle": "No saved versions yet",
+      "pickerEmpty": "No notes have saved versions yet.",
+      "pickerErrorTitle": "History could not be loaded",
+      "pickerError": "Could not load notes with saved versions.",
+      "pickerVersionCount": "{count} versions",
+      "backToHistoryList": "Back to history list",
+      "saveBeforeHistoryError": "Could not save the note. History was not opened. Try again.",
+      "currentNoteError": "Could not load the current note for comparison.",
+      "subtitle": "Version history",
+      "copy": "Copy version",
+      "copyShort": "Copy",
+      "copying": "Copying…",
+      "copyTitle": "{title} — copy",
+      "copyErrorGeneric": "Failed to copy this version.",
+      "copyErrorWithMessage": "Failed to copy this version: {message}",
+      "restore": "Restore this version",
+      "restoreShort": "Restore",
+      "restoreConfirm": "Restore this version to the live note?",
       "restoring": "Restoring…",
-      "coverValue": "Cover: {value}",
-      "snapshotVersion": "Snapshot",
-      "currentVersion": "Current note",
+      "restoreErrorGeneric": "Failed to restore this version.",
+      "restoreErrorWithMessage": "Failed to restore this version: {message}",
+      "timeline": {
+        "versions": "Versions",
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "comparingWithCurrent": "Comparing with the current note",
+        "footnote": "Versions live in this workspace's data folder. Retention keeps the last {count} snapshots per note — change it in Settings → Files.",
+        "empty": "This note has no saved versions yet.",
+        "loading": "Loading versions…",
+        "error": "Failed to load versions."
+      },
+      "tabs": {
+        "inline": "Changes",
+        "sideBySide": "Side by side",
+        "asNote": "As note"
+      },
+      "diffStat": {
+        "added": "{count} added",
+        "removed": "{count} removed",
+        "changed": "{count} changed",
+        "totalBlocks": "{count} blocks total"
+      },
+      "row": {
+        "added": "added",
+        "removed": "removed",
+        "changed": "changed"
+      },
       "fields": {
         "title": "Title",
         "icon": "Icon",
-        "cover": "Cover"
+        "cover": "Cover",
+        "propertiesType": "Type",
+        "propertiesTags": "Tags",
+        "propertiesDate": "Date",
+        "propertiesStatus": "Status",
+        "canvas": "Canvas"
       },
-      "rowKinds": {
-        "added": "Added",
-        "removed": "Removed",
-        "changed": "Changed"
+      "canvasSummary": "{elements} elements, {connectors} connectors",
+      "canvasNone": "No canvas",
+      "canvasLayoutChanged": "layout changed",
+      "change": {
+        "marks": "Formatting changed",
+        "type": "Block type changed: {from} → {to}",
+        "attrs": "Settings changed: {attrs}",
+        "structure": "Nested content changed"
       },
-      "states": {
-        "loadingFilesTitle": "Loading history",
-        "loadingFiles": "Loading note history…",
-        "noFilesTitle": "No history yet",
-        "noFiles": "No live notes with history yet.",
-        "noSearchResultsTitle": "No matches",
-        "noSearchResults": "No notes match that search.",
-        "noFileSelectedTitle": "Choose a note",
-        "noFileSelected": "Select a note to browse its history.",
-        "noSnapshotsTitle": "No versions",
-        "noSnapshots": "This note has no snapshots.",
-        "noSnapshotSelectedTitle": "Choose a version",
-        "noSnapshotSelected": "Select a version to preview it.",
-        "loadingPreviewTitle": "Loading snapshot",
-        "loadingPreview": "Loading snapshot…",
-        "emptySnapshotTitle": "Empty snapshot",
-        "emptySnapshot": "This snapshot is empty.",
-        "noDiffTitle": "No differences",
-        "noDiff": "No visible differences between the current note and this snapshot."
+      "preview": {
+        "unsupported": "{type} block — preview not available",
+        "externalImage": "External image (not loaded)",
+        "checklistItem": "Checklist item"
       },
-      "errors": {
-        "noWorkspace": "Open a workspace to browse history.",
-        "loadFiles": "Failed to load note history.",
-        "loadSnapshot": "Failed to load this snapshot.",
-        "loadCurrent": "Failed to load the current note for comparison.",
-        "restore": "Failed to restore this snapshot."
-      }
+      "snapshotColumn": "Version",
+      "currentColumn": "Current",
+      "noSnapshotSelected": "Select a version to compare it with the current note.",
+      "noDiff": "No differences between the current note and this version.",
+      "emptySnapshot": "This version is empty.",
+      "loadingSnapshot": "Loading version…",
+      "errorLoadingSnapshot": "Failed to load this version.",
+      "restoreWarning": "Restored. Some cleanup did not finish and will be retried when the workspace reopens.",
+      "restoreSucceeded": "Version restored. The previous state was saved as a version.",
+      "copyRollbackFailed": "Failed to copy this version. An incomplete copy remains: {noteId}",
+      "recoveryBadge": "Before restore",
+      "retry": "Retry",
+      "restoreConfirmAt": "Restore the version from {time}? The current note will be saved as a version first."
     },
     "status": {
       "saved": "Saved",
@@ -758,6 +981,13 @@
       "insertBelow": "Insert block below",
       "copyRef": "Copy block ref",
       "delete": "Delete"
+    },
+    "legacyMigration": {
+      "noticeTitle": "Legacy note data migration",
+      "noticeMessage": "Migrated {migrated} notes to the new format. Skipped {skipped}, failed {failed} — see the app log for details."
+    },
+    "errors": {
+      "schemaTooNew": "This workspace was created by a newer version of Nevo. Update Nevo to open it."
     }
   },
   "templates": {
@@ -765,7 +995,7 @@
     "createTitle": "New note from template",
     "insertTitle": "Insert template",
     "subtitle": "Choose a preset or workspace template, then fill any fields.",
-    "search": "Search templates...",
+    "search": "Search templates…",
     "newTemplate": "New template",
     "builtIn": "Built-in",
     "empty": "No templates found.",
@@ -786,7 +1016,7 @@
     "icon": "Icon",
     "description": "Description",
     "content": "Content",
-    "contentPlaceholder": "Write template content...",
+    "contentPlaceholder": "Write template content…",
     "fields": "Fields",
     "addField": "Add field",
     "fieldLabel": "Label",
@@ -850,7 +1080,7 @@
     },
     "search": {
       "label": "Search settings",
-      "placeholder": "Search settings...",
+      "placeholder": "Search settings…",
       "resultsTitle": "Results for \"{query}\"",
       "resultsCount": "{count} settings matched across the catalog.",
       "openResult": "Open {title} in {section}",
@@ -859,7 +1089,6 @@
     },
     "common": {
       "desktop": "desktop",
-
       "resetToDefaults": "Reset to defaults",
       "on": "On",
       "off": "Off",
@@ -883,6 +1112,8 @@
         "mono": "Mono"
       },
       "accent": {
+        "mineral": "Mineral",
+        "azure": "Azure",
         "violet": "Quiet Violet",
         "ember": "Ember",
         "sage": "Sage",
@@ -937,6 +1168,11 @@
         "smart": "Smart",
         "plain-text": "Plain text"
       },
+      "slashMenuLayout": {
+        "list": "List",
+        "grid": "Tiles",
+        "preview": "Previews"
+      },
       "editorStats": {
         "off": "Off",
         "corner": "Corner"
@@ -951,44 +1187,15 @@
         "thin": "Thin",
         "system": "System"
       },
-      "focusRingStyle": {
-        "accent": "Accent",
-        "high-contrast": "High contrast"
-      },
-      "windowChromeStyle": {
-        "default": "Default",
-        "immersive": "Immersive",
-        "minimal": "Minimal"
-      },
       "roundness": {
         "sharp": "Sharp",
         "default": "Default",
         "soft": "Soft"
       },
-      "backgroundScene": {
-        "aurora": "Aurora",
-        "paper": "Paper",
-        "studio": "Studio",
-        "plain": "Plain"
-      },
-      "surfaceStyle": {
-        "glass": "Glass",
-        "solid": "Solid",
-        "tinted": "Tinted"
-      },
       "contrastMode": {
         "soft": "Soft",
         "balanced": "Balanced",
         "high": "High"
-      },
-      "sidebarStyle": {
-        "floating": "Floating",
-        "solid": "Solid",
-        "minimal": "Minimal"
-      },
-      "sidebarContentMode": {
-        "tree": "Tree",
-        "tag-preview": "Tags & previews"
       },
       "sidebarLayout": {
         "docked": "Docked",
@@ -1057,7 +1264,8 @@
       "description": "Workspace defaults and everyday behaviour.",
       "groups": {
         "application": "Application",
-        "startup": "Startup"
+        "startup": "Startup",
+        "onboarding": "Onboarding"
       },
       "language": {
         "title": "Application language",
@@ -1070,7 +1278,7 @@
       "startupNote": {
         "title": "Startup document",
         "description": "Select the document to open when launching the application",
-        "placeholder": "Choose a document..."
+        "placeholder": "Choose a document…"
       },
       "restoreLastContext": {
         "title": "Restore last context",
@@ -1080,6 +1288,19 @@
         "title": "Delete confirmations",
         "description": "Require a confirmation prompt for destructive actions",
         "panelDescription": "Require a prompt before destructive tree actions"
+      },
+      "productTour": {
+        "title": "Interface tour",
+        "description": "Five short tips, about a minute",
+        "takeAgain": "Take again"
+      },
+      "firstStepsOnHome": {
+        "title": "\"First steps\" on Home",
+        "description": "Hides itself after 5 of 5"
+      },
+      "firstUseHints": {
+        "title": "First-use hints",
+        "description": "Canvas, boards, graph, history"
       }
     },
     "appearance": {
@@ -1115,29 +1336,9 @@
         "title": "Scrollbars",
         "description": "How scrollbars appear across the app"
       },
-      "focusRingStyle": {
-        "title": "Focus ring",
-        "description": "Keyboard focus indicator style"
-      },
-      "windowChromeStyle": {
-        "title": "Window chrome",
-        "description": "Titlebar and surface presentation style"
-      },
-      "backgroundScene": {
-        "title": "Background scene",
-        "description": "Ambient backdrop for this workspace"
-      },
-      "surfaceStyle": {
-        "title": "Surface style",
-        "description": "How glassy or solid UI panels appear"
-      },
       "contrastMode": {
         "title": "Contrast",
         "description": "Panel and text separation strength"
-      },
-      "sidebarStyle": {
-        "title": "Sidebar style",
-        "description": "Visual weight of navigation chrome"
       },
       "editorFont": {
         "title": "Editor font",
@@ -1146,10 +1347,6 @@
       "interfaceZoom": {
         "title": "Interface zoom",
         "description": "Scale the entire app interface up or down"
-      },
-      "reduceTransparency": {
-        "title": "Reduce transparency",
-        "description": "Turn off background blur on panels for clarity and performance"
       },
       "interfaceRoundness": {
         "title": "Corner roundness",
@@ -1229,6 +1426,10 @@
         "title": "Paste behaviour",
         "description": "Smart: preserve rich formatting. Plain text: strip formatting, keep line breaks"
       },
+      "slashMenuLayout": {
+        "title": "Slash menu view",
+        "description": "A detailed list, keycap tiles, or block previews"
+      },
       "slashMenuHints": {
         "title": "Slash menu hints",
         "description": "Show category and shortcut hints inside the slash command menu"
@@ -1251,7 +1452,6 @@
       },
       "groups": {
         "identity": "Identity",
-        "sidebarMode": "Sidebar mode",
         "sidebarLayout": "Sidebar placement",
         "navigation": "Navigation",
         "structure": "Structure",
@@ -1267,12 +1467,6 @@
         "glyphLabel": "Choose glyph",
         "glyphPickerTitle": "Workspace glyph",
         "save": "Save identity"
-      },
-      "sidebarContentMode": {
-        "title": "Sidebar content",
-        "description": "Choose the familiar tree or a tag-driven note preview feed.",
-        "treeDescription": "Folders and notes stay in the classic tree.",
-        "tagPreviewDescription": "Tags on the left, matching note previews on the right."
       },
       "sidebarLayout": {
         "title": "Sidebar placement",
@@ -1566,7 +1760,10 @@
     },
     "mcp": {
       "description": "Let external coding agents read and edit this workspace through the local MCP bridge.",
-      "groups": { "access": "Access", "connect": "Connect an agent" },
+      "groups": {
+        "access": "Access",
+        "connect": "Connect an agent"
+      },
       "modes": {
         "off": "Off",
         "readOnly": "Read only",
@@ -1589,10 +1786,28 @@
         "unsupported": "Available for local workspaces only."
       },
       "connect": {
-        "title": "Register the MCP server",
-        "description": "Build the server with pnpm --filter {'@'}nevo/mcp-server build, then register it with your agent using the absolute path to dist/index.js. No port or token goes in the config.",
-        "copy": "Copy command",
-        "copied": "Copied"
+        "title": "Connect a local agent",
+        "description": "Register Nevo in your installed agent. Connection does not enable workspace access; choose an access mode above when you're ready."
+      },
+      "agents": {
+        "codex": "Codex",
+        "claudeCode": "Claude Code",
+        "desktopOnly": "Available in the desktop app only.",
+        "loading": "Checking connection…",
+        "connect": "Connect",
+        "reconnect": "Reconnect",
+        "disconnect": "Disconnect",
+        "confirmReplace": "Replace existing entry?",
+        "replace": "Replace entry",
+        "cancel": "Cancel",
+        "restartHint": "Restart the agent to apply this change.",
+        "status": {
+          "notConfigured": "Not connected",
+          "connected": "Connected",
+          "needsReconnect": "Needs reconnection",
+          "conflict": "Another Nevo entry exists",
+          "error": "Could not check connection"
+        }
       }
     },
     "hotkeys": {
@@ -1602,7 +1817,7 @@
       "editable": "Editable",
       "conflictSummary": "Conflicts",
       "searchLabel": "Search shortcuts",
-      "searchPlaceholder": "Search shortcuts...",
+      "searchPlaceholder": "Search shortcuts…",
       "matches": "{count} matches",
       "conflicts": "Conflicts with {count} binding(s)",
       "pressKeys": "Press keys…",
@@ -1638,6 +1853,8 @@
         "bulletList": "Bullet list",
         "blockquote": "Quote",
         "inlineMath": "Inline math",
+        "findInNote": "Find in note",
+        "replaceInNote": "Find & replace",
         "newNote": "Create note",
         "newFolder": "Create folder",
         "saveNote": "Save note",
@@ -1646,7 +1863,7 @@
         "toggleRightPanel": "Toggle right panel",
         "openGraph": "Open graph",
         "openHistory": "Open history",
-        "openTrash": "Open trash",
+        "openTrash": "Open archive",
         "openSettings": "Open settings"
       }
     },
@@ -1672,8 +1889,8 @@
         "pruneNow": "Prune now"
       },
       "trashRetention": {
-        "title": "Trash retention",
-        "description": "How long to keep deleted notes before permanent deletion",
+        "title": "Archive retention",
+        "description": "How many days to keep deleted items before deleting them permanently",
         "7days": "7 days",
         "30days": "30 days",
         "90days": "90 days",
@@ -1840,6 +2057,12 @@
         "actions": "Actions"
       }
     },
+    "assets": {
+      "tooLarge": "\"{fileName}\" is larger than the {limit} limit and was not added"
+    },
+    "embeds": {
+      "sourceTooLarge": "This block's source is too large to render — shorten it to keep editing"
+    },
     "mermaid": {
       "label": "Mermaid diagram",
       "placeholder": "graph TD\n  A --> B",
@@ -1938,7 +2161,7 @@
         "transparent": "Transparent background",
         "button": "Export",
         "errorSelectionEmpty": "Nothing selected!",
-        "exporting": "Exporting..."
+        "exporting": "Exporting…"
       },
       "props": {
         "stroke": "Stroke",
@@ -2028,6 +2251,37 @@
       "placeholder": "Describe what you want…",
       "confirm": "Generate",
       "cancel": "Cancel"
+    },
+    "findBar": {
+      "ariaLabel": "Find and replace",
+      "findPlaceholder": "Find",
+      "replacePlaceholder": "Replace",
+      "matchCase": "Match case",
+      "wholeWord": "Whole word",
+      "useRegex": "Use regular expression",
+      "previous": "Previous match",
+      "next": "Next match",
+      "close": "Close",
+      "toggleReplace": "Toggle replace",
+      "replace": "Replace",
+      "replaceAll": "Replace all",
+      "noResults": "No results",
+      "invalidRegex": "Invalid regex",
+      "unsafeRegex": "This pattern is too expensive to run safely — simplify it",
+      "regexTimedOut": "Search took too long and was stopped — try a simpler pattern",
+      "counter": "{current} / {total}",
+      "tooMany": "{limit}+",
+      "menuItem": "Find in note"
+    },
+    "yjsRecovery": {
+      "degradedTitle": "Part of this note can't be displayed",
+      "degradedMessage": "Part of this note uses content this version cannot read. It is shown as plain text and won't be saved over until this is fixed."
+    },
+    "menu": {
+      "copy": "Copy",
+      "cut": "Cut",
+      "paste": "Paste",
+      "delete": "Delete"
     }
   },
   "version": "v{version} · Tauri",
@@ -2144,6 +2398,23 @@
     "play": "Play",
     "pause": "Pause"
   },
+  "voiceRecording": {
+    "recording": "Recording",
+    "saving": "Saving…",
+    "stop": "Stop",
+    "cancel": "Cancel",
+    "fileLabel": "Recording",
+    "savedNotInserted": "The recording was saved to workspace assets but could not be inserted into the note.",
+    "errors": {
+      "permissionDenied": "Microphone access denied. Allow it in system settings and try again.",
+      "noDevice": "No microphone found.",
+      "alreadyRecording": "A recording is already in progress.",
+      "startFailed": "Could not start recording.",
+      "stopFailed": "Could not stop recording.",
+      "saveFailed": "The recording could not be saved. The audio file was kept in the app cache.",
+      "unsupported": "Voice recording is not available on this device yet."
+    }
+  },
   "slashMenu": {
     "categories": {
       "text": "Text",
@@ -2171,6 +2442,7 @@
       "image": "Image",
       "video": "Video",
       "audio": "Audio",
+      "voice_recording": "Voice recording",
       "file": "File Attachment",
       "table": "Table",
       "mermaid": "Mermaid Diagram",
@@ -2197,7 +2469,7 @@
     "remove": "Remove",
     "noNoteSelected": "No note selected",
     "untitled": "(untitled)",
-    "searchPlaceholder": "Search notes...",
+    "searchPlaceholder": "Search notes…",
     "noNotesFound": "No notes found"
   },
   "embed": {
@@ -2398,8 +2670,10 @@
       "clear": "Clear",
       "save": "Save",
       "saving": "Saving…",
+      "saved": "Saved",
       "retry": "Try again",
-      "delete": "Delete"
+      "delete": "Delete",
+      "moreActions": "More actions"
     },
     "defaultTags": {
       "fieldName": "Tags",
@@ -2482,6 +2756,7 @@
       "createdAt": "Created",
       "updatedAt": "Last edited",
       "saveHint": "Ctrl/Cmd + Enter to save",
+      "saveFailed": "Could not save changes.",
       "progress": "Progress",
       "progressTasks": "{done} / {total} tasks ({pct}%)",
       "progressNoTasks": "No tasks",
@@ -2703,53 +2978,6 @@
       "openFooter": "Open full view ↗"
     }
   },
-  "cloud": {
-    "signIn": {
-      "title": "Sign in to Nevo",
-      "subtitle": "Sign in to create and join shared storages with your team. Your personal workspaces stay local.",
-      "google": "Continue with Google",
-      "github": "Continue with GitHub",
-      "serverLabel": "Server URL",
-      "authenticating": "Waiting for browser…",
-      "back": "Back"
-    },
-    "account": {
-      "signedInAs": "Signed in as {name}",
-      "signOut": "Sign out",
-      "signIn": "Sign in"
-    },
-    "storages": {
-      "title": "Shared storages",
-      "empty": "No shared storages yet. Create one to collaborate with your team.",
-      "create": "New shared storage",
-      "namePlaceholder": "Storage name",
-      "createAction": "Create",
-      "open": "Open",
-      "documents": "{n} documents"
-    },
-    "roles": {
-      "owner": "Owner",
-      "admin": "Admin",
-      "editor": "Editor",
-      "viewer": "Viewer"
-    },
-    "members": {
-      "title": "Members",
-      "you": "You",
-      "pending": "Pending key",
-      "approve": "Grant access",
-      "remove": "Remove",
-      "invite": "Invite",
-      "invitePlaceholder": "email{'@'}example.com",
-      "inviteAction": "Send invite",
-      "pendingInvites": "Pending invitations",
-      "approveHint": "This member is waiting for the encryption key. Grant access to let them in."
-    },
-    "errors": {
-      "noKey": "You don't have the key for this storage yet — ask an owner or admin to grant access.",
-      "generic": "Something went wrong. Please try again."
-    }
-  },
   "workspaceTransfer": {
     "panelTitle": "Backup & Restore",
     "panelDescription": "Export this workspace to a single file, or restore one from an archive.",
@@ -2809,6 +3037,7 @@
       "passwordRequired": "This archive is password-protected. Enter the password to continue.",
       "notNevoArchive": "The selected file is not a valid Nevo workspace archive.",
       "unsupportedVersion": "This archive was created by an incompatible app version.",
+      "workspaceSchemaTooNew": "This archive was created by a newer version of Nevo. Update Nevo to import it.",
       "destinationNotEmpty": "Choose an empty folder for the new workspace.",
       "localOnly": "This action is only available for local workspaces."
     }
@@ -2820,5 +3049,19 @@
       "allow": "Allow",
       "deny": "Deny"
     }
+  },
+  "app": { "notebook": { "createTitle": "Create notebook", "titleLabel": "Title", "paperLabel": "Paper", "create": "Create notebook", "cancel": "Cancel", "createError": "Could not create notebook.", "readOnlyTitle": "Notebook cannot be edited", "readOnlyDescription": "This notebook format or its data cannot be safely edited in this version of Nevo.", "exportJson": "Export notebook JSON", "exportJsonError": "Could not export notebook JSON.", "exportingJson": "Exporting notebook…", "unsupportedTextExport": "This notebook format cannot be exported as a text document.", "loadErrorTitle": "Notebook couldn't be opened", "loadErrorDescription": "The notebook data could not be read safely. Export the source file to recover it." } },
+  "notebook": {
+    "toolbar": "Notebook tools", "title": "Notebook title", "readOnlyTitle": "This notebook is read-only", "readOnlyDescription": "Its format or data cannot be edited safely by this version of Nevo.", "exportPaper": "Include paper", "exportSource": "Export notebook source…",
+    "selection": {"label": "Selection", "count": "Selected: {count}", "scale": "Scale", "rotate": "Rotate", "move": "Move selection", "copy": "Copy selection", "color": "Selection color", "clear": "Clear selection", "flipHorizontal": "Flip horizontally", "flipVertical": "Flip vertically", "handleHint": "Drag to transform. Arrow keys adjust; Shift snaps rotation to 15 degrees. Escape cancels the drag.", "align": {"label": "Align", "left": "Align left", "center": "Align center", "right": "Align right", "top": "Align top", "middle": "Align middle", "bottom": "Align bottom", "distributeHorizontal": "Distribute horizontally", "distributeVertical": "Distribute vertically", "distributeHint": "Select at least 3 items"}},
+    "tools": { "label": "Drawing tools", "pen": "Pen", "marker": "Highlighter", "eraser": "Eraser", "lasso": "Lasso select", "laser": "Laser pointer", "arrow": "Arrow", "line": "Line", "shapes": "Shapes", "rectangle": "Rectangle", "ellipse": "Ellipse", "circle": "Circle", "triangle": "Triangle", "move": "Move selection", "hand": "Hand tool", "color": "Ink color", "width": "Tool size", "lineStyle": "Line style", "lineSolid": "Solid", "lineDashed": "Dashed", "lineDotted": "Dotted", "eraserMode": "Eraser mode", "eraserPartial": "Erase part of a stroke", "eraserStroke": "Erase whole stroke", "image": "Insert image" },
+    "ruler": {"label": "Ruler", "move": "Move ruler", "rotate": "Rotate ruler", "moveHint": "Drag to move. Arrow keys move; Shift moves faster.", "rotateHint": "Drag to rotate. Arrow keys rotate; Shift snaps to 15 degrees. Home resets the angle."},
+    "paper": { "label": "Page paper", "plain": "Plain paper", "grid": "Grid", "ruled": "Ruled" },
+    "pages": { "label": "Pages", "open": "Open page list", "close": "Close page list", "add": "Add page", "order": "Notebook page order", "pageSummary": "Page {page}, {marks} marks", "accessibleSummary": "Page {page}, {marks} marks, {paper} paper", "actions": "Actions for page {page}", "moveUp": "Move page up", "moveDown": "Move page down", "duplicate": "Duplicate page", "remove": "Delete page", "ghost": "New page — start writing to add it" },
+    "undo": "Undo", "redo": "Redo", "zoomIn": "Zoom in", "zoomOut": "Zoom out", "export": "Export PDF",
+    "saveStatus": { "saved": "Saved", "saving": "Saving…", "unsaved": "Unsaved changes", "error": "Save failed" },
+    "errors": { "pageLimit": "The notebook has reached the page limit.", "objectLimit": "The notebook has reached the mark limit.", "pointLimit": "The notebook has reached the ink detail limit.", "serializedLimit": "The notebook has reached its storage limit.", "unsupported": "This notebook format cannot be edited by this version.", "invalid": "Notebook data could not be safely opened for editing.", "export": "The PDF could not be exported.", "imageType": "Only PNG, JPEG, WebP, and GIF images are supported.", "imageImport": "Could not insert the image." },
+    "deletePage": { "title": "Delete this page?", "message": "This page contains ink. You can restore it with Undo.", "confirm": "Delete page", "cancel": "Keep page" },
+    "palette": {"open": "Color palette", "builtin": "Palette", "custom": "My colors", "recent": "Recent", "addCurrent": "Add current color", "edit": "Edit", "done": "Done", "remove": "Remove color {color}", "quick": "Quick color choice", "colors": {"black": "Black", "graphite": "Graphite", "blue": "Blue", "sky": "Sky blue", "red": "Red", "orange": "Orange", "yellow": "Yellow", "green": "Green", "teal": "Teal", "purple": "Purple", "pink": "Pink", "brown": "Brown"}}
   }
 }

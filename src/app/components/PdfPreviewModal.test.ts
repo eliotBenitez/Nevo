@@ -132,8 +132,18 @@ describe('PdfPreviewModal', () => {
     await flushPdfModal()
 
     expect(wrapper.text()).toContain('Failed to generate PDF preview.')
-    await wrapper.find('.pdf-backdrop').trigger('keydown', { key: 'Escape' })
+    await wrapper.find('.nv-modal__panel').trigger('keydown', { key: 'Escape' })
 
     expect(wrapper.emitted('close')).toBeTruthy()
+  })
+
+  it('renders font family select with matching hover background token', async () => {
+    const wrapper = mountModal()
+    await flushPdfModal()
+
+    const select = wrapper.find('.pdf-select')
+    expect(select.exists()).toBe(true)
+    expect(select.classes()).toContain('tw:bg-(--hover)')
+    expect(select.classes()).not.toContain('tw:bg-(--input-bg)')
   })
 })

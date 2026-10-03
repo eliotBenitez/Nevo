@@ -62,3 +62,5 @@ Nevo.html
 
 dist-android
 fix
+# Local visual-QA sessions, profiles and screenshots (tools/visual-qa)
+.qa/

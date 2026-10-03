@@ -4,11 +4,8 @@
    Imported in cascade order; note-embed-picker.css stays last as it carries the
    global overlay z-index override that must win the cascade. */
 @import './editor/editor-pane.css';
-@import './editor/doc-appearance.css';
-@import './editor/editor-block-controls.css';
-@import './editor/editor-collab-panel.css';
-@import './editor/editor-toolbars.css';
-@import './editor/editor-link.css';
 @import './editor/editor-popups.css';
+@import './editor/editor-find.css';
 @import './editor/editor-menus.css';
+@import './editor/slash-menu-tiles.css';
 @import './editor/note-embed-picker.css';

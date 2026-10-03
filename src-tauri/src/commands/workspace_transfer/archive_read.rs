@@ -3,6 +3,8 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
+use serde::de::{IgnoredAny, MapAccess, Visitor};
+use serde::{Deserialize, Deserializer};
 use zip::read::ZipFile;
 use zip::result::ZipError;
 use zip::ZipArchive;
@@ -126,6 +128,142 @@ pub(super) fn read_archive_header(
     validate_header(&bytes)
 }
 
+#[derive(Default)]
+struct NoteFormatMarkers {
+    is_notebook: bool,
+    has_notebook_data: bool,
+}
+
+impl<'de> Deserialize<'de> for NoteFormatMarkers {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct MarkerVisitor;
+
+        impl<'de> Visitor<'de> for MarkerVisitor {
+            type Value = NoteFormatMarkers;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("a note object")
+            }
+
+            fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
+            where
+                M: MapAccess<'de>,
+            {
+                let mut markers = NoteFormatMarkers::default();
+                while let Some(key) = map.next_key::<String>()? {
+                    match key.as_str() {
+                        "documentKind" => {
+                            let value = map.next_value::<serde_json::Value>()?;
+                            markers.is_notebook |= value.as_str() == Some("notebook");
+                        }
+                        "notebook" => {
+                            map.next_value::<IgnoredAny>()?;
+                            markers.has_notebook_data = true;
+                        }
+                        _ => {
+                            map.next_value::<IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(markers)
+            }
+        }
+
+        deserializer.deserialize_map(MarkerVisitor)
+    }
+}
+
+/// Checks the archive's persisted format gate before extraction writes anything.
+/// The streaming note scan ignores unknown note fields and never rewrites their
+/// payloads, while still finding notebook markers in every archived note file.
+fn validate_archive_workspace(
+    archive: &mut ZipArchive<File>,
+    password: Option<&str>,
+    header: &ExportHeader,
+) -> Result<(), String> {
+    let mut embedded_schema = None;
+    let mut found_manifest = false;
+
+    for index in 0..archive.len() {
+        let entry_info = {
+            let entry = archive
+                .by_index_raw(index)
+                .map_err(|error| error.to_string())?;
+            if entry.is_dir() {
+                None
+            } else {
+                Some((normalized_entry_path(&entry)?, is_symlink(&entry)))
+            }
+        };
+        let Some((path, symlink)) = entry_info else {
+            continue;
+        };
+
+        if path == ".nevo/workspace.json" {
+            if symlink || found_manifest {
+                return Err("Archive contains an invalid workspace manifest entry".to_string());
+            }
+            found_manifest = true;
+            let bytes = read_entry_bytes_by_index(archive, index, password)?;
+            let manifest: serde_json::Value = serde_json::from_slice(&bytes)
+                .map_err(|_| "Embedded workspace manifest is invalid".to_string())?;
+            embedded_schema = manifest
+                .get("schemaVersion")
+                .and_then(serde_json::Value::as_u64)
+                .and_then(|version| u32::try_from(version).ok());
+        } else if path.starts_with("notes/") && path.ends_with(".nevo") {
+            if symlink {
+                return Err(format!("Archive contains a symbolic link: {path}"));
+            }
+            if header.workspace.schema_version < 2 {
+                let Some(markers) = read_note_format_markers(archive, index, password)? else {
+                    continue;
+                };
+                if markers.is_notebook || markers.has_notebook_data {
+                    return Err(
+                        "Notebook data requires workspace schema version 2 or newer".to_string()
+                    );
+                }
+            }
+        }
+    }
+
+    if !found_manifest {
+        return Err("Archive is missing its workspace manifest".to_string());
+    }
+    if embedded_schema != Some(header.workspace.schema_version) {
+        return Err("Archive workspace schema does not match its embedded manifest".to_string());
+    }
+    Ok(())
+}
+
+fn read_note_format_markers(
+    archive: &mut ZipArchive<File>,
+    index: usize,
+    password: Option<&str>,
+) -> Result<Option<NoteFormatMarkers>, String> {
+    let result = match password {
+        Some(password) => archive.by_index_decrypt(index, password.as_bytes()),
+        None => archive.by_index(index),
+    };
+    let entry = match result {
+        Ok(entry) => entry,
+        Err(ZipError::InvalidPassword) => return Err("Incorrect archive password".to_string()),
+        Err(ZipError::UnsupportedArchive(ZipError::PASSWORD_REQUIRED)) => {
+            return Err("This archive is password-protected; a password is required".to_string())
+        }
+        Err(error) => return Err(error.to_string()),
+    };
+    match serde_json::from_reader(entry) {
+        Ok(markers) => Ok(Some(markers)),
+        Err(error) if error.is_io() => Err(error.to_string()),
+        Err(_) => Ok(None),
+    }
+}
+
 /// Extracts every entry of a `.nevoz` archive into `dest`. The header entry
 /// is read and validated first so a bad file / password / version is
 /// reported before any file is written. Every write goes through
@@ -148,6 +286,7 @@ pub(super) fn extract_archive(
 
     let header_bytes = read_entry_bytes_by_name(&mut archive, NEVO_EXPORT_HEADER, password)?;
     let header = validate_header(&header_bytes)?;
+    validate_archive_workspace(&mut archive, password, &header)?;
 
     let total = archive.len() as u64;
     let _ = progress.send(TransferProgress::Extracting { done: 0, total });

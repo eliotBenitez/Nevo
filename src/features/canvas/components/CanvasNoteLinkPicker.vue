@@ -35,129 +35,49 @@ watch(() => props.open, (open) => {
 <template>
   <div
     v-if="open"
-    class="canvas-note-picker"
+    class="canvas-note-picker tw:absolute tw:z-50 tw:top-[72px] tw:left-1/2 tw:w-[min(420px,calc(100%-32px))] tw:max-h-[min(520px,calc(100%-100px))] tw:overflow-hidden tw:rounded-2xl tw:border tw:border-solid tw:border-(--border-subtle) tw:bg-surface-canvas tw:p-3 tw:shadow-(--shadow-3) tw:-translate-x-1/2"
     role="dialog"
     aria-modal="true"
     :aria-label="title"
     @keydown.esc="$emit('close')"
     @pointerdown.stop
   >
-    <header>
+    <header class="tw:flex tw:items-center tw:justify-between tw:mb-2.5">
       <strong>{{ title }}</strong>
-      <button type="button" :aria-label="closeLabel" @click="$emit('close')"><X :size="17" /></button>
+      <button
+        type="button"
+        class="tw:grid tw:size-8 tw:place-items-center tw:p-0 tw:border-0 tw:rounded-[8px] tw:text-content-secondary tw:bg-transparent"
+        :aria-label="closeLabel"
+        @click="$emit('close')"
+      ><X :size="17" /></button>
     </header>
-    <label>
+    <label class="tw:flex tw:items-center tw:gap-2 tw:px-2.5 tw:border tw:border-solid tw:border-(--border-subtle) tw:rounded-[10px]">
       <Search :size="15" />
-      <input ref="input" v-model="query" type="search" :placeholder="searchLabel" @keydown.esc="$emit('close')">
+      <input
+        ref="input"
+        v-model="query"
+        type="search"
+        class="tw:w-full tw:h-[38px] tw:border-0 tw:text-content-primary tw:bg-transparent tw:outline-none"
+        :placeholder="searchLabel"
+        @keydown.esc="$emit('close')"
+      >
     </label>
-    <div class="canvas-note-picker__list" role="listbox">
+    <div class="canvas-note-picker__list tw:grid tw:gap-1 tw:max-h-[380px] tw:mt-2 tw:overflow-y-auto" role="listbox">
       <button
         v-for="note in filtered"
         :key="note.id"
         type="button"
         role="option"
+        class="tw:grid tw:grid-cols-[28px_1fr] tw:gap-2 tw:min-h-[54px] tw:p-2 tw:border-0 tw:rounded-[10px] tw:text-content-primary tw:text-left tw:bg-transparent tw:hover:bg-(--hover-bg) tw:hover:outline-none tw:focus-visible:bg-(--hover-bg) tw:focus-visible:outline-none"
         @click="$emit('select', note)"
       >
         <span>{{ note.icon || '📄' }}</span>
-        <span>
+        <span class="tw:grid tw:min-w-0">
           <strong>{{ note.title }}</strong>
-          <small>{{ note.id }}</small>
+          <small class="tw:overflow-hidden tw:text-content-secondary tw:text-ellipsis">{{ note.id }}</small>
         </span>
       </button>
       <p v-if="filtered.length === 0">{{ emptyLabel }}</p>
     </div>
   </div>
 </template>
-
-<style scoped>
-.canvas-note-picker {
-  position: absolute;
-  z-index: 50;
-  top: 72px;
-  left: 50%;
-  width: min(420px, calc(100% - 32px));
-  max-height: min(520px, calc(100% - 100px));
-  padding: 12px;
-  overflow: hidden;
-  border: 1px solid var(--border-subtle);
-  border-radius: 16px;
-  background: var(--canvas-1);
-  box-shadow: var(--shadow-3);
-  transform: translateX(-50%);
-}
-
-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-header button {
-  display: grid;
-  width: 32px;
-  height: 32px;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: 8px;
-  color: var(--text-secondary);
-  background: transparent;
-}
-
-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 10px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-}
-
-input {
-  width: 100%;
-  height: 38px;
-  border: 0;
-  color: var(--text-primary);
-  background: transparent;
-  outline: none;
-}
-
-.canvas-note-picker__list {
-  display: grid;
-  gap: 4px;
-  max-height: 380px;
-  margin-top: 8px;
-  overflow-y: auto;
-}
-
-.canvas-note-picker__list button {
-  display: grid;
-  grid-template-columns: 28px 1fr;
-  gap: 8px;
-  min-height: 54px;
-  padding: 8px;
-  border: 0;
-  border-radius: 10px;
-  color: var(--text-primary);
-  text-align: left;
-  background: transparent;
-}
-
-.canvas-note-picker__list button:hover,
-.canvas-note-picker__list button:focus-visible {
-  background: var(--hover-bg);
-  outline: none;
-}
-
-.canvas-note-picker__list button > span:last-child {
-  display: grid;
-  min-width: 0;
-}
-
-small {
-  overflow: hidden;
-  color: var(--text-secondary);
-  text-overflow: ellipsis;
-}
-</style>

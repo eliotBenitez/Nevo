@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import type { NevoSlashItem, NevoToolbarAction } from '../../../types/editor-plugin'
+import type { SlashMenuLayout } from '../../../types/workspace'
 import { HIGHLIGHT_COLORS, TEXT_COLORS } from '../../../utils/editorColors'
 import type {
   SlashOverlayState, ToolbarOverlayState, TableMenuOverlayState,
@@ -137,6 +138,7 @@ interface Props {
   pluginActions: NevoToolbarAction[]
   currentNoteId: string | undefined
   slashEmojiPickerOpen: boolean
+  slashMenuLayout: SlashMenuLayout
   handlers: OverlayHandlers
 }
 
@@ -230,7 +232,7 @@ defineExpose({
 
 <template>
   <Teleport to="body">
-    <div v-if="slashOverlay.open" ref="slashMenuElRef" class="teleport-anchor">
+    <div v-if="slashOverlay.open" ref="slashMenuElRef" class="teleport-anchor tw:contents">
       <EditorSlashMenu
         :open="slashOverlay.open"
         :query="slashOverlay.query"
@@ -238,6 +240,7 @@ defineExpose({
         :items="slashOverlay.items"
         :menu-style="slashMenuStyle"
         :emoji-picker-open="slashEmojiPickerOpen"
+        :layout="slashMenuLayout"
         @select="handlers.runSlashItem"
         @select-emoji="handlers.selectSlashEmoji"
         @open-emoji-picker="handlers.openSlashEmojiPicker"
@@ -246,7 +249,7 @@ defineExpose({
       />
     </div>
 
-    <div v-if="toolbarOverlay.visible" ref="toolbarElRef" class="teleport-anchor">
+    <div v-if="toolbarOverlay.visible" ref="toolbarElRef" class="teleport-anchor tw:contents">
       <EditorFloatingToolbar
         :visible="toolbarOverlay.visible"
         :toolbar-style="toolbarStyle"
@@ -277,7 +280,7 @@ defineExpose({
       @remove="handlers.removeTextColor"
     />
 
-    <div v-if="tableMenuOverlay.visible" ref="tableMenuElRef" class="teleport-anchor">
+    <div v-if="tableMenuOverlay.visible" ref="tableMenuElRef" class="teleport-anchor tw:contents">
       <EditorTableMenu
         :visible="tableMenuOverlay.visible"
         :context="tableMenuOverlay.context"
@@ -290,7 +293,7 @@ defineExpose({
       />
     </div>
 
-    <div v-if="formulaPopover.open" ref="formulaPopoverElRef" class="teleport-anchor">
+    <div v-if="formulaPopover.open" ref="formulaPopoverElRef" class="teleport-anchor tw:contents">
       <EditorFormulaPopover
         ref="formulaPopoverCompRef"
         :open="formulaPopover.open"
@@ -303,7 +306,7 @@ defineExpose({
       />
     </div>
 
-    <div v-if="linkPopover.open" ref="linkPopoverElRef" class="teleport-anchor">
+    <div v-if="linkPopover.open" ref="linkPopoverElRef" class="teleport-anchor tw:contents">
       <EditorLinkPopover
         ref="linkPopoverCompRef"
         :open="linkPopover.open"
@@ -318,7 +321,7 @@ defineExpose({
       />
     </div>
 
-    <div v-if="mathPopover.open" ref="mathPopoverElRef" class="teleport-anchor">
+    <div v-if="mathPopover.open" ref="mathPopoverElRef" class="teleport-anchor tw:contents">
       <EditorMathPopover
         ref="mathPopoverCompRef"
         :open="mathPopover.open"
@@ -332,7 +335,7 @@ defineExpose({
       />
     </div>
 
-    <div v-if="mermaidPopover.open" ref="mermaidPopoverElRef" class="teleport-anchor">
+    <div v-if="mermaidPopover.open" ref="mermaidPopoverElRef" class="teleport-anchor tw:contents">
       <EditorMermaidPopover
         ref="mermaidPopoverCompRef"
         :open="mermaidPopover.open"
@@ -345,7 +348,7 @@ defineExpose({
       />
     </div>
 
-    <div v-if="queryPopover.open" ref="queryPopoverElRef" class="teleport-anchor">
+    <div v-if="queryPopover.open" ref="queryPopoverElRef" class="teleport-anchor tw:contents">
       <EditorQueryPopover
         :open="queryPopover.open"
         :data="queryPopover.data"
@@ -357,7 +360,7 @@ defineExpose({
       />
     </div>
 
-    <div v-if="markmapPopover.open" ref="markmapPopoverElRef" class="teleport-anchor">
+    <div v-if="markmapPopover.open" ref="markmapPopoverElRef" class="teleport-anchor tw:contents">
       <EditorMarkmapPopover
         ref="markmapPopoverCompRef"
         :open="markmapPopover.open"
@@ -370,7 +373,7 @@ defineExpose({
       />
     </div>
 
-    <div v-if="vegaPopover.open" ref="vegaPopoverElRef" class="teleport-anchor">
+    <div v-if="vegaPopover.open" ref="vegaPopoverElRef" class="teleport-anchor tw:contents">
       <EditorVegaPopover
         ref="vegaPopoverCompRef"
         :open="vegaPopover.open"
@@ -383,7 +386,7 @@ defineExpose({
       />
     </div>
 
-    <div v-if="pluginNodePopover.open" ref="pluginNodePopoverElRef" class="teleport-anchor">
+    <div v-if="pluginNodePopover.open" ref="pluginNodePopoverElRef" class="teleport-anchor tw:contents">
       <EditorPluginNodePopover
         ref="pluginNodePopoverCompRef"
         :open="pluginNodePopover.open"
@@ -399,7 +402,7 @@ defineExpose({
       />
     </div>
 
-    <div v-if="embedUrlPopover.open" ref="embedUrlPopoverElRef" class="teleport-anchor">
+    <div v-if="embedUrlPopover.open" ref="embedUrlPopoverElRef" class="teleport-anchor tw:contents">
       <EditorEmbedUrlPopover
         ref="embedUrlPopoverCompRef"
         :open="embedUrlPopover.open"
@@ -410,7 +413,7 @@ defineExpose({
       />
     </div>
 
-    <div ref="linkPickerElRef" class="teleport-anchor">
+    <div ref="linkPickerElRef" class="teleport-anchor tw:contents">
       <EditorLinkPicker
         ref="linkPickerCompRef"
         :open="linkPickerOverlay.open"
@@ -427,7 +430,7 @@ defineExpose({
     <div
       v-if="calloutIconPicker.open"
       ref="calloutIconPickerElRef"
-      class="callout-icon-picker"
+      class="callout-icon-picker tw:fixed tw:z-60"
       :style="calloutIconPickerStyle"
     >
       <NvIconPicker
@@ -440,7 +443,7 @@ defineExpose({
     <div
       v-if="blockHandle.visible || blockHandle.typeMenuOpen"
       ref="blockHandleElRef"
-      class="teleport-anchor"
+      class="teleport-anchor tw:contents"
     >
       <EditorBlockHandle
         :visible="blockHandle.visible"
@@ -449,12 +452,13 @@ defineExpose({
         :hovered-block-icon-attrs="blockHandle.hoveredBlockIconAttrs"
         @pointerdown="handlers.onBlockHandlePointerDown"
         @type-icon-click="handlers.onTypeIconClick"
+        @insert-below="handlers.insertBlockBelow"
         @mouseenter="handlers.onHandleMouseEnter"
         @mouseleave="handlers.onHandleMouseLeave"
       />
     </div>
 
-    <div v-if="blockHandle.typeMenuOpen" ref="blockTypeMenuElRef" class="teleport-anchor">
+    <div v-if="blockHandle.typeMenuOpen" ref="blockTypeMenuElRef" class="teleport-anchor tw:contents">
       <EditorBlockTypeMenu
         :open="blockHandle.typeMenuOpen"
         :menu-style="blockTypeMenuStyle"

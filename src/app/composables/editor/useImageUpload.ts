@@ -1,8 +1,12 @@
-import { Selection } from 'prosemirror-state'
+import { NodeSelection, Selection } from 'prosemirror-state'
 import { appLogger } from '../../../utils/logger'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import type { EditorCore } from './useEditorCore'
 import { noteCommands } from '../../../tauri/commands'
+import { MAX_ASSET_MB, isWithinAssetLimit } from '../../../core/assets/assetLimits'
+import { parseDataUrl } from '../../../utils/assets/dataUrl'
+import { useToast } from '../../../ui/composables/useToast'
+import { i18n } from '../../../i18n'
 
 const IMAGE_EXTENSION = /\.(png|jpe?g|gif|webp|svg|avif|bmp)$/i
 
@@ -19,6 +23,23 @@ export function useImageUpload(
 ) {
   const workspaceStore = useWorkspaceStore()
 
+  // Shows a toast and logs a rejected oversized asset — never silently drop
+  // a paste/drop that exceeded the limit.
+  function rejectOversizedAsset(fileName: string, size: number) {
+    const { showToast } = useToast()
+    showToast({
+      variant: 'error',
+      message: i18n.global.t('editor.assets.tooLarge', { fileName, limit: `${MAX_ASSET_MB} MB` }),
+    })
+    void appLogger.warn({
+      source: 'frontend.editor',
+      event: 'import_image',
+      message: 'Rejected an image import over the size limit',
+      workspacePath: getWorkspacePath(),
+      payload: { fileName, size },
+    })
+  }
+
   function requestImagePicker(targetPos: number | null = null) {
     core.pendingImageTargetPos = targetPos
   }
@@ -32,7 +53,7 @@ export function useImageUpload(
     )
   }
 
-  function applyImportedImage(src: string, fileName: string, targetPos: number | null) {
+  function applyImportedImage(src: string, fileName: string, targetPos: number | null, insertAfterSelectedImage = false) {
     if (!core.editorView) return
     const nextAttrs = { src, alt: fileName, caption: '', sizePreset: 'medium', width: null }
 
@@ -52,13 +73,20 @@ export function useImageUpload(
     // image_block instead of leaving an empty paragraph behind the new node.
     // Mirrors createInsertBlockCommand in editor-core/commands/utils.ts.
     const { selection } = state
-    let tr
-    if (selection.empty && selection.$from.parent.isTextblock && selection.$from.parent.content.size === 0) {
-      const from = selection.$from.before()
-      const to = from + selection.$from.parent.nodeSize
-      tr = state.tr.replaceWith(from, to, imageNode)
+    let tr = state.tr
+    let imagePos: number | null = null
+    if (insertAfterSelectedImage && selection instanceof NodeSelection && selection.node.type === imageBlockType) {
+      imagePos = selection.to
+      tr = tr.insert(imagePos, imageNode)
+    } else if (selection.empty && selection.$from.parent.isTextblock && selection.$from.parent.content.size === 0) {
+      imagePos = selection.$from.before()
+      const to = imagePos + selection.$from.parent.nodeSize
+      tr = tr.replaceWith(imagePos, to, imageNode)
     } else {
-      tr = state.tr.replaceSelectionWith(imageNode, false)
+      tr = tr.replaceSelectionWith(imageNode, false)
+    }
+    if (imagePos !== null && tr.doc.nodeAt(imagePos)?.type === imageBlockType) {
+      tr = tr.setSelection(NodeSelection.create(tr.doc, imagePos))
     }
     core.editorView.dispatch(tr.scrollIntoView())
     onOverlaysUpdate()
@@ -66,14 +94,19 @@ export function useImageUpload(
 
   // Bytes-over-IPC import — kept for drag-and-drop (only a File, no path) and cloud
   // backends. The path-based picker below avoids the main-thread freeze on local.
-  async function importAndApplyImage(file: File, targetPos: number | null) {
+  async function importAndApplyImage(file: File, targetPos: number | null, insertAfterSelectedImage = false) {
     if (!core.editorView) return
     const backend = workspaceStore.backend
     if (!backend) return
 
-    const bytes = Array.from(new Uint8Array(await file.arrayBuffer()))
+    if (!isWithinAssetLimit(file.size)) {
+      rejectOversizedAsset(file.name, file.size)
+      return
+    }
+
+    const bytes = new Uint8Array(await file.arrayBuffer())
     const imported = await backend.importImageAsset(file.name, bytes)
-    applyImportedImage(imported.src, file.name, targetPos)
+    applyImportedImage(imported.src, file.name, targetPos, insertAfterSelectedImage)
   }
 
   function isLocalBackend(): boolean {
@@ -84,13 +117,49 @@ export function useImageUpload(
     return (url.split(/[?#]/)[0] ?? url).split('/').pop() || 'image'
   }
 
+  // A `data:` URL is decoded and imported through the asset store like any
+  // other pasted image, instead of being embedded verbatim — otherwise a large
+  // base64 image would live inside the ProseMirror doc/Yjs update, and get
+  // duplicated into every snapshot and relay update. Falls back to embedding
+  // the raw data URL only when decoding fails, so the paste is never lost.
+  async function importDataUrlAndApplyImage(url: string, targetPos: number | null): Promise<void> {
+    const backend = workspaceStore.backend
+    const parsed = parseDataUrl(url)
+    if (!parsed) {
+      void appLogger.warn({
+        source: 'frontend.editor',
+        event: 'import_image',
+        message: 'Could not decode a pasted data URL; embedding it verbatim',
+        workspacePath: getWorkspacePath(),
+      })
+      applyImportedImage(url, 'pasted-image', targetPos)
+      return
+    }
+    if (!isWithinAssetLimit(parsed.bytes.length)) {
+      rejectOversizedAsset(parsed.fileName, parsed.bytes.length)
+      return
+    }
+    if (!backend) return
+    try {
+      const imported = await backend.importImageAsset(parsed.fileName, parsed.bytes)
+      applyImportedImage(imported.src, parsed.fileName, targetPos)
+    } catch (error) {
+      await appLogger.error({
+        source: 'frontend.editor',
+        event: 'import_image',
+        message: 'Failed to import a pasted data URL image into the asset store',
+        workspacePath: getWorkspacePath(),
+        error,
+      })
+      applyImportedImage(url, 'pasted-image', targetPos)
+    }
+  }
+
   async function importUrlAndApplyImage(url: string, targetPos: number | null) {
     const backend = workspaceStore.backend
     if (!backend || !core.editorView) return
-    // Data URLs are self-contained — the CSP allows them as image sources, so
-    // use them directly instead of round-tripping through the downloader.
     if (/^data:/i.test(url)) {
-      applyImportedImage(url, 'pasted-image', targetPos)
+      await importDataUrlAndApplyImage(url, targetPos)
       return
     }
     try {
@@ -247,7 +316,11 @@ export function useImageUpload(
       const { width, height } = await image.size()
       if (width && height) {
         const bytes = rgbaToPngBytes(rgba, width, height)
-        const imported = await backend.importImageAsset('pasted-image.png', bytes)
+        if (!isWithinAssetLimit(bytes.length)) {
+          rejectOversizedAsset('pasted-image.png', bytes.length)
+          return
+        }
+        const imported = await backend.importImageAsset('pasted-image.png', Uint8Array.from(bytes))
         applyImportedImage(imported.src, 'pasted-image.png', null)
         core.editorView?.focus()
         return
@@ -322,8 +395,9 @@ export function useImageUpload(
     if (images.length > 0) {
       event.preventDefault()
       void (async () => {
-        for (const file of images) {
-          await importAndApplyImage(file, null)
+        for (let index = 0; index < images.length; index += 1) {
+          const file = images[index]
+          if (file) await importAndApplyImage(file, null, index > 0)
         }
         core.editorView?.focus()
       })()

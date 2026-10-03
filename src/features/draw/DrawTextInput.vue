@@ -33,7 +33,7 @@ watch(
   <div
     v-if="active"
     ref="el"
-    class="draw-text-input"
+    class="draw-text-input tw:absolute tw:z-5 tw:m-0 tw:p-0 tw:border-none tw:outline-none tw:bg-transparent tw:whitespace-pre tw:min-w-1 tw:min-h-[1em] tw:cursor-text tw:[caret-color:currentColor]"
     contenteditable="plaintext-only"
     spellcheck="false"
     :style="style"

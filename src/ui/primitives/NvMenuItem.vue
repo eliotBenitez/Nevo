@@ -179,8 +179,13 @@ function resolveProps(item: NvMenuItemDef) {
   <button
     ref="itemRef"
     role="menuitem"
-    class="nv-menu-item"
-    :class="{ 'is-danger': danger, 'is-disabled': disabled }"
+    class="nv-menu-item tw:group tw:flex tw:h-8 tw:w-full tw:shrink-0 tw:cursor-pointer tw:items-center tw:gap-[7px] tw:whitespace-nowrap tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:px-2 tw:text-left tw:font-nv-ui tw:text-[12.5px] tw:font-medium tw:tracking-normal tw:transition-[background-color,color] tw:duration-[80ms] tw:focus:outline-none tw:disabled:cursor-not-allowed tw:disabled:pointer-events-none tw:disabled:opacity-45"
+    :class="[
+      danger
+        ? 'is-danger tw:text-danger tw:hover:bg-(--surface-danger) tw:focus:bg-(--surface-danger)'
+        : 'tw:text-content-primary tw:hover:bg-surface-subtle tw:focus:bg-surface-subtle',
+      disabled && 'is-disabled',
+    ]"
     :disabled="disabled || undefined"
     :aria-haspopup="hasSubmenu ? 'menu' : undefined"
     :aria-expanded="hasSubmenu ? submenuOpen : undefined"
@@ -189,10 +194,16 @@ function resolveProps(item: NvMenuItemDef) {
     @mouseleave="onMouseLeave"
     @keydown="onItemKeydown"
   >
-    <component :is="icon" v-if="icon" :size="14" class="nv-menu-item__icon" />
-    <span class="nv-menu-item__label">{{ label }}</span>
-    <span v-if="shortcut" class="nv-menu-item__shortcut">{{ shortcut }}</span>
-    <ChevronRight v-if="hasSubmenu" :size="12" class="nv-menu-item__chevron" />
+    <component
+      :is="icon"
+      v-if="icon"
+      :size="14"
+      class="nv-menu-item__icon tw:shrink-0"
+      :class="danger ? 'tw:text-danger' : 'tw:text-content-muted tw:group-hover:text-content-primary tw:group-focus:text-content-primary'"
+    />
+    <span class="nv-menu-item__label tw:min-w-0 tw:flex-1 tw:overflow-hidden tw:text-ellipsis">{{ label }}</span>
+    <span v-if="shortcut" class="nv-menu-item__shortcut tw:ml-1 tw:shrink-0 tw:font-nv-mono tw:text-[10.5px] tw:text-content-muted">{{ shortcut }}</span>
+    <ChevronRight v-if="hasSubmenu" :size="12" class="nv-menu-item__chevron tw:ml-0.5 tw:shrink-0 tw:text-content-muted" />
   </button>
 
   <Teleport v-if="hasSubmenu" to="body">
@@ -202,7 +213,7 @@ function resolveProps(item: NvMenuItemDef) {
         ref="submenuPanelRef"
         role="menu"
         tabindex="-1"
-        class="nv-popup-menu__panel"
+        class="nv-popup-menu__panel tw:fixed tw:min-w-[160px] tw:max-h-[min(420px,calc(100vh-24px))] tw:overflow-y-auto tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--menu-bg) tw:p-1 tw:shadow-(--menu-shadow) tw:outline-none"
         :style="{ top: `${submenuPos.top}px`, left: `${submenuPos.left}px`, zIndex: 500 + depth }"
         @pointerdown.stop
         @mouseenter="() => clearTimers()"

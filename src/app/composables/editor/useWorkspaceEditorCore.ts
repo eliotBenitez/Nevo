@@ -9,6 +9,7 @@ import {
   type EditorCore,
   type EditorCoreCallbacks,
 } from './useEditorCore'
+import type { VoiceRecordingEditorBindings } from './useVoiceRecording'
 
 const TYPEWRITER_POSITION_RATIO: Record<string, number> = {
   upper: 0.30,
@@ -43,10 +44,12 @@ export interface WorkspaceEditorCoreOptions {
   requestImageInput: () => void
   onImagePaste: RequiredCallback<'onImagePaste'>
   openImageContextMenu: RequiredCallback<'onImageContextMenuRequest'>
+  onContextMenuRequest?: EditorCoreCallbacks['onContextMenuRequest']
   pickAndInsertFile: (pos?: number) => Promise<unknown>
   requestFileInput: () => void
   openFileAsset: (src: string) => Promise<unknown>
   requestMediaPicker: RequiredCallback<'onMediaPickerRequest'>
+  voiceRecording?: VoiceRecordingEditorBindings
   openNoteEmbedPicker: RequiredCallback<'onNoteEmbedPickRequest'>
   openEmbedUrlPopover: RequiredCallback<'onEmbedUrlRequest'>
   openNoteEmbed: (noteId: string) => void
@@ -164,6 +167,7 @@ export function useWorkspaceEditorCore(options: WorkspaceEditorCoreOptions) {
     },
     onImagePaste: options.onImagePaste,
     onImageContextMenuRequest: options.openImageContextMenu,
+    onContextMenuRequest: options.onContextMenuRequest,
     onFilePickerRequest: (pos) => {
       if (options.backendSupportsPathImport()) {
         void options.pickAndInsertFile(pos)
@@ -176,6 +180,7 @@ export function useWorkspaceEditorCore(options: WorkspaceEditorCoreOptions) {
       void options.openFileAsset(src)
     },
     onMediaPickerRequest: options.requestMediaPicker,
+    voiceRecording: options.voiceRecording,
     onNoteEmbedPickRequest: options.openNoteEmbedPicker,
     onEmbedUrlRequest: options.openEmbedUrlPopover,
     onNoteEmbedContentLoad: async ({ noteId, setHtml, setLoading }) => {

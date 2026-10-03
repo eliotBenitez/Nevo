@@ -1,24 +1,19 @@
 /* src/app/components/WorkspaceTreeNode.vue */
-.tree-row {
-  width: 100%;
-  border: none;
-  background: transparent;
-  color: var(--text-2);
-  height: 30px;
-  border-radius: calc(8px * var(--radius-scale, 1));
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  cursor: pointer;
-  padding-right: 10px;
-  position: relative;
-  transition: background 0.12s, color 0.12s;
-}
+/* Base layout, typography, and default (idle) appearance for `.tree-row`,
+   `.tree-arrow`, `.tree-title`, `.tree-folder-count`, `.tree-folder-add`,
+   `.tree-note-emoji`, `.tree-children` and `.tree-drop-line` now live as
+   `tw:` utilities on the template. Every rule below is a state override —
+   hover/focus-visible, the active/dragging/drag-over/drop-* row modifiers,
+   and their descendant combinations — kept unlayered so it continues to beat
+   the new base utilities regardless of declaration order, exactly as it beat
+   the old base rules. This mirrors the row/tab state-matrix precedent from
+   workspace-shell.css and titlebar-tabs.css: expressing six overlapping
+   modifier classes as mutually exclusive `tw:` literals without a browser to
+   verify every combination would risk a visual regression. */
 
 .tree-row:hover {
   background: var(--hover);
-  color: var(--text-1);
+  color: var(--text-primary);
 }
 
 .tree-row:focus-visible,
@@ -28,42 +23,15 @@
 }
 
 .tree-row--active {
-  background: color-mix(in oklab, var(--glass-3) 86%, transparent);
-  color: var(--text-1);
-  box-shadow: inset 2px 0 0 var(--accent), inset 0 0 0 1px color-mix(in oklab, var(--accent) 24%, transparent);
+  background: var(--island-bg);
+  color: var(--text-primary);
+  font-weight: 500;
+  box-shadow: var(--shadow-raised);
 }
 
-.tree-arrow {
-  width: 12px;
-  height: 12px;
-  display: grid;
-  place-items: center;
-  color: var(--text-4);
-}
-
-.tree-title {
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: left;
-}
-
-.tree-folder-add {
-  width: 20px;
-  height: 20px;
-  border-radius: calc(6px * var(--radius-scale, 1));
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--text-4);
-  font-size: 14px;
-  line-height: 1;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.12s, background 0.12s, color 0.12s;
+.tree-row--active .tree-arrow,
+.tree-row--active .tree-note-emoji svg {
+  color: var(--accent);
 }
 
 .tree-row:hover .tree-folder-add,
@@ -73,26 +41,11 @@
 
 .tree-folder-add:hover {
   background: var(--hover-strong);
-  color: var(--text-1);
+  color: var(--text-primary);
 }
 
 .tree-folder-add:focus-visible {
   opacity: 1;
-}
-
-.tree-note-emoji {
-  width: 18px;
-  display: inline-flex;
-  justify-content: center;
-  flex: 0 0 auto;
-  line-height: 1;
-}
-
-.tree-children {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: 2px;
 }
 
 /* --- Drag-and-drop feedback --- */
@@ -103,33 +56,17 @@
 
 /* Индикаторные полосы позиции сброса (рендерятся как дочерние .tree-drop-line).
    По умолчанию скрыты; проявляются при наведении через модификаторы строки. */
-.tree-drop-line {
-  position: absolute;
-  left: 6px;
-  right: 6px;
-  height: 0;
-  border-radius: calc(2px * var(--radius-scale, 1));
-  pointer-events: none;
-  transition: height 0.1s ease, opacity 0.1s ease, background 0.1s ease, box-shadow 0.1s ease;
-}
-.tree-drop-line--top {
-  top: -2px;
-}
-.tree-drop-line--bottom {
-  bottom: -2px;
-}
 
 /* Горизонтальная accent-полоса до/после строки (переупорядочивание). */
 .tree-row--drop-before .tree-drop-line--top,
 .tree-row--drop-after .tree-drop-line--bottom {
   height: 3px;
   background: var(--accent);
-  box-shadow: 0 0 8px var(--accent-glow, rgb(161 98 7 / 0.25));
 }
 
 /* Заполнение папки-приёмника при наведении «внутрь» (как drop-zone в Kanban). */
 .tree-row--drop-into {
   background: color-mix(in oklab, var(--accent) 13%, transparent) !important;
   box-shadow: inset 0 0 0 1px var(--accent);
-  color: var(--text-1);
+  color: var(--text-primary);
 }

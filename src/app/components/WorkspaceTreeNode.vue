@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ChevronRight } from 'lucide-vue-next'
+import { ChevronRight, Plus } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import type { TreeNode } from '../../types/note'
 import NvNoteIcon from '../../ui/primitives/NvNoteIcon.vue'
+import { folderNoteCount } from '../../utils/folder-note-count'
 import type {
   SidebarDragOver,
   SidebarDragSource,
@@ -44,6 +46,8 @@ const emit = defineEmits<{
   'drop': [event: DragEvent, target: SidebarDragTarget]
 }>()
 
+const { t } = useI18n()
+
 const isFolder = computed(() => props.node.kind === 'folder')
 const folder = computed(() => props.node.kind === 'folder' ? props.node.meta : null)
 const note = computed(() => props.node.kind === 'note' ? props.node.meta : null)
@@ -60,6 +64,8 @@ const isActive = computed(() => {
 })
 
 const currentId = computed(() => folder.value?.id ?? note.value?.id ?? '')
+
+const noteCount = computed(() => folder.value ? folderNoteCount(folder.value) : 0)
 
 const isDragging = computed(() => props.draggedId === currentId.value)
 
@@ -182,7 +188,7 @@ function onDrop(event: DragEvent) {
   <div class="tree-node">
     <div
       v-if="isFolder && folder"
-      class="tree-row"
+      class="tree-row tw:w-full tw:border-0 tw:bg-transparent tw:text-content-secondary tw:h-[30px] tw:rounded-[calc(12px*var(--radius-scale,1))] tw:flex tw:items-center tw:gap-2 tw:text-[13px] tw:cursor-pointer tw:pr-2.5 tw:relative tw:transition-[background,color] tw:duration-[120ms]"
       :class="{
         'tree-row--active': isActive,
         'tree-row--dragging': isDragging,
@@ -205,21 +211,29 @@ function onDrop(event: DragEvent) {
       @dragleave="onDragLeave"
       @drop="onDrop"
     >
-      <span class="tree-drop-line tree-drop-line--top" aria-hidden="true" />
-      <span class="tree-arrow" @click.stop="toggleFolder">
+      <span class="tree-drop-line tree-drop-line--top tw:absolute tw:left-1.5 tw:right-1.5 tw:h-0 tw:rounded-[calc(2px*var(--radius-scale,1))] tw:pointer-events-none tw:transition-[height,opacity,background,box-shadow] tw:duration-100 tw:-top-0.5" aria-hidden="true" />
+      <span class="tree-arrow tw:w-3 tw:h-3 tw:grid tw:place-items-center tw:text-content-muted" @click.stop="toggleFolder">
         <ChevronRight :size="12" :style="{ transform: isCollapsed ? 'rotate(0deg)' : 'rotate(90deg)' }" />
       </span>
-      <NvNoteIcon :value="folder.icon || '📁'" :size="14" class="tree-note-emoji" />
-      <span class="tree-title">{{ folder.title }}</span>
-      <button type="button" class="tree-folder-add" draggable="false" @click="createInFolder">
-        +
+      <NvNoteIcon :value="folder.icon || '📁'" :size="14" class="tree-note-emoji tw:w-[18px] tw:inline-flex tw:justify-center tw:flex-none tw:leading-none" />
+      <span class="tree-title tw:flex-1 tw:min-w-0 tw:whitespace-nowrap tw:overflow-hidden tw:text-ellipsis tw:text-left">{{ folder.title }}</span>
+      <span v-if="noteCount > 0" class="tree-folder-count tw:flex-none tw:text-content-muted tw:text-[11px] tw:[font-variant-numeric:tabular-nums] tw:text-right">{{ noteCount }}</span>
+      <button
+        type="button"
+        class="tree-folder-add tw:w-5 tw:h-5 tw:p-0 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border-none tw:bg-transparent tw:text-content-muted tw:grid tw:place-items-center tw:cursor-pointer tw:opacity-0 tw:transition-[opacity,background,color] tw:duration-[120ms]"
+        draggable="false"
+        :title="t('workspace.actions.newNote')"
+        :aria-label="t('workspace.actions.newNote')"
+        @click="createInFolder"
+      >
+        <Plus :size="12" aria-hidden="true" />
       </button>
-      <span class="tree-drop-line tree-drop-line--bottom" aria-hidden="true" />
+      <span class="tree-drop-line tree-drop-line--bottom tw:absolute tw:left-1.5 tw:right-1.5 tw:h-0 tw:rounded-[calc(2px*var(--radius-scale,1))] tw:pointer-events-none tw:transition-[height,opacity,background,box-shadow] tw:duration-100 tw:-bottom-0.5" aria-hidden="true" />
     </div>
 
     <div
       v-else-if="note"
-      class="tree-row"
+      class="tree-row tw:w-full tw:border-0 tw:bg-transparent tw:text-content-secondary tw:h-[30px] tw:rounded-[calc(12px*var(--radius-scale,1))] tw:flex tw:items-center tw:gap-2 tw:text-[13px] tw:cursor-pointer tw:pr-2.5 tw:relative tw:transition-[background,color] tw:duration-[120ms]"
       :class="{
         'tree-row--active': isActive,
         'tree-row--dragging': isDragging,
@@ -241,13 +255,13 @@ function onDrop(event: DragEvent) {
       @dragleave="onDragLeave"
       @drop="onDrop"
     >
-      <span class="tree-drop-line tree-drop-line--top" aria-hidden="true" />
-      <NvNoteIcon :value="note.icon || '📄'" :size="14" class="tree-note-emoji" />
-      <span class="tree-title">{{ note.title }}</span>
-      <span class="tree-drop-line tree-drop-line--bottom" aria-hidden="true" />
+      <span class="tree-drop-line tree-drop-line--top tw:absolute tw:left-1.5 tw:right-1.5 tw:h-0 tw:rounded-[calc(2px*var(--radius-scale,1))] tw:pointer-events-none tw:transition-[height,opacity,background,box-shadow] tw:duration-100 tw:-top-0.5" aria-hidden="true" />
+      <NvNoteIcon :value="note.icon || '📄'" :size="14" class="tree-note-emoji tw:w-[18px] tw:inline-flex tw:justify-center tw:flex-none tw:leading-none" />
+      <span class="tree-title tw:flex-1 tw:min-w-0 tw:whitespace-nowrap tw:overflow-hidden tw:text-ellipsis tw:text-left">{{ note.title }}</span>
+      <span class="tree-drop-line tree-drop-line--bottom tw:absolute tw:left-1.5 tw:right-1.5 tw:h-0 tw:rounded-[calc(2px*var(--radius-scale,1))] tw:pointer-events-none tw:transition-[height,opacity,background,box-shadow] tw:duration-100 tw:-bottom-0.5" aria-hidden="true" />
     </div>
 
-    <div v-if="isFolder && !isCollapsed" class="tree-children">
+    <div v-if="isFolder && !isCollapsed" class="tree-children tw:flex tw:flex-col tw:gap-0.5 tw:mt-0.5">
       <WorkspaceTreeNode
         v-for="child in children"
         :key="child.meta.id"

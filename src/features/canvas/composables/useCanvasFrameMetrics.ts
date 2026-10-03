@@ -8,10 +8,11 @@ interface UseCanvasFrameMetricsOptions {
 /**
  * Measures the rendered height of the document frame's ProseMirror root via a
  * single ResizeObserver. The measured height stays in a local ref and is
- * never written to the Y.Doc — writing it back is what caused the old
- * per-block model's measure -> Yjs -> re-render -> measure loop. Consumers
- * that need on-screen geometry (camera fit, minimap, export) combine this
- * with the stored frame through `effectiveFrameBounds` (`core/canvas/frame`).
+ * never written back into the canvas store — writing it back is what caused
+ * the old per-block model's measure -> Yjs -> re-render -> measure loop.
+ * Consumers that need on-screen geometry (camera fit, minimap, export)
+ * combine this with the stored frame through `effectiveFrameBounds`
+ * (`core/canvas/frame`).
  */
 export function useCanvasFrameMetrics(options: UseCanvasFrameMetricsOptions) {
   const contentHeight: ShallowRef<number> = shallowRef(0)

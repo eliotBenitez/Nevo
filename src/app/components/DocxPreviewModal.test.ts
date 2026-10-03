@@ -138,7 +138,7 @@ describe('DocxPreviewModal', () => {
 
     // Reset emitted events
     wrapper.vm.$emit('close') // manually clear / emit again just in case, but let's test Escape key on backdrop
-    await wrapper.find('.docx-backdrop').trigger('keydown', { key: 'Escape' })
+    await wrapper.find('.nv-modal__panel').trigger('keydown', { key: 'Escape' })
     expect(wrapper.emitted('close')).toBeTruthy()
   })
 })

@@ -22,7 +22,7 @@ describe('TitleBarSearch', () => {
     })
 
     const button = wrapper.get('button')
-    expect(button.text()).toContain('Search notes, blocks, settings...')
+    expect(button.text()).toContain('Search')
     expect(button.text()).toContain('Ctrl')
     expect(button.text()).toContain('P')
     expect(button.attributes('aria-label')).toBeTruthy()

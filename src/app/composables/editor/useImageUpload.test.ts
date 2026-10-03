@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { TextSelection } from 'prosemirror-state'
+import { NodeSelection, TextSelection } from 'prosemirror-state'
+import { redo, undo } from 'prosemirror-history'
 import { EditorView } from 'prosemirror-view'
 import { createNevoEditorState } from '../../../editor-core/state'
 import { nevoBaseSchema } from '../../../editor-core/schema'
@@ -79,9 +80,6 @@ function createCoreWithView(content: { type: string; content?: unknown[] } = { t
     lastSerializedContentRef: null,
     setLastSerializedFromDoc: vi.fn(),
     lastLoadedNoteId: null,
-    ydoc: null,
-    awareness: null,
-    ownsYdoc: false,
     workspacePath: null,
     refreshBrokenLinks: vi.fn(),
   } as unknown as EditorCore
@@ -257,8 +255,105 @@ describe('useImageUpload — paste handling', () => {
 
     // The empty paragraph must have been replaced, not left in place.
     expect(nodeTypes).toEqual(['paragraph', 'image_block'])
+    expect(view.state.selection).toBeInstanceOf(NodeSelection)
+    expect((view.state.selection as NodeSelection).node.type.name).toBe('image_block')
 
     core.editorView?.destroy()
+  })
+
+  it.each([
+    {
+      name: 'at the beginning',
+      content: { type: 'doc', content: [{ type: 'paragraph' }, { type: 'paragraph', content: [{ type: 'text', text: 'after' }] }] },
+      cursor: 1,
+      expected: ['image_block', 'paragraph'],
+      expectedText: 'after',
+    },
+    {
+      name: 'in the middle',
+      content: {
+        type: 'doc',
+        content: [
+          { type: 'paragraph', content: [{ type: 'text', text: 'before' }] },
+          { type: 'paragraph' },
+          { type: 'paragraph', content: [{ type: 'text', text: 'after' }] },
+        ],
+      },
+      cursor: 9,
+      expected: ['paragraph', 'image_block', 'paragraph'],
+      expectedText: 'beforeafter',
+    },
+  ])('selects the pasted image when replacing an empty paragraph $name', async ({ content, cursor, expected, expectedText }) => {
+    await useLocalBackend()
+    const core = createCoreWithView(content)
+    const view = core.editorView!
+    view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, cursor)))
+    const upload = useImageUpload(core, () => '/workspace', () => {})
+
+    upload.onEditorPaste(buildPasteEvent([new File(['png-bytes'], 'pasted.png', { type: 'image/png' })]))
+    await new Promise((r) => setTimeout(r, 0))
+
+    expect(view.state.doc.content.content.map((node) => node.type.name)).toEqual(expected)
+    expect(view.state.doc.textContent).toBe(expectedText)
+    expect(view.state.selection).toBeInstanceOf(NodeSelection)
+    expect((view.state.selection as NodeSelection).node.type.name).toBe('image_block')
+
+    expect(undo(view.state, (tr) => view.dispatch(tr))).toBe(true)
+    expect(view.state.doc.content.content.map((node) => node.type.name)).toEqual(content.content.map((node) => node.type))
+    expect(view.state.doc.textContent).toBe(expectedText)
+    expect(redo(view.state, (tr) => view.dispatch(tr))).toBe(true)
+    expect(view.state.doc.content.content.map((node) => node.type.name)).toEqual(expected)
+    expect(view.state.doc.textContent).toBe(expectedText)
+    view.destroy()
+  })
+
+  it('preserves each image when multiple image files are pasted into an empty paragraph', async () => {
+    await useLocalBackend()
+    const core = createCoreWithView({
+      type: 'doc',
+      content: [{ type: 'paragraph' }, { type: 'paragraph', content: [{ type: 'text', text: 'after' }] }],
+    })
+    const view = core.editorView!
+    view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1)))
+    const upload = useImageUpload(core, () => '/workspace', () => {})
+
+    upload.onEditorPaste(buildPasteEvent([
+      new File(['first'], 'first.png', { type: 'image/png' }),
+      new File(['second'], 'second.png', { type: 'image/png' }),
+    ]))
+    await new Promise((r) => setTimeout(r, 0))
+
+    const images: string[] = []
+    view.state.doc.descendants((node) => {
+      if (node.type.name === 'image_block') images.push(node.attrs.alt as string)
+    })
+    expect(images).toEqual(['first.png', 'second.png'])
+    expect(view.state.doc.content.content.map((node) => node.type.name)).toEqual(['image_block', 'image_block', 'paragraph'])
+    expect(view.state.doc.textContent).toBe('after')
+    expect(view.state.selection).toBeInstanceOf(NodeSelection)
+    expect((view.state.selection as NodeSelection).node.attrs.alt).toBe('second.png')
+    view.destroy()
+  })
+
+  it('replaces an already selected image when a single image is pasted', async () => {
+    await useLocalBackend()
+    const core = createCoreWithView({
+      type: 'doc',
+      content: [{ type: 'image_block', attrs: { src: '.nevo/assets/old.png', alt: 'old.png' } }],
+    })
+    const view = core.editorView!
+    view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, 0)))
+    const upload = useImageUpload(core, () => '/workspace', () => {})
+
+    upload.onEditorPaste(buildPasteEvent([new File(['new'], 'new.png', { type: 'image/png' })]))
+    await new Promise((r) => setTimeout(r, 0))
+
+    const images: string[] = []
+    view.state.doc.descendants((node) => {
+      if (node.type.name === 'image_block') images.push(node.attrs.alt as string)
+    })
+    expect(images).toEqual(['new.png'])
+    view.destroy()
   })
 
   it('imports a local image from the native clipboard (file:// path via readText)', async () => {
@@ -271,7 +366,11 @@ describe('useImageUpload — paste handling', () => {
       bytes: 3,
       fileName: 'photo.png',
     })
-    const core = createCoreWithView()
+    const core = createCoreWithView({
+      type: 'doc',
+      content: [{ type: 'paragraph' }, { type: 'paragraph', content: [{ type: 'text', text: 'after' }] }],
+    })
+    core.editorView!.dispatch(core.editorView!.state.tr.setSelection(TextSelection.create(core.editorView!.state.doc, 1)))
     const upload = useImageUpload(core, () => '/workspace', () => {})
 
     const event = buildUriListPasteEvent()
@@ -281,6 +380,10 @@ describe('useImageUpload — paste handling', () => {
     expect(event.defaultPrevented).toBe(true)
     await new Promise((r) => setTimeout(r, 0))
     expect(noteCommandMocks.importClipboardImagePath).toHaveBeenCalledWith('/workspace')
+    expect(core.editorView!.state.doc.firstChild?.type.name).toBe('image_block')
+    expect(core.editorView!.state.doc.textContent).toBe('after')
+    expect(core.editorView!.state.selection).toBeInstanceOf(NodeSelection)
+    expect((core.editorView!.state.selection as NodeSelection).node.type.name).toBe('image_block')
 
     core.editorView?.destroy()
   })
@@ -289,7 +392,11 @@ describe('useImageUpload — paste handling', () => {
     await useLocalBackend()
     const url = 'https://example.com/pic.png'
     clipboardMock.readText.mockResolvedValue(url)
-    const core = createCoreWithView()
+    const core = createCoreWithView({
+      type: 'doc',
+      content: [{ type: 'paragraph' }, { type: 'paragraph', content: [{ type: 'text', text: 'after' }] }],
+    })
+    core.editorView!.dispatch(core.editorView!.state.tr.setSelection(TextSelection.create(core.editorView!.state.doc, 1)))
     const upload = useImageUpload(core, () => '/workspace', () => {})
 
     const event = buildUriListPasteEvent()
@@ -306,6 +413,9 @@ describe('useImageUpload — paste handling', () => {
       if (node.type.name === 'image_block') imageSrc = node.attrs.src as string
     })
     expect(imageSrc).toBe(IMPORTED_SRC)
+    expect(core.editorView!.state.doc.textContent).toBe('after')
+    expect(core.editorView!.state.selection).toBeInstanceOf(NodeSelection)
+    expect((core.editorView!.state.selection as NodeSelection).node.type.name).toBe('image_block')
 
     core.editorView?.destroy()
   })
@@ -314,7 +424,11 @@ describe('useImageUpload — paste handling', () => {
     await useLocalBackend()
     const url = 'https://private-user-images.githubusercontent.com/1/abc.png?jwt=x'
     const event = buildTypedPasteEvent({ 'text/html': `<meta charset="utf-8"><img src="${url}" alt="">` })
-    const core = createCoreWithView()
+    const core = createCoreWithView({
+      type: 'doc',
+      content: [{ type: 'paragraph' }, { type: 'paragraph', content: [{ type: 'text', text: 'after' }] }],
+    })
+    core.editorView!.dispatch(core.editorView!.state.tr.setSelection(TextSelection.create(core.editorView!.state.doc, 1)))
     const upload = useImageUpload(core, () => '/workspace', () => {})
 
     const handled = upload.onEditorPaste(event)
@@ -330,6 +444,9 @@ describe('useImageUpload — paste handling', () => {
       if (node.type.name === 'image_block') imageSrc = node.attrs.src as string
     })
     expect(imageSrc).toBe(IMPORTED_SRC)
+    expect(core.editorView!.state.doc.textContent).toBe('after')
+    expect(core.editorView!.state.selection).toBeInstanceOf(NodeSelection)
+    expect((core.editorView!.state.selection as NodeSelection).node.type.name).toBe('image_block')
 
     core.editorView?.destroy()
   })

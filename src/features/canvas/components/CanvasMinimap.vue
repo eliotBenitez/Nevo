@@ -23,9 +23,9 @@ const scale = computed(() => {
 </script>
 
 <template>
-  <div v-if="allBounds" class="canvas-minimap" aria-hidden="true">
+  <div v-if="allBounds" class="canvas-minimap tw:absolute tw:right-4 tw:bottom-4 tw:z-20 tw:h-[116px] tw:w-44 tw:overflow-hidden tw:rounded-xl tw:border tw:border-solid tw:border-(--border-subtle) tw:bg-[color-mix(in_srgb,var(--surface-canvas)_88%,transparent)] tw:shadow-(--shadow-raised) tw:max-[720px]:hidden" aria-hidden="true">
     <div
-      class="canvas-minimap__block"
+      class="canvas-minimap__block tw:absolute tw:rounded-[2px] tw:bg-content-muted tw:opacity-50"
       :style="{
         left: `${(effectiveFrame.x - allBounds.x) * scale}px`,
         top: `${(effectiveFrame.y - allBounds.y) * scale}px`,
@@ -34,7 +34,7 @@ const scale = computed(() => {
       }"
     />
     <div
-      class="canvas-minimap__viewport"
+      class="canvas-minimap__viewport tw:absolute tw:border tw:border-solid tw:border-accent tw:bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]"
       :style="{
         left: `${(camera.x - allBounds.x) * scale}px`,
         top: `${(camera.y - allBounds.y) * scale}px`,
@@ -44,38 +44,3 @@ const scale = computed(() => {
     />
   </div>
 </template>
-
-<style scoped>
-.canvas-minimap {
-  position: absolute;
-  z-index: 20;
-  right: 16px;
-  bottom: 16px;
-  width: 176px;
-  height: 116px;
-  overflow: hidden;
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--canvas-1) 88%, transparent);
-  box-shadow: var(--shadow-1);
-}
-
-.canvas-minimap__block {
-  position: absolute;
-  border-radius: 2px;
-  background: var(--text-3);
-  opacity: 0.5;
-}
-
-.canvas-minimap__viewport {
-  position: absolute;
-  border: 1px solid var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-}
-
-@media (max-width: 720px) {
-  .canvas-minimap {
-    display: none;
-  }
-}
-</style>

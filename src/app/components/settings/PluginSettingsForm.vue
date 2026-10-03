@@ -112,20 +112,23 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div v-if="plugin.settingsSchema?.length" class="plugin-settings-form">
+  <div v-if="plugin.settingsSchema?.length" class="plugin-settings-form tw:mt-2">
     <div
       v-for="field in plugin.settingsSchema"
       :key="field.key"
-      class="settings-row settings-row--border"
-      :class="{ 'settings-row--stack': field.type === 'textarea' && !field.secret }"
+      class="settings-row settings-row--border tw:grid tw:min-w-0 tw:py-3"
+      :class="field.type === 'textarea' && !field.secret
+        ? 'settings-row--stack tw:grid-cols-[minmax(0,1fr)] tw:items-stretch tw:gap-2'
+        : 'tw:grid-cols-[minmax(0,1fr)_auto] tw:items-center tw:gap-5 tw:max-[980px]:grid-cols-[minmax(0,1fr)] tw:max-[980px]:items-stretch tw:max-[980px]:gap-2'"
     >
-      <div class="row-copy">
-        <div class="row-title">{{ label(field.label, field.key) }}</div>
-        <div v-if="field.description" class="row-sub">{{ label(field.description, field.description) }}</div>
+      <div class="row-copy tw:min-w-0">
+        <div class="row-title tw:text-content-primary tw:text-[13.5px] tw:font-[550] tw:[overflow-wrap:anywhere]">{{ label(field.label, field.key) }}</div>
+        <div v-if="field.description" class="row-sub tw:mt-0.5 tw:text-content-muted tw:text-xs tw:leading-[1.45] tw:[overflow-wrap:anywhere]">{{ label(field.description, field.description) }}</div>
       </div>
 
       <NvToggle
         v-if="field.type === 'checkbox'"
+        :aria-label="label(field.label, field.key)"
         :model-value="boolValue(field)"
         @update:model-value="v => updateSetting(field, v)"
       />
@@ -148,14 +151,14 @@ onMounted(async () => {
 
       <textarea
         v-else-if="field.type === 'textarea' && !field.secret"
-        class="ui-input plugin-settings-form__textarea"
+        class="ui-input plugin-settings-form__textarea tw:w-[220px] tw:min-h-16 tw:py-2 tw:px-2.5 tw:resize-y tw:font-medium tw:text-[12.5px] tw:font-nv-ui"
         :value="stringValue(field)"
         :placeholder="placeholderText(field)"
         rows="3"
         @change="e => updateSetting(field, (e.target as HTMLTextAreaElement).value)"
       />
 
-      <div v-else-if="field.secret" class="plugin-settings-form__secret">
+      <div v-else-if="field.secret" class="plugin-settings-form__secret tw:flex tw:items-center tw:gap-2">
         <input
           class="ui-input"
           type="password"
@@ -164,8 +167,8 @@ onMounted(async () => {
           @input="e => onSecretInput(field, (e.target as HTMLInputElement).value)"
           @blur="onSecretBlur(field)"
         >
-        <span v-if="secretFlash[field.key]" class="plugin-settings-form__badge">{{ t('settings.plugins.settings.saved') }}</span>
-        <span v-else-if="secretHasValue[field.key]" class="plugin-settings-form__badge">{{ t('settings.plugins.settings.secretSet') }}</span>
+        <span v-if="secretFlash[field.key]" class="plugin-settings-form__badge tw:text-content-muted tw:text-[11px] tw:font-nv-mono tw:whitespace-nowrap">{{ t('settings.plugins.settings.saved') }}</span>
+        <span v-else-if="secretHasValue[field.key]" class="plugin-settings-form__badge tw:text-content-muted tw:text-[11px] tw:font-nv-mono tw:whitespace-nowrap">{{ t('settings.plugins.settings.secretSet') }}</span>
       </div>
 
       <input
@@ -179,38 +182,3 @@ onMounted(async () => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.plugin-settings-form {
-  border-top: 1px solid var(--line-1);
-}
-
-.plugin-settings-form .settings-row {
-  padding: 12px 0;
-}
-
-.plugin-settings-form .settings-row:first-child {
-  border-top: none;
-}
-
-.plugin-settings-form__textarea {
-  width: 220px;
-  min-height: 64px;
-  padding: 8px 10px;
-  resize: vertical;
-  font: 500 12.5px var(--font-ui);
-}
-
-.plugin-settings-form__secret {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.plugin-settings-form__badge {
-  color: var(--text-4);
-  font-size: 11px;
-  font-family: var(--font-mono);
-  white-space: nowrap;
-}
-</style>

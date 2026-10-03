@@ -13,8 +13,8 @@ export interface TypstExportPayload {
 
 export interface BuildTypstExportOptions {
   assetPathPrefix?: string
-  /** Image bytes by file name, for workspaces whose assets are not on disk
-   *  (cloud). Anything not listed here is resolved from its path in Rust. */
+  /** Image bytes by file name, for assets not resolvable from a workspace
+   *  path. Anything not listed here is resolved from its path in Rust. */
   assetBytes?: Map<string, Uint8Array>
 }
 
@@ -67,9 +67,8 @@ export async function buildTypstExport(
     assetPathPrefix: buildOptions.assetPathPrefix,
   })
 
-  // A workspace image is resolved from its path in Rust; a cloud image has no
-  // file on disk, so its decrypted bytes are carried inline instead. The key is
-  // the file name the cloud asset preparation step assigned.
+  // A workspace image is resolved from its path in Rust; anything without a
+  // file on disk instead carries its bytes inline, keyed by file name.
   const assets: TypstAsset[] = images.map((img) => {
     const inline = buildOptions.assetBytes?.get(img.src.split('/').pop() ?? '')
     return inline

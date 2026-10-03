@@ -1,0 +1,15 @@
+/* src/app/components/home/HomeHero.vue */
+/* Layout, typography and default surface now live as `tw:` utilities on the
+   template (including the max-899px/max-719px breakpoints, expressed as
+   arbitrary Tailwind variants). Only the reduced-motion override remains:
+   it targets the transition this component keeps as a `tw:transition-colors`
+   utility, so prefers-reduced-motion still needs to zero its duration here. */
+@media (prefers-reduced-motion: reduce) {
+  .workspace-home__search {
+    transition-duration: 0.01ms;
+  }
+
+  .workspace-home__search:hover {
+    transform: none;
+  }
+}

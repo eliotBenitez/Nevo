@@ -30,7 +30,7 @@ export function canvasToolShape(tool: CanvasTool): CanvasShapeElement['shape'] |
 
 function themeTextColor(): string {
   if (typeof document === 'undefined') return '#171717'
-  return getComputedStyle(document.documentElement).getPropertyValue('--text-1').trim() || '#171717'
+  return getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim() || '#171717'
 }
 
 export function useCanvasToolState() {

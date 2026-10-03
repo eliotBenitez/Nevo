@@ -360,3 +360,71 @@ describe('slash plugin state', () => {
     }
   })
 })
+
+describe('slash plugin grid navigation', () => {
+  function createGridView(getGridColumns: () => number) {
+    const schema = nevoBaseSchema
+    const slashItems = createCoreSlashItems(createCoreCommands(schema).commands)
+    let state = EditorState.create({
+      schema,
+      doc: schema.node('doc', null, [schema.node('paragraph', null, [schema.text('/')])]),
+      plugins: [createSlashCommandPlugin(() => slashItems, { getGridColumns })],
+    })
+    state = state.apply(state.tr.setSelection(Selection.near(state.doc.resolve(2))))
+    const mount = document.createElement('div')
+    document.body.appendChild(mount)
+    const view = new EditorView(mount, {
+      state,
+      dispatchTransaction(transaction) {
+        view.updateState(view.state.apply(transaction))
+      },
+    })
+    return { view, slashItems, mount }
+  }
+
+  function press(view: EditorView, key: string): boolean {
+    const event = new KeyboardEvent('keydown', { key, cancelable: true })
+    return view.someProp('handleKeyDown', handler => handler(view, event)) ?? false
+  }
+
+  it('moves down four positions in the keycap grid', () => {
+    const { view, mount } = createGridView(() => 4)
+    expect(press(view, 'ArrowDown')).toBe(true)
+    expect(getSlashMenuState(view.state).activeIndex).toBe(4)
+    view.destroy()
+    mount.remove()
+  })
+
+  it('moves by one tile horizontally and by a row vertically', () => {
+    const { view, mount } = createGridView(() => 3)
+    expect(getSlashMenuState(view.state).open).toBe(true)
+
+    expect(press(view, 'ArrowRight')).toBe(true)
+    expect(getSlashMenuState(view.state).activeIndex).toBe(1)
+    expect(press(view, 'ArrowDown')).toBe(true)
+    expect(getSlashMenuState(view.state).activeIndex).toBe(4)
+    expect(press(view, 'ArrowLeft')).toBe(true)
+    expect(getSlashMenuState(view.state).activeIndex).toBe(3)
+    expect(press(view, 'ArrowUp')).toBe(true)
+    expect(getSlashMenuState(view.state).activeIndex).toBe(0)
+
+    view.destroy()
+    mount.remove()
+  })
+
+  it('leaves ArrowLeft/ArrowRight to the editor in list mode and reads the layout on each key', () => {
+    let columns = 0
+    const { view, mount } = createGridView(() => columns)
+
+    expect(press(view, 'ArrowRight')).toBe(false)
+    expect(press(view, 'ArrowDown')).toBe(true)
+    expect(getSlashMenuState(view.state).activeIndex).toBe(1)
+
+    columns = 3
+    expect(press(view, 'ArrowDown')).toBe(true)
+    expect(getSlashMenuState(view.state).activeIndex).toBe(4)
+
+    view.destroy()
+    mount.remove()
+  })
+})

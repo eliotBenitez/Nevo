@@ -1,4 +1,15 @@
-import type { BlockNode, NoteDocument } from '../types/note'
+import type { BlockNode, NoteDocument, NoteProperties } from '../types/note'
+import type { NotebookPageV1 } from '../core/notebook/types'
+import {
+  canonicalJson,
+  detectBlockChanges,
+  normalizeAttrsOrNull,
+  normalizeNode,
+  type HistoryBlockChangeKind,
+} from './noteHistoryCanonical'
+
+export { canonicalJson } from './noteHistoryCanonical'
+export type { HistoryBlockChangeKind } from './noteHistoryCanonical'
 
 export interface HistoryFileListItem {
   id: string
@@ -15,27 +26,56 @@ export interface HistoryNoteSelectionOptions {
   activeNoteId: string | null
 }
 
+export type HistoryMetadataField =
+  | 'title'
+  | 'icon'
+  | 'cover'
+  | 'propertiesType'
+  | 'propertiesTags'
+  | 'propertiesDate'
+  | 'propertiesStatus'
+  | 'canvas'
+
 export interface HistoryDiffMetadataChange {
-  field: 'title' | 'icon' | 'cover'
+  field: HistoryMetadataField
   currentValue: string | null
   snapshotValue: string | null
+  /** canvas only: element/connector counts equal but layout/content differs */
+  layoutOnly?: boolean
 }
 
 export interface HistoryComparableBlock {
   type: string
   label: string
+  /** collected inline text ('' for atoms) */
+  text: string
+  /** canonical, key-order independent */
   signature: string
+  attrs: Record<string, unknown>
 }
 
 export interface NormalizedDiffBlockRow {
-  kind: 'added' | 'removed' | 'changed'
+  kind: 'added' | 'removed' | 'changed' | 'unchanged'
   current: HistoryComparableBlock | null
   snapshot: HistoryComparableBlock | null
+  /** only for kind 'changed' with both sides */
+  changes?: HistoryBlockChangeKind[]
+  /** attr keys whose values differ, sorted; only when changes includes 'attrs' */
+  changedAttrs?: string[]
 }
 
 export interface NoteHistoryDiff {
   metadata: HistoryDiffMetadataChange[]
   rows: NormalizedDiffBlockRow[]
+  notebookPages?: NotebookPageHistoryChange[]
+}
+
+export interface NotebookPageHistoryChange {
+  pageId: string
+  kind: 'added' | 'removed' | 'changed' | 'moved'
+  currentIndex?: number
+  snapshotIndex?: number
+  moved?: boolean
 }
 
 const COMPLEX_BLOCK_LABELS: Record<string, string> = {
@@ -72,24 +112,79 @@ export function filterHistoryFiles(files: HistoryFileListItem[], query: string):
   return files.filter(file => file.title.toLowerCase().includes(normalizedQuery))
 }
 
+export function summarizeCanvas(canvas: NoteDocument['canvas']): string | null {
+  if (!canvas) return null
+  return `${Object.keys(canvas.elements ?? {}).length}/${Object.keys(canvas.connectors ?? {}).length}`
+}
+
 export function buildNoteHistoryDiff(current: NoteDocument, snapshot: NoteDocument): NoteHistoryDiff {
-  const currentBlocks = normalizeHistoryBlocks(current.content)
-  const snapshotBlocks = normalizeHistoryBlocks(snapshot.content)
+  const currentBlocks = toInternalBlocks(current.content)
+  const snapshotBlocks = toInternalBlocks(snapshot.content)
   const unchangedPairs = buildUnchangedPairs(snapshotBlocks, currentBlocks)
   const rows = buildDiffRows(snapshotBlocks, currentBlocks, unchangedPairs)
 
   return {
-    metadata: [
-      buildMetadataChange('title', current.title, snapshot.title),
-      buildMetadataChange('icon', current.icon, snapshot.icon),
-      buildMetadataChange('cover', current.cover ?? null, snapshot.cover ?? null),
-    ].filter((change): change is HistoryDiffMetadataChange => change !== null),
+    metadata: buildMetadataChanges(current, snapshot),
     rows,
+    ...(current.documentKind === 'notebook' || snapshot.documentKind === 'notebook'
+      ? { notebookPages: diffNotebookPages(current.notebook?.pages, snapshot.notebook?.pages) }
+      : {}),
   }
 }
 
+function diffNotebookPages(
+  currentPages: NotebookPageV1[] | undefined,
+  snapshotPages: NotebookPageV1[] | undefined,
+): NotebookPageHistoryChange[] {
+  const current = Array.isArray(currentPages) ? currentPages : []
+  const snapshot = Array.isArray(snapshotPages) ? snapshotPages : []
+  const currentIndexById = new Map(current.map((page, index) => [page.id, index]))
+  const snapshotIndexById = new Map(snapshot.map((page, index) => [page.id, index]))
+  const changes: NotebookPageHistoryChange[] = []
+
+  for (let index = 0; index < snapshot.length; index += 1) {
+    const page = snapshot[index]
+    if (!page) continue
+    const currentIndex = currentIndexById.get(page.id)
+    if (currentIndex === undefined) {
+      changes.push({ pageId: page.id, kind: 'removed', snapshotIndex: index })
+      continue
+    }
+    const currentPage = current[currentIndex]
+    if (!currentPage) continue
+    const moved = currentIndex !== index
+    const currentValue = { ...currentPage, id: undefined }
+    const snapshotValue = { ...page, id: undefined }
+    if (canonicalJson(currentValue) !== canonicalJson(snapshotValue)) {
+      changes.push({ pageId: page.id, kind: 'changed', currentIndex, snapshotIndex: index, ...(moved ? { moved: true } : {}) })
+    } else if (moved) {
+      changes.push({ pageId: page.id, kind: 'moved', currentIndex, snapshotIndex: index })
+    }
+  }
+
+  for (let index = 0; index < current.length; index += 1) {
+    const page = current[index]
+    if (page && !snapshotIndexById.has(page.id)) changes.push({ pageId: page.id, kind: 'added', currentIndex: index })
+  }
+  return changes
+}
+
+function buildMetadataChanges(current: NoteDocument, snapshot: NoteDocument): HistoryDiffMetadataChange[] {
+  const changes = [
+    buildMetadataChange('title', current.title, snapshot.title),
+    buildMetadataChange('icon', current.icon, snapshot.icon),
+    buildMetadataChange('cover', current.cover ?? null, snapshot.cover ?? null),
+    buildMetadataChange('propertiesType', normalizePropertyValue(current.properties, 'type'), normalizePropertyValue(snapshot.properties, 'type')),
+    buildMetadataChange('propertiesTags', normalizePropertyTags(current.properties), normalizePropertyTags(snapshot.properties)),
+    buildMetadataChange('propertiesDate', normalizePropertyValue(current.properties, 'date'), normalizePropertyValue(snapshot.properties, 'date')),
+    buildMetadataChange('propertiesStatus', normalizePropertyValue(current.properties, 'status'), normalizePropertyValue(snapshot.properties, 'status')),
+    buildCanvasMetadataChange(current.canvas, snapshot.canvas),
+  ]
+  return changes.filter((change): change is HistoryDiffMetadataChange => change !== null)
+}
+
 function buildMetadataChange(
-  field: HistoryDiffMetadataChange['field'],
+  field: HistoryMetadataField,
   currentValue: string | null,
   snapshotValue: string | null,
 ): HistoryDiffMetadataChange | null {
@@ -97,24 +192,54 @@ function buildMetadataChange(
   return { field, currentValue, snapshotValue }
 }
 
+function normalizePropertyValue(properties: NoteProperties | undefined, key: 'type' | 'date' | 'status'): string | null {
+  const value = properties?.[key]
+  if (typeof value !== 'string') return null
+  return value.trim() || null
+}
+
+function normalizePropertyTags(properties: NoteProperties | undefined): string | null {
+  const tags = (properties?.tags ?? []).map(tag => tag.trim()).filter(Boolean)
+  return tags.length ? tags.join(', ') : null
+}
+
+function buildCanvasMetadataChange(
+  current: NoteDocument['canvas'],
+  snapshot: NoteDocument['canvas'],
+): HistoryDiffMetadataChange | null {
+  if (canonicalJson(current ?? null) === canonicalJson(snapshot ?? null)) return null
+  const currentValue = summarizeCanvas(current)
+  const snapshotValue = summarizeCanvas(snapshot)
+  return { field: 'canvas', currentValue, snapshotValue, layoutOnly: currentValue === snapshotValue }
+}
+
 export function normalizeHistoryBlocks(content: BlockNode): HistoryComparableBlock[] {
   if (content.type !== 'doc' || !content.content?.length) return []
   return content.content.map(toComparableBlock)
 }
 
+/** A comparable block paired with the raw node it was derived from, so a
+ *  'changed' row can inspect the original attrs/marks/content to explain
+ *  *why* it changed without re-deriving that from the flattened signature. */
+interface InternalDiffBlock {
+  raw: BlockNode
+  comparable: HistoryComparableBlock
+}
+
+function toInternalBlocks(content: BlockNode): InternalDiffBlock[] {
+  if (content.type !== 'doc' || !content.content?.length) return []
+  return content.content.map(raw => ({ raw, comparable: toComparableBlock(raw) }))
+}
+
 function toComparableBlock(block: BlockNode): HistoryComparableBlock {
   const text = collectInlineText(block).trim()
   const label = text || COMPLEX_BLOCK_LABELS[block.type] || 'Changed block'
-  const serializedPayload = JSON.stringify({
-    attrs: block.attrs ?? null,
-    content: block.content ?? null,
-    marks: block.marks ?? null,
-    text: block.text ?? null,
-  })
   return {
     type: block.type,
     label,
-    signature: `${block.type}:${text || label}:${serializedPayload}`,
+    text,
+    signature: canonicalJson(normalizeNode(block)),
+    attrs: normalizeAttrsOrNull(block.attrs) ?? {},
   }
 }
 
@@ -126,8 +251,8 @@ function collectInlineText(block: BlockNode): string {
 }
 
 function buildUnchangedPairs(
-  snapshotBlocks: HistoryComparableBlock[],
-  currentBlocks: HistoryComparableBlock[],
+  snapshotBlocks: InternalDiffBlock[],
+  currentBlocks: InternalDiffBlock[],
 ): Array<[number, number]> {
   const snapshotLength = snapshotBlocks.length
   const currentLength = currentBlocks.length
@@ -135,7 +260,7 @@ function buildUnchangedPairs(
 
   for (let i = snapshotLength - 1; i >= 0; i -= 1) {
     for (let j = currentLength - 1; j >= 0; j -= 1) {
-      if (snapshotBlocks[i]?.signature === currentBlocks[j]?.signature) {
+      if (snapshotBlocks[i]?.comparable.signature === currentBlocks[j]?.comparable.signature) {
         dp[i]![j] = dp[i + 1]![j + 1]! + 1
       } else {
         dp[i]![j] = Math.max(dp[i + 1]![j]!, dp[i]![j + 1]!)
@@ -147,7 +272,7 @@ function buildUnchangedPairs(
   let i = 0
   let j = 0
   while (i < snapshotLength && j < currentLength) {
-    if (snapshotBlocks[i]?.signature === currentBlocks[j]?.signature) {
+    if (snapshotBlocks[i]?.comparable.signature === currentBlocks[j]?.comparable.signature) {
       pairs.push([i, j])
       i += 1
       j += 1
@@ -166,8 +291,8 @@ function buildUnchangedPairs(
 }
 
 function buildDiffRows(
-  snapshotBlocks: HistoryComparableBlock[],
-  currentBlocks: HistoryComparableBlock[],
+  snapshotBlocks: InternalDiffBlock[],
+  currentBlocks: InternalDiffBlock[],
   unchangedPairs: Array<[number, number]>,
 ): NormalizedDiffBlockRow[] {
   const rows: NormalizedDiffBlockRow[] = []
@@ -181,16 +306,23 @@ function buildDiffRows(
         currentBlocks.slice(currentStart, currentIndex),
       ),
     )
+    if (snapshotIndex < snapshotBlocks.length && currentIndex < currentBlocks.length) {
+      rows.push({
+        kind: 'unchanged',
+        snapshot: snapshotBlocks[snapshotIndex]?.comparable ?? null,
+        current: currentBlocks[currentIndex]?.comparable ?? null,
+      })
+    }
     snapshotStart = snapshotIndex + 1
     currentStart = currentIndex + 1
   }
 
-  return rows
+  return rows.some(row => row.kind !== 'unchanged') ? rows : []
 }
 
 function buildGapRows(
-  snapshotGap: HistoryComparableBlock[],
-  currentGap: HistoryComparableBlock[],
+  snapshotGap: InternalDiffBlock[],
+  currentGap: InternalDiffBlock[],
 ): NormalizedDiffBlockRow[] {
   const rows: NormalizedDiffBlockRow[] = []
   const changedCount = Math.min(snapshotGap.length, currentGap.length)
@@ -198,37 +330,38 @@ function buildGapRows(
   if (snapshotGap.length > currentGap.length) {
     const removedCount = snapshotGap.length - currentGap.length
     for (const block of snapshotGap.slice(0, removedCount)) {
-      rows.push({
-        kind: 'removed',
-        snapshot: block,
-        current: null,
-      })
+      rows.push({ kind: 'removed', snapshot: block.comparable, current: null })
     }
   }
 
   for (let index = 0; index < changedCount; index += 1) {
     const snapshotOffset = Math.max(0, snapshotGap.length - changedCount) + index
     const currentOffset = index
+    const snapshotBlock = snapshotGap[snapshotOffset]
+    const currentBlock = currentGap[currentOffset]
+    if (!snapshotBlock || !currentBlock) continue
+    if (snapshotBlock.comparable.signature === currentBlock.comparable.signature) continue
+    const { changes, changedAttrs } = detectBlockChanges(
+      snapshotBlock.raw,
+      currentBlock.raw,
+      snapshotBlock.comparable,
+      currentBlock.comparable,
+    )
     rows.push({
       kind: 'changed',
-      snapshot: snapshotGap[snapshotOffset] ?? null,
-      current: currentGap[currentOffset] ?? null,
+      snapshot: snapshotBlock.comparable,
+      current: currentBlock.comparable,
+      changes,
+      ...(changedAttrs ? { changedAttrs } : {}),
     })
   }
 
   if (currentGap.length > snapshotGap.length) {
     const addedStart = changedCount
     for (const block of currentGap.slice(addedStart)) {
-      rows.push({
-        kind: 'added',
-        snapshot: null,
-        current: block,
-      })
+      rows.push({ kind: 'added', snapshot: null, current: block.comparable })
     }
   }
 
-  return rows.filter(row => {
-    if (row.kind !== 'changed') return true
-    return row.snapshot?.signature !== row.current?.signature
-  })
+  return rows
 }

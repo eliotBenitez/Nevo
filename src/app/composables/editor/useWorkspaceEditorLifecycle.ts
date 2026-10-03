@@ -28,7 +28,6 @@ interface WorkspaceEditorLifecycleOptions {
   getPendingBlockTargetKey: () => string | null
   getPendingDrawUpdateKey: () => string | null
   getTreeSize: () => number
-  getCollabSessionNoteId: () => string | null
   isPluginRuntimeReady: () => boolean
   isPluginRuntimePaused: () => boolean
   mountBlockHandle: () => void
@@ -48,7 +47,6 @@ interface WorkspaceEditorLifecycleOptions {
   applyPendingDrawUpdate: () => void
   afterSuccessfulSave: () => void
   flushPendingContent: () => void
-  leaveCollabSession: () => Promise<void>
   loadNoteGraph: (noteId: string) => void
   clearGraph: () => void
   onDocumentMouseDown: (event: MouseEvent) => void
@@ -72,7 +70,7 @@ export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOpt
     await options.editorSetup.setupEditorForNote(note, root, options.getSettings())
     options.mountNotePreload(root)
     options.updateEditorStatsNow()
-    if (mountBlockHandle && !options.isTouch.value) options.mountBlockHandle()
+    if (mountBlockHandle) options.mountBlockHandle()
     await options.applyPendingBlockTarget()
     options.applyPendingDrawUpdate()
     await options.refreshScrollbarMetrics()
@@ -124,10 +122,14 @@ export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOpt
   watch(
     () => {
       const note = options.getNote()
-      return note ? { id: note.id, content: note.content } : null
+      return {
+        state: note ? { id: note.id, content: note.content } : null,
+        ready: options.isPluginRuntimeReady(),
+        paused: options.isPluginRuntimePaused(),
+      }
     },
-    async (noteState) => {
-      if (options.isPluginRuntimePaused() || !options.isPluginRuntimeReady()) return
+    async ({ state: noteState, ready, paused }) => {
+      if (paused || !ready) return
       options.unmountBlockHandle()
       if (!noteState) {
         options.unmountNotePreload()
@@ -139,7 +141,7 @@ export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOpt
         if (rawContent === options.core.lastSerializedContentRef
           || JSON.stringify(rawContent) === options.core.lastSerializedContent) {
           options.core.lastSerializedContentRef = rawContent
-          if (!options.isTouch.value) options.mountBlockHandle()
+          options.mountBlockHandle()
           return
         }
       }
@@ -152,9 +154,9 @@ export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOpt
   watch(options.isTouch, (touch) => {
     if (touch) {
       options.closeBlockTypeMenu()
-      options.unmountBlockHandle()
       options.scrollbarVisible.value = false
-    } else if (options.getNote()) {
+    }
+    if (options.getNote()) {
       options.mountBlockHandle()
     }
   })
@@ -176,10 +178,7 @@ export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOpt
 
   watch(
     () => options.getNote()?.id,
-    (noteId, prevId) => {
-      if (noteId !== prevId && options.getCollabSessionNoteId()) {
-        void options.leaveCollabSession()
-      }
+    (noteId) => {
       if (noteId) options.loadNoteGraph(noteId)
       else options.clearGraph()
     },
@@ -212,10 +211,13 @@ export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOpt
     nextTick(options.resizeTitle)
   })
 
-  onMounted(() => {
+  onMounted(async () => {
     document.addEventListener('mousedown', options.onDocumentMouseDown)
     options.startPluginRuntimeGuard()
     nextTick(options.resizeTitle)
+    if (options.isPluginRuntimeReady() && !options.isPluginRuntimePaused() && !options.core.editorView) {
+      await reinitializeEditor(true)
+    }
   })
 
   onBeforeUnmount(async () => {
@@ -225,7 +227,6 @@ export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOpt
     options.unmountBlockHandle()
     options.unmountNotePreload()
     options.editorSetup.destroyEditorView()
-    await options.leaveCollabSession()
     await options.disposePluginRuntime()
   })
 

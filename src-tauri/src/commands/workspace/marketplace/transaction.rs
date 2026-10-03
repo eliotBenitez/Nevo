@@ -1,8 +1,8 @@
 use super::super::paths::plugins_dir_path;
 use super::super::plugins::validate_plugin_id;
 use super::types::MarketplaceMigrationBundle;
+use crate::commands::note::{note_lock, note_path, NoteDocument};
 use crate::commands::path_utils::{validate_id, write_atomic};
-use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -10,8 +10,11 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 const MARKETPLACE_TRANSACTIONS_DIR: &str = ".nevo/marketplace/transactions";
 const MARKETPLACE_TRANSACTION_JOURNAL: &str = "journal.json";
-const MAX_MIGRATION_COLLAB_BYTES: usize = 100 * 1024 * 1024;
-const MAX_MIGRATION_TOTAL_BYTES: usize = 500 * 1024 * 1024;
+/// A single migrated note's ProseMirror document, serialized. Generous
+/// relative to a typical note, but still a hard cap against a runaway plugin
+/// migration writing an absurdly large document into `note.json`.
+const MAX_MIGRATION_NOTE_CONTENT_BYTES: usize = 100 * 1024 * 1024;
+const MAX_MIGRATION_TOTAL_CONTENT_BYTES: usize = 500 * 1024 * 1024;
 pub(super) const MAX_MIGRATION_STORAGE_BYTES: usize = 5 * 1024 * 1024;
 const MAX_MIGRATION_REGISTRY_BYTES: usize = 2 * 1024 * 1024;
 
@@ -66,7 +69,9 @@ pub(super) struct MarketplaceTransactionJournal {
 pub(super) struct PreparedMigrationFiles {
     workspace_storage: Option<Vec<u8>>,
     plugin_registry: Option<Vec<u8>>,
-    collab_states: BTreeMap<String, Vec<u8>>,
+    /// Migrated ProseMirror documents, keyed by note id, to write into each
+    /// note's `note.json` on commit.
+    migrated_content: BTreeMap<String, serde_json::Value>,
 }
 pub(super) fn marketplace_transaction_dir(
     workspace: &Path,
@@ -152,24 +157,26 @@ pub(super) fn prepare_migration_files(
         })
         .transpose()?;
     let mut total_bytes = 0usize;
-    let mut collab_states = BTreeMap::new();
-    for (note_id, encoded) in migration.collab_states_base64 {
+    let mut migrated_content = BTreeMap::new();
+    for (note_id, document) in migration.migrated_content {
         validate_id(&note_id)?;
-        let bytes = base64::engine::general_purpose::STANDARD
-            .decode(encoded)
-            .map_err(|error| format!("Plugin migration Y.Doc is not valid base64: {error}"))?;
+        let size = serde_json::to_vec(&document)
+            .map_err(|error| error.to_string())?
+            .len();
         total_bytes = total_bytes
-            .checked_add(bytes.len())
-            .ok_or_else(|| "Plugin migration Y.Doc total size overflowed".to_string())?;
-        if bytes.len() > MAX_MIGRATION_COLLAB_BYTES || total_bytes > MAX_MIGRATION_TOTAL_BYTES {
-            return Err("Plugin migration Y.Doc payload exceeds its size limit".to_string());
+            .checked_add(size)
+            .ok_or_else(|| "Plugin migration note content total size overflowed".to_string())?;
+        if size > MAX_MIGRATION_NOTE_CONTENT_BYTES
+            || total_bytes > MAX_MIGRATION_TOTAL_CONTENT_BYTES
+        {
+            return Err("Plugin migration note content exceeds its size limit".to_string());
         }
-        collab_states.insert(note_id, bytes);
+        migrated_content.insert(note_id, document);
     }
     Ok(PreparedMigrationFiles {
         workspace_storage,
         plugin_registry,
-        collab_states,
+        migrated_content,
     })
 }
 
@@ -204,11 +211,11 @@ pub(super) fn marketplace_backup_entries(
     }
     entries.extend(
         migration
-            .collab_states
+            .migrated_content
             .keys()
             .map(|note_id| MarketplaceBackupEntry {
-                target: format!(".nevo/collab/{note_id}.yjs"),
-                backup: format!("backup/collab/{note_id}.yjs"),
+                target: format!("notes/note-{note_id}.nevo"),
+                backup: format!("backup/notes/note-{note_id}.nevo"),
                 kind: MarketplaceBackupKind::File,
                 existed: false,
                 backup_ready: false,
@@ -249,15 +256,37 @@ pub(super) fn commit_marketplace_files(
     if let Some(bytes) = &migration.plugin_registry {
         write_workspace_file(&workspace.join(".nevo/plugin-registry.json"), bytes)?;
     }
-    for (note_id, bytes) in &migration.collab_states {
-        write_workspace_file(
-            &workspace
-                .join(".nevo/collab")
-                .join(format!("{note_id}.yjs")),
-            bytes,
-        )?;
+    let workspace_str = workspace.to_string_lossy().into_owned();
+    for (note_id, document) in &migration.migrated_content {
+        write_migrated_note_content(&workspace_str, note_id, document)?;
     }
     Ok(())
+}
+
+/// Writes a plugin migration's ProseMirror document into a note's `content`
+/// field, through the same lock + read/modify/write-atomic path `save_note`
+/// uses for that note (see `note_lock`), so this cannot race a concurrent
+/// autosave for the same note. Only `content` and `updated_at` change —
+/// title, folder, properties, and any unknown fields the note carries round
+/// trip untouched via `NoteDocument`'s own (de)serialization.
+fn write_migrated_note_content(
+    workspace: &str,
+    note_id: &str,
+    document: &serde_json::Value,
+) -> Result<(), String> {
+    let target = note_path(workspace, note_id)?;
+
+    let note_write_lock = note_lock(workspace, note_id);
+    let _note_guard = note_write_lock.lock().map_err(|error| error.to_string())?;
+
+    let existing = std::fs::read(&target).map_err(|error| error.to_string())?;
+    let mut note: NoteDocument =
+        serde_json::from_slice(&existing).map_err(|error| error.to_string())?;
+    note.content = document.clone();
+    note.updated_at = chrono::Utc::now().to_rfc3339();
+
+    let bytes = serde_json::to_vec(&note).map_err(|error| error.to_string())?;
+    write_atomic(&target, &bytes).map_err(|error| error.to_string())
 }
 
 fn prepare_transaction_backup(

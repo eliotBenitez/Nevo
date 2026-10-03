@@ -37,16 +37,16 @@ const syncLabel = computed(() => {
 </script>
 
 <template>
-  <div class="ke-root">
+  <div class="ke-root tw:flex tw:flex-col tw:overflow-hidden tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-panel tw:text-xs">
     <!-- Compact toolbar -->
-    <div class="ke-toolbar">
-      <LayoutGrid :size="12" class="ke-toolbar__icon" />
-      <span class="ke-toolbar__title">{{ board.title }}</span>
-      <span class="ke-toolbar__count">{{ t('kanban.embedded.cardCount', { n: cards.length }) }}</span>
-      <div class="ke-toolbar__spacer" />
+    <div class="ke-toolbar tw:flex tw:items-center tw:gap-[7px] tw:bg-transparent tw:px-3 tw:py-2">
+      <LayoutGrid :size="12" class="ke-toolbar__icon tw:shrink-0 tw:text-content-muted" />
+      <span class="ke-toolbar__title tw:text-xs tw:font-semibold tw:text-content-primary">{{ board.title }}</span>
+      <span class="ke-toolbar__count tw:font-nv-mono tw:text-[10.5px] tw:text-content-muted">{{ t('kanban.embedded.cardCount', { n: cards.length }) }}</span>
+      <div class="ke-toolbar__spacer tw:flex-1" />
       <button
         type="button"
-        class="ke-icon-btn"
+        class="ke-icon-btn tw:grid tw:size-[22px] tw:place-items-center tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-none tw:bg-transparent tw:text-content-muted tw:cursor-pointer tw:transition-colors tw:duration-100 tw:hover:bg-[var(--hover-strong,var(--surface-overlay))] tw:hover:text-content-secondary"
         :title="t('kanban.embedded.openFullView')"
         :aria-label="t('kanban.embedded.openFullView')"
         @click="emit('open-full')"
@@ -56,7 +56,7 @@ const syncLabel = computed(() => {
     </div>
 
     <!-- Board columns (max 3) -->
-    <div class="ke-board">
+    <div class="ke-board tw:flex tw:min-h-[120px] tw:max-h-[360px] tw:items-start tw:gap-2 tw:overflow-x-auto tw:overflow-y-hidden tw:px-3 tw:py-2.5">
       <KanbanColumn
         v-for="col in columns"
         :key="col.id"
@@ -68,132 +68,21 @@ const syncLabel = computed(() => {
         @open-card="id => emit('open-card', id)"
         @add-card="id => emit('add-card', id)"
       />
-      <div v-if="!columns.length" class="ke-empty">
+      <div v-if="!columns.length" class="ke-empty tw:flex-1 tw:grid tw:place-items-center tw:p-5 tw:text-[11.5px] tw:text-content-muted">
         {{ t('kanban.embedded.noColumns') }}
       </div>
     </div>
 
     <!-- Footer sync bar -->
-    <div class="ke-footer">
-      <RefreshCw :size="10" class="ke-footer__icon" />
-      <span class="ke-footer__linked">{{ t('kanban.embedded.linkedTo', { title: board.title }) }}</span>
-      <span class="ke-footer__dot">·</span>
-      <span class="ke-footer__sync">{{ syncLabel }}</span>
-      <div class="ke-footer__spacer" />
-      <button type="button" class="ke-footer__open" @click="emit('open-full')">
+    <div class="ke-footer tw:flex tw:items-center tw:gap-[5px] tw:bg-[var(--hover,var(--surface-overlay))] tw:px-3 tw:py-[7px]">
+      <RefreshCw :size="10" class="ke-footer__icon tw:shrink-0 tw:text-content-muted" />
+      <span class="ke-footer__linked tw:text-[10.5px] tw:text-content-muted">{{ t('kanban.embedded.linkedTo', { title: board.title }) }}</span>
+      <span class="ke-footer__dot tw:text-content-muted">·</span>
+      <span class="ke-footer__sync tw:text-[10.5px] tw:text-content-muted">{{ syncLabel }}</span>
+      <div class="ke-footer__spacer tw:flex-1" />
+      <button type="button" class="ke-footer__open tw:border-none tw:bg-transparent tw:p-0 tw:text-[10.5px] tw:text-accent tw:cursor-pointer tw:transition-opacity tw:duration-[120ms] tw:hover:opacity-75" @click="emit('open-full')">
         {{ t('kanban.embedded.openFooter') }}
       </button>
     </div>
   </div>
 </template>
-
-<style scoped>
-.ke-root {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--line-2, var(--border-subtle));
-  border-radius: calc(12px * var(--radius-scale, 1));
-  background: var(--glass-2, var(--surface-1));
-  overflow: hidden;
-  font-size: 12px;
-}
-
-/* Toolbar */
-.ke-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--line-1, var(--border-subtle));
-  background: var(--glass-titlebar, var(--surface-2));
-}
-
-.ke-toolbar__icon { color: var(--text-4, var(--text-muted)); flex-shrink: 0; }
-
-.ke-toolbar__title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-1, var(--text-primary));
-}
-
-.ke-toolbar__count {
-  font-size: 10.5px;
-  color: var(--text-4, var(--text-muted));
-  font-family: var(--font-mono, monospace);
-}
-
-.ke-toolbar__spacer { flex: 1; }
-
-.ke-icon-btn {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: calc(5px * var(--radius-scale, 1));
-  border: none;
-  background: none;
-  color: var(--text-4, var(--text-muted));
-  cursor: pointer;
-  transition: background 0.1s, color 0.1s;
-}
-
-.ke-icon-btn:hover {
-  background: var(--hover-strong, var(--surface-2));
-  color: var(--text-2, var(--text-secondary));
-}
-
-/* Board */
-.ke-board {
-  display: flex;
-  gap: 8px;
-  padding: 10px 12px;
-  overflow-x: auto;
-  align-items: flex-start;
-  min-height: 120px;
-  max-height: 360px;
-  overflow-y: hidden;
-}
-
-.ke-empty {
-  flex: 1;
-  display: grid;
-  place-items: center;
-  color: var(--text-4, var(--text-muted));
-  font-size: 11.5px;
-  padding: 20px;
-}
-
-/* Footer */
-.ke-footer {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 7px 12px;
-  border-top: 1px solid var(--line-1, var(--border-subtle));
-  background: var(--hover, var(--surface-2));
-}
-
-.ke-footer__icon { color: var(--text-4, var(--text-muted)); flex-shrink: 0; }
-
-.ke-footer__linked,
-.ke-footer__sync {
-  font-size: 10.5px;
-  color: var(--text-4, var(--text-muted));
-}
-
-.ke-footer__dot { color: var(--text-4, var(--text-muted)); }
-
-.ke-footer__spacer { flex: 1; }
-
-.ke-footer__open {
-  font-size: 10.5px;
-  color: var(--accent);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: opacity 0.12s;
-}
-
-.ke-footer__open:hover { opacity: 0.75; }
-</style>

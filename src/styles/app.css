@@ -2,12 +2,9 @@
    Imported in cascade order; each partial owns one component's styles. */
 @import './app/workspace-shell.css';
 @import './app/mobile-workspace.css';
-@import './app/note-breadcrumb.css';
 @import './app/pdf-preview-modal.css';
 @import './app/docx-preview-modal.css';
 @import './app/titlebar-search.css';
 @import './app/titlebar-tabs.css';
-@import './app/workspace-history-modal.css';
-@import './app/workspace-rename-modal.css';
 @import './app/workspace-sidebar.css';
 @import './app/workspace-tree-node.css';

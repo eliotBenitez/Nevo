@@ -1,33 +1,40 @@
 /* src/app/WorkspaceShell.vue */
-.workspace-root { display: flex; flex-direction: column; isolation: isolate; }
-.workspace-body { position: relative; z-index: 1; }
+/* `.workspace-root`'s own flex/column/isolation and `.workspace-body`'s
+   position/z-index now live as `tw:` utilities on the template. The rules
+   below stay in CSS because they are state overrides (unlayered CSS always
+   beats `@layer utilities`, so they still correctly win regardless of
+   declaration order), cross-cutting selectors shared with `.sidebar`/
+   `.tree-row`/etc. owned by WorkspaceSidebar.vue (Task 2's scope, not
+   touched here), or CSS-variable-driven dynamic geometry
+   (`--app-titlebar-height`, `--app-shell-padding-x`, `--app-sidebar-width`,
+   safe-area insets) that must stay as inline vars/CSS per the migration's
+   dynamic-geometry rule. */
 .workspace-root--compact .workspace-titlebar { min-height: 38px; }
 .workspace-root--compact .sidebar { width: 252px; flex-basis: 252px; gap: 10px; }
 .workspace-root--compact .sidebar-system__item, .workspace-root--compact .nv-btn { min-height: 28px; }
 .workspace-root--reduced-motion, .workspace-root--reduced-motion * { transition-duration: 0ms !important; animation-duration: 0ms !important; scroll-behavior: auto !important; }
 
 .workspace-titlebar {
-  min-height: var(--app-titlebar-height, 42px);
-  display: flex; align-items: center; gap: 10px;
+  min-height: max(50px, var(--app-titlebar-height, 44px));
   padding: max(var(--safe-area-top), 0px) var(--app-shell-padding-x, 18px) 0;
-  background: var(--glass-titlebar);
-  backdrop-filter: blur(18px) saturate(110%);
-  -webkit-backdrop-filter: blur(18px) saturate(110%);
-  border-bottom: 1px solid var(--line-1);
-  position: relative; z-index: 4;
 }
-.workspace-titlebar--drag { -webkit-app-region: drag; }
-.workspace-titlebar .nv-btn, .titlebar-leading, .titlebar-main, .titlebar-actions { -webkit-app-region: no-drag; }
-.titlebar-leading { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
-.titlebar-trailing { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; margin-left: auto; }
-.titlebar-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
-.titlebar-action-btn { min-width: 28px; }
-.workspace-drawer-toggle { min-width: 28px; padding: 0 8px; }
 
-.workspace-body { flex: 1; display: flex; min-height: 0; overflow: hidden; position: relative; }
+.workspace-body {
+  flex: 1; display: flex; min-height: 0; overflow: hidden;
+  background: var(--frame-bg);
+  padding: 0 var(--island-inset) var(--island-inset) 0;
+}
+.workspace-body--inset-left { padding-left: var(--island-inset); }
 .workspace-sidebar-shell { flex: 0 0 var(--app-sidebar-width, 272px); width: var(--app-sidebar-width, 272px); overflow: hidden; transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), flex-basis 0.22s cubic-bezier(0.4, 0, 0.2, 1); contain: layout paint; }
 .workspace-sidebar-shell--tag-preview { --app-sidebar-width: clamp(420px, 28vw, 480px); }
 .workspace-sidebar-shell--hidden { flex-basis: 0; width: 0; }
+.workspace-sidebar-shell--desktop:not(.workspace-sidebar-shell--floating) .sidebar {
+  width: 100%;
+  flex-basis: auto;
+  border-radius: 0;
+}
+/* Floating sidebar is an overlay surface (spec §5, §10.1): it hovers above the
+   island content on hover/pin rather than sharing the frame tone. */
 .workspace-sidebar-shell--floating {
   position: absolute; left: 0; top: 0; bottom: 0; height: 100%;
   z-index: 20; flex: none;
@@ -40,29 +47,32 @@
 }
 .workspace-sidebar-shell--floating.workspace-sidebar-shell--revealed { transform: translateX(0); }
 .workspace-sidebar-shell--floating .sidebar {
-  border-radius: calc(14px * var(--radius-scale, 1));
-  border: 1px solid var(--line-2);
-  box-shadow: var(--shadow-pop), 0 0 0 1px color-mix(in oklab, var(--canvas-0) 60%, transparent);
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: var(--surface-overlay);
+  box-shadow: var(--shadow-overlay);
   height: 100%;
 }
-.workspace-sidebar-edge-trigger { position: absolute; left: 0; top: 0; bottom: 0; width: 14px; z-index: 15; }
-.workspace-editor-pane-shell { flex: 1; display: flex; min-width: 0; min-height: 0; overflow: hidden; }
-.workspace-right-panel-shell { flex: 0 0 280px; width: 280px; overflow: hidden; transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), flex-basis 0.22s cubic-bezier(0.4, 0, 0.2, 1); contain: layout paint; }
-.workspace-right-panel-shell--hidden { flex-basis: 0; width: 0; }
-.workspace-sidebar-toggle { min-width: 28px; padding: 0 8px; opacity: 0.7; transition: opacity 0.15s; }
-.workspace-sidebar-toggle:hover { opacity: 1; }
-.workspace-sidebar-toggle--collapsed { opacity: 0.45; }
-.workspace-drawer-toggle:focus-visible,
-.workspace-sidebar-toggle:focus-visible,
-.titlebar-action-btn:focus-visible,
-.workspace-drawer-bar .nv-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--accent-soft), 0 0 0 1px var(--accent);
+/* Island: the primary content region sits on a rounded canvas-tone surface,
+   inset from the frame by .workspace-body's padding (spec §5, §10.1). */
+.workspace-editor-pane-shell {
+  flex: 1; display: flex; min-width: 0; min-height: 0; overflow: hidden;
+  border-radius: var(--island-radius);
+  background: var(--island-bg);
+  border: 1px solid transparent;
 }
+/* Full-screen feature views are islands too, so every route shares one frame. */
+.workspace-body > :is(.graph-view, .kb-view, .draw-view, .history-view, .history-picker, .settings-view, .archive-view, .sandbox-plugin-view) {
+  overflow: hidden;
+  border-radius: var(--island-radius);
+  background: var(--island-bg);
+  border: 1px solid transparent;
+}
+.workspace-right-panel-shell { flex: 0 0 296px; width: 296px; overflow: hidden; transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), flex-basis 0.22s cubic-bezier(0.4, 0, 0.2, 1); contain: layout paint; }
+.workspace-right-panel-shell--hidden { flex-basis: 0; width: 0; }
+.workspace-sidebar-toggle--collapsed { opacity: 0.45; }
 
-.workspace-drawer-backdrop { position: fixed; inset: 0; z-index: 55; display: flex; justify-content: flex-start; background: oklch(0 0 0 / 0.52); padding: max(var(--safe-area-top), 0px) 0 max(var(--safe-area-bottom), 0px); }
-.workspace-drawer-panel { width: min(92vw, 340px); height: 100%; display: flex; flex-direction: column; background: var(--glass-2); border-right: 1px solid var(--line-1); box-shadow: var(--shadow-pop); }
-.workspace-drawer-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px; border-bottom: 1px solid var(--line-1); }
+.workspace-drawer-backdrop { padding: max(var(--safe-area-top), 0px) 0 max(var(--safe-area-bottom), 0px); }
 .workspace-drawer-panel .sidebar { width: 100%; height: 100%; flex: 1; border-right: none; border-radius: 0; }
 .workspace-drawer-panel .nv-btn,
 .workspace-drawer-panel .sidebar-board-item,
@@ -71,22 +81,13 @@
   min-height: 44px;
 }
 
-.rename-modal-backdrop { position: fixed; inset: 0; background: oklch(0 0 0 / 0.35); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: grid; place-items: center; z-index: 50; }
-.rename-modal { width: min(420px, calc(100vw - 24px)); border-radius: calc(14px * var(--radius-scale, 1)); border: 1px solid var(--line-2); background: var(--glass-3); box-shadow: var(--shadow-pop); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
-.rename-modal__title { margin: 0; font-size: 14px; color: var(--text-1); font-weight: 560; }
-.rename-modal__actions { display: flex; justify-content: flex-end; gap: 8px; }
-
-.workspace-root--fullscreen-dialogs .rename-modal-backdrop { padding: max(var(--safe-area-top), 0px) max(var(--safe-area-right), 0px) max(var(--safe-area-bottom), 0px) max(var(--safe-area-left), 0px); }
-.workspace-root--fullscreen-dialogs .rename-modal { width: 100vw; min-height: 100%; border-radius: 0; }
-
 @media (max-width: 1099px) { .titlebar-action-label { display: none; } }
 @media (max-width: 960px) {
-  .workspace-titlebar { align-items: stretch; gap: 8px; flex-wrap: wrap; padding-bottom: 10px; }
-  .workspace-titlebar--compact-layout { min-height: auto; }
-  .titlebar-trailing { margin-left: auto; }
+  .workspace-titlebar { grid-template-columns: minmax(0, 1fr) minmax(180px, 280px) minmax(0, 1fr); gap: 8px; }
 }
 @media (max-width: 719px) {
   .workspace-titlebar {
+    display: flex;
     min-height: calc(56px + max(var(--safe-area-top), 0px));
     flex-wrap: nowrap;
     align-items: center;
@@ -96,6 +97,8 @@
       0
       calc(var(--app-shell-padding-x, 12px) + max(var(--safe-area-left), 0px));
   }
+
+  .titlebar-start { flex: 1 1 auto; }
 
   .workspace-root--phone .titlebar-actions {
     display: none;
@@ -159,4 +162,10 @@
   }
 
   .workspace-drawer-panel { width: min(100vw, 360px); }
+
+  /* Phone: the island inset collapses to 0 so content fills the viewport (spec §14). */
+  .workspace-body { padding: 0; }
+  .workspace-body--inset-left { padding-left: 0; }
+  .workspace-editor-pane-shell,
+  .workspace-body > :is(.graph-view, .kb-view, .draw-view, .history-view, .history-picker, .settings-view, .archive-view, .sandbox-plugin-view) { border-radius: 0; }
 }

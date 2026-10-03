@@ -2,7 +2,7 @@ import { ref } from 'vue'
 import { useTreeStore } from '../stores/tree'
 import { useWorkspaceStore } from '../stores/workspace'
 import { useNoteStore } from '../stores/note'
-import { collabCommands, noteCommands } from '../tauri/commands'
+import { noteCommands } from '../tauri/commands'
 import { parseMarkdownToBlockNodeAsync, type ParsedMarkdown } from '../utils/noteImport/markdownParser'
 import type { BlockNode } from '../types/note'
 
@@ -15,11 +15,6 @@ export function useMarkdownImport() {
   const workspaceStore = useWorkspaceStore()
   const noteStore = useNoteStore()
   const importing = ref(false)
-
-  async function resetLocalEditorState(workspacePath: string, noteId: string) {
-    if (workspaceStore.backendKind !== 'local') return
-    await collabCommands.deleteYjsState(workspacePath, noteId)
-  }
 
   async function pickAndParseMarkdown(): Promise<{ basename: string; parsed: ParsedMarkdown } | null> {
     const selected = await noteCommands.pickAndReadTextFile()
@@ -51,7 +46,6 @@ export function useMarkdownImport() {
 
       const updatedAt = new Date().toISOString()
       await noteCommands.saveNote(workspacePath, { ...note, title: title || basename, content, updatedAt })
-      await resetLocalEditorState(workspacePath, note.id)
       noteStore.invalidateNoteCache(note.id)
       treeStore.syncNoteMeta(note.id, { title: title || basename, icon: note.icon }, updatedAt)
       void workspaceStore.refreshSidebarNotePreviews()
@@ -79,7 +73,6 @@ export function useMarkdownImport() {
       const updatedAt = new Date().toISOString()
       await options.beforePersist?.()
       await noteCommands.saveNote(workspacePath, { ...note, content: merged, updatedAt })
-      await resetLocalEditorState(workspacePath, note.id)
       noteStore.invalidateNoteCache(note.id)
       treeStore.syncNoteMeta(note.id, { title: note.title, icon: note.icon }, updatedAt)
       void workspaceStore.refreshSidebarNotePreviews()

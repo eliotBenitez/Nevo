@@ -41,10 +41,13 @@ function onInput(event: Event) {
 </script>
 
 <template>
-  <span class="nv-range-input" :class="{ 'nv-range-input--with-value': showValue }">
+  <span
+    class="nv-range-input tw:inline-grid tw:w-full tw:items-center"
+    :class="showValue && 'nv-range-input--with-value tw:grid-cols-[minmax(56px,1fr)_minmax(30px,auto)] tw:gap-[7px]'"
+  >
     <input
       type="range"
-      class="nv-range-input__control"
+      class="nv-range-input__control tw:m-0 tw:h-7 tw:w-full tw:accent-accent tw:cursor-pointer tw:disabled:cursor-not-allowed tw:disabled:opacity-[0.48]"
       :value="modelValue"
       :min="min"
       :max="max"
@@ -54,45 +57,14 @@ function onInput(event: Event) {
       :aria-valuetext="showValue ? displayValue : undefined"
       @input="onInput"
     >
-    <output v-if="showValue" class="nv-range-input__value">{{ displayValue }}</output>
+    <output v-if="showValue" class="nv-range-input__value tw:text-right tw:font-nv-ui tw:text-[11px] tw:leading-none tw:font-medium tw:tabular-nums tw:text-content-muted">{{ displayValue }}</output>
   </span>
 </template>
 
 <style scoped>
-.nv-range-input {
-  display: inline-grid;
-  align-items: center;
-  width: 100%;
-}
-
-.nv-range-input--with-value {
-  grid-template-columns: minmax(56px, 1fr) minmax(30px, auto);
-  gap: 7px;
-}
-
-.nv-range-input__control {
-  width: 100%;
-  height: 28px;
-  margin: 0;
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
 .nv-range-input__control:focus-visible {
-  border-radius: calc(5px * var(--radius-scale, 1));
+  border-radius: calc(6px * var(--radius-scale, 1));
   outline: none;
-  box-shadow: 0 0 0 2px var(--accent-soft);
-}
-
-.nv-range-input__control:disabled {
-  opacity: 0.48;
-  cursor: not-allowed;
-}
-
-.nv-range-input__value {
-  color: var(--text-3);
-  font: 500 11px/1 var(--font-ui);
-  text-align: right;
-  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 </style>

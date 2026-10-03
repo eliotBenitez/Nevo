@@ -73,23 +73,23 @@ async function handleSubmit() {
 <template>
   <form
     v-if="open"
-    class="editor-overlay embed-popover"
+    class="editor-overlay embed-popover tw:fixed tw:z-60 tw:flex tw:min-w-[320px] tw:flex-col tw:gap-2"
     :style="{ top: position.top + 'px', left: position.left + 'px' }"
     @submit.prevent="handleSubmit"
   >
-    <label class="embed-popover__label" for="embed-url-input">{{ t('embed.pasteUrl') }}</label>
+    <label class="embed-popover__label tw:text-[13px] tw:font-medium tw:text-content-secondary" for="embed-url-input">{{ t('embed.pasteUrl') }}</label>
     <input
       id="embed-url-input"
       ref="inputRef"
       v-model="urlRef"
-      class="embed-popover__input"
+      class="embed-popover__input tw:w-full tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-line-default tw:bg-(--surface-raised) tw:px-3 tw:py-2 tw:text-sm tw:text-content-primary tw:outline-none tw:transition-colors tw:duration-120 tw:focus:border-accent tw:disabled:opacity-50"
       type="url"
       placeholder="https://www.youtube.com/watch?v=..."
       :disabled="loadingRef"
       @keydown="emit('keydown', $event)"
     />
-    <div v-if="errorRef" class="embed-popover__error">{{ errorRef }}</div>
-    <div class="embed-popover__actions">
+    <div v-if="errorRef" class="embed-popover__error tw:text-xs tw:text-danger">{{ errorRef }}</div>
+    <div class="embed-popover__actions tw:flex tw:justify-end tw:gap-2">
       <button type="submit" class="nv-btn nv-btn--primary" :disabled="!urlRef.trim() || loadingRef">
         {{ loadingRef ? t('embed.loading') : t('embed.pasteUrl') }}
       </button>
@@ -99,43 +99,3 @@ async function handleSubmit() {
     </div>
   </form>
 </template>
-
-<style scoped>
-.embed-popover {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 320px;
-}
-.embed-popover__label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-2);
-}
-.embed-popover__input {
-  width: 100%;
-  padding: 8px 12px;
-  font-size: 14px;
-  border: 1px solid var(--border-2, color-mix(in oklab, var(--accent) 20%, transparent));
-  border-radius: calc(6px * var(--radius-scale, 1));
-  background: var(--surface-1);
-  color: var(--text-1);
-  outline: none;
-  transition: border-color 120ms ease;
-}
-.embed-popover__input:focus {
-  border-color: var(--accent);
-}
-.embed-popover__input:disabled {
-  opacity: 0.5;
-}
-.embed-popover__error {
-  font-size: 12px;
-  color: var(--danger, #ef4444);
-}
-.embed-popover__actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-</style>

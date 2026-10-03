@@ -1,7 +1,5 @@
-import * as Y from 'yjs'
-import { prosemirrorJSONToYDoc, yDocToProsemirrorJSON } from 'y-prosemirror'
 import type { MarkSpec, NodeSpec } from 'prosemirror-model'
-import { workspaceCommands, collabCommands } from '../../tauri/commands'
+import { workspaceCommands, noteCommands } from '../../tauri/commands'
 import type {
   MarketplaceMigrationBundle,
   MarketplacePreparedPlugin,
@@ -170,14 +168,6 @@ function replaceNodeAtPath(
   content[lastIndex] = jsonClone(replacement)
 }
 
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = ''
-  for (let offset = 0; offset < bytes.length; offset += 32_768) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + 32_768))
-  }
-  return btoa(binary)
-}
-
 function stagedHostBroker(storage: Record<string, unknown>) {
   const localStorage: Record<string, unknown> = {}
   return async (method: string, rawArgs: unknown): Promise<unknown> => {
@@ -248,11 +238,10 @@ async function buildMigrationBundle(
   const documents = new Map<string, Record<string, unknown>>()
   const collected: CollectedPluginNode[] = []
   for (const noteId of collectWorkspaceNoteIds(workspace)) {
-    const bytes = await collabCommands.loadYjsState(workspacePath, noteId)
-    if (bytes.length === 0) continue
-    const ydoc = new Y.Doc()
-    Y.applyUpdate(ydoc, bytes)
-    const document = yDocToProsemirrorJSON(ydoc, 'prosemirror') as Record<string, unknown>
+    // `note.json` is a note's source of truth (see Phase 4), so its content
+    // is read straight through the backend — no more Y.Doc decode step here.
+    const note = await noteCommands.loadNote(workspacePath, noteId)
+    const document = note.content as unknown as Record<string, unknown>
     documents.set(noteId, document)
     collected.push(...collectPluginNodes(noteId, document, nodeTypes))
   }
@@ -274,17 +263,18 @@ async function buildMigrationBundle(
   })
 
   const schema = buildMigrationSchema(pluginId, cachedSchema)
-  const collabStatesBase64: Record<string, string> = {}
+  const migratedContent: Record<string, Record<string, unknown>> = {}
   for (const [noteId, document] of documents) {
+    // Validated against the migration schema (not `nevoBaseSchema`) so
+    // content only this plugin's contributions can render is not rejected.
     schema.nodeFromJSON(document)
     if (!collected.some(item => item.noteId === noteId)) continue
-    const migrated = prosemirrorJSONToYDoc(schema, document, 'prosemirror')
-    collabStatesBase64[noteId] = bytesToBase64(Y.encodeStateAsUpdate(migrated))
+    migratedContent[noteId] = document
   }
   return {
     workspaceStorage: result.storage,
     pluginRegistry: nextRegistry as unknown as Record<string, unknown>,
-    collabStatesBase64,
+    migratedContent,
   }
 }
 

@@ -1,5 +1,7 @@
 use super::*;
-use crate::commands::folder::{create_folder_sync, delete_folder_sync, load_manifest};
+use crate::commands::folder::{
+    create_folder_sync, delete_folder_sync, load_manifest, save_manifest,
+};
 use crate::commands::workspace::create_workspace;
 use chrono::Utc;
 use serde_json::json;
@@ -53,6 +55,239 @@ fn create_saved_note(workspace_path: &str) -> NoteDocument {
     note.updated_at = Utc::now().to_rfc3339();
     save_note_impl(workspace_path.to_string(), note.clone()).expect("save note");
     note
+}
+
+#[test]
+fn create_notebook_upgrades_manifest_before_registering_lossless_note_data() {
+    let workspace = TestWorkspace::new();
+    let path = workspace.path_string();
+    let note = super::notebook::create_notebook_impl(
+        path.clone(),
+        None,
+        "Meeting notes".to_string(),
+        "📓".to_string(),
+        "ruled".to_string(),
+    )
+    .expect("create notebook");
+    let manifest = load_manifest(&path).expect("manifest");
+    assert_eq!(manifest.schema_version, 2);
+    assert_eq!(manifest.root_notes[0].id, note.id);
+    assert_eq!(note.extra["documentKind"], json!("notebook"));
+    assert_eq!(note.extra["notebook"]["version"], json!(1));
+    assert_eq!(
+        note.extra["notebook"]["pages"][0]["paper"]["kind"],
+        json!("ruled")
+    );
+    assert!(note.canvas.is_none());
+    assert_eq!(note.content, json!({ "type": "doc", "content": [] }));
+}
+
+#[test]
+fn invalid_notebook_creation_does_not_upgrade_or_write_anything() {
+    let workspace = TestWorkspace::new();
+    let path = workspace.path_string();
+    let error = super::notebook::create_notebook_impl(
+        path.clone(),
+        None,
+        "Invalid".to_string(),
+        "📓".to_string(),
+        "dots".to_string(),
+    )
+    .expect_err("unsupported paper kind must fail");
+    assert!(error.contains("Unsupported notebook paper"));
+    assert_eq!(load_manifest(&path).unwrap().schema_version, 1);
+    assert_eq!(
+        std::fs::read_dir(workspace.path.join("notes"))
+            .unwrap()
+            .count(),
+        0
+    );
+}
+
+#[test]
+fn failed_notebook_manifest_write_keeps_the_written_note_as_a_diagnosable_orphan() {
+    let workspace = TestWorkspace::new();
+    let path = workspace.path_string();
+    let mut manifest_writes = 0;
+    let result = super::notebook::create_notebook_impl_with_manifest_writer(
+        path.clone(),
+        None,
+        "Partially registered".to_string(),
+        "📓".to_string(),
+        "plain".to_string(),
+        |workspace_path, manifest| {
+            manifest_writes += 1;
+            if manifest_writes == 1 {
+                save_manifest(workspace_path, manifest)
+            } else {
+                Err("injected metadata write failure".to_string())
+            }
+        },
+    );
+    let error = result.expect_err("metadata write failure should be surfaced");
+    assert_eq!(error, "injected metadata write failure");
+    assert_eq!(manifest_writes, 2);
+
+    let manifest = load_manifest(&path).expect("manifest");
+    assert_eq!(manifest.schema_version, 2);
+    assert!(manifest.root_notes.is_empty());
+    let note_paths: Vec<_> = std::fs::read_dir(workspace.path.join("notes"))
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .collect();
+    assert_eq!(note_paths.len(), 1);
+    let raw = std::fs::read_to_string(&note_paths[0]).unwrap();
+    let note: NoteDocument = serde_json::from_str(&raw).expect("orphan remains readable");
+    assert_eq!(note.extra["documentKind"], json!("notebook"));
+}
+
+#[test]
+fn save_note_cannot_strip_notebook_markers_or_bypass_schema_upgrade() {
+    let workspace = TestWorkspace::new();
+    let path = workspace.path_string();
+    let mut notebook = super::notebook::create_notebook_impl(
+        path.clone(),
+        None,
+        "Meeting notes".to_string(),
+        "📓".to_string(),
+        "plain".to_string(),
+    )
+    .expect("create notebook");
+    let note_file = note_path(&path, &notebook.id).unwrap();
+    let before = std::fs::read(&note_file).unwrap();
+    notebook.extra.remove("documentKind");
+    notebook.extra.remove("notebook");
+    let error = save_note_impl(path.clone(), notebook).expect_err("downgrade must fail");
+    assert!(error.starts_with("unsupported-format:"));
+    assert_eq!(std::fs::read(&note_file).unwrap(), before);
+
+    let document = create_note_impl(path.clone(), None, "Ordinary".to_string(), "📄".to_string())
+        .expect("create document");
+    let mut forged = document.clone();
+    forged
+        .extra
+        .insert("documentKind".to_string(), json!("notebook"));
+    forged
+        .extra
+        .insert("notebook".to_string(), json!({ "version": 1, "pages": [] }));
+    let error = save_note_impl(path.clone(), forged).expect_err("schema/form mismatch must fail");
+    assert!(error.starts_with("unsupported-format:") || error.contains("Notebook page count"));
+}
+
+#[test]
+fn notebook_snapshot_restore_preserves_unknown_fields_at_nested_levels() {
+    let workspace = TestWorkspace::new();
+    let path = workspace.path_string();
+    let mut note = super::notebook::create_notebook_impl(
+        path.clone(),
+        None,
+        "History notebook".to_string(),
+        "📓".to_string(),
+        "plain".to_string(),
+    )
+    .expect("create notebook");
+    note.extra["notebook"]["futureField"] = json!({ "version": 4 });
+    note.extra["notebook"]["pages"][0]["paper"]["futurePaperField"] = json!("kept");
+    let note_bytes = serde_json::to_vec_pretty(&note).unwrap();
+    let snapshot_id = snapshots::write_snapshot_bytes(&path, &note.id, &note_bytes).unwrap();
+    crate::commands::path_utils::write_atomic(&note_path(&path, &note.id).unwrap(), &note_bytes)
+        .unwrap();
+
+    note.extra["notebook"]["futureField"] = json!({ "version": 9 });
+    let edited_bytes = serde_json::to_vec_pretty(&note).unwrap();
+    crate::commands::path_utils::write_atomic(&note_path(&path, &note.id).unwrap(), &edited_bytes)
+        .unwrap();
+    let restored = restore_note_snapshot_impl(path.clone(), note.id.clone(), snapshot_id)
+        .expect("restore notebook snapshot");
+    assert_eq!(
+        restored.note.extra["notebook"]["futureField"]["version"],
+        json!(4)
+    );
+    assert_eq!(
+        restored.note.extra["notebook"]["pages"][0]["paper"]["futurePaperField"],
+        json!("kept")
+    );
+}
+
+fn write_retention_setting(workspace_path: &str, raw: serde_json::Value) {
+    let path = crate::commands::workspace::settings_path(workspace_path);
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(&path, serde_json::to_vec(&raw).unwrap()).unwrap();
+}
+
+fn seed_snapshot_files(workspace_path: &str, note_id: &str, count: usize) {
+    let dir = snapshots::snapshot_dir_path(workspace_path, note_id).unwrap();
+    std::fs::create_dir_all(&dir).unwrap();
+    for i in 0..count {
+        let stem = format!("2020010100{:04}000-{}", i, Uuid::new_v4());
+        std::fs::write(dir.join(format!("{stem}.json")), b"{}").unwrap();
+    }
+}
+
+#[test]
+fn retention_limit_follows_settings_and_defaults_to_fifty() {
+    let workspace = TestWorkspace::new();
+    let path = workspace.path_string();
+    let settings_file = crate::commands::workspace::settings_path(&path);
+    let _ = std::fs::remove_file(&settings_file);
+    assert_eq!(
+        snapshots::snapshot_retention_limit(&path),
+        50,
+        "missing settings"
+    );
+
+    for (raw, expected) in [(1, 1), (12, 12), (50, 50), (200, 200), (0, 1), (999, 200)] {
+        write_retention_setting(&path, json!({ "files": { "snapshotRetentionCount": raw } }));
+        assert_eq!(
+            snapshots::snapshot_retention_limit(&path),
+            expected,
+            "raw {raw}"
+        );
+    }
+
+    write_retention_setting(&path, json!({ "files": {} }));
+    assert_eq!(
+        snapshots::snapshot_retention_limit(&path),
+        50,
+        "legacy settings"
+    );
+
+    std::fs::write(&settings_file, b"not json").unwrap();
+    assert_eq!(
+        snapshots::snapshot_retention_limit(&path),
+        50,
+        "unreadable settings"
+    );
+}
+
+#[test]
+fn explicit_prune_uses_the_settings_limit() {
+    let workspace = TestWorkspace::new();
+    let path = workspace.path_string();
+    write_retention_setting(&path, json!({ "files": { "snapshotRetentionCount": 12 } }));
+    seed_snapshot_files(&path, "note-prune", 20);
+
+    prune_note_snapshots_impl(path.clone(), "note-prune".to_string()).expect("prune");
+
+    let left = list_note_snapshots_impl(path, "note-prune".to_string()).unwrap();
+    assert_eq!(left.len(), 12);
+}
+
+#[test]
+fn autosave_snapshot_prunes_to_the_settings_limit() {
+    let workspace = TestWorkspace::new();
+    let path = workspace.path_string();
+    write_retention_setting(&path, json!({ "files": { "snapshotRetentionCount": 2 } }));
+    let note = create_saved_note(&path);
+    // Drop every fresh snapshot so the throttle window is clear, then seed
+    // old-dated ones; the next save must snapshot and prune to 2.
+    let dir = snapshots::snapshot_dir_path(&path, &note.id).unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+    seed_snapshot_files(&path, &note.id, 5);
+
+    save_note_impl(path.clone(), note.clone()).expect("save");
+
+    assert_eq!(list_note_snapshots_impl(path, note.id).unwrap().len(), 2);
 }
 
 #[test]
@@ -163,49 +398,6 @@ fn save_note_updates_nested_manifest_entry_by_note_id_despite_stale_folder_id() 
 }
 
 #[test]
-fn touch_note_updated_at_advances_file_and_manifest_while_preserving_title_and_icon() {
-    let workspace = TestWorkspace::new();
-    let workspace_path = workspace.path_string();
-    let mut note = create_note_impl(
-        workspace_path.clone(),
-        None,
-        "Touched note".to_string(),
-        "🖊️".to_string(),
-    )
-    .expect("create note");
-
-    // Seed a far-past timestamp on both the note file and the manifest entry
-    // so the touch can be verified as a real chronological advance rather
-    // than comparing two timestamps that happen to be equal.
-    let stale = "2000-01-01T00:00:00+00:00".to_string();
-    note.updated_at = stale.clone();
-    save_note_impl(workspace_path.clone(), note.clone()).expect("save note with stale timestamp");
-
-    let touched_at = touch_note_updated_at_impl(workspace_path.clone(), note.id.clone())
-        .expect("touch note updated_at");
-
-    let stale_parsed = chrono::DateTime::parse_from_rfc3339(&stale).expect("parse stale timestamp");
-    let touched_parsed =
-        chrono::DateTime::parse_from_rfc3339(&touched_at).expect("parse touched timestamp");
-    assert!(touched_parsed > stale_parsed);
-
-    let reloaded = load_note_impl(workspace_path.clone(), note.id.clone()).expect("reload note");
-    assert_eq!(reloaded.updated_at, touched_at);
-    assert_eq!(reloaded.title, "Touched note");
-    assert_eq!(reloaded.icon, "🖊️");
-
-    let manifest = load_manifest(&workspace_path).expect("load manifest");
-    let manifest_entry = manifest
-        .root_notes
-        .iter()
-        .find(|item| item.id == note.id)
-        .expect("manifest entry for touched note");
-    assert_eq!(manifest_entry.updated_at, touched_at);
-    assert_eq!(manifest_entry.title, "Touched note");
-    assert_eq!(manifest_entry.icon, "🖊️");
-}
-
-#[test]
 fn create_note_rejects_missing_folder_without_leaving_a_file() {
     let workspace = TestWorkspace::new();
     let workspace_path = workspace.path_string();
@@ -299,8 +491,8 @@ fn load_note_snapshot_returns_snapshot_document() {
         list_note_snapshots_impl(workspace_path.clone(), note.id.clone()).expect("list snapshots");
     let snapshot_id = snapshots.first().expect("snapshot metadata").id.clone();
 
-    let snapshot =
-        load_note_snapshot(workspace_path, note.id.clone(), snapshot_id).expect("load snapshot");
+    let snapshot = load_note_snapshot_impl(workspace_path, note.id.clone(), snapshot_id)
+        .expect("load snapshot");
 
     assert_eq!(snapshot.id, note.id);
     assert_eq!(snapshot.title, note.title);
@@ -313,14 +505,14 @@ fn load_note_snapshot_returns_error_for_invalid_snapshot_id() {
     let workspace_path = workspace.path_string();
     let note = create_saved_note(&workspace_path);
 
-    let error = load_note_snapshot(workspace_path, note.id, "missing-snapshot".to_string())
+    let error = load_note_snapshot_impl(workspace_path, note.id, "missing-snapshot".to_string())
         .expect_err("invalid snapshot id should fail");
 
     assert!(!error.is_empty());
 }
 
 #[test]
-fn restore_note_snapshot_creates_a_fresh_latest_snapshot() {
+fn restore_note_snapshot_adds_a_pre_restore_recovery_snapshot() {
     let workspace = TestWorkspace::new();
     let workspace_path = workspace.path_string();
     let mut note = create_saved_note(&workspace_path);
@@ -347,17 +539,17 @@ fn restore_note_snapshot_creates_a_fresh_latest_snapshot() {
     let before_restore = list_note_snapshots_impl(workspace_path.clone(), note.id.clone())
         .expect("list before restore");
     std::thread::sleep(std::time::Duration::from_millis(5));
-    let restored = restore_note_snapshot(
+    let restored = restore_note_snapshot_impl(
         workspace_path.clone(),
         note.id.clone(),
         original_snapshot_id.clone(),
     )
     .expect("restore snapshot");
-    let after_restore =
-        list_note_snapshots_impl(workspace_path, note.id).expect("list after restore");
+    let after_restore = list_note_snapshots_impl(workspace_path.clone(), note.id.clone())
+        .expect("list after restore");
 
     assert_eq!(
-        restored.content,
+        restored.note.content,
         json!({
             "type": "doc",
             "content": [
@@ -369,9 +561,27 @@ fn restore_note_snapshot_creates_a_fresh_latest_snapshot() {
         })
     );
     assert_eq!(after_restore.len(), before_restore.len() + 1);
-    assert_ne!(
-        after_restore.first().map(|snapshot| snapshot.id.as_str()),
-        Some(original_snapshot_id.as_str())
+    assert_eq!(
+        after_restore.first().map(|snapshot| snapshot.id.clone()),
+        Some(restored.recovery_snapshot_id.clone())
+    );
+    let recovery = load_note_snapshot_impl(
+        workspace_path,
+        note.id,
+        restored.recovery_snapshot_id.clone(),
+    )
+    .expect("load recovery snapshot");
+    assert_eq!(
+        recovery.content,
+        json!({
+            "type": "doc",
+            "content": [
+                {
+                    "type": "paragraph",
+                    "content": [{ "type": "text", "text": "Overwritten body" }]
+                }
+            ]
+        })
     );
 }
 
@@ -495,4 +705,105 @@ fn search_workspace_blocks_skips_malformed_and_empty_note_content() {
     .expect("search blocks");
 
     assert!(results.is_empty());
+}
+
+#[test]
+fn restore_note_snapshot_commits_only_note_json_and_leaves_a_legacy_yjs_file_untouched() {
+    let workspace = TestWorkspace::new();
+    let workspace_path = workspace.path_string();
+    let note = create_saved_note(&workspace_path);
+
+    let snapshots =
+        list_note_snapshots_impl(workspace_path.clone(), note.id.clone()).expect("list snapshots");
+    let snapshot_id = snapshots
+        .first()
+        .expect("save_note_impl should have created a snapshot")
+        .id
+        .clone();
+
+    // Simulate edits made after the snapshot was taken: a different note body
+    // on disk, and separately, a leftover `.yjs` file from before this note's
+    // workspace was migrated off legacy per-note Y.Doc state.
+    let mut edited = note.clone();
+    edited.content = json!({
+        "type": "doc",
+        "content": [
+            { "type": "paragraph", "content": [{ "type": "text", "text": "Edited after snapshot" }] }
+        ]
+    });
+    edited.updated_at = Utc::now().to_rfc3339();
+    save_note_impl(workspace_path.clone(), edited).expect("save edited note");
+    let yjs_path =
+        crate::commands::note::collab::yjs_state_path(&workspace_path, &note.id).expect("yjs path");
+    std::fs::create_dir_all(yjs_path.parent().unwrap()).unwrap();
+    std::fs::write(&yjs_path, b"legacy-yjs-bytes").unwrap();
+
+    let restored = restore_note_snapshot_impl(workspace_path.clone(), note.id.clone(), snapshot_id)
+        .expect("restore snapshot");
+
+    assert_eq!(restored.note.content, note.content);
+
+    let note_file_path = note_path(&workspace_path, &note.id).expect("note path");
+    let on_disk: NoteDocument =
+        serde_json::from_str(&std::fs::read_to_string(&note_file_path).unwrap()).unwrap();
+    assert_eq!(
+        on_disk.content, note.content,
+        "note.json must hold the restored (not the edited) body"
+    );
+
+    let yjs_bytes = std::fs::read(&yjs_path).unwrap();
+    assert_eq!(
+        yjs_bytes, b"legacy-yjs-bytes",
+        "restore must not touch a leftover legacy `.yjs` file at all"
+    );
+
+    let manifest = load_manifest(&workspace_path).expect("load manifest");
+    let meta = manifest
+        .root_notes
+        .iter()
+        .find(|item| item.id == note.id)
+        .expect("manifest entry for the restored note");
+    assert_eq!(meta.updated_at, restored.note.updated_at);
+}
+
+/// A note.json saved by a hypothetical newer Nevo build with a top-level
+/// field this build doesn't know about must survive a load->save round trip
+/// unchanged, instead of that field being silently dropped the first time an
+/// older build resaves the note.
+#[test]
+fn note_round_trip_preserves_an_unknown_top_level_field() {
+    let workspace = TestWorkspace::new();
+    let workspace_path = workspace.path_string();
+    let note = create_note_impl(
+        workspace_path.clone(),
+        None,
+        "Note with future field".to_string(),
+        "📄".to_string(),
+    )
+    .expect("create note");
+
+    let note_file_path = note_path(&workspace_path, &note.id).expect("note path");
+    let raw = std::fs::read_to_string(&note_file_path).expect("read note file");
+    let mut value: serde_json::Value = serde_json::from_str(&raw).expect("parse note file");
+    value["futureFeatureFlag"] = serde_json::Value::from("from-a-newer-build");
+    std::fs::write(
+        &note_file_path,
+        serde_json::to_string_pretty(&value).unwrap(),
+    )
+    .expect("rewrite note file with an unknown field");
+
+    let loaded = load_note_impl(workspace_path.clone(), note.id.clone()).expect("load note");
+    assert_eq!(
+        loaded.extra.get("futureFeatureFlag"),
+        Some(&serde_json::Value::from("from-a-newer-build"))
+    );
+
+    save_note_impl(workspace_path.clone(), loaded).expect("save note");
+
+    let after = std::fs::read_to_string(&note_file_path).expect("read note file");
+    let after_value: serde_json::Value = serde_json::from_str(&after).expect("parse note file");
+    assert_eq!(
+        after_value["futureFeatureFlag"],
+        serde_json::Value::from("from-a-newer-build")
+    );
 }

@@ -1,6 +1,7 @@
 import type { WorkspaceSettingSearchItem } from '../../types/search'
 import { resolveBindingChord } from '../../utils/workspace-settings'
 import { LOCAL_SHORTCUT_COMMAND_IDS } from '../../utils/hotkeys'
+import { isSystemPluginId, SYSTEM_PLUGIN_SHORT_IDS } from '../../utils/system-plugins'
 import type { BuildWorkspaceSettingsSearchItemsOptions } from './settings-helpers'
 import {
   booleanLabel, accentLabel, densityLabel, lineWidthLabel,
@@ -35,6 +36,27 @@ export function buildWorkspaceSettingsSearchItems(options: BuildWorkspaceSetting
       title: t('settings.general.deleteConfirmations.title'),
       description: t('settings.general.deleteConfirmations.description'),
       value: booleanLabel(t, settings.general.confirmBeforeDelete),
+    },
+    {
+      type: 'setting', id: 'general.productTour', section: 'general',
+      sectionLabel: sectionLabel(t, 'general'),
+      title: t('settings.general.productTour.title'),
+      description: t('settings.general.productTour.description'),
+      value: t('settings.general.productTour.takeAgain'),
+    },
+    {
+      type: 'setting', id: 'general.firstStepsOnHome', section: 'general',
+      sectionLabel: sectionLabel(t, 'general'),
+      title: t('settings.general.firstStepsOnHome.title'),
+      description: t('settings.general.firstStepsOnHome.description'),
+      value: booleanLabel(t, !appConfig.onboarding.firstStepsHidden),
+    },
+    {
+      type: 'setting', id: 'general.firstUseHints', section: 'general',
+      sectionLabel: sectionLabel(t, 'general'),
+      title: t('settings.general.firstUseHints.title'),
+      description: t('settings.general.firstUseHints.description'),
+      value: booleanLabel(t, appConfig.onboarding.hintsEnabled),
     },
     {
       type: 'setting', id: 'appearance.mode', section: 'appearance',
@@ -72,46 +94,11 @@ export function buildWorkspaceSettingsSearchItems(options: BuildWorkspaceSetting
       value: t(`settings.options.scrollbarVisibility.${appConfig.scrollbarVisibility}`),
     },
     {
-      type: 'setting', id: 'appearance.focusRingStyle', section: 'appearance',
-      sectionLabel: sectionLabel(t, 'appearance'),
-      title: t('settings.appearance.focusRingStyle.title'),
-      description: t('settings.appearance.focusRingStyle.description'),
-      value: t(`settings.options.focusRingStyle.${appConfig.focusRingStyle}`),
-    },
-    {
-      type: 'setting', id: 'appearance.windowChromeStyle', section: 'appearance',
-      sectionLabel: sectionLabel(t, 'appearance'),
-      title: t('settings.appearance.windowChromeStyle.title'),
-      description: t('settings.appearance.windowChromeStyle.description'),
-      value: t(`settings.options.windowChromeStyle.${appConfig.windowChromeStyle}`),
-    },
-    {
-      type: 'setting', id: 'appearance.backgroundScene', section: 'appearance',
-      sectionLabel: sectionLabel(t, 'appearance'),
-      title: t('settings.appearance.backgroundScene.title'),
-      description: t('settings.appearance.backgroundScene.description'),
-      value: t(`settings.options.backgroundScene.${settings.appearance.backgroundScene}`),
-    },
-    {
-      type: 'setting', id: 'appearance.surfaceStyle', section: 'appearance',
-      sectionLabel: sectionLabel(t, 'appearance'),
-      title: t('settings.appearance.surfaceStyle.title'),
-      description: t('settings.appearance.surfaceStyle.description'),
-      value: t(`settings.options.surfaceStyle.${settings.appearance.surfaceStyle}`),
-    },
-    {
       type: 'setting', id: 'appearance.contrastMode', section: 'appearance',
       sectionLabel: sectionLabel(t, 'appearance'),
       title: t('settings.appearance.contrastMode.title'),
       description: t('settings.appearance.contrastMode.description'),
       value: t(`settings.options.contrastMode.${settings.appearance.contrastMode}`),
-    },
-    {
-      type: 'setting', id: 'appearance.sidebarStyle', section: 'appearance',
-      sectionLabel: sectionLabel(t, 'appearance'),
-      title: t('settings.appearance.sidebarStyle.title'),
-      description: t('settings.appearance.sidebarStyle.description'),
-      value: t(`settings.options.sidebarStyle.${settings.appearance.sidebarStyle}`),
     },
     {
       type: 'setting', id: 'editor.documentWidth', section: 'editor',
@@ -228,6 +215,13 @@ export function buildWorkspaceSettingsSearchItems(options: BuildWorkspaceSetting
       value: t(`settings.options.pasteBehavior.${settings.editor.pasteBehavior === 'plain-text' ? 'plainText' : 'smart'}`),
     },
     {
+      type: 'setting', id: 'editor.slashMenuLayout', section: 'editor',
+      sectionLabel: sectionLabel(t, 'editor'),
+      title: t('settings.editor.slashMenuLayout.title'),
+      description: t('settings.editor.slashMenuLayout.description'),
+      value: t(`settings.options.slashMenuLayout.${settings.editor.slashMenuLayout}`),
+    },
+    {
       type: 'setting', id: 'editor.slashMenuHints', section: 'editor',
       sectionLabel: sectionLabel(t, 'editor'),
       title: t('settings.editor.slashMenuHints.title'),
@@ -315,11 +309,14 @@ export function buildWorkspaceSettingsSearchItems(options: BuildWorkspaceSetting
   ]
 
   for (const plugin of plugins) {
+    const systemPluginKey = isSystemPluginId(plugin.id) ? SYSTEM_PLUGIN_SHORT_IDS[plugin.id] : null
     items.push({
       type: 'setting', id: `plugins.${plugin.id}`, section: 'plugins',
       sectionLabel: sectionLabel(t, 'plugins'),
-      title: plugin.name,
-      description: plugin.description || t('settings.plugins.fallbackDescription'),
+      title: systemPluginKey ? t(`settings.plugins.${systemPluginKey}.title`) : plugin.name,
+      description: systemPluginKey
+        ? t(`settings.plugins.${systemPluginKey}.description`)
+        : plugin.description || t('settings.plugins.fallbackDescription'),
       value: pluginValidation[plugin.id] === 'invalid'
         ? t('settings.state.coming')
         : plugin.enabled ? t('settings.common.enabled') : t('settings.common.disabled'),
@@ -332,7 +329,7 @@ export function buildWorkspaceSettingsSearchItems(options: BuildWorkspaceSetting
       type: 'setting', id: `hotkeys.${binding.commandId}`, section: 'hotkeys',
       sectionLabel: sectionLabel(t, 'hotkeys'),
       title: hotkeyLabel(t, binding),
-      description: `${binding.commandId} · ${hotkeyScopeLabel(t, binding.scope)}`,
+      description: hotkeyScopeLabel(t, binding.scope),
       value: isEditable
         ? displayChord(resolveBindingChord(binding))
         : `${displayChord(resolveBindingChord(binding))} · ${t('settings.hotkeys.fixed')}`,

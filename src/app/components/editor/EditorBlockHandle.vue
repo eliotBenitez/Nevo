@@ -32,6 +32,8 @@ import {
   Database,
   ListFilter,
   Link2,
+  Plus,
+  BarChart3,
 } from 'lucide-vue-next'
 
 defineProps<{
@@ -44,6 +46,7 @@ defineProps<{
 const emit = defineEmits<{
   pointerdown: [event: PointerEvent]
   typeIconClick: []
+  insertBelow: []
   mouseenter: []
   mouseleave: []
 }>()
@@ -74,6 +77,7 @@ const nodeTypeIconMap: Record<string, Component> = {
   database_block: Database,
   query_block: ListFilter,
   block_embed: Link2,
+  vega_block: BarChart3,
 }
 
 function getNodeIcon(typeName: string | null, attrs: { level?: number; kind?: string } | null): Component {
@@ -99,14 +103,14 @@ const { t } = useI18n()
 <template>
   <div
     v-if="visible"
-    class="block-handle"
+    class="block-handle tw:fixed tw:z-50 tw:flex tw:touch-none tw:items-start tw:gap-0 tw:-translate-x-full tw:coarse:translate-x-[-32px] tw:coarse:gap-0.5 tw:coarse:rounded-[calc(12px*var(--radius-scale,1))] tw:coarse:border tw:coarse:border-solid tw:coarse:border-transparent tw:coarse:bg-(--menu-bg) tw:coarse:p-0.5 tw:coarse:shadow-(--shadow-overlay)"
     :style="{ top: `${position.top}px`, left: `${position.left}px` }"
     @mouseenter="emit('mouseenter')"
     @mouseleave="emit('mouseleave')"
   >
     <button
       type="button"
-      class="block-handle__btn block-handle__drag"
+      class="block-handle__btn block-handle__drag tw:flex tw:h-[22px] tw:w-4 tw:shrink-0 tw:cursor-grab tw:items-center tw:justify-center tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:p-0 tw:text-content-muted tw:transition-[background,color] tw:duration-80 tw:hover:bg-(--hover) tw:hover:text-content-secondary tw:active:cursor-grabbing tw:coarse:h-11 tw:coarse:w-11 tw:coarse:touch-none tw:coarse:text-content-secondary tw:coarse:active:bg-(--hover-strong) tw:coarse:active:text-accent"
       :aria-label="t('editor.blockHandle.drag')"
       :title="t('editor.blockHandle.drag')"
       @pointerdown="emit('pointerdown', $event)"
@@ -115,13 +119,23 @@ const { t } = useI18n()
     </button>
     <button
       type="button"
-      class="block-handle__btn block-handle__type"
+      class="block-handle__btn block-handle__type tw:flex tw:h-[22px] tw:w-4 tw:shrink-0 tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:p-0 tw:text-content-muted tw:transition-[background,color] tw:duration-80 tw:hover:bg-(--hover) tw:hover:text-content-secondary tw:coarse:h-11 tw:coarse:w-11 tw:coarse:touch-none tw:coarse:text-content-secondary tw:coarse:active:bg-(--hover-strong) tw:coarse:active:text-accent"
       :aria-label="t('editor.blockHandle.options')"
       :title="t('editor.blockHandle.options')"
       @mousedown.prevent.stop
       @click.prevent.stop="onTypeIconClick"
     >
       <component :is="getNodeIcon(hoveredBlockTypeName, hoveredBlockIconAttrs)" :size="13" />
+    </button>
+    <button
+      type="button"
+      class="block-handle__btn block-handle__insert-below tw:hidden tw:h-[22px] tw:w-4 tw:shrink-0 tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:p-0 tw:text-content-muted tw:transition-[background,color] tw:duration-80 tw:hover:bg-(--hover) tw:hover:text-content-secondary tw:coarse:flex tw:coarse:h-11 tw:coarse:w-11 tw:coarse:touch-none tw:coarse:text-content-secondary tw:coarse:active:bg-(--hover-strong) tw:coarse:active:text-accent"
+      :aria-label="t('editor.blockMenu.insertBelow')"
+      :title="t('editor.blockMenu.insertBelow')"
+      @mousedown.prevent.stop
+      @click.prevent.stop="emit('insertBelow')"
+    >
+      <Plus :size="16" aria-hidden="true" />
     </button>
   </div>
 </template>

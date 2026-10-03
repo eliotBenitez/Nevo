@@ -174,22 +174,58 @@ const dowLabels = computed(() =>
     new Date(2024, 0, 1 + index).toLocaleDateString(locale.value, { weekday: 'short' }),
   ),
 )
+
+// Month-view day cell background: `--drop` beats `--muted` beats idle,
+// matching the original source order (both are plain 0,1,0 classes, so a
+// flat ternary reproduces it exactly). Outline only comes from `--drop`
+// here, so it can live in the same branch without conflicting with anything.
+function monthDayClass(day: { inMonth: boolean; iso: string }) {
+  if (dragOverDay.value === day.iso) {
+    return 'kb-cal__day--drop tw:bg-[color-mix(in_oklab,var(--accent)_10%,transparent)] tw:outline tw:outline-[1.5px] tw:outline-dashed tw:outline-accent tw:-outline-offset-2'
+  }
+  if (!day.inMonth) return 'kb-cal__day--muted tw:bg-transparent'
+  return 'tw:bg-surface-raised'
+}
+
+// Today badge on the day-of-month number (shared shape between the month
+// grid and the week view's column header number).
+function todayNumClass(isToday: boolean) {
+  return isToday
+    ? 'kb-cal__day-num--today tw:inline-grid tw:size-5 tw:place-items-center tw:rounded-full tw:bg-accent tw:font-semibold tw:text-white'
+    : 'tw:text-content-secondary'
+}
+
+// Week-view column background and outline are two independent properties:
+// `--today` (background only) comes after `--drop` (background + outline)
+// in the original source, so `--today` wins the background tie-break when
+// both apply, but `--drop`'s outline is untouched by `--today` and must
+// still show regardless.
+function weekColClass(day: { isToday: boolean; iso: string }) {
+  const isDrop = dragOverDay.value === day.iso
+  const bg = day.isToday
+    ? 'kb-cal__week-view__col--today tw:bg-[var(--accent-soft,rgb(161_98_7/0.08))]'
+    : isDrop
+      ? 'tw:bg-[color-mix(in_oklab,var(--accent)_10%,transparent)]'
+      : 'tw:bg-surface-raised'
+  const outline = isDrop ? 'kb-cal__day--drop tw:outline tw:outline-[1.5px] tw:outline-dashed tw:outline-accent tw:-outline-offset-2' : ''
+  return `${bg} ${outline}`.trim()
+}
 </script>
 
 <template>
-  <div class="kb-cal">
-    <div class="kb-cal__nav">
-      <button type="button" class="kb-cal__nav-btn" @click="navPrev">
+  <div class="kb-cal tw:flex tw:min-h-0 tw:flex-1 tw:flex-col tw:overflow-hidden">
+    <div class="kb-cal__nav tw:flex tw:shrink-0 tw:flex-wrap tw:items-center tw:gap-2 tw:px-5 tw:py-[9px]">
+      <button type="button" class="kb-cal__nav-btn tw:grid tw:size-[26px] tw:place-items-center tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-transparent tw:text-[var(--text-muted,var(--text-secondary))] tw:cursor-pointer" @click="navPrev">
         <ChevronLeft :size="12" />
       </button>
-      <button type="button" class="kb-cal__nav-btn" @click="navNext">
+      <button type="button" class="kb-cal__nav-btn tw:grid tw:size-[26px] tw:place-items-center tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-transparent tw:text-[var(--text-muted,var(--text-secondary))] tw:cursor-pointer" @click="navNext">
         <ChevronRight :size="12" />
       </button>
-      <span class="kb-cal__month-title">{{ navTitle }}</span>
-      <button type="button" class="kb-cal__today-btn" @click="goToday">{{ t('kanban.calendar.today') }}</button>
-      <div class="kb-cal__spacer" />
-      <div class="kb-cal__field-picker">
-        <span class="kb-cal__field-label">{{ t('kanban.calendar.chooseField') }}</span>
+      <span class="kb-cal__month-title tw:[font-family:var(--font-serif,Georgia,serif)] tw:text-[17px] tw:font-normal tw:text-content-primary tw:italic">{{ navTitle }}</span>
+      <button type="button" class="kb-cal__today-btn tw:h-7 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-transparent tw:px-2.5 tw:text-[var(--text-muted,var(--text-secondary))] tw:cursor-pointer" @click="goToday">{{ t('kanban.calendar.today') }}</button>
+      <div class="kb-cal__spacer tw:flex-1 tw:max-[820px]:hidden" />
+      <div class="kb-cal__field-picker tw:flex tw:items-center tw:gap-2 tw:max-[820px]:w-full">
+        <span class="kb-cal__field-label tw:text-[11px] tw:tracking-[0.04em] tw:text-content-muted tw:uppercase">{{ t('kanban.calendar.chooseField') }}</span>
         <NvSelect
           :model-value="selectedDateFieldId"
           :options="dateFieldOptions"
@@ -198,12 +234,14 @@ const dowLabels = computed(() =>
           @update:model-value="value => selectedDateFieldId = value as string"
         />
       </div>
-      <div class="kb-cal__mode-switch">
+      <div class="kb-cal__mode-switch tw:flex tw:gap-px tw:rounded-[calc(6px*var(--radius-scale,1))] tw:bg-[var(--hover-strong,var(--surface-overlay))] tw:p-0.5">
         <span
           v-for="mode in (['month', 'week', 'day'] as CalMode[])"
           :key="mode"
-          class="kb-cal__mode-btn"
-          :class="{ 'kb-cal__mode-btn--active': calMode === mode }"
+          class="kb-cal__mode-btn tw:rounded-[calc(4px*var(--radius-scale,1))] tw:px-2.5 tw:py-[3px] tw:text-[11px] tw:cursor-pointer"
+          :class="calMode === mode
+            ? 'kb-cal__mode-btn--active tw:bg-surface-raised tw:font-[550] tw:text-content-primary tw:shadow-(--shadow-raised)'
+            : 'tw:text-[var(--text-muted,var(--text-secondary))]'"
           @click="calMode = mode"
         >
           {{ t(`kanban.calendar.${mode}`) }}
@@ -211,46 +249,42 @@ const dowLabels = computed(() =>
       </div>
     </div>
 
-    <div v-if="!activeDateField" class="kb-cal__empty">
+    <div v-if="!activeDateField" class="kb-cal__empty tw:flex tw:flex-1 tw:flex-col tw:items-center tw:justify-center tw:gap-2 tw:text-[var(--text-muted,var(--text-secondary))]">
       <p>{{ t('kanban.calendar.noDateProp') }}</p>
-      <p class="kb-cal__empty-sub">{{ t('kanban.calendar.noDateHint') }}</p>
+      <p class="kb-cal__empty-sub tw:max-w-[280px] tw:text-center tw:text-xs tw:text-content-muted">{{ t('kanban.calendar.noDateHint') }}</p>
       <button
         v-if="dateFields.length > 0"
         type="button"
-        class="kb-cal__select-btn"
+        class="kb-cal__select-btn tw:h-7 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-transparent tw:px-2.5 tw:text-[var(--text-muted,var(--text-secondary))] tw:cursor-pointer"
         @click="selectedDateFieldId = dateFields[0].id"
       >
         {{ t('kanban.calendar.pickFirstField') }}
       </button>
     </div>
 
-    <div v-else-if="calMode === 'month'" class="kb-cal__grid-wrap">
-      <div class="kb-cal__dow-row">
-        <div v-for="label in dowLabels" :key="label" class="kb-cal__dow">{{ label }}</div>
+    <div v-else-if="calMode === 'month'" class="kb-cal__grid-wrap tw:flex tw:flex-1 tw:flex-col tw:overflow-hidden tw:px-4 tw:pt-2.5 tw:pb-3.5">
+      <div class="kb-cal__dow-row tw:grid tw:grid-cols-7">
+        <div v-for="label in dowLabels" :key="label" class="kb-cal__dow tw:px-2 tw:py-1.5 tw:text-[10.5px] tw:font-semibold tw:tracking-[0.04em] tw:text-content-muted tw:uppercase">{{ label }}</div>
       </div>
-      <div class="kb-cal__weeks">
-        <div v-for="(week, index) in calGrid" :key="index" class="kb-cal__week">
+      <div class="kb-cal__weeks tw:flex tw:flex-1 tw:flex-col tw:gap-px tw:overflow-hidden tw:rounded-[calc(10px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-[var(--border-default,var(--border-subtle))] tw:bg-[var(--border-default,var(--border-subtle))]">
+        <div v-for="(week, index) in calGrid" :key="index" class="kb-cal__week tw:grid tw:flex-1 tw:grid-cols-7 tw:gap-px">
           <div
             v-for="day in week"
             :key="day.iso"
-            class="kb-cal__day"
-            :class="{
-              'kb-cal__day--muted': !day.inMonth,
-              'kb-cal__day--today': day.isToday,
-              'kb-cal__day--drop': dragOverDay === day.iso,
-            }"
+            class="kb-cal__day tw:relative tw:flex tw:min-h-20 tw:flex-col tw:gap-[3px] tw:px-[7px] tw:py-1.5"
+            :class="monthDayClass(day)"
             @dragover="onDayDragOver($event, day.iso)"
             @drop="onDayDrop(day.iso)"
             @dragleave.self="onDayDragLeave"
           >
-            <div class="kb-cal__day-num-wrap">
-              <span class="kb-cal__day-num" :class="{ 'kb-cal__day-num--today': day.isToday }">{{ day.date.getDate() }}</span>
+            <div class="kb-cal__day-num-wrap tw:flex tw:justify-end">
+              <span class="kb-cal__day-num tw:text-[11px]" :class="todayNumClass(day.isToday)">{{ day.date.getDate() }}</span>
             </div>
-            <div class="kb-cal__events">
+            <div class="kb-cal__events tw:flex tw:flex-col tw:gap-0.5">
               <div
                 v-for="card in (eventsByDate.get(day.iso) ?? [])"
                 :key="card.id"
-                class="kb-cal__event"
+                class="kb-cal__event tw:flex tw:items-center tw:gap-1 tw:rounded-[calc(4px*var(--radius-scale,1))] tw:border-l-2 tw:border-l-[var(--text-muted,var(--text-muted))] tw:bg-[var(--hover-strong,var(--surface-overlay))] tw:px-1.5 tw:py-1 tw:text-[10.5px] tw:text-content-secondary tw:cursor-pointer"
                 :class="{ 'kb-cal__event--overdue': isOverdue(card) }"
                 :style="getStatusColor(card) ? { background: getStatusColor(card)?.soft, color: getStatusColor(card)?.text, borderLeftColor: getStatusColor(card)?.dot } : {}"
                 draggable="true"
@@ -261,30 +295,30 @@ const dowLabels = computed(() =>
                 {{ card.title }}
               </div>
             </div>
-            <div v-if="dragOverDay === day.iso" class="kb-cal__drop-hint">{{ t('kanban.calendar.dropReschedule') }}</div>
+            <div v-if="dragOverDay === day.iso" class="kb-cal__drop-hint tw:text-[10px] tw:text-content-muted">{{ t('kanban.calendar.dropReschedule') }}</div>
           </div>
         </div>
       </div>
     </div>
 
-    <div v-else-if="calMode === 'week'" class="kb-cal__week-view">
-      <div class="kb-cal__week-view__header">
+    <div v-else-if="calMode === 'week'" class="kb-cal__week-view tw:flex tw:flex-1 tw:flex-col tw:overflow-hidden tw:px-4 tw:pt-2.5 tw:pb-3.5">
+      <div class="kb-cal__week-view__header tw:grid tw:grid-cols-7 tw:gap-px tw:overflow-hidden tw:rounded-[calc(10px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-[var(--border-default,var(--border-subtle))] tw:bg-[var(--border-default,var(--border-subtle))]">
         <div
           v-for="day in weekDays"
           :key="day.iso"
-          class="kb-cal__week-view__col-head"
-          :class="{ 'kb-cal__week-view__col-head--today': day.isToday }"
+          class="kb-cal__week-view__col-head tw:flex tw:flex-col tw:items-center tw:px-1 tw:py-1.5"
+          :class="day.isToday ? 'kb-cal__week-view__col-head--today tw:bg-[var(--accent-soft,rgb(161_98_7/0.08))]' : 'tw:bg-surface-raised'"
         >
           <span class="kb-cal__week-view__dow">{{ day.label }}</span>
-          <span class="kb-cal__week-view__num" :class="{ 'kb-cal__day-num--today': day.isToday }">{{ day.num }}</span>
+          <span class="kb-cal__week-view__num" :class="todayNumClass(day.isToday)">{{ day.num }}</span>
         </div>
       </div>
-      <div class="kb-cal__week-view__body">
+      <div class="kb-cal__week-view__body tw:flex-1 tw:grid tw:grid-cols-7 tw:gap-px tw:overflow-hidden tw:rounded-b-[calc(10px*var(--radius-scale,1))] tw:border-x tw:border-b tw:border-solid tw:border-[var(--border-default,var(--border-subtle))] tw:bg-[var(--border-default,var(--border-subtle))]">
         <div
           v-for="day in weekDays"
           :key="day.iso"
-          class="kb-cal__week-view__col"
-          :class="{ 'kb-cal__week-view__col--today': day.isToday, 'kb-cal__day--drop': dragOverDay === day.iso }"
+          class="kb-cal__week-view__col tw:relative tw:flex tw:min-h-20 tw:flex-col tw:gap-[3px] tw:px-[7px] tw:py-1.5"
+          :class="weekColClass(day)"
           @dragover="onDayDragOver($event, day.iso)"
           @drop="onDayDrop(day.iso)"
           @dragleave.self="onDayDragLeave"
@@ -292,7 +326,7 @@ const dowLabels = computed(() =>
           <div
             v-for="card in (eventsByDate.get(day.iso) ?? [])"
             :key="card.id"
-            class="kb-cal__event"
+            class="kb-cal__event tw:flex tw:items-center tw:gap-1 tw:rounded-[calc(4px*var(--radius-scale,1))] tw:border-l-2 tw:border-l-[var(--text-muted,var(--text-muted))] tw:bg-[var(--hover-strong,var(--surface-overlay))] tw:px-1.5 tw:py-1 tw:text-[10.5px] tw:text-content-secondary tw:cursor-pointer"
             :class="{ 'kb-cal__event--overdue': isOverdue(card) }"
             :style="getStatusColor(card) ? { background: getStatusColor(card)?.soft, color: getStatusColor(card)?.text, borderLeftColor: getStatusColor(card)?.dot } : {}"
             draggable="true"
@@ -302,17 +336,17 @@ const dowLabels = computed(() =>
             <span v-if="isOverdue(card)" class="kb-cal__event-warn">⚠</span>
             {{ card.title }}
           </div>
-          <div v-if="!(eventsByDate.get(day.iso) ?? []).length" class="kb-cal__week-view__empty">{{ t('kanban.calendar.noEvents') }}</div>
+          <div v-if="!(eventsByDate.get(day.iso) ?? []).length" class="kb-cal__week-view__empty tw:text-[10px] tw:text-content-muted">{{ t('kanban.calendar.noEvents') }}</div>
         </div>
       </div>
     </div>
 
-    <div v-else class="kb-cal__day-view">
-      <div class="kb-cal__day-view__events">
+    <div v-else class="kb-cal__day-view tw:flex tw:flex-1 tw:p-5">
+      <div class="kb-cal__day-view__events tw:flex tw:w-full tw:flex-1 tw:flex-col tw:items-center tw:justify-center tw:gap-2 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle tw:p-4 tw:text-[var(--text-muted,var(--text-secondary))]">
         <div
           v-for="card in (eventsByDate.get(viewDayIso) ?? [])"
           :key="card.id"
-          class="kb-cal__day-view__event"
+          class="kb-cal__day-view__event tw:flex tw:items-center tw:gap-1 tw:rounded-[calc(4px*var(--radius-scale,1))] tw:border-l-2 tw:border-l-[var(--text-muted,var(--text-muted))] tw:bg-surface-raised tw:px-1.5 tw:py-1 tw:text-[10.5px] tw:text-content-secondary tw:cursor-pointer"
           :class="{ 'kb-cal__event--overdue': isOverdue(card) }"
           :style="getStatusColor(card) ? { borderLeftColor: getStatusColor(card)?.dot } : {}"
           @click="emit('open-card', card.id)"
@@ -320,283 +354,8 @@ const dowLabels = computed(() =>
           <span v-if="isOverdue(card)" class="kb-cal__event-warn">⚠</span>
           {{ card.title }}
         </div>
-        <div v-if="!(eventsByDate.get(viewDayIso) ?? []).length" class="kb-cal__day-view__empty">{{ t('kanban.calendar.noEvents') }}</div>
+        <div v-if="!(eventsByDate.get(viewDayIso) ?? []).length" class="kb-cal__day-view__empty tw:text-[10px] tw:text-content-muted">{{ t('kanban.calendar.noEvents') }}</div>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.kb-cal {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.kb-cal__nav {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 20px;
-  border-bottom: 1px solid var(--line-1, var(--border-subtle));
-  flex-shrink: 0;
-  flex-wrap: wrap;
-}
-
-.kb-cal__nav-btn,
-.kb-cal__today-btn,
-.kb-cal__select-btn {
-  border-radius: calc(6px * var(--radius-scale, 1));
-  border: 1px solid var(--line-1, var(--border-subtle));
-  background: none;
-  color: var(--text-3, var(--text-secondary));
-  cursor: pointer;
-}
-
-.kb-cal__nav-btn {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-}
-
-.kb-cal__today-btn,
-.kb-cal__select-btn {
-  height: 28px;
-  padding: 0 10px;
-}
-
-.kb-cal__month-title {
-  font-size: 17px;
-  font-weight: 400;
-  font-style: italic;
-  font-family: var(--font-serif, Georgia, serif);
-  color: var(--text-1, var(--text-primary));
-}
-
-.kb-cal__spacer {
-  flex: 1;
-}
-
-.kb-cal__field-picker {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.kb-cal__field-label {
-  font-size: 11px;
-  color: var(--text-4, var(--text-muted));
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.kb-cal__mode-switch {
-  display: flex;
-  padding: 2px;
-  background: var(--hover-strong, var(--surface-2));
-  border-radius: calc(6px * var(--radius-scale, 1));
-  gap: 1px;
-}
-
-.kb-cal__mode-btn {
-  padding: 3px 9px;
-  border-radius: calc(4px * var(--radius-scale, 1));
-  font-size: 11px;
-  color: var(--text-3, var(--text-secondary));
-  cursor: pointer;
-}
-
-.kb-cal__mode-btn--active {
-  background: var(--glass-3, var(--surface-1));
-  color: var(--text-1, var(--text-primary));
-  font-weight: 550;
-}
-
-.kb-cal__empty,
-.kb-cal__day-view,
-.kb-cal__day-view__events {
-  flex: 1;
-  display: flex;
-}
-
-.kb-cal__empty,
-.kb-cal__day-view__events {
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: var(--text-3, var(--text-secondary));
-}
-
-.kb-cal__empty-sub {
-  font-size: 12px;
-  color: var(--text-4, var(--text-muted));
-  max-width: 280px;
-  text-align: center;
-}
-
-.kb-cal__grid-wrap,
-.kb-cal__week-view {
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  padding: 10px 16px 14px;
-}
-
-.kb-cal__dow-row,
-.kb-cal__week,
-.kb-cal__week-view__header,
-.kb-cal__week-view__body {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-}
-
-.kb-cal__dow {
-  padding: 5px 8px;
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-4, var(--text-muted));
-}
-
-.kb-cal__weeks,
-.kb-cal__week-view__header,
-.kb-cal__week-view__body {
-  border: 1px solid var(--line-2, var(--border-subtle));
-  border-radius: calc(10px * var(--radius-scale, 1));
-  overflow: hidden;
-  background: var(--line-2, var(--border-subtle));
-  gap: 1px;
-}
-
-.kb-cal__weeks {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.kb-cal__week {
-  flex: 1;
-  gap: 1px;
-}
-
-.kb-cal__day,
-.kb-cal__week-view__col-head,
-.kb-cal__week-view__col,
-.kb-cal__day-view__event {
-  background: var(--glass-2, var(--surface-1));
-}
-
-.kb-cal__day,
-.kb-cal__week-view__col {
-  padding: 6px 7px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  position: relative;
-  min-height: 80px;
-}
-
-.kb-cal__day--muted {
-  background: transparent;
-}
-
-.kb-cal__day--drop {
-  background: color-mix(in oklab, var(--accent) 10%, transparent);
-  outline: 1.5px dashed var(--accent);
-  outline-offset: -2px;
-}
-
-.kb-cal__day-num-wrap {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.kb-cal__day-num {
-  font-size: 11px;
-  color: var(--text-2, var(--text-secondary));
-}
-
-.kb-cal__day-num--today {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: white;
-  font-weight: 600;
-  display: inline-grid;
-  place-items: center;
-}
-
-.kb-cal__events {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.kb-cal__event,
-.kb-cal__day-view__event {
-  font-size: 10.5px;
-  padding: 4px 6px;
-  border-radius: calc(4px * var(--radius-scale, 1));
-  background: var(--hover-strong, var(--surface-2));
-  color: var(--text-2, var(--text-secondary));
-  border-left: 2px solid var(--text-3, var(--text-muted));
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.kb-cal__drop-hint,
-.kb-cal__week-view__empty,
-.kb-cal__day-view__empty {
-  font-size: 10px;
-  color: var(--text-4, var(--text-muted));
-}
-
-.kb-cal__week-view__col-head {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 6px 4px;
-}
-
-.kb-cal__week-view__col-head--today,
-.kb-cal__week-view__col--today {
-  background: var(--accent-soft, rgb(161 98 7 / 0.08));
-}
-
-.kb-cal__week-view__body {
-  flex: 1;
-  border-top: none;
-  border-radius: 0 0 10px 10px;
-}
-
-.kb-cal__day-view {
-  padding: 20px;
-}
-
-.kb-cal__day-view__events {
-  width: 100%;
-  border-radius: calc(12px * var(--radius-scale, 1));
-  border: 1px solid var(--line-2, var(--border-subtle));
-  background: var(--glass-2, var(--surface-1));
-  padding: 16px;
-}
-
-@media (max-width: 820px) {
-  .kb-cal__field-picker {
-    width: 100%;
-  }
-
-  .kb-cal__spacer {
-    display: none;
-  }
-}
-</style>

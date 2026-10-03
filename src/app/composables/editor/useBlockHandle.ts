@@ -1,6 +1,5 @@
 import { nextTick, reactive } from 'vue'
-import { NodeSelection, Selection, TextSelection } from 'prosemirror-state'
-import type { EditorState, Transaction } from 'prosemirror-state'
+import { NodeSelection, TextSelection } from 'prosemirror-state'
 import type { Node as PMNode } from 'prosemirror-model'
 import type { EditorCore } from './useEditorCore'
 import { runGuardedCommand } from './prosemirrorErrors'
@@ -17,6 +16,55 @@ import {
   type DropTarget,
   type DropIndicator,
 } from '../../../editor-core/dnd/blockDnd'
+import {
+  type BlockHandleBounds,
+  type BlockHandleMenuSize,
+  TYPE_MENU_MARGIN,
+  TYPE_MENU_OFFSET_Y,
+  TYPE_MENU_ALIGN_BOTTOM_OFFSET,
+  BLOCK_HANDLE_WIDTH,
+  BLOCK_HANDLE_HEIGHT,
+  BLOCK_HANDLE_BOUNDARY_MARGIN,
+  BLOCK_HANDLE_TOP_OFFSET,
+  BLOCK_HANDLE_LEFT_OFFSET,
+  DRAG_THRESHOLD,
+  AUTOSCROLL_EDGE,
+  AUTOSCROLL_SPEED,
+  clamp,
+  extractBlockIconAttrs,
+  resolveBlockHandlePosition,
+  isPointInBlockHandleStickyArea,
+  resolveBlockTypeMenuPosition,
+  resolveTurnIntoSelectionPos,
+  createDeleteBlockTransaction,
+  resolveBlockPosFromResolvedPos,
+  resolveActiveBlockPos,
+} from './blockHandlePosition'
+
+export {
+  type BlockHandleBounds,
+  type BlockHandleMenuSize,
+  TYPE_MENU_MARGIN,
+  TYPE_MENU_OFFSET_Y,
+  TYPE_MENU_ALIGN_BOTTOM_OFFSET,
+  BLOCK_HANDLE_WIDTH,
+  BLOCK_HANDLE_HEIGHT,
+  BLOCK_HANDLE_BOUNDARY_MARGIN,
+  BLOCK_HANDLE_TOP_OFFSET,
+  BLOCK_HANDLE_LEFT_OFFSET,
+  DRAG_THRESHOLD,
+  AUTOSCROLL_EDGE,
+  AUTOSCROLL_SPEED,
+  clamp,
+  extractBlockIconAttrs,
+  resolveBlockHandlePosition,
+  isPointInBlockHandleStickyArea,
+  resolveBlockTypeMenuPosition,
+  resolveTurnIntoSelectionPos,
+  createDeleteBlockTransaction,
+  resolveBlockPosFromResolvedPos,
+  resolveActiveBlockPos,
+}
 
 export interface BlockHandleState {
   visible: boolean
@@ -32,19 +80,7 @@ export interface BlockHandleState {
   typeMenuPosition: { top: number; left: number }
 }
 
-interface BlockHandleBounds {
-  top: number
-  right: number
-  bottom: number
-  left: number
-}
-
-interface BlockHandleMenuSize {
-  width: number
-  height: number
-}
-
-interface UseBlockHandleOptions {
+export interface UseBlockHandleOptions {
   getHandleBoundaryEl?: () => HTMLElement | null
   getTypeMenuBoundaryEl?: () => HTMLElement | null
   getTypeMenuEl?: () => HTMLElement | null
@@ -52,107 +88,6 @@ interface UseBlockHandleOptions {
    *  reference token for `copyBlockRef`. Absent (e.g. an unsaved/no-app-context
    *  preview) makes copyBlockRef a no-op rather than emitting a broken token. */
   getCurrentNoteId?: () => string | null
-}
-
-const TYPE_MENU_MARGIN = 12
-const TYPE_MENU_OFFSET_Y = 28
-const TYPE_MENU_ALIGN_BOTTOM_OFFSET = 6
-const BLOCK_HANDLE_WIDTH = 32
-const BLOCK_HANDLE_HEIGHT = 22
-const BLOCK_HANDLE_BOUNDARY_MARGIN = 4
-const BLOCK_HANDLE_TOP_OFFSET = 3
-const BLOCK_HANDLE_LEFT_OFFSET = 28
-const DRAG_THRESHOLD = 4
-const AUTOSCROLL_EDGE = 48
-const AUTOSCROLL_SPEED = 14
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max)
-}
-
-/** Extracts only the primitive attrs the block-handle icon depends on, so Vue
- *  can track a small stable shape instead of a deep ProseMirror node. */
-function extractBlockIconAttrs(node: PMNode): { level?: number; kind?: string } | null {
-  if (node.type.name === 'heading') return { level: node.attrs.level }
-  if (node.type.name === 'media_block') return { kind: node.attrs.kind }
-  return null
-}
-
-export function resolveBlockHandlePosition(
-  blockRect: Pick<DOMRect, 'top' | 'left'>,
-  bounds?: Pick<DOMRect, 'left'> | null,
-) {
-  const preferredLeft = blockRect.left - BLOCK_HANDLE_LEFT_OFFSET
-  const minLeft = bounds ? bounds.left + BLOCK_HANDLE_WIDTH + BLOCK_HANDLE_BOUNDARY_MARGIN : preferredLeft
-
-  return {
-    top: blockRect.top + BLOCK_HANDLE_TOP_OFFSET,
-    left: Math.max(preferredLeft, minLeft),
-  }
-}
-
-export function isPointInBlockHandleStickyArea(
-  point: { x: number; y: number },
-  blockRect: Pick<DOMRect, 'top' | 'right' | 'bottom' | 'left'>,
-  handlePosition: { top: number; left: number },
-) {
-  const left = Math.min(handlePosition.left, blockRect.left) - BLOCK_HANDLE_BOUNDARY_MARGIN
-  const right = Math.max(handlePosition.left, blockRect.right)
-  const top = Math.min(handlePosition.top, blockRect.top) - BLOCK_HANDLE_BOUNDARY_MARGIN
-  const bottom = Math.max(handlePosition.top + BLOCK_HANDLE_HEIGHT, blockRect.bottom) + BLOCK_HANDLE_BOUNDARY_MARGIN
-
-  return point.x >= left && point.x <= right && point.y >= top && point.y <= bottom
-}
-
-export function resolveBlockTypeMenuPosition(
-  anchor: { top: number; left: number },
-  menuSize: BlockHandleMenuSize,
-  bounds: BlockHandleBounds,
-  margin = TYPE_MENU_MARGIN,
-) {
-  const minLeft = bounds.left + margin
-  const maxLeft = Math.max(minLeft, bounds.right - margin - menuSize.width)
-  const nextLeft = clamp(anchor.left, minLeft, maxLeft)
-
-  const preferredBelowTop = anchor.top + TYPE_MENU_OFFSET_Y
-  const preferredAboveTop = anchor.top - menuSize.height + TYPE_MENU_ALIGN_BOTTOM_OFFSET
-  const maxTop = bounds.bottom - margin - menuSize.height
-  const minTop = bounds.top + margin
-  const fitsBelow = preferredBelowTop <= maxTop
-  const preferredTop = fitsBelow ? preferredBelowTop : preferredAboveTop
-  const nextTop = clamp(preferredTop, minTop, Math.max(minTop, maxTop))
-
-  return { top: nextTop, left: nextLeft }
-}
-
-export function resolveTurnIntoSelectionPos(
-  doc: PMNode,
-  hoveredBlockPos: number,
-  selectionFrom: number | null = null,
-): number | null {
-  const blockNode = doc.nodeAt(hoveredBlockPos)
-  if (!blockNode) return null
-
-  const blockEnd = hoveredBlockPos + blockNode.nodeSize
-  if (selectionFrom !== null && selectionFrom > hoveredBlockPos && selectionFrom < blockEnd) {
-    const $from = doc.resolve(selectionFrom)
-    for (let depth = $from.depth; depth >= 1; depth -= 1) {
-      if ($from.node(depth).isTextblock) return selectionFrom
-    }
-  }
-
-  if (blockNode.isTextblock) return hoveredBlockPos + 1
-
-  let textblockPos: number | null = null
-  blockNode.descendants((node, pos) => {
-    if (textblockPos !== null) return false
-    if (!node.isTextblock) return true
-
-    textblockPos = hoveredBlockPos + pos + 2
-    return false
-  })
-
-  return textblockPos
 }
 
 function getViewportBounds(): BlockHandleBounds {
@@ -169,22 +104,12 @@ function getMeasuredMenuEl(el: HTMLElement | null): HTMLElement | null {
   return (el.firstElementChild as HTMLElement | null) ?? el
 }
 
-export function createDeleteBlockTransaction(state: EditorState, pos: number): Transaction | null {
-  const docNode = state.doc.nodeAt(pos)
-  if (!docNode) return null
-
-  const paragraph = state.schema.nodes.paragraph?.createAndFill()
-  if (!paragraph) return null
-
-  if (state.doc.childCount === 1 && pos === 0) {
-    const tr = state.tr.replaceWith(0, docNode.nodeSize, paragraph)
-    return tr.setSelection(TextSelection.create(tr.doc, 1)).scrollIntoView()
+function isEditorFocused(view: { hasFocus?: () => boolean; dom?: Node } | null | undefined): boolean {
+  if (!view) return false
+  if (typeof view.hasFocus === 'function') {
+    return view.hasFocus()
   }
-
-  const tr = state.tr.delete(pos, pos + docNode.nodeSize)
-  const selectionPos = Math.min(pos, tr.doc.content.size)
-  const direction = selectionPos === 0 ? 1 : -1
-  return tr.setSelection(Selection.near(tr.doc.resolve(selectionPos), direction)).scrollIntoView()
+  return Boolean(view.dom && view.dom.contains(document.activeElement))
 }
 
 export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions = {}) {
@@ -204,12 +129,14 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
   // reason to be tracked reactively.
   let hoveredBlockDom: HTMLElement | null = null
 
-  let currentDom: EventTarget | null = null
+  let currentDom: HTMLElement | null = null
   let isOverHandle = false
+  let isHoveringAnotherBlock = false
   let hideTimer: ReturnType<typeof setTimeout> | null = null
+  let focusOutTimer: ReturnType<typeof setTimeout> | null = null
   let mouseMoveFrame: number | null = null
   let pendingMousePoint: { x: number; y: number } | null = null
-  let touchStart: { x: number; y: number; time: number } | null = null
+  let coarseTapStart: { pointerId: number; x: number; y: number; time: number } | null = null
 
   function updateTypeMenuPosition() {
     const typeMenuEl = getMeasuredMenuEl(options.getTypeMenuEl?.() ?? null)
@@ -231,13 +158,99 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     }
   }
 
+  function clearFocusOutTimer() {
+    if (focusOutTimer !== null) {
+      clearTimeout(focusOutTimer)
+      focusOutTimer = null
+    }
+  }
+
+  function showForBlock(pos: number): boolean {
+    const view = core.editorView
+    if (!view || blockHandle.isDragging) return false
+
+    const blockNode = view.state.doc.nodeAt(pos)
+    if (!blockNode) return false
+
+    const blockDomRaw = view.nodeDOM(pos)
+    let blockDom: HTMLElement | null = null
+    if (blockDomRaw instanceof HTMLElement) {
+      blockDom = blockDomRaw
+    } else if (blockDomRaw instanceof Text) {
+      blockDom = blockDomRaw.parentElement
+    }
+
+    if (!blockDom) return false
+
+    const blockRect = blockDom.getBoundingClientRect()
+    if (blockRect.width === 0 && blockRect.height === 0) return false
+
+    const handleBounds = options.getHandleBoundaryEl?.()?.getBoundingClientRect()
+    const nextPosition = resolveBlockHandlePosition(blockRect, handleBounds)
+
+    if (
+      blockHandle.visible
+      && blockHandle.hoveredBlockPos === pos
+      && hoveredBlockDom === blockDom
+      && !blockHandle.typeMenuOpen
+      && blockHandle.position.top === nextPosition.top
+      && blockHandle.position.left === nextPosition.left
+    ) {
+      clearHideTimer()
+      return true
+    }
+
+    clearHideTimer()
+    blockHandle.visible = true
+    blockHandle.hoveredBlockPos = pos
+    blockHandle.hoveredBlockTypeName = blockNode.type.name
+    blockHandle.hoveredBlockIconAttrs = extractBlockIconAttrs(blockNode)
+    hoveredBlockDom = blockDom
+    blockHandle.position = nextPosition
+    return true
+  }
+
+  function updateActiveBlock(): boolean {
+    const view = core.editorView
+    if (!view || view.isDestroyed || blockHandle.isDragging || blockHandle.typeMenuOpen) return false
+
+    // If currently hovering over another block with the mouse, hover takes priority
+    if (isHoveringAnotherBlock) return false
+
+    if (!isEditorFocused(view)) {
+      if (!isOverHandle) {
+        blockHandle.visible = false
+      }
+      return false
+    }
+
+    const activePos = resolveActiveBlockPos(view.state)
+    if (activePos !== null) {
+      return showForBlock(activePos)
+    }
+
+    if (!isOverHandle) {
+      blockHandle.visible = false
+    }
+    return false
+  }
+
+  function reposition() {
+    if (!blockHandle.visible || blockHandle.isDragging) return
+    if (blockHandle.hoveredBlockPos !== null) {
+      showForBlock(blockHandle.hoveredBlockPos)
+    }
+    if (blockHandle.typeMenuOpen) {
+      updateTypeMenuPosition()
+    }
+  }
+
   function handleMousePoint(clientX: number, clientY: number) {
     const view = core.editorView
-    if (!view) return
-    if (blockHandle.isDragging) return
+    if (!view || blockHandle.isDragging) return
 
     // Sticky corridor: when moving toward the currently shown handle (which sits in the
-    // gap to the left of the active block), keep it instead of recomputing. Without this,
+    // gap to the left of the block), keep it instead of recomputing. Without this,
     // crossing into a neighbouring column while reaching the handle makes it jump away.
     if (blockHandle.visible && hoveredBlockDom && !blockHandle.typeMenuOpen) {
       const rect = hoveredBlockDom.getBoundingClientRect()
@@ -252,49 +265,8 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     const posResult = view.posAtCoords({ left: clientX, top: clientY })
     if (posResult) {
       const $pos = view.state.doc.resolve(posResult.pos)
-      const callout = view.state.schema.nodes.callout
-      const column = view.state.schema.nodes.column
-      let calloutDepth: number | null = null
-      let columnDepth: number | null = null
-
-      if (callout) {
-        for (let depth = $pos.depth; depth >= 1; depth -= 1) {
-          if ($pos.node(depth).type === callout) {
-            calloutDepth = depth
-            break
-          }
-        }
-      }
-
-      if (column) {
-        for (let depth = $pos.depth; depth >= 1; depth -= 1) {
-          if ($pos.node(depth).type === column) {
-            columnDepth = depth
-            break
-          }
-        }
-      }
-
-      if (calloutDepth !== null && (columnDepth === null || calloutDepth > columnDepth)) {
-        // Always target the callout itself so the handle shows the correct type
-        // and is positioned outside the callout (not overlapping the icon)
-        hoveredBlockPos = $pos.before(calloutDepth)
-      } else if (columnDepth !== null) {
-        // Resolve the block that is a direct child of the column, so each block in a
-        // column gets its own handle — even when hovering an empty block or the column's
-        // stretched empty space resolves to the column itself instead of the inner block.
-        if ($pos.depth > columnDepth) {
-          hoveredBlockPos = $pos.before(columnDepth + 1)
-        } else {
-          const columnNode = $pos.node(columnDepth)
-          if (columnNode.childCount > 0) {
-            const idx = Math.min($pos.index(columnDepth), columnNode.childCount - 1)
-            hoveredBlockPos = $pos.posAtIndex(idx, columnDepth)
-          }
-        }
-      } else if ($pos.depth >= 1) {
-        hoveredBlockPos = $pos.before(1)
-      } else if (view.state.doc.nodeAt(posResult.pos) !== null) {
+      hoveredBlockPos = resolveBlockPosFromResolvedPos($pos, view.state.schema)
+      if (hoveredBlockPos === null && view.state.doc.nodeAt(posResult.pos) !== null) {
         // Atom node (math, mermaid, file, image) — pos lands exactly at block start
         hoveredBlockPos = posResult.pos
       }
@@ -316,45 +288,21 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     }
 
     if (hoveredBlockPos === null) {
-      if (!blockHandle.typeMenuOpen) blockHandle.visible = false
+      if (!blockHandle.typeMenuOpen) {
+        isHoveringAnotherBlock = false
+        if (isEditorFocused(view)) {
+          updateActiveBlock()
+        } else if (!isOverHandle) {
+          blockHandle.visible = false
+        }
+      }
       return
     }
 
-    const blockNode = view.state.doc.nodeAt(hoveredBlockPos)
-    if (!blockNode) {
-      if (!blockHandle.typeMenuOpen) blockHandle.visible = false
-      return
-    }
+    const activePos = resolveActiveBlockPos(view.state)
+    isHoveringAnotherBlock = activePos !== null && hoveredBlockPos !== activePos
 
-    const blockDomRaw = view.nodeDOM(hoveredBlockPos)
-    let blockDom: HTMLElement | null = null
-    if (blockDomRaw instanceof HTMLElement) {
-      blockDom = blockDomRaw
-    } else if (blockDomRaw instanceof Text) {
-      blockDom = blockDomRaw.parentElement
-    }
-
-    if (!blockDom) {
-      if (!blockHandle.typeMenuOpen) blockHandle.visible = false
-      return
-    }
-
-    if (
-      blockHandle.visible
-      && blockHandle.hoveredBlockPos === hoveredBlockPos
-      && hoveredBlockDom === blockDom
-      && !blockHandle.typeMenuOpen
-    ) return
-
-    const blockRect = blockDom.getBoundingClientRect()
-    clearHideTimer()
-    blockHandle.visible = true
-    blockHandle.hoveredBlockPos = hoveredBlockPos
-    blockHandle.hoveredBlockTypeName = blockNode.type.name
-    blockHandle.hoveredBlockIconAttrs = extractBlockIconAttrs(blockNode)
-    hoveredBlockDom = blockDom
-    const handleBounds = options.getHandleBoundaryEl?.()?.getBoundingClientRect()
-    blockHandle.position = resolveBlockHandlePosition(blockRect, handleBounds)
+    showForBlock(hoveredBlockPos)
   }
 
   function onMouseMove(event: MouseEvent) {
@@ -384,29 +332,49 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     clearHideTimer()
     hideTimer = setTimeout(() => {
       hideTimer = null
-      if (!isOverHandle && !blockHandle.typeMenuOpen) blockHandle.visible = false
+      if (isOverHandle || blockHandle.typeMenuOpen) return
+      isHoveringAnotherBlock = false
+      const view = core.editorView
+      if (isEditorFocused(view)) {
+        updateActiveBlock()
+      } else if (!isOverHandle) {
+        blockHandle.visible = false
+      }
     }, 120)
   }
 
-  // Touch has no hover, so a quick tap reveals the handle for the tapped block
-  // (reusing the pointer geometry). Scrolls and long-press (native text
-  // selection) are excluded by the movement/duration thresholds.
-  function onTouchStart(event: TouchEvent) {
-    if (event.touches.length !== 1) { touchStart = null; return }
-    const touch = event.touches[0]
-    touchStart = { x: touch.clientX, y: touch.clientY, time: Date.now() }
+  // Touch has no hover. Pointer Events work consistently in the Android
+  // webview, including node views that suppress compatibility touch events.
+  function onEditorPointerDown(event: PointerEvent) {
+    if (
+      !event.isPrimary
+      || (event.pointerType !== 'touch' && event.pointerType !== 'pen')
+      || event.button !== 0
+    ) {
+      coarseTapStart = null
+      return
+    }
+    coarseTapStart = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      time: Date.now(),
+    }
   }
 
-  function onTouchEnd(event: TouchEvent) {
-    const start = touchStart
-    touchStart = null
+  function onEditorPointerUp(event: PointerEvent) {
+    const start = coarseTapStart
+    coarseTapStart = null
     if (!start || blockHandle.isDragging) return
-    const touch = event.changedTouches[0]
-    if (!touch) return
-    const moved = Math.hypot(touch.clientX - start.x, touch.clientY - start.y)
+    if (event.pointerId !== start.pointerId) return
+    const moved = Math.hypot(event.clientX - start.x, event.clientY - start.y)
     if (moved > 10 || Date.now() - start.time > 400) return
     // Defer so ProseMirror finishes placing the caret and layout settles.
-    window.setTimeout(() => handleMousePoint(touch.clientX, touch.clientY), 0)
+    window.setTimeout(() => handleMousePoint(event.clientX, event.clientY), 0)
+  }
+
+  function onEditorPointerCancel() {
+    coarseTapStart = null
   }
 
   function onHandleMouseEnter() {
@@ -420,8 +388,47 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     clearHideTimer()
     hideTimer = setTimeout(() => {
       hideTimer = null
-      if (!isOverHandle && !blockHandle.typeMenuOpen) blockHandle.visible = false
+      if (isOverHandle || blockHandle.typeMenuOpen) return
+      isHoveringAnotherBlock = false
+      const view = core.editorView
+      if (isEditorFocused(view)) {
+        updateActiveBlock()
+      } else {
+        blockHandle.visible = false
+      }
     }, 120)
+  }
+
+  function onEditorFocusIn() {
+    clearFocusOutTimer()
+    isHoveringAnotherBlock = false
+    updateActiveBlock()
+  }
+
+  function onEditorFocusOut(event: FocusEvent) {
+    const related = event.relatedTarget as Node | null
+    if (related && (options.getHandleBoundaryEl?.()?.contains(related) || options.getTypeMenuEl?.()?.contains(related))) {
+      return
+    }
+    clearFocusOutTimer()
+    focusOutTimer = setTimeout(() => {
+      focusOutTimer = null
+      if (!isEditorFocused(core.editorView) && !blockHandle.typeMenuOpen && !isOverHandle) {
+        blockHandle.visible = false
+      }
+    }, 120)
+  }
+
+  function onDocumentSelectionChange() {
+    const view = core.editorView
+    if (!view || view.isDestroyed || !isEditorFocused(view)) return
+    isHoveringAnotherBlock = false
+    updateActiveBlock()
+  }
+
+  function onEditorKeyUp() {
+    isHoveringAnotherBlock = false
+    updateActiveBlock()
   }
 
   function mount() {
@@ -429,16 +436,26 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     if (!view) return
     if (currentDom === view.dom) return
     unmount()
-    currentDom = view.dom
+    currentDom = view.dom as HTMLElement
     view.dom.addEventListener('mousemove', onMouseMove as EventListener)
     view.dom.addEventListener('mouseleave', onMouseLeave)
-    view.dom.addEventListener('touchstart', onTouchStart as EventListener, { passive: true })
-    view.dom.addEventListener('touchend', onTouchEnd as EventListener, { passive: true })
+    view.dom.addEventListener('pointerdown', onEditorPointerDown as EventListener, { passive: true, capture: true })
+    view.dom.addEventListener('pointerup', onEditorPointerUp as EventListener, { passive: true, capture: true })
+    view.dom.addEventListener('pointercancel', onEditorPointerCancel as EventListener, { passive: true, capture: true })
+    view.dom.addEventListener('focusin', onEditorFocusIn as EventListener)
+    view.dom.addEventListener('focusout', onEditorFocusOut as EventListener)
+    view.dom.addEventListener('keyup', onEditorKeyUp as EventListener)
     window.addEventListener('mousemove', onWindowMouseMove)
+    document.addEventListener('selectionchange', onDocumentSelectionChange)
+
+    if (isEditorFocused(view)) {
+      updateActiveBlock()
+    }
   }
 
   function unmount() {
     clearHideTimer()
+    clearFocusOutTimer()
     cleanupDrag()
     if (mouseMoveFrame !== null) {
       window.cancelAnimationFrame(mouseMoveFrame)
@@ -448,13 +465,19 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     if (currentDom) {
       currentDom.removeEventListener('mousemove', onMouseMove as EventListener)
       currentDom.removeEventListener('mouseleave', onMouseLeave)
-      currentDom.removeEventListener('touchstart', onTouchStart as EventListener)
-      currentDom.removeEventListener('touchend', onTouchEnd as EventListener)
+      currentDom.removeEventListener('pointerdown', onEditorPointerDown as EventListener, true)
+      currentDom.removeEventListener('pointerup', onEditorPointerUp as EventListener, true)
+      currentDom.removeEventListener('pointercancel', onEditorPointerCancel as EventListener, true)
+      currentDom.removeEventListener('focusin', onEditorFocusIn as EventListener)
+      currentDom.removeEventListener('focusout', onEditorFocusOut as EventListener)
+      currentDom.removeEventListener('keyup', onEditorKeyUp as EventListener)
       currentDom = null
     }
     window.removeEventListener('mousemove', onWindowMouseMove)
-    touchStart = null
+    document.removeEventListener('selectionchange', onDocumentSelectionChange)
+    coarseTapStart = null
     isOverHandle = false
+    isHoveringAnotherBlock = false
     blockHandle.visible = false
     blockHandle.typeMenuOpen = false
     blockHandle.hoveredBlockPos = null
@@ -535,7 +558,7 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     dragGhost.textContent = node.textContent.trim().slice(0, 80) || '…'
     dragGhost.style.cssText = [
       'position:fixed', 'left:0', 'top:0', 'padding:4px 10px', 'border-radius:6px',
-      'background:var(--surface-2, rgba(40,40,40,0.92))', 'color:var(--text-1, #fff)',
+      'background:var(--surface-overlay, rgba(40,40,40,0.92))', 'color:var(--text-primary, #fff)',
       'font-size:14px', 'font-family:inherit', 'white-space:nowrap', 'max-width:320px',
       'overflow:hidden', 'text-overflow:ellipsis', 'pointer-events:none',
       'box-shadow:0 2px 12px rgba(0,0,0,0.2)', 'z-index:9002', 'will-change:transform',
@@ -653,6 +676,11 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
 
   function closeTypeMenu() {
     blockHandle.typeMenuOpen = false
+    if (isEditorFocused(core.editorView)) {
+      updateActiveBlock()
+    } else {
+      blockHandle.visible = false
+    }
   }
 
   function turnInto(commandId: string) {
@@ -673,6 +701,10 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     })
     view.focus()
     blockHandle.typeMenuOpen = false
+    isHoveringAnotherBlock = false
+    void nextTick(() => {
+      updateActiveBlock()
+    })
   }
 
   function duplicateBlock() {
@@ -685,6 +717,10 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     view.dispatch(view.state.tr.insert(pos + node.nodeSize, copy).scrollIntoView())
     view.focus()
     blockHandle.typeMenuOpen = false
+    isHoveringAnotherBlock = false
+    void nextTick(() => {
+      updateActiveBlock()
+    })
   }
 
   function insertBlockAbove() {
@@ -697,6 +733,8 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     view.dispatch(tr.setSelection(TextSelection.create(tr.doc, pos + 1)).scrollIntoView())
     view.focus()
     blockHandle.typeMenuOpen = false
+    blockHandle.visible = false
+    isHoveringAnotherBlock = false
   }
 
   function insertBlockBelow() {
@@ -712,6 +750,8 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     view.dispatch(tr.setSelection(TextSelection.create(tr.doc, insertPos + 1)).scrollIntoView())
     view.focus()
     blockHandle.typeMenuOpen = false
+    blockHandle.visible = false
+    isHoveringAnotherBlock = false
   }
 
   function deleteBlock() {
@@ -724,6 +764,10 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     view.focus()
     blockHandle.typeMenuOpen = false
     blockHandle.visible = false
+    isHoveringAnotherBlock = false
+    void nextTick(() => {
+      updateActiveBlock()
+    })
   }
 
   /**
@@ -751,6 +795,8 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     blockHandle,
     mount,
     unmount,
+    updateActiveBlock,
+    reposition,
     onHandlePointerDown,
     onTypeIconClick,
     onHandleMouseEnter,

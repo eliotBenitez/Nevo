@@ -79,4 +79,48 @@ describe('editorPopoverPosition', () => {
     expect(popover.style.left).toBe('575px')
     expect(position).toEqual({ top: 182, left: 438 })
   })
+
+  it('prefers opening above the anchor when preferAbove is true and space permits', () => {
+    const popover = document.createElement('div')
+    Object.defineProperty(popover, 'offsetHeight', { value: 80 })
+    popover.getBoundingClientRect = () => rect(200, 150, 300, 80)
+
+    const clamp: ClampOverlayPosition = (pos) => pos
+
+    // Anchor at top: 300, bottom: 350. Bounds: top 50, bottom 600.
+    // preferredAboveTop = 300 - 80 - 12 = 208 >= 50 + 12 (fits above).
+    // preferredBelowTop = 350 + 12 = 362 (fits below too).
+    const position = placeEditorPopoverNearAnchor(
+      popover,
+      rect(200, 300, 100, 50),
+      clamp,
+      rect(0, 50, 800, 550),
+      12,
+      true,
+    )
+
+    expect(position).toEqual({ top: 208, left: 250 })
+  })
+
+  it('falls back to below when preferAbove is true but there is no space above', () => {
+    const popover = document.createElement('div')
+    Object.defineProperty(popover, 'offsetHeight', { value: 80 })
+    popover.getBoundingClientRect = () => rect(200, 150, 300, 80)
+
+    const clamp: ClampOverlayPosition = (pos) => pos
+
+    // Anchor at top: 70, bottom: 120. Bounds: top 50, bottom 600.
+    // preferredAboveTop = 70 - 80 - 12 = -22 < 50 + 12 (does not fit above).
+    // preferredBelowTop = 120 + 12 = 132 (fits below).
+    const position = placeEditorPopoverNearAnchor(
+      popover,
+      rect(200, 70, 100, 50),
+      clamp,
+      rect(0, 50, 800, 550),
+      12,
+      true,
+    )
+
+    expect(position).toEqual({ top: 132, left: 250 })
+  })
 })

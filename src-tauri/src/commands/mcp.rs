@@ -52,3 +52,40 @@ pub fn mcp_respond(
     mcp_bridge::resolve_webview_request(&app, &request_id, outcome);
     Ok(())
 }
+
+#[cfg(desktop)]
+#[tauri::command]
+pub async fn get_mcp_agent_status() -> Result<serde_json::Value, String> {
+    let statuses =
+        tauri::async_runtime::spawn_blocking(crate::commands::mcp_registration::installed_statuses)
+            .await
+            .map_err(|_| "Could not inspect MCP agent configuration".to_string())?;
+    serde_json::to_value(statuses).map_err(|error| error.to_string())
+}
+
+#[cfg(desktop)]
+#[tauri::command]
+pub async fn connect_mcp_agent(
+    agent: String,
+    replace_conflict: bool,
+) -> Result<serde_json::Value, String> {
+    let agent = crate::commands::mcp_registration::Agent::parse(&agent)?;
+    let status = tauri::async_runtime::spawn_blocking(move || {
+        crate::commands::mcp_registration::connect_installed(agent, replace_conflict)
+    })
+    .await
+    .map_err(|_| "Could not connect MCP agent".to_string())??;
+    serde_json::to_value(status).map_err(|error| error.to_string())
+}
+
+#[cfg(desktop)]
+#[tauri::command]
+pub async fn disconnect_mcp_agent(agent: String) -> Result<serde_json::Value, String> {
+    let agent = crate::commands::mcp_registration::Agent::parse(&agent)?;
+    let status = tauri::async_runtime::spawn_blocking(move || {
+        crate::commands::mcp_registration::disconnect_installed(agent)
+    })
+    .await
+    .map_err(|_| "Could not disconnect MCP agent".to_string())??;
+    serde_json::to_value(status).map_err(|error| error.to_string())
+}

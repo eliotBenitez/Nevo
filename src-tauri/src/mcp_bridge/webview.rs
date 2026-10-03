@@ -1,9 +1,10 @@
 //! Request channel from the bridge into the webview.
 //!
 //! Two bridge operations cannot be served from Rust: editing a note that is
-//! open (the live Y.Doc, not the file on disk, is the source of truth) and
-//! asking the user to confirm a write in `ask` mode. Both are handled by
-//! emitting a request to the frontend and awaiting its reply.
+//! open (the live editor's in-memory ProseMirror state, not yet flushed to
+//! `note.json`, is ahead of the file on disk) and asking the user to confirm
+//! a write in `ask` mode. Both are handled by emitting a request to the
+//! frontend and awaiting its reply.
 
 use std::sync::Arc;
 use std::time::Duration;

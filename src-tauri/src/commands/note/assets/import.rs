@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use tauri::ipc::{InvokeBody, Request};
 use tauri::AppHandle;
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_dialog::DialogExt;
@@ -14,10 +15,51 @@ use crate::commands::path_utils::normalize_workspace_path;
 use crate::commands::workspace;
 use crate::logging::{LogContext, LogError};
 
-const MAX_LOCAL_ASSET_BYTES: u64 = 100 * 1024 * 1024;
+// Keep in sync with the frontend's `MAX_ASSET_BYTES` in
+// `src/core/assets/assetLimits.ts` — that check runs first (before the bytes
+// ever leave the browser), but this is the real enforcement boundary since the
+// frontend check is bypassable by anything that can call the IPC command
+// directly.
+pub(super) const MAX_LOCAL_ASSET_BYTES: u64 = 100 * 1024 * 1024;
 
+/// Imports a pasted/dropped image (or other asset) whose bytes travel from the
+/// frontend as a raw IPC body (ArrayBuffer / Uint8Array) instead of a JSON
+/// number array — avoids the ~3-4x transport overhead of encoding every byte
+/// as a JSON number, and keeps the whole-file read/hash/write off the WebView
+/// main thread via `spawn_blocking`. `workspace_path` and the (percent-encoded)
+/// file name travel via headers since `invoke` accepts either args OR a raw
+/// body, not both.
 #[tauri::command]
-pub fn import_image_asset(
+pub async fn import_image_asset(request: Request<'_>) -> Result<ImportedImageAsset, String> {
+    let headers = request.headers();
+    let workspace_path = headers
+        .get("nv-workspace-path")
+        .and_then(|v| v.to_str().ok())
+        .ok_or_else(|| "missing nv-workspace-path header".to_string())?
+        .to_owned();
+    let file_name_header = headers
+        .get("nv-file-name")
+        .and_then(|v| v.to_str().ok())
+        .ok_or_else(|| "missing nv-file-name header".to_string())?
+        .to_owned();
+    let file_name = percent_encoding::percent_decode_str(&file_name_header)
+        .decode_utf8()
+        .map_err(|_| "nv-file-name header is not valid UTF-8".to_string())?
+        .into_owned();
+
+    let bytes = match request.body() {
+        InvokeBody::Raw(bytes) => bytes.clone(),
+        _ => return Err("import_image_asset expects a raw binary body".to_string()),
+    };
+
+    tauri::async_runtime::spawn_blocking(move || {
+        import_image_asset_impl(workspace_path, file_name, bytes)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+pub(crate) fn import_image_asset_impl(
     workspace_path: String,
     file_name: String,
     bytes: Vec<u8>,
@@ -35,6 +77,24 @@ pub fn import_image_asset(
             }),
         );
         return Err("Image payload is empty".to_string());
+    }
+    if bytes.len() as u64 > MAX_LOCAL_ASSET_BYTES {
+        let message = format!(
+            "Image payload of {} bytes exceeds the {} byte limit",
+            bytes.len(),
+            MAX_LOCAL_ASSET_BYTES
+        );
+        let _ = logger.error(
+            "tauri.note",
+            "import_image_asset",
+            "Rejected oversized asset payload",
+            LogContext::default().with_error(LogError {
+                kind: Some("validation".to_string()),
+                message: message.clone(),
+                details: None,
+            }),
+        );
+        return Err(message);
     }
 
     let workspace_path = normalize_workspace_path(&workspace_path).inspect_err(|message| {
@@ -256,6 +316,25 @@ fn import_asset_by_path_inner(
     source_path: String,
     file_name: String,
 ) -> Result<ImportedImageAsset, String> {
+    import_asset_by_path_with_limit(
+        workspace_path,
+        source_path,
+        file_name,
+        MAX_LOCAL_ASSET_BYTES,
+    )
+}
+
+/// Same as `import_asset_by_path_inner` but with a caller-supplied size cap
+/// instead of the generic `MAX_LOCAL_ASSET_BYTES`. Voice recordings use a
+/// larger cap (see `commands::voice_recording`) since a WAV file at even a
+/// low quality preset can exceed the generic asset limit well within a
+/// normal recording length.
+pub(crate) fn import_asset_by_path_with_limit(
+    workspace_path: String,
+    source_path: String,
+    file_name: String,
+    max_bytes: u64,
+) -> Result<ImportedImageAsset, String> {
     let logger = crate::logging::logger();
 
     let workspace_path = normalize_workspace_path(&workspace_path).inspect_err(|message| {
@@ -276,7 +355,7 @@ fn import_asset_by_path_inner(
     std::fs::create_dir_all(&assets_dir).map_err(|error| error.to_string())?;
 
     let metadata = std::fs::metadata(&source_path).map_err(|error| error.to_string())?;
-    if !metadata.is_file() || metadata.len() > MAX_LOCAL_ASSET_BYTES {
+    if !metadata.is_file() || metadata.len() > max_bytes {
         return Err("Selected asset is not a file or exceeds the size limit".to_string());
     }
     let bytes = std::fs::read(&source_path).map_err(|error| {

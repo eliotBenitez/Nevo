@@ -51,7 +51,10 @@ describe('NvConfirmDialog', () => {
 
     const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]')
     expect(dialog).not.toBeNull()
+    // The danger variant must read on the panel (border tint + top bar, via NvModal's
+    // panel-class prop) as well as on the icon box — not on the icon alone.
     expect(dialog?.classList.contains('nv-confirm-dialog--danger')).toBe(true)
+    expect(dialog?.querySelector('.nv-confirm-dialog__icon--danger')).not.toBeNull()
     expect(dialog?.getAttribute('aria-labelledby')).toBe('nv-confirm-title')
     expect(dialog?.getAttribute('aria-describedby')).toBe('nv-confirm-message')
     expect(document.body.querySelector('#nv-confirm-title')?.textContent).toContain('Подтвердите действие')
@@ -105,7 +108,7 @@ describe('NvConfirmDialog', () => {
     const backdropResult = confirm({ message: 'Закрыть через фон?' })
     await flushDialog()
     document.body
-      .querySelector<HTMLElement>('[data-testid="nv-confirm-backdrop"]')
+      .querySelector<HTMLElement>('.nv-modal__scrim')
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
     await expect(backdropResult).resolves.toBe(false)

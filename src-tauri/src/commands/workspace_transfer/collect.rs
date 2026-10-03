@@ -80,7 +80,11 @@ fn collect_dir_recursive(root: &Path, dir: &Path, collector: &mut Collector) -> 
 /// recursive `.nevo` subdirectories that hold user data. Deliberately never
 /// walks `.nevo/github`, `.nevo/marketplace`, or `folders/` — those are
 /// host-specific or transient and are excluded simply by not being listed
-/// below.
+/// below. Also never walks `.nevo/collab` or `.nevo/collab-legacy-*`:
+/// `note.json` (under `notes/`, already collected above) is a note's source
+/// of truth, and any legacy Y.Doc state left over from before the workspace
+/// was migrated is neither needed by a restored copy nor safe to carry
+/// forward as if it were still authoritative.
 pub(super) fn collect_full_workspace_files(root: &Path) -> Result<Vec<CollectedFile>, String> {
     // Fold the database WAL into the main file so its committed rows are
     // captured by the copy below. Best-effort: a checkpoint failure must not
@@ -121,7 +125,6 @@ pub(super) fn collect_full_workspace_files(root: &Path) -> Result<Vec<CollectedF
         ".nevo/templates",
         ".nevo/index",
         ".nevo/plugins",
-        ".nevo/collab",
     ] {
         collect_dir_recursive(root, &root.join(relative), &mut collector)?;
     }

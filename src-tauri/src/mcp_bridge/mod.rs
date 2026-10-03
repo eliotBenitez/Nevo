@@ -9,7 +9,7 @@
 //! token, `Host` pinned to the bridge's own address, and an access mode that
 //! defaults to `off`.
 
-mod endpoint_file;
+pub(crate) mod endpoint_file;
 mod handlers;
 mod http;
 mod permissions;

@@ -1,26 +1,6 @@
 import { noteCommands } from '../../../tauri/commands'
 import { ensureMediaServer, mediaHttpUrl } from '../../../tauri/mediaServer'
-import { CloudBackend, type WorkspaceBackend } from '../../../core/workspace-backend'
-import { appLogger } from '../../../utils/logger'
 import type { EditorCore } from './useEditorCore'
-
-/**
- * Opens the browser's own file chooser.
- *
- * A local workspace picks through Rust, which copies the file into the
- * workspace and hands back a path. A cloud workspace has nowhere on disk to
- * copy to — it needs the bytes — so it goes through the webview instead.
- */
-function pickMediaFile(kind: 'audio' | 'video'): Promise<File | null> {
-  return new Promise((resolve) => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = kind === 'video' ? 'video/*' : 'audio/*'
-    input.addEventListener('change', () => resolve(input.files?.[0] ?? null), { once: true })
-    input.addEventListener('cancel', () => resolve(null), { once: true })
-    input.click()
-  })
-}
 
 function getMediaDurationFromUrl(url: string, isVideo: boolean): Promise<number | null> {
   return new Promise((resolve) => {
@@ -45,7 +25,6 @@ export function useMediaUpload(
   core: EditorCore,
   getWorkspacePath: () => string | null,
   onOverlaysUpdate: () => void,
-  getBackend: () => WorkspaceBackend | null = () => null,
 ) {
   function updateMediaNodeAtPosition(position: number, attrs: Record<string, unknown>) {
     if (!core.editorView) return
@@ -56,36 +35,11 @@ export function useMediaUpload(
     )
   }
 
-  /** Uploads the picked file as an encrypted relay asset (cloud workspaces). */
-  async function importForCloud(cloud: CloudBackend, kind: 'audio' | 'video') {
-    const file = await pickMediaFile(kind)
-    if (!file) return null
-    try {
-      const bytes = Array.from(new Uint8Array(await file.arrayBuffer()))
-      const imported = await cloud.importImageAsset(file.name, bytes)
-      return { fileName: file.name, src: imported.src, bytes: imported.bytes }
-    } catch (error) {
-      // Most likely the relay's per-asset size limit; a large video will not fit.
-      await appLogger.error({
-        source: 'frontend.editor',
-        event: 'import_cloud_media',
-        message: 'Failed to upload media to the cloud workspace',
-        error,
-        payload: { kind, fileName: file.name, size: file.size },
-      })
-      return null
-    }
-  }
-
   async function openMediaPicker(targetPos: number | null, kind: 'audio' | 'video') {
     const workspacePath = getWorkspacePath()
-    const backend = getBackend()
-    const cloud = backend instanceof CloudBackend ? backend : null
-    if (!workspacePath && !cloud) return
+    if (!workspacePath) return
 
-    const imported = cloud
-      ? await importForCloud(cloud, kind)
-      : await noteCommands.pickAndImportAsset(workspacePath!, kind)
+    const imported = await noteCommands.pickAndImportAsset(workspacePath, kind)
     if (!imported) return
     const fileName = imported.fileName
     const extension = fileName.split('.').pop()?.toLowerCase() ?? ''
@@ -102,16 +56,9 @@ export function useMediaUpload(
     // asset:// cannot feed WebKitGTK's GStreamer backend for either media type.
     let duration: number | null = null
     try {
-      if (cloud) {
-        // Already cached as an object URL by the upload; no media server for
-        // a workspace whose assets never touch the disk.
-        const url = cloud.assetUrl(imported.src)
-        if (url) duration = await getMediaDurationFromUrl(url, kind === 'video')
-      } else {
-        await ensureMediaServer()
-        const url = mediaHttpUrl(`${workspacePath}/${imported.src}`, imported.src)
-        if (url) duration = await getMediaDurationFromUrl(url, kind === 'video')
-      }
+      await ensureMediaServer()
+      const url = mediaHttpUrl(`${workspacePath}/${imported.src}`, imported.src)
+      if (url) duration = await getMediaDurationFromUrl(url, kind === 'video')
     } catch { duration = null }
 
     const nextAttrs = {

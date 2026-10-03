@@ -16,6 +16,12 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
 
+const boxSizeClasses = {
+  xs: 'tw:size-3 tw:rounded-[calc(3px*var(--radius-scale,1))]',
+  sm: 'tw:size-4 tw:rounded-[calc(4px*var(--radius-scale,1))]',
+  md: 'tw:size-5 tw:rounded-[calc(5px*var(--radius-scale,1))]',
+} as const
+
 const inputRef = ref<HTMLInputElement | null>(null)
 
 const iconSize = computed(() => {
@@ -33,87 +39,35 @@ watch(
 
 <template>
   <label
-    class="nv-checkbox"
-    :class="[`nv-checkbox--${size}`, disabled && 'nv-checkbox--disabled']"
+    class="nv-checkbox tw:inline-flex tw:items-center tw:gap-2 tw:select-none"
+    :class="[`nv-checkbox--${size}`, disabled ? 'nv-checkbox--disabled tw:pointer-events-none tw:cursor-not-allowed tw:opacity-[0.48]' : 'tw:cursor-pointer']"
   >
     <input
       ref="inputRef"
       type="checkbox"
-      class="nv-checkbox__input"
+      class="nv-checkbox__input tw:peer tw:pointer-events-none tw:absolute tw:size-px tw:opacity-0"
       :checked="modelValue"
       :disabled="disabled"
       @change="emit('update:modelValue', ($event.target as HTMLInputElement).checked)"
     />
-    <span class="nv-checkbox__box" aria-hidden="true">
+    <span
+      class="nv-checkbox__box tw:grid tw:shrink-0 tw:place-items-center tw:border-[1.5px] tw:border-solid tw:border-line-strong tw:bg-surface-overlay tw:text-content-on-accent tw:transition-[background-color,border-color,box-shadow] tw:duration-[120ms] tw:peer-checked:border-accent tw:peer-checked:bg-accent tw:peer-indeterminate:border-accent tw:peer-indeterminate:bg-accent tw:peer-focus-visible:outline-2 tw:peer-focus-visible:outline-solid tw:peer-focus-visible:outline-focus-ring tw:peer-focus-visible:outline-offset-2"
+      :class="boxSizeClasses[size]"
+      aria-hidden="true"
+    >
       <Minus v-if="indeterminate" :size="iconSize" :stroke-width="2.5" />
       <Check v-else-if="modelValue" :size="iconSize" :stroke-width="2.5" />
     </span>
-    <span v-if="label" class="nv-checkbox__label">{{ label }}</span>
+    <span v-if="label" class="nv-checkbox__label tw:font-nv-ui tw:text-[12.5px] tw:font-medium tw:text-content-secondary">{{ label }}</span>
     <slot v-else />
   </label>
 </template>
 
 <style scoped>
-.nv-checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.nv-checkbox--disabled {
-  opacity: 0.48;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-.nv-checkbox__input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.nv-checkbox__box {
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  width: 16px;
-  height: 16px;
-  border-radius: calc(4px * var(--radius-scale, 1));
-  border: 1.5px solid var(--line-strong);
-  background: var(--glass-3, var(--surface-1));
-  color: white;
-  transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
-}
-
 .nv-checkbox:hover:not(.nv-checkbox--disabled) .nv-checkbox__box {
   border-color: var(--accent);
 }
 
-.nv-checkbox__input:checked + .nv-checkbox__box,
-.nv-checkbox__input:indeterminate + .nv-checkbox__box {
-  background: var(--accent);
-  border-color: var(--accent);
-  box-shadow: 0 2px 8px var(--accent-glow);
-}
-
-.nv-checkbox__input:focus-visible + .nv-checkbox__box {
-  box-shadow: 0 0 0 2px var(--accent-soft);
-}
-
-.nv-checkbox--xs .nv-checkbox__box { width: 12px; height: 12px; border-radius: calc(3px * var(--radius-scale, 1)); }
-.nv-checkbox--md .nv-checkbox__box { width: 20px; height: 20px; border-radius: calc(5px * var(--radius-scale, 1)); }
-
-.nv-checkbox__label {
-  font: 500 12.5px var(--font-ui);
-  color: var(--text-2);
-  transition: color 0.12s;
-}
-
-.nv-checkbox:hover:not(.nv-checkbox--disabled) .nv-checkbox__label {
-  color: var(--text-1);
-}
+.nv-checkbox__label { transition: color 0.12s; }
+.nv-checkbox:hover:not(.nv-checkbox--disabled) .nv-checkbox__label { color: var(--text-primary); }
 </style>

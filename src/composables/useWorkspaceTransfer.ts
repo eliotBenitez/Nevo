@@ -5,6 +5,7 @@ import { useToast } from '../ui/composables/useToast'
 import { promptPassword } from '../ui/composables/usePasswordPrompt'
 import { workspaceTransferCommands } from '../tauri/workspaceTransfer'
 import type { MergeReport, TransferProgress } from '../types/workspace-transfer'
+import { isWorkspaceSchemaTooNewError } from '../utils/workspaceSchemaError'
 
 export type TransferStage = 'idle' | 'starting' | 'packing' | 'encrypting' | 'extracting' | 'finishing'
 
@@ -18,6 +19,7 @@ type TransferErrorKind =
   | 'passwordRequired'
   | 'notNevoArchive'
   | 'unsupportedVersion'
+  | 'workspaceSchemaTooNew'
   | 'destinationNotEmpty'
   | 'unknown'
 
@@ -43,6 +45,7 @@ function classifyTransferError(message: string): TransferErrorKind {
   if (/incorrect archive password/i.test(message)) return 'incorrectPassword'
   if (/password-protected.*password is required/i.test(message)) return 'passwordRequired'
   if (/not a valid nevo workspace archive/i.test(message)) return 'notNevoArchive'
+  if (isWorkspaceSchemaTooNewError(message)) return 'workspaceSchemaTooNew'
   if (/incompatible app version/i.test(message)) return 'unsupportedVersion'
   if (/empty folder/i.test(message)) return 'destinationNotEmpty'
   return 'unknown'
@@ -99,6 +102,7 @@ export function useWorkspaceTransfer() {
       case 'passwordRequired': return t('workspaceTransfer.errors.passwordRequired')
       case 'notNevoArchive': return t('workspaceTransfer.errors.notNevoArchive')
       case 'unsupportedVersion': return t('workspaceTransfer.errors.unsupportedVersion')
+      case 'workspaceSchemaTooNew': return t('workspaceTransfer.errors.workspaceSchemaTooNew')
       case 'destinationNotEmpty': return t('workspaceTransfer.errors.destinationNotEmpty')
       default: return raw
     }

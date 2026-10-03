@@ -1,19 +1,21 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
 import { ArrowLeft, Kanban, Plus, Zap, X } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import { useKanbanStore } from '../../../stores/kanban'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import KanbanColumn from './KanbanColumn.vue'
-import KanbanCardModal from './KanbanCardModal.vue'
+import KanbanCardEditorPane from './KanbanCardEditorPane.vue'
 import KanbanToolbar from './KanbanToolbar.vue'
 import KanbanTableView from './KanbanTableView.vue'
 import KanbanCalendarView from './KanbanCalendarView.vue'
 import KanbanGroupView from './KanbanGroupView.vue'
 import KanbanAutomations from './KanbanAutomations.vue'
 import KanbanAddCardModal from './KanbanAddCardModal.vue'
+import { useFirstUseHint } from '../../onboarding/hints/useFirstUseHint'
 import type { KanbanBoard, KanbanBoardCardViewSettings, KanbanCard } from '../../../types/kanban'
 import type { KanbanViewMode, KanbanGroupBy } from './KanbanToolbar.vue'
 import { createKanbanId } from './kanbanFields'
@@ -32,6 +34,8 @@ const props = defineProps<Props>()
 const emit = defineEmits<{ 'back': [] }>()
 const { t } = useI18n()
 
+useFirstUseHint('kanbanViews')
+
 const kanbanStore = useKanbanStore()
 const workspaceStore = useWorkspaceStore()
 const { boards, cards, activeCardId, boardsError, cardsError, moveError } = storeToRefs(kanbanStore)
@@ -39,6 +43,7 @@ const { appConfig } = storeToRefs(workspaceStore)
 
 const board = ref<KanbanBoard | null>(null)
 const boardScrollRef = ref<HTMLElement | null>(null)
+const cardEditorRef = ref<InstanceType<typeof KanbanCardEditorPane> | null>(null)
 const boardCards = computed(() => cards.value.get(props.boardId) ?? [])
 const activeCard = computed(() =>
   activeCardId.value ? boardCards.value.find(c => c.id === activeCardId.value) ?? null : null
@@ -263,7 +268,30 @@ const dropStatusName = computed(() => {
   return opts.find(o => o.id === dropTargetColumnId.value)?.name ?? ''
 })
 
-function openCard(cardId: string) { kanbanStore.openCard(cardId) }
+async function openCard(cardId: string) {
+  if (activeCardId.value && cardEditorRef.value && !await cardEditorRef.value.flush()) return
+  if (activeCardId.value === cardId) {
+    kanbanStore.closeCard()
+    return
+  }
+  kanbanStore.openCard(cardId)
+}
+
+async function closeCardEditor() {
+  if (cardEditorRef.value && !await cardEditorRef.value.flush()) return
+  kanbanStore.closeCard()
+}
+
+async function flushBeforeNavigation() {
+  if (!activeCardId.value || !cardEditorRef.value) return true
+  return await cardEditorRef.value.flush()
+}
+
+onBeforeRouteLeave(flushBeforeNavigation)
+onBeforeRouteUpdate((to, from) => {
+  if (to.params.boardId === from.params.boardId) return true
+  return flushBeforeNavigation()
+})
 
 onBeforeUnmount(() => {
   clearDragState()
@@ -314,11 +342,11 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
 
 <template>
   <!-- Loading -->
-  <div v-if="isLoading" class="kb-view kb-view--center">
-    <div class="kb-view__loading-card" role="status" aria-live="polite">
-      <span class="kb-view__spinner" aria-hidden="true" />
-      <span class="kb-view__state-copy">{{ t('kanban.view.loading') }}</span>
-      <div class="kb-view__loading-rail" aria-hidden="true">
+  <div v-if="isLoading" class="kb-view kb-view--center tw:box-border tw:flex tw:h-full tw:w-full tw:max-w-full tw:min-w-0 tw:flex-1 tw:flex-col tw:items-center tw:justify-center tw:gap-3 tw:overflow-hidden tw:bg-(--island-bg) tw:px-5 tw:py-8 tw:text-center tw:text-[13px] tw:text-content-muted tw:max-[760px]:pt-[calc(32px+max(var(--safe-area-top),0px))] tw:max-[760px]:pr-[calc(20px+max(var(--safe-area-right),0px))] tw:max-[760px]:pb-[calc(32px+max(var(--safe-area-bottom),0px))] tw:max-[760px]:pl-[calc(20px+max(var(--safe-area-left),0px))]">
+    <div class="kb-view__loading-card tw:flex tw:w-[min(340px,100%)] tw:flex-col tw:items-center tw:gap-3 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-raised tw:p-[18px] tw:shadow-(--shadow-raised)" role="status" aria-live="polite">
+      <span class="kb-view__spinner tw:size-[18px] tw:rounded-full tw:border-2 tw:border-solid tw:border-[color-mix(in_oklab,var(--accent)_18%,transparent)] tw:border-t-accent tw:[animation:kb-view-spin_850ms_linear_infinite]" aria-hidden="true" />
+      <span class="kb-view__state-copy tw:m-0 tw:max-w-[420px] tw:leading-[1.5] tw:text-content-secondary">{{ t('kanban.view.loading') }}</span>
+      <div class="kb-view__loading-rail tw:grid tw:w-full tw:gap-[7px]" aria-hidden="true">
         <span />
         <span />
         <span />
@@ -327,41 +355,46 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
   </div>
 
   <!-- Error -->
-  <div v-else-if="loadError" class="kb-view kb-view--center">
-    <p class="kb-view__state-title">{{ t('kanban.view.loadBoardErrorTitle') }}</p>
-    <p class="kb-view__state-copy">{{ loadError }}</p>
-    <div class="kb-view__state-actions">
+  <div v-else-if="loadError" class="kb-view kb-view--center tw:box-border tw:flex tw:h-full tw:w-full tw:max-w-full tw:min-w-0 tw:flex-1 tw:flex-col tw:items-center tw:justify-center tw:gap-3 tw:overflow-hidden tw:bg-(--island-bg) tw:px-5 tw:py-8 tw:text-center tw:text-[13px] tw:text-content-muted tw:max-[760px]:pt-[calc(32px+max(var(--safe-area-top),0px))] tw:max-[760px]:pr-[calc(20px+max(var(--safe-area-right),0px))] tw:max-[760px]:pb-[calc(32px+max(var(--safe-area-bottom),0px))] tw:max-[760px]:pl-[calc(20px+max(var(--safe-area-left),0px))]">
+    <p class="kb-view__state-title tw:m-0 tw:text-[15px] tw:font-semibold tw:text-content-primary">{{ t('kanban.view.loadBoardErrorTitle') }}</p>
+    <p class="kb-view__state-copy tw:m-0 tw:max-w-[420px] tw:leading-[1.5] tw:text-content-secondary">{{ loadError }}</p>
+    <div class="kb-view__state-actions tw:flex tw:items-center tw:gap-2">
       <button type="button" class="nv-btn" @click="emit('back')"><ArrowLeft :size="13" /> {{ t('kanban.common.back') }}</button>
       <button type="button" class="nv-btn nv-btn--primary" @click="retryLoad">{{ t('kanban.common.retry') }}</button>
     </div>
   </div>
 
   <!-- Not found -->
-  <div v-else-if="notFound" class="kb-view kb-view--center">
-    <p class="kb-view__state-title">{{ t('kanban.view.boardNotFound') }}</p>
+  <div v-else-if="notFound" class="kb-view kb-view--center tw:box-border tw:flex tw:h-full tw:w-full tw:max-w-full tw:min-w-0 tw:flex-1 tw:flex-col tw:items-center tw:justify-center tw:gap-3 tw:overflow-hidden tw:bg-(--island-bg) tw:px-5 tw:py-8 tw:text-center tw:text-[13px] tw:text-content-muted tw:max-[760px]:pt-[calc(32px+max(var(--safe-area-top),0px))] tw:max-[760px]:pr-[calc(20px+max(var(--safe-area-right),0px))] tw:max-[760px]:pb-[calc(32px+max(var(--safe-area-bottom),0px))] tw:max-[760px]:pl-[calc(20px+max(var(--safe-area-left),0px))]">
+    <p class="kb-view__state-title tw:m-0 tw:text-[15px] tw:font-semibold tw:text-content-primary">{{ t('kanban.view.boardNotFound') }}</p>
     <button type="button" class="nv-btn nv-btn--primary" @click="emit('back')">
       <ArrowLeft :size="13" /> {{ t('kanban.common.back') }}
     </button>
   </div>
 
   <!-- Board view -->
-  <div v-else-if="board" class="kb-view">
+  <div v-else-if="board" class="kb-view tw:box-border tw:flex tw:h-full tw:w-full tw:max-w-full tw:min-w-0 tw:flex-1 tw:flex-col tw:overflow-hidden tw:bg-(--island-bg)" :class="{ 'kb-view--split': activeCard, 'kb-view--split-error': activeCard && moveError }">
     <!-- Move error banner -->
-    <div v-if="moveError" class="kb-view__error-banner">
+    <div v-if="moveError" class="kb-view__error-banner tw:flex tw:shrink-0 tw:items-center tw:justify-between tw:gap-2 tw:bg-surface-danger tw:px-4 tw:py-2 tw:text-xs tw:text-content-secondary">
       {{ t('kanban.view.moveFailed', { message: moveError }) }}
-      <button type="button" class="nv-btn kb-view__error-close" :aria-label="t('kanban.common.close')" @click="kanbanStore.moveError = null">
+      <button type="button" class="nv-btn kb-view__error-close tw:grid tw:size-7 tw:shrink-0 tw:place-items-center tw:p-0" :aria-label="t('kanban.common.close')" @click="kanbanStore.moveError = null">
         <X :size="14" />
       </button>
     </div>
 
     <!-- Page header -->
-    <div class="kb-view__header">
-      <button type="button" class="nv-btn kb-view__back" :aria-label="t('kanban.common.back')" @click="emit('back')">
+    <div class="kb-view__header tw:flex tw:shrink-0 tw:items-center tw:gap-2 tw:px-5 tw:pt-3.5 tw:pb-2.5 tw:max-[760px]:box-border tw:max-[760px]:min-h-[calc(60px+max(var(--safe-area-top),0px))] tw:max-[760px]:pt-[calc(8px+max(var(--safe-area-top),0px))] tw:max-[760px]:pr-[calc(12px+max(var(--safe-area-right),0px))] tw:max-[760px]:pb-2 tw:max-[760px]:pl-[calc(12px+max(var(--safe-area-left),0px))]">
+      <button
+        type="button"
+        class="nv-btn kb-view__back tw:text-content-muted tw:focus-visible:outline-none tw:focus-visible:shadow-[0_0_0_2px_var(--accent-soft),0_0_0_1px_var(--accent)] tw:max-[760px]:grid tw:max-[760px]:size-11 tw:max-[760px]:shrink-0 tw:max-[760px]:place-items-center tw:max-[760px]:p-0"
+        :aria-label="t('kanban.common.back')"
+        @click="emit('back')"
+      >
         <ArrowLeft :size="14" />
       </button>
-      <NvNoteIcon :value="board.icon" :size="18" class="kb-view__icon" />
-      <h1 class="kb-view__title">{{ board.title }}</h1>
-      <span class="kb-view__card-count">{{ t('kanban.view.cardCount', { n: boardCards.length }) }}</span>
+      <NvNoteIcon :value="board.icon" :size="18" class="kb-view__icon tw:text-lg tw:leading-none" />
+      <h1 class="kb-view__title tw:m-0 tw:min-w-0 tw:flex-1 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-xl tw:font-[650] tw:text-content-primary tw:max-[760px]:text-lg">{{ board.title }}</h1>
+      <span class="kb-view__card-count tw:shrink-0 tw:font-nv-mono tw:text-[11px] tw:text-content-muted tw:max-[760px]:hidden">{{ t('kanban.view.cardCount', { n: boardCards.length }) }}</span>
     </div>
 
     <!-- Toolbar -->
@@ -396,7 +429,7 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
     <div
       v-else-if="activeView === 'board'"
       ref="boardScrollRef"
-      class="kb-view__board"
+      class="kb-view__board tw:relative tw:box-border tw:flex tw:w-full tw:max-w-full tw:min-w-0 tw:flex-1 tw:items-start tw:gap-3 tw:overflow-x-auto tw:overflow-y-hidden tw:px-[18px] tw:pt-4 tw:pb-[22px] tw:[-webkit-overflow-scrolling:touch] tw:[overscroll-behavior-inline:contain] tw:[scrollbar-color:var(--border-strong,var(--border-subtle))_transparent] tw:[scrollbar-width:thin] tw:[&::-webkit-scrollbar]:h-3 tw:[&::-webkit-scrollbar-thumb]:rounded-full tw:[&::-webkit-scrollbar-thumb]:border-2 tw:[&::-webkit-scrollbar-thumb]:border-solid tw:[&::-webkit-scrollbar-thumb]:border-transparent tw:[&::-webkit-scrollbar-thumb]:bg-[color-mix(in_oklab,var(--border-strong,var(--border-subtle))_92%,transparent)] tw:[&::-webkit-scrollbar-thumb]:[background-clip:padding-box] tw:[&::-webkit-scrollbar-track]:bg-transparent tw:max-[760px]:gap-2.5 tw:max-[760px]:pt-3 tw:max-[760px]:pr-[calc(14px+max(var(--safe-area-right),0px))] tw:max-[760px]:pb-[calc(18px+max(var(--safe-area-bottom),0px))] tw:max-[760px]:pl-[calc(14px+max(var(--safe-area-left),0px))] tw:max-[760px]:[scroll-padding-inline:calc(14px+max(var(--safe-area-left),0px))] tw:max-[760px]:[scroll-snap-type:inline_proximity]"
       @wheel="onBoardWheel"
       @dragend="onBoardDragEnd"
     >
@@ -415,6 +448,7 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
         :can-delete="columns.length > 1"
         :compact="boardCardSettings.cardDensity === 'compact'"
         :view-settings="boardCardSettings"
+        :selected-card-id="activeCardId"
         @add-card="addCard"
         @quick-add-card="quickAddCard"
         @open-card="openCard"
@@ -428,8 +462,8 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
 
       <!-- Drop status change tooltip -->
       <Teleport v-if="dragCardId && dropTargetColumnId && dropTargetColumnId !== dragFromColumnId" to="body">
-        <div class="kb-drop-tooltip">
-          <Zap :size="12" class="kb-drop-tooltip__icon" />
+        <div class="kb-drop-tooltip tw:fixed tw:bottom-8 tw:left-1/2 tw:z-[300] tw:inline-flex tw:-translate-x-1/2 tw:items-center tw:gap-1.5 tw:rounded-full tw:border tw:border-solid tw:border-transparent tw:bg-(--menu-bg) tw:px-3.5 tw:py-[7px] tw:text-[12.5px] tw:text-content-secondary tw:shadow-(--shadow-overlay) tw:pointer-events-none tw:[animation:kb-tooltip-in_0.15s_ease]">
+          <Zap :size="12" class="kb-drop-tooltip__icon tw:shrink-0 tw:text-accent" />
           {{ t('kanban.board.dropHere') }}
           <strong>{{ dropStatusName }}</strong>
         </div>
@@ -439,25 +473,25 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
       <button
         v-if="columns.length > 0"
         type="button"
-        class="kb-view__add-col"
+        class="kb-view__add-col tw:flex tw:w-[210px] tw:shrink-0 tw:items-center tw:gap-1.5 tw:self-start tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-dashed tw:border-[var(--border-strong,var(--border-default))] tw:bg-transparent tw:px-3 tw:py-2.5 tw:font-[inherit] tw:text-xs tw:text-content-muted tw:transition-[border-color,color] tw:duration-150 tw:cursor-pointer tw:hover:border-accent tw:hover:text-accent tw:focus-visible:border-accent tw:focus-visible:outline-none tw:focus-visible:shadow-[0_0_0_2px_var(--accent-soft),0_0_0_1px_var(--accent)]"
         @click="addStatusColumn"
       >
         <Plus :size="11" />
         {{ t('kanban.view.addColumn') }}
       </button>
 
-      <div v-if="noSearchResults" class="kb-view__no-results">
-        <div class="kb-view__empty-icon"><Kanban :size="18" /></div>
-        <p class="kb-view__empty-title">{{ t('kanban.view.noResultsTitle') }}</p>
-        <p class="kb-view__empty-hint">{{ t('kanban.view.noResultsHint') }}</p>
+      <div v-if="noSearchResults" class="kb-view__no-results tw:sticky tw:left-1/2 tw:my-10 tw:mx-5 tw:flex tw:min-w-[260px] tw:shrink-0 tw:flex-col tw:items-center tw:gap-2 tw:self-center tw:text-center tw:pointer-events-none">
+        <div class="kb-view__empty-icon tw:grid tw:size-11 tw:place-items-center tw:rounded-[calc(11px*var(--radius-scale,1))] tw:bg-[var(--accent-soft,rgb(161_98_7/0.12))] tw:text-accent"><Kanban :size="18" /></div>
+        <p class="kb-view__empty-title tw:m-0 tw:[font-family:var(--font-serif,Georgia,serif)] tw:text-xl tw:font-normal tw:tracking-[-0.01em] tw:text-content-primary tw:italic">{{ t('kanban.view.noResultsTitle') }}</p>
+        <p class="kb-view__empty-hint tw:m-0 tw:max-w-[300px] tw:text-[12.5px] tw:leading-[1.5] tw:text-[var(--text-muted,var(--text-secondary))]">{{ t('kanban.view.noResultsHint') }}</p>
       </div>
 
       <!-- Empty board -->
-      <div v-if="columns.length === 0" class="kb-view__empty">
-        <div class="kb-view__empty-icon"><Kanban :size="20" /></div>
-        <p class="kb-view__empty-title">{{ t('kanban.view.emptyTitle') }}</p>
-        <p class="kb-view__empty-hint">{{ t('kanban.view.emptyHint') }}</p>
-        <div class="kb-view__empty-actions">
+      <div v-if="columns.length === 0" class="kb-view__empty tw:m-auto tw:flex tw:flex-col tw:items-center tw:gap-2.5 tw:text-center">
+        <div class="kb-view__empty-icon tw:grid tw:size-11 tw:place-items-center tw:rounded-[calc(11px*var(--radius-scale,1))] tw:bg-[var(--accent-soft,rgb(161_98_7/0.12))] tw:text-accent"><Kanban :size="20" /></div>
+        <p class="kb-view__empty-title tw:m-0 tw:[font-family:var(--font-serif,Georgia,serif)] tw:text-xl tw:font-normal tw:tracking-[-0.01em] tw:text-content-primary tw:italic">{{ t('kanban.view.emptyTitle') }}</p>
+        <p class="kb-view__empty-hint tw:m-0 tw:max-w-[300px] tw:text-[12.5px] tw:leading-[1.5] tw:text-[var(--text-muted,var(--text-secondary))]">{{ t('kanban.view.emptyHint') }}</p>
+        <div class="kb-view__empty-actions tw:flex tw:gap-1.5">
           <button type="button" class="nv-btn nv-btn--primary" @click="addStatusColumn">
             <Plus :size="12" /> {{ t('kanban.view.addColumn') }}
           </button>
@@ -484,12 +518,12 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
       @open-card="openCard"
     />
 
-    <!-- Card modal -->
-    <KanbanCardModal
+    <KanbanCardEditorPane
       v-if="activeCard"
+      ref="cardEditorRef"
       :card="activeCard"
       :board="board"
-      @close="kanbanStore.closeCard()"
+      @back="closeCardEditor"
     />
 
     <!-- Add card modal -->
@@ -511,9 +545,9 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
   </div>
 
   <!-- Fallback -->
-  <div v-else class="kb-view kb-view--center">
-    <p class="kb-view__state-title">{{ t('kanban.view.boardUnavailable') }}</p>
-    <div class="kb-view__state-actions">
+  <div v-else class="kb-view kb-view--center tw:box-border tw:flex tw:h-full tw:w-full tw:max-w-full tw:min-w-0 tw:flex-1 tw:flex-col tw:items-center tw:justify-center tw:gap-3 tw:overflow-hidden tw:bg-(--island-bg) tw:px-5 tw:py-8 tw:text-center tw:text-[13px] tw:text-content-muted tw:max-[760px]:pt-[calc(32px+max(var(--safe-area-top),0px))] tw:max-[760px]:pr-[calc(20px+max(var(--safe-area-right),0px))] tw:max-[760px]:pb-[calc(32px+max(var(--safe-area-bottom),0px))] tw:max-[760px]:pl-[calc(20px+max(var(--safe-area-left),0px))]">
+    <p class="kb-view__state-title tw:m-0 tw:text-[15px] tw:font-semibold tw:text-content-primary">{{ t('kanban.view.boardUnavailable') }}</p>
+    <div class="kb-view__state-actions tw:flex tw:items-center tw:gap-2">
       <button type="button" class="nv-btn" @click="emit('back')"><ArrowLeft :size="13" /> {{ t('kanban.common.back') }}</button>
       <button type="button" class="nv-btn nv-btn--primary" @click="retryLoad">{{ t('kanban.common.retry') }}</button>
     </div>
@@ -521,91 +555,85 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
 </template>
 
 <style scoped>
+.kb-view--split {
+  display: grid;
+  grid-template-columns: clamp(620px, 45%, 760px) minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+.kb-view--split > .kb-view__header { grid-column: 1; grid-row: 1; }
+.kb-view--split > :deep(.kb-toolbar) { grid-column: 1; grid-row: 2; min-width: 0; }
+.kb-view--split > :deep(.kb-toolbar) { overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+.kb-view--split > :deep(.kb-toolbar) > * { flex: 0 0 auto; }
+.kb-view--split > :deep(.kb-toolbar) .kb-toolbar__spacer { display: none; }
+.kb-view--split > :deep(.kb-toolbar) .kb-toolbar__group,
+.kb-view--split > :deep(.kb-toolbar) .kb-toolbar__display-trigger,
+.kb-view--split > :deep(.kb-toolbar) .kb-toolbar__search,
+.kb-view--split > :deep(.kb-toolbar) .kb-toolbar__btn--primary,
+.kb-view--split > :deep(.kb-toolbar) .kb-toolbar__btn--icon { display: none; }
+.kb-view--split > :deep(.kb-toolbar) .kb-toolbar__sep { display: none; }
+.kb-view--split .kb-view__card-count { display: none; }
+.kb-view--split > .kb-view__board :deep(.kb-column) { width: calc((100% - 12px) / 2); min-width: calc((100% - 12px) / 2); }
+.kb-view--split > .kb-view__board :deep(.kb-card--selected) {
+  position: relative;
+  border-color: color-mix(in oklab, var(--accent) 32%, var(--border-subtle));
+  background: color-mix(in oklab, var(--accent) 6%, var(--surface-raised));
+  box-shadow: none;
+}
+.kb-view--split > .kb-view__board :deep(.kb-card--selected)::before {
+  position: absolute;
+  inset: 8px auto 8px 0;
+  width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: var(--accent);
+  content: '';
+}
+.kb-view--split > .kb-view__board :deep(.kb-card--selected:focus-visible) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.kb-view--split > .kb-view__board,
+.kb-view--split > :deep(.kb-group),
+.kb-view--split > :deep(.kb-table),
+.kb-view--split > :deep(.kb-cal) { grid-column: 1; grid-row: 3; min-width: 0; }
+.kb-view--split > .kb-editor-pane { grid-column: 2; grid-row: 1 / 4; }
+.kb-view--split-error { grid-template-rows: auto auto auto minmax(0, 1fr); }
+.kb-view--split-error > .kb-view__error-banner { grid-column: 1; grid-row: 1; }
+.kb-view--split-error > .kb-view__header { grid-row: 2; }
+.kb-view--split-error > :deep(.kb-toolbar) { grid-row: 3; }
+.kb-view--split-error > .kb-view__board,
+.kb-view--split-error > :deep(.kb-group),
+.kb-view--split-error > :deep(.kb-table),
+.kb-view--split-error > :deep(.kb-cal) { grid-row: 4; }
+.kb-view--split-error > .kb-editor-pane { grid-row: 1 / 5; }
+@media (max-width: 1300px) {
+  .kb-view--split { display: flex; }
+  .kb-view--split > .kb-view__header,
+  .kb-view--split > :deep(.kb-toolbar),
+  .kb-view--split > .kb-view__board,
+  .kb-view--split > :deep(.kb-group),
+  .kb-view--split > :deep(.kb-table),
+  .kb-view--split > :deep(.kb-cal) { display: none; }
+  .kb-view--split > .kb-editor-pane { border-left: 0; }
+  .kb-view--split .kb-editor-back { display: inline-flex; }
+}
+@media (max-width: 760px) {
+  .kb-view--split { display: flex; }
+  .kb-view--split > .kb-view__header,
+  .kb-view--split > :deep(.kb-toolbar),
+  .kb-view--split > .kb-view__board,
+  .kb-view--split > :deep(.kb-group),
+  .kb-view--split > :deep(.kb-table),
+  .kb-view--split > :deep(.kb-cal) { display: none; }
+  .kb-view--split > .kb-editor-pane { border-left: 0; }
+  .kb-view--split .kb-editor-back { display: inline-flex; }
+}
+/* Set/removed on <body> directly by the pointer-drag composable (not
+   rendered by this component's template), so it cannot become a template
+   class. */
 :global(body.kb-kanban-dragging) {
   cursor: grabbing;
   user-select: none;
 }
-
-.kb-view {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-  background:
-    linear-gradient(180deg, color-mix(in oklab, var(--glass-2) 58%, transparent), transparent 180px),
-    var(--canvas-1, var(--surface-0));
-}
-
-.kb-view--center {
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 32px 20px;
-  text-align: center;
-  color: var(--text-3, var(--text-muted));
-  font-size: 13px;
-}
-
-.kb-view__state-title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-1, var(--text-primary));
-}
-
-.kb-view__state-copy {
-  margin: 0;
-  max-width: 420px;
-  color: var(--text-2, var(--text-secondary));
-  line-height: 1.5;
-}
-
-.kb-view__state-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.kb-view__loading-card {
-  width: min(340px, 100%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 18px;
-  border: 1px solid var(--line-1, var(--border-subtle));
-  border-radius: calc(12px * var(--radius-scale, 1));
-  background: color-mix(in oklab, var(--glass-3, var(--surface-1)) 88%, transparent);
-  box-shadow: var(--shadow-1, 0 10px 30px oklch(0 0 0 / 0.08));
-}
-
-.kb-view__spinner {
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  border: 2px solid color-mix(in oklab, var(--accent) 18%, transparent);
-  border-top-color: var(--accent);
-  animation: kb-view-spin 850ms linear infinite;
-}
-
-.kb-view__loading-rail {
-  width: 100%;
-  display: grid;
-  gap: 7px;
-}
-
-.kb-view__loading-rail span {
-  height: 8px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--line-1, oklch(0.8 0 0 / 0.4)), color-mix(in oklab, var(--accent) 18%, transparent), var(--line-1, oklch(0.8 0 0 / 0.4)));
-  background-size: 220% 100%;
-  animation: kb-view-skeleton 1.2s ease-in-out infinite;
-}
-
-.kb-view__loading-rail span:nth-child(2) { width: 82%; }
-.kb-view__loading-rail span:nth-child(3) { width: 64%; }
 
 @keyframes kb-view-spin {
   to { transform: rotate(360deg); }
@@ -616,213 +644,19 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
   100% { background-position: -120% 0; }
 }
 
-.kb-view__error-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 16px;
-  background: oklch(0.55 0.18 25 / 0.12);
-  border-bottom: 1px solid oklch(0.55 0.18 25 / 0.3);
-  font-size: 12px;
-  color: var(--text-2, var(--text-secondary));
-  flex-shrink: 0;
-}
-
-.kb-view__error-close {
-  width: 28px;
-  height: 28px;
-  padding: 0 !important;
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-}
-
-.kb-view__error-close:focus-visible,
-.kb-view__back:focus-visible,
-.kb-view__add-col:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--accent-soft), 0 0 0 1px var(--accent);
-}
-
-/* Page header */
-.kb-view__header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 20px 10px;
-  border-bottom: 1px solid var(--line-1, var(--border-subtle));
-  flex-shrink: 0;
-}
-
-.kb-view__back { color: var(--text-3, var(--text-muted)); }
-
-.kb-view__icon { font-size: 18px; line-height: 1; }
-
-.kb-view__title {
-  font-size: 20px;
-  font-weight: 650;
-  color: var(--text-1, var(--text-primary));
-  flex: 1;
-  margin: 0;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.kb-view__card-count {
-  font-size: 11px;
-  color: var(--text-4, var(--text-muted));
-  font-family: var(--font-mono, monospace);
-  flex-shrink: 0;
-}
-
-/* Board lane */
-.kb-view__board {
-  flex: 1;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px 18px 22px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  position: relative;
-  scrollbar-width: thin;
-  scrollbar-color: var(--line-strong, var(--border-subtle)) transparent;
-}
-
-.kb-view__board::-webkit-scrollbar {
-  height: 12px;
-}
-
-.kb-view__board::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.kb-view__board::-webkit-scrollbar-thumb {
-  background: color-mix(in oklab, var(--line-strong, var(--border-subtle)) 92%, transparent);
+.kb-view__loading-rail span {
+  height: 8px;
   border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  background: linear-gradient(90deg, var(--border-subtle, oklch(0.8 0 0 / 0.4)), color-mix(in oklab, var(--accent) 18%, transparent), var(--border-subtle, oklch(0.8 0 0 / 0.4)));
+  background-size: 220% 100%;
+  animation: kb-view-skeleton 1.2s ease-in-out infinite;
 }
 
-/* Drop status tooltip */
-.kb-drop-tooltip {
-  position: fixed;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 300;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border-radius: 999px;
-  background: var(--glass-3, var(--surface-1));
-  border: 1px solid color-mix(in oklab, var(--accent) 68%, var(--line-strong));
-  box-shadow: var(--shadow-pop), 0 0 14px -8px var(--accent-glow);
-  font-size: 12.5px;
-  color: var(--text-2, var(--text-secondary));
-  pointer-events: none;
-  animation: kb-tooltip-in 0.15s ease;
-}
+.kb-view__loading-rail span:nth-child(2) { width: 82%; }
+.kb-view__loading-rail span:nth-child(3) { width: 64%; }
 
 @keyframes kb-tooltip-in {
   from { opacity: 0; transform: translateX(-50%) translateY(8px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
-}
-
-.kb-drop-tooltip__icon { color: var(--accent); flex: 0 0 auto; }
-
-/* Add column ghost */
-.kb-view__add-col {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 210px;
-  flex-shrink: 0;
-  padding: 9px 12px;
-  border-radius: calc(8px * var(--radius-scale, 1));
-  border: 1px dashed var(--line-strong, var(--border-muted));
-  background: transparent;
-  color: var(--text-4, var(--text-muted));
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
-  align-self: flex-start;
-}
-
-.kb-view__add-col:hover { border-color: var(--accent); color: var(--accent); }
-
-.kb-view__add-col:focus-visible {
-  border-color: var(--accent);
-}
-
-.kb-view__no-results {
-  position: sticky;
-  left: 50%;
-  align-self: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  min-width: 260px;
-  margin: 40px 20px;
-  text-align: center;
-  pointer-events: none;
-}
-
-/* Empty board */
-.kb-view__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  margin: auto;
-  text-align: center;
-}
-
-.kb-view__empty-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: calc(11px * var(--radius-scale, 1));
-  background: var(--accent-soft, rgb(161 98 7 / 0.12));
-  color: var(--accent);
-  display: grid;
-  place-items: center;
-}
-
-.kb-view__empty-title {
-  font-family: var(--font-serif, Georgia, serif);
-  font-style: italic;
-  font-weight: 400;
-  font-size: 20px;
-  color: var(--text-1, var(--text-primary));
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-
-.kb-view__empty-hint {
-  font-size: 12.5px;
-  color: var(--text-3, var(--text-secondary));
-  max-width: 300px;
-  line-height: 1.5;
-  margin: 0;
-}
-
-.kb-view__empty-actions { display: flex; gap: 6px; }
-
-/* Property panel backdrop */
-.kb-panel-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 250;
-  background: oklch(0 0 0 / 0.3);
-  backdrop-filter: blur(2px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 </style>

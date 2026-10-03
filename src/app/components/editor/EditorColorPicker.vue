@@ -20,7 +20,7 @@ function onColorUpdate(value: string | null) {
 </script>
 
 <template>
-  <div v-if="open" class="editor-overlay" :style="pickerStyle">
+  <div v-if="open" class="editor-overlay tw:fixed tw:z-60" :style="pickerStyle">
     <NvColorPicker :colors="colors" allow-none @update:model-value="onColorUpdate" />
   </div>
 </template>

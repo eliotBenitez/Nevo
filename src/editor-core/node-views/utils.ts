@@ -1,5 +1,11 @@
 import { h, render } from 'vue'
 import hljs from 'highlight.js/lib/common'
+// Base theme for `.hljs-*` token classes; Nevo's own light/dark rules in
+// prose-code.css have higher selector specificity and always win over it, so
+// load order doesn't matter. Kept next to the `hljs` import (not in
+// main.ts's eager CSS list) so it — and the ~30 bundled languages in
+// highlight.js/lib/common — only load with the editor, not at app startup.
+import 'highlight.js/styles/github-dark.css'
 import type { Node as PMNode } from 'prosemirror-model'
 import { NodeSelection } from 'prosemirror-state'
 import type { EditorView } from 'prosemirror-view'

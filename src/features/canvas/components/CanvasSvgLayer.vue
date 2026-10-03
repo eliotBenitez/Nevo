@@ -118,11 +118,20 @@ function richLineY(element: CanvasElement, index: number): number {
   return canvasRichTextLines(element.content).slice(0, index)
     .reduce((y, block) => y + richFontSize(block.type, block.level) * 1.45, 34)
 }
+
+// Connect-target and selection can both be true for the same element while
+// quick-connect-dragging onto a selected node; connect-target must win, same
+// as the removed CSS where its rule was declared after the selected rule.
+function elementFilterClass(element: CanvasElement): string {
+  if (element.id === props.connectTargetId) return 'tw:[filter:drop-shadow(0_0_0_3px_var(--accent))]'
+  if (props.selectedIds.includes(element.id)) return 'tw:[filter:drop-shadow(0_0_2px_var(--accent))]'
+  return ''
+}
 </script>
 
 <template>
   <svg
-    class="canvas-svg-layer"
+    class="canvas-svg-layer tw:absolute tw:inset-0 tw:z-1 tw:overflow-visible tw:pointer-events-none"
     :viewBox="viewBox"
     :width="viewportWidth"
     :height="viewportHeight"
@@ -142,13 +151,13 @@ function richLineY(element: CanvasElement, index: number): number {
       <g
         v-for="connectorSource in orderedConnectors"
         :key="connectorSource.id"
-        class="canvas-svg-connector"
-        :class="{ 'canvas-svg-connector--selected': selectedIds.includes(connectorSource.id) }"
+        class="canvas-svg-connector tw:pointer-events-auto"
+        :class="{ 'canvas-svg-connector--selected tw:[filter:drop-shadow(0_0_2px_var(--accent))]': selectedIds.includes(connectorSource.id) }"
         @pointerdown.stop="$emit('select', connectorSource.id, $event.shiftKey)"
         @dblclick.stop="$emit('edit', connectorSource.id)"
       >
         <path
-          class="canvas-svg-connector__hit"
+          class="canvas-svg-connector__hit tw:cursor-pointer"
           :d="connectorPath(displayConnector(connectorSource).from, displayConnector(connectorSource).to, displayConnector(connectorSource).routing)"
           fill="none"
           stroke="transparent"
@@ -157,7 +166,7 @@ function richLineY(element: CanvasElement, index: number): number {
         <path
           :d="connectorPath(displayConnector(connectorSource).from, displayConnector(connectorSource).to, displayConnector(connectorSource).routing)"
           fill="none"
-          :stroke="connectorSource.color || 'var(--text-3)'"
+          :stroke="connectorSource.color || 'var(--text-muted)'"
           :stroke-width="connectorSource.width || 2"
           :marker-start="connectorMarker(connectorSource, 'start')"
           :marker-end="connectorMarker(connectorSource, 'end')"
@@ -177,12 +186,15 @@ function richLineY(element: CanvasElement, index: number): number {
       <g
         v-for="elementSource in orderedElements"
         :key="elementSource.id"
-        class="canvas-svg-element"
-        :class="{
-          'canvas-svg-element--selected': selectedIds.includes(elementSource.id),
-          'canvas-svg-element--locked': elementSource.locked,
-          'canvas-svg-element--connect-target': elementSource.id === connectTargetId,
-        }"
+        class="canvas-svg-element tw:pointer-events-auto"
+        :class="[
+          {
+            'canvas-svg-element--selected': selectedIds.includes(elementSource.id),
+            'canvas-svg-element--locked tw:cursor-not-allowed': elementSource.locked,
+            'canvas-svg-element--connect-target': elementSource.id === connectTargetId,
+          },
+          elementFilterClass(elementSource),
+        ]"
         :opacity="elementSource.style?.opacity ?? 1"
         :transform="`translate(${displayElement(elementSource).x} ${displayElement(elementSource).y}) rotate(${displayElement(elementSource).rotation || 0} ${displayElement(elementSource).width / 2} ${displayElement(elementSource).height / 2})`"
         @pointerdown.stop="$emit('interact', elementSource.id, $event)"
@@ -193,8 +205,8 @@ function richLineY(element: CanvasElement, index: number): number {
           :width="displayElement(elementSource).width"
           :height="displayElement(elementSource).height"
           rx="12"
-          :fill="elementSource.style?.fill || 'var(--canvas-1)'"
-          :stroke="elementSource.style?.stroke || 'var(--line-strong)'"
+          :fill="elementSource.style?.fill || 'var(--surface-canvas)'"
+          :stroke="elementSource.style?.stroke || 'var(--border-strong)'"
           :stroke-width="elementSource.style?.strokeWidth || 2"
         />
         <ellipse
@@ -203,15 +215,15 @@ function richLineY(element: CanvasElement, index: number): number {
           :cy="displayElement(elementSource).height / 2"
           :rx="displayElement(elementSource).width / 2"
           :ry="displayElement(elementSource).height / 2"
-          :fill="elementSource.style?.fill || 'var(--canvas-1)'"
-          :stroke="elementSource.style?.stroke || 'var(--line-strong)'"
+          :fill="elementSource.style?.fill || 'var(--surface-canvas)'"
+          :stroke="elementSource.style?.stroke || 'var(--border-strong)'"
           :stroke-width="elementSource.style?.strokeWidth || 2"
         />
         <path
           v-else-if="elementSource.kind === 'shape'"
           :d="`M ${displayElement(elementSource).width / 2} 0 L ${displayElement(elementSource).width} ${displayElement(elementSource).height / 2} L ${displayElement(elementSource).width / 2} ${displayElement(elementSource).height} L 0 ${displayElement(elementSource).height / 2} Z`"
-          :fill="elementSource.style?.fill || 'var(--canvas-1)'"
-          :stroke="elementSource.style?.stroke || 'var(--line-strong)'"
+          :fill="elementSource.style?.fill || 'var(--surface-canvas)'"
+          :stroke="elementSource.style?.stroke || 'var(--border-strong)'"
           :stroke-width="elementSource.style?.strokeWidth || 2"
         />
         <path
@@ -263,8 +275,8 @@ function richLineY(element: CanvasElement, index: number): number {
             :width="displayElement(elementSource).width"
             :height="displayElement(elementSource).height"
             rx="14"
-            :fill="elementSource.style?.fill || 'var(--canvas-1)'"
-            :stroke="elementSource.style?.stroke || 'var(--line-strong)'"
+            :fill="elementSource.style?.fill || 'var(--surface-canvas)'"
+            :stroke="elementSource.style?.stroke || 'var(--border-strong)'"
             :stroke-width="elementSource.style?.strokeWidth || 1"
           />
           <text x="18" y="35" font-size="22">{{ linkedNote(elementSource)?.icon || elementSource.icon || '📄' }}</text>
@@ -327,7 +339,7 @@ function richLineY(element: CanvasElement, index: number): number {
       </g>
     </g>
 
-    <g v-if="creationDraft" class="canvas-svg-draft">
+    <g v-if="creationDraft" class="canvas-svg-draft tw:pointer-events-none">
       <rect
         v-if="creationDraft.kind === 'shape' && creationDraft.shape === 'rectangle'"
         v-bind="creationDraft.bounds"
@@ -396,7 +408,7 @@ function richLineY(element: CanvasElement, index: number): number {
       />
     </g>
 
-    <g v-if="connectDraft" class="canvas-svg-draft">
+    <g v-if="connectDraft" class="canvas-svg-draft tw:pointer-events-none">
       <path
         :d="connectorPath(connectDraft.from, connectDraft.to, connectDraft.routing)"
         fill="none"
@@ -408,39 +420,3 @@ function richLineY(element: CanvasElement, index: number): number {
     </g>
   </svg>
 </template>
-
-<style scoped>
-.canvas-svg-layer {
-  position: absolute;
-  z-index: 1;
-  inset: 0;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.canvas-svg-element,
-.canvas-svg-connector {
-  pointer-events: auto;
-}
-
-.canvas-svg-element--selected,
-.canvas-svg-connector--selected {
-  filter: drop-shadow(0 0 2px var(--accent));
-}
-
-.canvas-svg-element--locked {
-  cursor: not-allowed;
-}
-
-.canvas-svg-element--connect-target {
-  filter: drop-shadow(0 0 0 3px var(--accent));
-}
-
-.canvas-svg-connector__hit {
-  cursor: pointer;
-}
-
-.canvas-svg-draft {
-  pointer-events: none;
-}
-</style>

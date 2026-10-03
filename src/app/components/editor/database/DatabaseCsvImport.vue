@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Upload, X } from 'lucide-vue-next'
+import { Upload } from 'lucide-vue-next'
+import NvModal from '../../../../ui/primitives/NvModal.vue'
 import NvSelect from '../../../../ui/primitives/NvSelect.vue'
 import { parseCsv, inferColumnType, detectDelimiter, CSV_DELIMITERS } from '../../../../utils/csv/parseCsv'
 import { parseCsvInWorker } from '../../../../features/database/databaseWorkerClient'
@@ -143,112 +144,101 @@ function confirmImport() {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div class="nv-db-csv-backdrop" @mousedown.self="emit('close')">
-      <div class="nv-db-csv-modal" role="dialog" aria-modal="true">
-        <div class="nv-db-csv-modal__header">
-          <span class="nv-db-csv-modal__title">{{ t('database.csv.title') }}</span>
-          <button type="button" class="nv-db-csv-modal__close" @click="emit('close')">
-            <X :size="15" />
+  <NvModal :open="true" size="md" :title="t('database.csv.title')" @close="emit('close')">
+    <div class="nv-db-csv-modal__body">
+      <template v-if="!hasFile">
+        <button type="button" class="nv-db-csv-modal__pick" @click="triggerFilePick">
+          <Upload :size="16" />
+          {{ t('database.csv.chooseFile') }}
+        </button>
+        <p class="nv-db-csv-modal__hint">{{ t('database.csv.dropHint') }}</p>
+        <p v-if="parseError" class="nv-db-csv-modal__error">{{ t('database.csv.parseError') }}</p>
+      </template>
+
+      <template v-else>
+        <div class="nv-db-csv-modal__file-row">
+          <span class="nv-db-csv-modal__filename">{{ fileName }}</span>
+          <button type="button" class="nv-db-csv-modal__change" @click="triggerFilePick">
+            {{ t('database.csv.chooseFile') }}
           </button>
         </div>
 
-        <div class="nv-db-csv-modal__body">
-          <template v-if="!hasFile">
-            <button type="button" class="nv-db-csv-modal__pick" @click="triggerFilePick">
-              <Upload :size="16" />
-              {{ t('database.csv.chooseFile') }}
-            </button>
-            <p class="nv-db-csv-modal__hint">{{ t('database.csv.dropHint') }}</p>
-            <p v-if="parseError" class="nv-db-csv-modal__error">{{ t('database.csv.parseError') }}</p>
-          </template>
-
-          <template v-else>
-            <div class="nv-db-csv-modal__file-row">
-              <span class="nv-db-csv-modal__filename">{{ fileName }}</span>
-              <button type="button" class="nv-db-csv-modal__change" @click="triggerFilePick">
-                {{ t('database.csv.chooseFile') }}
-              </button>
-            </div>
-
-            <div class="nv-db-csv-modal__delimiter-row">
-              <span class="nv-db-csv-modal__delimiter-label">{{ t('database.csv.delimiter') }}</span>
-              <NvSelect
-                class="nv-db-csv-modal__delimiter-select"
-                :model-value="delimiter"
-                :options="delimiterOptions"
-                :min-width="150"
-                @update:model-value="delimiter = $event as string"
-              />
-            </div>
-
-            <label class="nv-db-csv-modal__toggle-row">
-              <input type="checkbox" v-model="firstRowIsHeader" />
-              <span>{{ t('database.csv.firstRowHeader') }}</span>
-            </label>
-
-            <div class="nv-db-csv-modal__section-label">{{ t('database.csv.columnMapping') }}</div>
-            <div class="nv-db-csv-modal__columns">
-              <div v-for="(name, i) in columns" :key="i" class="nv-db-csv-modal__column-row">
-                <span class="nv-db-csv-modal__column-name">{{ name }}</span>
-                <NvSelect
-                  class="nv-db-csv-modal__column-type"
-                  :model-value="columnTypes[i]"
-                  :options="typeOptions()"
-                  :min-width="130"
-                  @update:model-value="columnTypes[i] = $event as DbFieldType"
-                />
-              </div>
-            </div>
-
-            <div class="nv-db-csv-modal__section-label">{{ t('database.csv.preview') }}</div>
-            <div class="nv-db-csv-modal__preview-wrap">
-              <table class="nv-db-csv-modal__preview">
-                <thead>
-                  <tr>
-                    <th v-for="(name, i) in columns" :key="i">{{ name }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(row, r) in previewRows" :key="r">
-                    <td v-for="c in columns.length" :key="c">{{ row[c - 1] ?? '' }}</td>
-                  </tr>
-                </tbody>
-              </table>
-              <div class="nv-db-csv-modal__rows-count">{{ dataRows.length }} {{ t('database.csv.rowsCount') }}</div>
-            </div>
-
-            <div class="nv-db-csv-modal__section-label">{{ t('database.csv.mode') }}</div>
-            <div class="nv-db-csv-modal__mode">
-              <label class="nv-db-csv-modal__mode-opt">
-                <input type="radio" value="replace" v-model="mode" />
-                <span>{{ t('database.csv.modeReplace') }}</span>
-              </label>
-              <label class="nv-db-csv-modal__mode-opt">
-                <input type="radio" value="append" v-model="mode" />
-                <span>{{ t('database.csv.modeAppend') }}</span>
-              </label>
-            </div>
-          </template>
+        <div class="nv-db-csv-modal__delimiter-row">
+          <span class="nv-db-csv-modal__delimiter-label">{{ t('database.csv.delimiter') }}</span>
+          <NvSelect
+            class="nv-db-csv-modal__delimiter-select"
+            :model-value="delimiter"
+            :options="delimiterOptions"
+            :min-width="150"
+            @update:model-value="delimiter = $event as string"
+          />
         </div>
 
-        <input
-          ref="fileInputRef"
-          type="file"
-          accept=".csv,text/csv"
-          class="nv-db-csv-modal__file-input"
-          @change="onFileChange"
-        />
+        <label class="nv-db-csv-modal__toggle-row">
+          <input type="checkbox" v-model="firstRowIsHeader" />
+          <span>{{ t('database.csv.firstRowHeader') }}</span>
+        </label>
 
-        <div class="nv-db-csv-modal__footer">
-          <button type="button" class="nv-db-csv-modal__cancel" @click="emit('close')">
-            {{ t('database.csv.cancel') }}
-          </button>
-          <button type="button" class="nv-db-csv-modal__confirm" :disabled="!hasFile" @click="confirmImport">
-            {{ t('database.csv.import') }}
-          </button>
+        <div class="nv-db-csv-modal__section-label">{{ t('database.csv.columnMapping') }}</div>
+        <div class="nv-db-csv-modal__columns">
+          <div v-for="(name, i) in columns" :key="i" class="nv-db-csv-modal__column-row">
+            <span class="nv-db-csv-modal__column-name">{{ name }}</span>
+            <NvSelect
+              class="nv-db-csv-modal__column-type"
+              :model-value="columnTypes[i]"
+              :options="typeOptions()"
+              :min-width="130"
+              @update:model-value="columnTypes[i] = $event as DbFieldType"
+            />
+          </div>
         </div>
-      </div>
+
+        <div class="nv-db-csv-modal__section-label">{{ t('database.csv.preview') }}</div>
+        <div class="nv-db-csv-modal__preview-wrap">
+          <table class="nv-db-csv-modal__preview">
+            <thead>
+              <tr>
+                <th v-for="(name, i) in columns" :key="i">{{ name }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, r) in previewRows" :key="r">
+                <td v-for="c in columns.length" :key="c">{{ row[c - 1] ?? '' }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="nv-db-csv-modal__rows-count">{{ dataRows.length }} {{ t('database.csv.rowsCount') }}</div>
+        </div>
+
+        <div class="nv-db-csv-modal__section-label">{{ t('database.csv.mode') }}</div>
+        <div class="nv-db-csv-modal__mode">
+          <label class="nv-db-csv-modal__mode-opt">
+            <input type="radio" value="replace" v-model="mode" />
+            <span>{{ t('database.csv.modeReplace') }}</span>
+          </label>
+          <label class="nv-db-csv-modal__mode-opt">
+            <input type="radio" value="append" v-model="mode" />
+            <span>{{ t('database.csv.modeAppend') }}</span>
+          </label>
+        </div>
+      </template>
     </div>
-  </Teleport>
+
+    <input
+      ref="fileInputRef"
+      type="file"
+      accept=".csv,text/csv"
+      class="nv-db-csv-modal__file-input"
+      @change="onFileChange"
+    />
+
+    <template #footer>
+      <button type="button" class="nv-db-csv-modal__cancel" @click="emit('close')">
+        {{ t('database.csv.cancel') }}
+      </button>
+      <button type="button" class="nv-db-csv-modal__confirm" :disabled="!hasFile" @click="confirmImport">
+        {{ t('database.csv.import') }}
+      </button>
+    </template>
+  </NvModal>
 </template>

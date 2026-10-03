@@ -1,12 +1,12 @@
-import { describe, expect, it } from 'vitest'
-import { EditorState, TextSelection } from 'prosemirror-state'
+import { describe, expect, it, vi } from 'vitest'
+import { EditorState, NodeSelection, TextSelection } from 'prosemirror-state'
 import { EditorView } from 'prosemirror-view'
 import { mount as mountVue } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import { nevoBaseSchema } from '../../../editor-core/schema'
 import EditorBlockHandle from '../../components/editor/EditorBlockHandle.vue'
 import type { EditorCore } from './useEditorCore'
-import { createDeleteBlockTransaction, isPointInBlockHandleStickyArea, resolveBlockHandlePosition, resolveBlockTypeMenuPosition, resolveTurnIntoSelectionPos, useBlockHandle } from './useBlockHandle'
+import { createDeleteBlockTransaction, isPointInBlockHandleStickyArea, resolveActiveBlockPos, resolveBlockHandlePosition, resolveBlockTypeMenuPosition, resolveTurnIntoSelectionPos, useBlockHandle } from './useBlockHandle'
 import { buildDropTransaction } from '../../../editor-core/dnd/blockDnd'
 // Referenceable blocks carry a lazy `id` attr (default null); the canonical
 // content shape strips unset ids, so assert through the same normalization the
@@ -27,10 +27,17 @@ describe('resolveBlockHandlePosition', () => {
     expect(position).toEqual({ top: 123, left: 212 })
   })
 
-  it('keeps the handle inside the editor boundary', () => {
+  it('keeps the handle inside the editor boundary when gutter space allows', () => {
+    const position = resolveBlockHandlePosition({ top: 120, left: 240 }, { left: 180 })
+
+    expect(position).toEqual({ top: 123, left: 216 })
+  })
+
+  it('never pushes the handle to overlap the block when gutter is constrained', () => {
     const position = resolveBlockHandlePosition({ top: 120, left: 240 }, { left: 210 })
 
-    expect(position).toEqual({ top: 123, left: 246 })
+    expect(position.left).toBeLessThanOrEqual(240)
+    expect(position).toEqual({ top: 123, left: 240 })
   })
 })
 
@@ -38,6 +45,14 @@ describe('isPointInBlockHandleStickyArea', () => {
   it('keeps the handle sticky while the pointer crosses the gap to the block', () => {
     expect(isPointInBlockHandleStickyArea(
       { x: 224, y: 132 },
+      { top: 120, right: 420, bottom: 148, left: 240 },
+      { top: 123, left: 212 },
+    )).toBe(true)
+  })
+
+  it('keeps the handle sticky while the pointer is directly over the handle buttons', () => {
+    expect(isPointInBlockHandleStickyArea(
+      { x: 195, y: 132 },
       { top: 120, right: 420, bottom: 148, left: 240 },
       { top: 123, left: 212 },
     )).toBe(true)
@@ -255,6 +270,329 @@ describe('useBlockHandle drag', () => {
   })
 })
 
+describe('useBlockHandle mobile controls', () => {
+  it.each([
+    ['math_block', { latex: 'x^2', displayMode: true }],
+    ['draw_block', { drawId: 'draw-1', src: '', svgPreview: '', title: '' }],
+    ['mermaid_block', { code: 'graph TD\nA --> B' }],
+  ])('inserts an editable paragraph below %s without replacing it', (typeName, attrs) => {
+    const schema = nevoBaseSchema
+    const block = schema.nodes[typeName]!.create(attrs)
+    const doc = schema.node('doc', null, [block])
+    const mount = document.createElement('div')
+    document.body.appendChild(mount)
+    const view = new EditorView(mount, {
+      state: EditorState.create({ schema, doc }),
+      dispatchTransaction(transaction) {
+        view.updateState(view.state.apply(transaction))
+      },
+    })
+
+    try {
+      const core = {
+        editorView: view,
+        commandRegistry: new Map(),
+        workspacePath: null,
+      } as unknown as EditorCore
+      const handle = useBlockHandle(core)
+      handle.blockHandle.hoveredBlockPos = 0
+      handle.blockHandle.visible = true
+
+      handle.insertBlockBelow()
+
+      expect(view.state.doc.childCount).toBe(2)
+      expect(view.state.doc.child(0).type.name).toBe(typeName)
+      expect(view.state.doc.child(1).type.name).toBe('paragraph')
+      expect(view.state.selection).toBeInstanceOf(TextSelection)
+      expect(view.state.selection.$from.parent.type.name).toBe('paragraph')
+      expect(handle.blockHandle.visible).toBe(false)
+    } finally {
+      view.destroy()
+      mount.remove()
+    }
+  })
+
+  it('reveals the handle after a short primary touch pointer tap on an atom block', () => {
+    vi.useFakeTimers()
+    const schema = nevoBaseSchema
+    const doc = schema.node('doc', null, [
+      schema.node('mermaid_block', { code: 'graph TD\nA --> B' }),
+    ])
+    const mount = document.createElement('div')
+    document.body.appendChild(mount)
+    const view = new EditorView(mount, {
+      state: EditorState.create({ schema, doc }),
+    })
+    const atomDom = view.nodeDOM(0)
+    if (!(atomDom instanceof HTMLElement)) throw new Error('Expected an atom block element')
+    vi.spyOn(view, 'posAtCoords').mockReturnValue({ pos: 0, inside: 0 })
+    vi.spyOn(atomDom, 'getBoundingClientRect').mockReturnValue({
+      top: 80,
+      right: 420,
+      bottom: 180,
+      left: 40,
+      width: 380,
+      height: 100,
+      x: 40,
+      y: 80,
+      toJSON: () => ({}),
+    })
+
+    const createTouchPointerEvent = (type: string) => {
+      const event = new Event(type, { bubbles: true })
+      Object.defineProperties(event, {
+        pointerId: { value: 1 },
+        pointerType: { value: 'touch' },
+        isPrimary: { value: true },
+        button: { value: 0 },
+        clientX: { value: 80 },
+        clientY: { value: 100 },
+      })
+      return event
+    }
+
+    try {
+      const core = {
+        editorView: view,
+        commandRegistry: new Map(),
+        workspacePath: null,
+      } as unknown as EditorCore
+      const handle = useBlockHandle(core)
+      handle.mount()
+
+      atomDom.dispatchEvent(createTouchPointerEvent('pointerdown'))
+      atomDom.dispatchEvent(createTouchPointerEvent('pointerup'))
+      vi.runAllTimers()
+
+      expect(handle.blockHandle.visible).toBe(true)
+      expect(handle.blockHandle.hoveredBlockPos).toBe(0)
+      expect(handle.blockHandle.hoveredBlockTypeName).toBe('mermaid_block')
+      handle.unmount()
+    } finally {
+      vi.useRealTimers()
+      view.destroy()
+      mount.remove()
+    }
+  })
+})
+
+describe('resolveActiveBlockPos', () => {
+  it('resolves the block position for text selection in a paragraph', () => {
+    const schema = nevoBaseSchema
+    const doc = schema.node('doc', null, [
+      schema.node('paragraph', null, [schema.text('first paragraph')]),
+      schema.node('paragraph', null, [schema.text('second paragraph')]),
+    ])
+    const secondParagraphPos = doc.child(0).nodeSize
+    const state = EditorState.create({
+      schema,
+      doc,
+      selection: TextSelection.create(doc, secondParagraphPos + 3),
+    })
+
+    expect(resolveActiveBlockPos(state)).toBe(secondParagraphPos)
+  })
+
+  it('resolves the callout container position when the selection is inside callout content', () => {
+    const schema = nevoBaseSchema
+    const doc = schema.node('doc', null, [
+      schema.node('callout', null, [
+        schema.node('paragraph', null, [schema.text('inside callout')]),
+      ]),
+    ])
+    const state = EditorState.create({
+      schema,
+      doc,
+      selection: TextSelection.create(doc, 3),
+    })
+
+    expect(resolveActiveBlockPos(state)).toBe(0)
+  })
+
+  it('resolves the block position for a NodeSelection on an atom block', () => {
+    const schema = nevoBaseSchema
+    const doc = schema.node('doc', null, [
+      schema.node('divider'),
+      schema.node('paragraph', null, [schema.text('body')]),
+    ])
+    const state = EditorState.create({
+      schema,
+      doc,
+      selection: NodeSelection.create(doc, 0),
+    })
+
+    expect(resolveActiveBlockPos(state)).toBe(0)
+  })
+})
+
+describe('useBlockHandle active block', () => {
+  it('shows the block handle at the active block when the editor has focus', () => {
+    const schema = nevoBaseSchema
+    const doc = schema.node('doc', null, [
+      schema.node('paragraph', null, [schema.text('active line')]),
+    ])
+    const mount = document.createElement('div')
+    document.body.appendChild(mount)
+    const view = new EditorView(mount, {
+      state: EditorState.create({
+        schema,
+        doc,
+        selection: TextSelection.create(doc, 2),
+      }),
+    })
+
+    const pDom = view.nodeDOM(0) as HTMLElement
+    vi.spyOn(pDom, 'getBoundingClientRect').mockReturnValue({
+      top: 50,
+      right: 300,
+      bottom: 80,
+      left: 100,
+      width: 200,
+      height: 30,
+      x: 100,
+      y: 50,
+      toJSON: () => ({}),
+    })
+
+    view.focus()
+
+    try {
+      const core = {
+        editorView: view,
+        commandRegistry: new Map(),
+        workspacePath: null,
+      } as unknown as EditorCore
+      const handle = useBlockHandle(core)
+      handle.mount()
+
+      expect(handle.blockHandle.visible).toBe(true)
+      expect(handle.blockHandle.hoveredBlockPos).toBe(0)
+      expect(handle.blockHandle.hoveredBlockTypeName).toBe('paragraph')
+      expect(handle.blockHandle.position.top).toBe(53)
+      handle.unmount()
+    } finally {
+      view.destroy()
+      mount.remove()
+    }
+  })
+
+  it('switches handle to hovered block and restores to active block on mouse leave', () => {
+    vi.useFakeTimers()
+    const schema = nevoBaseSchema
+    const doc = schema.node('doc', null, [
+      schema.node('paragraph', null, [schema.text('first')]),
+      schema.node('paragraph', null, [schema.text('second')]),
+    ])
+    const mount = document.createElement('div')
+    document.body.appendChild(mount)
+    const view = new EditorView(mount, {
+      state: EditorState.create({
+        schema,
+        doc,
+        selection: TextSelection.create(doc, 2),
+      }),
+    })
+
+    const p1Dom = view.nodeDOM(0) as HTMLElement
+    const p2Pos = doc.child(0).nodeSize
+    const p2Dom = view.nodeDOM(p2Pos) as HTMLElement
+
+    vi.spyOn(p1Dom, 'getBoundingClientRect').mockReturnValue({
+      top: 50, right: 300, bottom: 80, left: 100, width: 200, height: 30, x: 100, y: 50, toJSON: () => ({}),
+    })
+    vi.spyOn(p2Dom, 'getBoundingClientRect').mockReturnValue({
+      top: 90, right: 300, bottom: 120, left: 100, width: 200, height: 30, x: 100, y: 90, toJSON: () => ({}),
+    })
+
+    view.focus()
+
+    try {
+      const core = {
+        editorView: view,
+        commandRegistry: new Map(),
+        workspacePath: null,
+      } as unknown as EditorCore
+      const handle = useBlockHandle(core)
+      handle.mount()
+
+      // Active block is p1
+      expect(handle.blockHandle.visible).toBe(true)
+      expect(handle.blockHandle.hoveredBlockPos).toBe(0)
+
+      // Hover over p2
+      vi.spyOn(view, 'posAtCoords').mockReturnValue({ pos: p2Pos + 1, inside: p2Pos })
+      view.dom.dispatchEvent(new MouseEvent('mousemove', { clientX: 150, clientY: 100, bubbles: true }))
+      vi.runAllTimers()
+
+      // Handle moved to hovered block (p2)
+      expect(handle.blockHandle.visible).toBe(true)
+      expect(handle.blockHandle.hoveredBlockPos).toBe(p2Pos)
+
+      // Mouse leaves editor -> handle should revert to active block (p1) because view has focus
+      view.dom.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }))
+      vi.runAllTimers()
+
+      expect(handle.blockHandle.visible).toBe(true)
+      expect(handle.blockHandle.hoveredBlockPos).toBe(0)
+
+      handle.unmount()
+    } finally {
+      vi.useRealTimers()
+      view.destroy()
+      mount.remove()
+    }
+  })
+
+  it('hides the block handle when editor focus is lost', () => {
+    vi.useFakeTimers()
+    const schema = nevoBaseSchema
+    const doc = schema.node('doc', null, [
+      schema.node('paragraph', null, [schema.text('first')]),
+    ])
+    const mount = document.createElement('div')
+    document.body.appendChild(mount)
+    const view = new EditorView(mount, {
+      state: EditorState.create({
+        schema,
+        doc,
+        selection: TextSelection.create(doc, 2),
+      }),
+    })
+
+    const pDom = view.nodeDOM(0) as HTMLElement
+    vi.spyOn(pDom, 'getBoundingClientRect').mockReturnValue({
+      top: 50, right: 300, bottom: 80, left: 100, width: 200, height: 30, x: 100, y: 50, toJSON: () => ({}),
+    })
+
+    view.focus()
+
+    try {
+      const core = {
+        editorView: view,
+        commandRegistry: new Map(),
+        workspacePath: null,
+      } as unknown as EditorCore
+      const handle = useBlockHandle(core)
+      handle.mount()
+
+      expect(handle.blockHandle.visible).toBe(true)
+
+      // Editor loses focus
+      vi.spyOn(view, 'hasFocus').mockReturnValue(false)
+      view.dom.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))
+      vi.runAllTimers()
+
+      expect(handle.blockHandle.visible).toBe(false)
+
+      handle.unmount()
+    } finally {
+      vi.useRealTimers()
+      view.destroy()
+      mount.remove()
+    }
+  })
+})
+
 describe('EditorBlockHandle', () => {
   it('renders heading icons for heading levels 4 through 6', () => {
     for (const level of [4, 5, 6]) {
@@ -275,13 +613,15 @@ describe('EditorBlockHandle', () => {
     }
   })
 
-  it('renders separate button controls for dragging and block type options', () => {
+  it('renders separate button controls for dragging, type options, and insertion', async () => {
+    const onInsertBelow = vi.fn()
     const wrapper = mountVue(EditorBlockHandle, {
       props: {
         visible: true,
         position: { top: 0, left: 0 },
         hoveredBlockTypeName: 'paragraph',
         hoveredBlockIconAttrs: null,
+        onInsertBelow,
       },
       global: {
         plugins: [i18n],
@@ -290,12 +630,16 @@ describe('EditorBlockHandle', () => {
 
     const dragButton = wrapper.get('.block-handle__drag')
     const typeButton = wrapper.get('.block-handle__type')
+    const insertBelowButton = wrapper.get('.block-handle__insert-below')
 
     expect(dragButton.attributes('type')).toBe('button')
     expect(typeButton.attributes('type')).toBe('button')
 
     expect(dragButton.attributes('aria-label')).toBeTruthy()
     expect(typeButton.attributes('aria-label')).toBeTruthy()
+    expect(insertBelowButton.attributes('aria-label')).toBeTruthy()
+    await insertBelowButton.trigger('click')
+    expect(onInsertBelow).toHaveBeenCalledTimes(1)
     wrapper.unmount()
   })
 })

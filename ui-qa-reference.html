@@ -1,0 +1,127 @@
+<!doctype html><html lang="ru" class="theme-dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Nevo visual QA</title>
+<link rel="stylesheet" href="/src/styles/tokens.css"><link rel="stylesheet" href="/src/styles/base.css"><link rel="stylesheet" href="/src/styles/primitives.css"><link rel="stylesheet" href="/src/styles/app.css"><link rel="stylesheet" href="/src/styles/editor.css">
+<style>
+.right-panel {
+  width: 296px; height: 100%;
+  border-left: 1px solid var(--workspace-divider);
+  background: var(--workspace-inspector-surface);
+  display: flex; flex-direction: column; overflow-x: hidden; overflow-y: auto;
+}
+
+.right-panel__head {
+  position: sticky; top: 0; z-index: 1;
+  flex-shrink: 0; height: 56px; display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px; border-bottom: 1px solid var(--workspace-divider);
+  background: var(--workspace-toolbar-surface);
+}
+.right-panel__mode { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 8px; height: 38px; border: 1px solid var(--workspace-control-border); border-radius: calc(12px * var(--radius-scale, 1)); background: var(--workspace-tab-surface); }
+.right-panel__head-icon { color: var(--text-3); }
+.right-panel__head-title { font-size: 13px; font-weight: 580; color: var(--text-2); }
+.right-panel__close { width: 28px; height: 28px; display: grid; place-items: center; border: none; border-radius: calc(9px * var(--radius-scale, 1)); background: transparent; color: var(--text-4); cursor: pointer; transition: background-color 120ms ease, color 120ms ease; }
+.right-panel__close:hover { background: var(--hover); color: var(--text-1); }
+
+.right-panel__toc { flex: 0 1 auto; max-height: min(42vh, 320px); overflow-y: auto; padding: 14px 8px; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; contain: paint; }
+
+.right-panel__toc-item {
+  position: relative; width: 100%; height: 32px; display: flex; align-items: center;
+  gap: 5px; padding-right: 10px; border-radius: calc(9px * var(--radius-scale, 1)); color: var(--text-2);
+  font-size: 12.5px; transition: background-color 120ms ease, color 120ms ease;
+}
+.right-panel__toc-item:hover { background: var(--hover); color: var(--text-1); }
+.right-panel__toc-item.is-collapsed { color: var(--text-4); }
+.right-panel__toc-chevron { width: 16px; height: 16px; flex-shrink: 0; display: grid; place-items: center; border: none; background: transparent; color: var(--text-4); cursor: pointer; border-radius: calc(4px * var(--radius-scale, 1)); }
+.right-panel__toc-chevron.is-hidden { opacity: 0; pointer-events: none; }
+.right-panel__toc-chevron:hover { color: var(--text-2); }
+.right-panel__toc-chevron :deep(svg) { transition: transform 180ms ease; transform: rotate(0deg); }
+.right-panel__toc-chevron.is-open :deep(svg) { transform: rotate(90deg); }
+
+.right-panel__toc-level { font-size: 9.5px; font-weight: 600; color: var(--text-4); min-width: 16px; flex-shrink: 0; }
+.right-panel__toc-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: none; background: transparent; color: inherit; font-size: inherit; font-family: inherit; text-align: left; cursor: pointer; padding: 0; }
+
+.right-panel__section { flex-shrink: 0; padding: 14px 14px; border-top: 1px solid var(--workspace-divider); background: var(--workspace-inspector-section-surface); display: flex; flex-direction: column; gap: 6px; }
+.right-panel__section--scroll { max-height: 160px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; contain: paint; }
+.right-panel__section-label { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-4); margin-bottom: 4px; }
+.right-panel__properties { gap: 7px; }
+.right-panel__property-row { min-height: 28px; display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 8px; }
+.right-panel__property-label { font-size: 11.5px; color: var(--text-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.right-panel__property-control { min-width: 0; width: 100%; }
+.right-panel__property-control :deep(.nv-select__trigger),
+.right-panel__property-control :deep(.ndp-trigger) { width: 100%; min-width: 0; height: 28px; }
+.right-panel__property-tags {
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 4px 6px;
+  border: 1px solid var(--line-1);
+  border-radius: calc(7px * var(--radius-scale, 1));
+  background: var(--glass-2);
+}
+.right-panel__tag {
+  max-width: 100%;
+  min-width: 0;
+  height: 21px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 3px 0 7px;
+  border-radius: calc(5px * var(--radius-scale, 1));
+  background: var(--hover);
+  color: var(--text-2);
+  font-size: 11.5px;
+}
+.right-panel__tag-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.right-panel__tag-remove { width: 15px; height: 15px; flex-shrink: 0; display: grid; place-items: center; border: none; border-radius: calc(4px * var(--radius-scale, 1)); background: transparent; color: var(--text-4); cursor: pointer; padding: 0; }
+.right-panel__tag-remove:hover { background: var(--hover-strong); color: var(--text-1); }
+.right-panel__tag-input {
+  flex: 1 1 78px;
+  min-width: 78px;
+  height: 22px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 11.5px;
+  padding: 0 2px;
+}
+.right-panel__tag-input::placeholder { color: var(--text-4); }
+.right-panel__tag-input:disabled { cursor: not-allowed; opacity: 0.55; }
+.right-panel__meta-row { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-3); }
+.right-panel__meta-key { color: var(--text-4); min-width: 58px; flex-shrink: 0; }
+.right-panel__meta-sep { color: var(--text-4); }
+.right-panel__empty { padding: 4px 12px; font-size: 12px; color: var(--text-4); }
+.right-panel__section .right-panel__empty { padding: 4px 0; }
+.right-panel__empty--sm { font-size: 11.5px; }
+
+.right-panel__link-item { width: 100%; height: 26px; display: flex; align-items: center; gap: 6px; padding: 0 2px; border: none; background: transparent; color: var(--text-3); font-size: 12px; text-align: left; cursor: pointer; border-radius: calc(6px * var(--radius-scale, 1)); transition: background-color 120ms ease, color 120ms ease; }
+.right-panel__link-item:hover { background: var(--hover); color: var(--text-1); }
+.right-panel__link-icon { flex-shrink: 0; color: var(--text-4); }
+.right-panel__link-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.right-panel__backlink-item { width: 100%; min-height: 46px; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--workspace-control-border); background: var(--workspace-tab-surface); color: var(--text-2); font-size: 12.5px; text-align: left; cursor: pointer; border-radius: calc(12px * var(--radius-scale, 1)); transition: background-color 120ms ease, color 120ms ease; }
+.right-panel__backlink-item:hover { background: var(--hover); color: var(--text-1); }
+.right-panel__backlink-icon { font-size: 13px; line-height: 1; flex-shrink: 0; }
+.right-panel__backlink-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.right-panel__backlink-count { font-size: 10.5px; font-weight: 600; color: var(--text-4); background: var(--hover); padding: 1px 5px; border-radius: calc(4px * var(--radius-scale, 1)); flex-shrink: 0; }
+
+.right-panel__footer { margin-top: auto; position: sticky; bottom: 0; padding: 12px; border-top: 1px solid var(--workspace-divider); background: var(--workspace-inspector-surface); }
+.right-panel__graph-button { width: 100%; min-height: 42px; display: flex; align-items: center; justify-content: center; gap: 8px; border: none; border-radius: calc(12px * var(--radius-scale, 1)); background: var(--accent); color: #111117; font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; transition: filter 140ms ease, transform 140ms ease; }
+.right-panel__graph-button:hover { filter: brightness(1.08); }
+.right-panel__graph-button:active { transform: translateY(1px); }
+
+.right-panel__close:focus-visible,
+.right-panel__toc-chevron:focus-visible,
+.right-panel__toc-text:focus-visible,
+.right-panel__backlink-item:focus-visible,
+.right-panel__graph-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+body { margin:0 } .workspace-root { height:100vh; --app-shell-padding-x:18px; --app-sidebar-width:272px; --accent:oklch(0.66 0.10 258); background:var(--workspace-editor-surface); color:var(--text-1) } .workspace-titlebar { grid-template-columns:minmax(0,1fr) minmax(260px,430px) minmax(0,1fr) } .doc-body { padding-bottom:30px } .right-panel__toc { flex:0 1 auto } .preview-content { color:var(--text-2); font-size:15px; line-height:1.6 } .preview-content h2 { font-size:24px; color:var(--text-1); margin:28px 0 10px } .preview-content p { margin:10px 0 18px } .preview-content blockquote { border-left:2px solid var(--accent); margin:0 0 18px; padding:0 0 0 18px } .preview-content .callout { background:var(--workspace-tab-surface); border:1px solid var(--workspace-control-border); border-radius:16px; padding:15px 18px; margin:18px 0; } .preview-content .check { margin:10px 0; } .preview-content .check input { accent-color:var(--accent) } @media(max-width:960px){ .workspace-sidebar-shell { display:none } } @media(max-width:719px){ .workspace-right-panel-shell { display:none } .titlebar-start .titlebar-tabs { display:none } .workspace-titlebar { grid-template-columns:1fr auto; } }</style>
+<script>document.documentElement.className=new URLSearchParams(location.search).get('theme')==='light'?'theme-light':'theme-dark';addEventListener('DOMContentLoaded',()=>document.querySelector('.workspace-root')?.classList.toggle('workspace-root--phone',innerWidth<720));addEventListener('resize',()=>document.querySelector('.workspace-root')?.classList.toggle('workspace-root--phone',innerWidth<720));</script></head><body><div class="nv-app workspace-root"><header class="workspace-titlebar"><div class="titlebar-start"><div class="titlebar-leading"><button class="nv-btn workspace-sidebar-toggle" aria-label="Боковая панель">☰</button></div><div class="titlebar-tabs"><div class="title-tab-wrap title-tab--active"><button class="title-tab">Метод отбора</button></div></div></div><div class="titlebar-search"><button class="titlebar-search__field titlebar-search__field--trigger" aria-label="Поиск"><span class="titlebar-search__icon">⌕</span><span class="titlebar-search__label">Поиск по заметкам, блокам и настройкам...</span></button></div><div class="titlebar-trailing"><button class="nv-btn" aria-label="Настройки">⚙</button></div></header>
+<div class="workspace-body"><div class="workspace-sidebar-shell workspace-sidebar-shell--desktop"><aside class="sidebar"><div class="workspace-head"><div class="workspace-glyph">N</div><div class="workspace-meta"><div class="workspace-name">Исследование</div><div class="workspace-subtitle">412 заметки · локально</div></div></div><div class="sidebar-actionbar"><button class="sidebar-actionbar__new">＋ <span>Новая заметка</span></button><div class="sidebar-actionbar__tools"><button class="sidebar-actionbar__icon" aria-label="Сортировка">↕</button></div></div><div class="sidebar-system"><div class="sidebar-system__item">Входящие</div><div class="sidebar-system__item">Сегодня</div><div class="sidebar-system__item">Граф</div><div class="sidebar-system__item">Архив</div></div><div class="sample-list"><div class="right-panel__section-label">ФАЙЛЫ</div><div class="tree-row">▱ &nbsp; проекты</div><div class="tree-row tree-row--active">▤ &nbsp; Метод отбора</div><div class="tree-row">&nbsp;&nbsp;&nbsp;Критерий насыщения</div><div class="tree-row">&nbsp;&nbsp;&nbsp;Отказы и смещение</div><div class="tree-row">▱ &nbsp; интервью</div><div class="tree-row">▱ &nbsp; идеи</div><div class="right-panel__section-label" style="margin-top:22px">ТЕГИ</div><div class="right-panel__tag"># метод</div><div class="right-panel__tag"># интервью</div></div></aside></div>
+<div class="workspace-editor-pane-shell"><main class="editor-pane"><div class="editor-doc"><div class="breadcrumb-strip"><div class="breadcrumb-strip__trail"><span class="breadcrumb-item">проекты</span><span class="breadcrumb-chevron">/</span><span class="breadcrumb-item breadcrumb-item--active">Метод отбора</span></div><div class="breadcrumb-strip__actions"><button class="breadcrumb-action-btn" aria-label="История">◴</button><button class="breadcrumb-action-btn" aria-label="Ещё">⋯</button></div></div><div class="editor-doc-body"><div class="doc-body-wrap"><section class="doc-body"><div class="doc-appearance doc-appearance--covered"><div class="doc-cover" style="background:linear-gradient(112deg,#22222f,#2d2630)"><div class="doc-appearance-actions doc-appearance-actions--on-cover"><button class="doc-appearance-btn">Обложка</button></div></div></div><div class="doc-content"><div class="doc-title-row"><button class="doc-title-emoji" aria-label="Значок заметки">N</button><textarea class="doc-title" rows="1">Метод отбора респондентов</textarea></div><div class="preview-content"><p>3 сентября &nbsp; #метод &nbsp; #интервью</p><p>Отбираем по принципу максимального различия: каждый следующий респондент отличается от опрошенных хотя бы по одному ключевому признаку.</p><h2>Критерий остановки</h2><blockquote>Две подряд встречи без новых кодов — выборка насыщена. См. Критерий насыщения.</blockquote><div class="callout">Фиксируем отказы отдельно — иначе смещение выборки не видно.</div><div class="check"><input type="checkbox" checked> Сформулировать критерии</div><div class="check"><input type="checkbox"> Свести таблицу признаков</div></div></div></section></div></div></div></main></div>
+<div class="workspace-right-panel-shell"><aside class="right-panel"><div class="right-panel__head"><div class="right-panel__mode"><span class="right-panel__head-icon">☷</span><span class="right-panel__head-title">Оглавление</span></div><button class="right-panel__close" aria-label="Закрыть">×</button></div><div class="right-panel__toc"><div class="right-panel__toc-item">Критерий остановки</div><div class="right-panel__toc-item">Таблица признаков</div><div class="right-panel__toc-item">Отказы</div></div><div class="right-panel__section right-panel__section--scroll right-panel__backlinks"><div class="right-panel__section-label">БЭКЛИНКИ</div><button class="right-panel__backlink-item">Карта темы</button><button class="right-panel__backlink-item">Интервью № 12</button></div><div class="right-panel__section right-panel__properties"><div class="right-panel__section-label">СВОЙСТВА</div><div class="right-panel__property-row"><span>Статус</span><span>в работе</span></div><div class="right-panel__property-row"><span>Слов</span><span>1 240</span></div><div class="right-panel__property-row"><span>Изменена</span><span>14:22</span></div></div><div class="right-panel__footer"><button class="right-panel__graph-button">Открыть граф</button></div></aside></div></div></div></body></html>

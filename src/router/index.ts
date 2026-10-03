@@ -1,5 +1,8 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { finalizeActiveRecording } from '../core/voice-recording/activeRecording'
+import { useNoteStore } from '../stores/note'
+import { useWorkspaceStore } from '../stores/workspace'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -35,6 +38,14 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../app/WorkspaceShell.vue'),
   },
   {
+    path: '/workspace/note/:noteId/history',
+    component: () => import('../app/WorkspaceShell.vue'),
+  },
+  {
+    path: '/workspace/history',
+    component: () => import('../app/WorkspaceShell.vue'),
+  },
+  {
     path: '/workspace/folder/:folderId',
     component: () => import('../app/WorkspaceShell.vue'),
   },
@@ -58,9 +69,41 @@ const routes: RouteRecordRaw[] = [
     path: '/workspace/draw/:noteId/:drawId',
     component: () => import('../app/WorkspaceShell.vue'),
   },
+  {
+    path: '/workspace/settings/:section?',
+    component: () => import('../app/WorkspaceShell.vue'),
+  },
+  {
+    path: '/workspace/archive',
+    component: () => import('../app/WorkspaceShell.vue'),
+  },
 ]
 
 export const router = createRouter({
   history: createWebHashHistory(),
   routes,
 })
+
+// Finalize an in-progress voice recording while the editor is still mounted,
+// so the recorded block is inserted and saved before the view unmounts.
+export async function finalizeRecordingBeforeNavigation(to?: { fullPath: string }, from?: { fullPath: string }): Promise<boolean | void> {
+  await finalizeActiveRecording()
+  if (!to || !from) return
+  if (to.fullPath === from.fullPath) return true
+
+  const noteStore = useNoteStore()
+  const currentNote = noteStore.activeNote
+  if (!currentNote) return true
+
+  const workspaceStore = useWorkspaceStore()
+  const noteId = currentNote.id
+  const backend = workspaceStore.backend
+  const result = await noteStore.flushDurably()
+  return result.ok
+    && !noteStore.isDirty
+    && noteStore.saveStatus !== 'error'
+    && noteStore.activeNote?.id === noteId
+    && workspaceStore.backend === backend
+}
+
+router.beforeEach(finalizeRecordingBeforeNavigation)

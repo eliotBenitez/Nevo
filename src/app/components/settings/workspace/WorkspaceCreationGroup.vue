@@ -10,6 +10,8 @@ import NvSelect from '../../../../ui/primitives/NvSelect.vue'
 import NvIconPicker from '../../../../ui/primitives/NvIconPicker.vue'
 import NvNoteIcon from '../../../../ui/primitives/NvNoteIcon.vue'
 import NvPopupMenu from '../../../../ui/primitives/NvPopupMenu.vue'
+import SettingsGroup from '../ui/SettingsGroup.vue'
+import SettingsRow from '../ui/SettingsRow.vue'
 
 const { t, locale } = useI18n()
 const workspaceStore = useWorkspaceStore()
@@ -84,136 +86,103 @@ watch([() => workspaceStore.backend, locale], loadTemplateOptions)
 </script>
 
 <template>
-  <div class="group">
-    <div class="group-header">
-      <div class="group-label">{{ t('settings.workspace.groups.creationDefaults') }}</div>
+  <SettingsGroup :title="t('settings.workspace.groups.creationDefaults')">
+    <template #header-actions>
       <NvButton variant="ghost" size="xs" @click="resetCreation">{{ t('settings.common.resetToDefaults') }}</NvButton>
-    </div>
-    <div class="settings-card">
-      <div class="settings-row">
-        <div class="row-copy">
-          <div class="row-title">{{ t('settings.workspace.defaultNoteIcon.title') }}</div>
-          <div class="row-sub">{{ t('settings.workspace.defaultNoteIcon.description') }}</div>
-        </div>
-        <NvPopupMenu v-model:open="noteIconPickerOpen" placement="bottom-end">
-          <template #trigger>
-            <NvButton class="icon-trigger-btn">
-              <NvNoteIcon :value="settings.workspace.defaultNoteIcon" :size="18" />
-            </NvButton>
-          </template>
-          <div class="settings-icon-picker-wrap">
-            <NvIconPicker
-              :value="settings.workspace.defaultNoteIcon"
-              @select="selectNoteIcon"
-              @close="noteIconPickerOpen = false"
-            />
-          </div>
-        </NvPopupMenu>
-      </div>
+    </template>
 
-      <div class="settings-row settings-row--border">
-        <div class="row-copy">
-          <div class="row-title">{{ t('settings.workspace.defaultFolderIcon.title') }}</div>
-          <div class="row-sub">{{ t('settings.workspace.defaultFolderIcon.description') }}</div>
+    <SettingsRow
+      :title="t('settings.workspace.defaultNoteIcon.title')"
+      :description="t('settings.workspace.defaultNoteIcon.description')"
+    >
+      <NvPopupMenu v-model:open="noteIconPickerOpen" placement="bottom-end">
+        <template #trigger>
+          <NvButton class="icon-trigger-btn tw:size-10 tw:rounded-[calc(10px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-input-bg tw:flex tw:items-center tw:justify-center tw:cursor-pointer tw:transition-[background-color,box-shadow,transform] tw:duration-[160ms] tw:text-content-primary tw:hover:bg-surface-raised tw:hover:shadow-[0_0_0_2px_var(--accent)] active:tw:translate-y-0">
+            <NvNoteIcon :value="settings.workspace.defaultNoteIcon" :size="18" />
+          </NvButton>
+        </template>
+        <div class="settings-icon-picker-wrap">
+          <NvIconPicker
+            :value="settings.workspace.defaultNoteIcon"
+            @select="selectNoteIcon"
+            @close="noteIconPickerOpen = false"
+          />
         </div>
-        <NvPopupMenu v-model:open="folderIconPickerOpen" placement="bottom-end">
-          <template #trigger>
-            <NvButton class="icon-trigger-btn">
-              <NvNoteIcon :value="settings.workspace.defaultFolderIcon" :size="18" />
-            </NvButton>
-          </template>
-          <div class="settings-icon-picker-wrap">
-            <NvIconPicker
-              :value="settings.workspace.defaultFolderIcon"
-              @select="selectFolderIcon"
-              @close="folderIconPickerOpen = false"
-            />
-          </div>
-        </NvPopupMenu>
-      </div>
+      </NvPopupMenu>
+    </SettingsRow>
 
-      <div class="settings-row settings-row--border">
-        <div class="row-copy">
-          <div class="row-title">{{ t('settings.workspace.defaultNoteTitlePattern.title') }}</div>
-          <div class="row-sub">{{ t('settings.workspace.defaultNoteTitlePattern.description') }}</div>
+    <SettingsRow
+      :title="t('settings.workspace.defaultFolderIcon.title')"
+      :description="t('settings.workspace.defaultFolderIcon.description')"
+    >
+      <NvPopupMenu v-model:open="folderIconPickerOpen" placement="bottom-end">
+        <template #trigger>
+          <NvButton class="icon-trigger-btn tw:size-10 tw:rounded-[calc(10px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-input-bg tw:flex tw:items-center tw:justify-center tw:cursor-pointer tw:transition-[background-color,box-shadow,transform] tw:duration-[160ms] tw:text-content-primary tw:hover:bg-surface-raised tw:hover:shadow-[0_0_0_2px_var(--accent)] active:tw:translate-y-0">
+            <NvNoteIcon :value="settings.workspace.defaultFolderIcon" :size="18" />
+          </NvButton>
+        </template>
+        <div class="settings-icon-picker-wrap">
+          <NvIconPicker
+            :value="settings.workspace.defaultFolderIcon"
+            @select="selectFolderIcon"
+            @close="folderIconPickerOpen = false"
+          />
         </div>
-        <NvSelect
-          :model-value="settings.workspace.defaultNoteTitlePattern"
-          :options="titlePatternOptions"
-          @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.defaultNoteTitlePattern = v as any })"
-        />
-      </div>
+      </NvPopupMenu>
+    </SettingsRow>
 
-      <div class="settings-row settings-row--border">
-        <div class="row-copy">
-          <div class="row-title">{{ t('settings.workspace.newNoteTemplate.title') }}</div>
-          <div class="row-sub">{{ t('settings.workspace.newNoteTemplate.description') }}</div>
-        </div>
-        <NvSelect
-          :model-value="settings.workspace.newNoteTemplate"
-          :options="templateOptions"
-          @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.newNoteTemplate = v as any })"
-        />
-      </div>
+    <SettingsRow
+      :title="t('settings.workspace.defaultNoteTitlePattern.title')"
+      :description="t('settings.workspace.defaultNoteTitlePattern.description')"
+    >
+      <NvSelect
+        :model-value="settings.workspace.defaultNoteTitlePattern"
+        :options="titlePatternOptions"
+        @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.defaultNoteTitlePattern = v as any })"
+      />
+    </SettingsRow>
 
-      <div class="settings-row settings-row--border">
-        <div class="row-copy">
-          <div class="row-title">{{ t('settings.workspace.autoCreateStarterStructure.title') }}</div>
-          <div class="row-sub">{{ t('settings.workspace.autoCreateStarterStructure.description') }}</div>
-        </div>
-        <NvSelect
-          :model-value="settings.workspace.autoCreateStarterStructure"
-          :options="starterStructureOptions"
-          @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.autoCreateStarterStructure = v as any })"
-        />
-      </div>
+    <SettingsRow
+      :title="t('settings.workspace.newNoteTemplate.title')"
+      :description="t('settings.workspace.newNoteTemplate.description')"
+    >
+      <NvSelect
+        :model-value="settings.workspace.newNoteTemplate"
+        :options="templateOptions"
+        @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.newNoteTemplate = v as any })"
+      />
+    </SettingsRow>
 
-      <div class="settings-row settings-row--border">
-        <div class="row-copy">
-          <div class="row-title">{{ t('settings.workspace.newWorkspaceHomeNote.title') }}</div>
-          <div class="row-sub">{{ t('settings.workspace.newWorkspaceHomeNote.description') }}</div>
-        </div>
-        <NvToggle
-          :model-value="settings.workspace.newWorkspaceHomeNote"
-          @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.newWorkspaceHomeNote = v })"
-        />
-      </div>
-    </div>
-  </div>
+    <SettingsRow
+      :title="t('settings.workspace.autoCreateStarterStructure.title')"
+      :description="t('settings.workspace.autoCreateStarterStructure.description')"
+    >
+      <NvSelect
+        :model-value="settings.workspace.autoCreateStarterStructure"
+        :options="starterStructureOptions"
+        @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.autoCreateStarterStructure = v as any })"
+      />
+    </SettingsRow>
+
+    <SettingsRow
+      :title="t('settings.workspace.newWorkspaceHomeNote.title')"
+      :description="t('settings.workspace.newWorkspaceHomeNote.description')"
+    >
+      <NvToggle
+        :aria-label="t('settings.workspace.newWorkspaceHomeNote.title')"
+        :model-value="settings.workspace.newWorkspaceHomeNote"
+        @update:model-value="v => workspaceStore.updateSettings(draft => { draft.workspace.newWorkspaceHomeNote = v })"
+      />
+    </SettingsRow>
+  </SettingsGroup>
 </template>
 
 <style scoped>
-.icon-trigger-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: calc(10px * var(--radius-scale, 1));
-  border: 1px solid var(--line-strong);
-  background: var(--glass-1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  color: var(--text-1);
-}
-
-.icon-trigger-btn:hover {
-  background: var(--glass-2);
-  border-color: var(--accent);
-  transform: translateY(-1px);
-}
-
-.icon-trigger-btn:active {
-  transform: translateY(0);
-}
-
 .settings-icon-picker-wrap :deep(.nv-icon-picker) {
   border: none;
   background: transparent;
   box-shadow: none;
-  backdrop-filter: none;
   padding: 4px;
   width: 320px;
 }
 </style>
-

@@ -1,46 +1,44 @@
-import type * as Y from 'yjs'
 import {
   alignElements,
   distributeElements,
-  getCanvasSharedTypes,
   reflowConnectorBinding,
-  runCanvasGesture,
   textElementSize,
   type CanvasAlignment,
   type CanvasBounds,
   type CanvasClipboardPayload,
   type CanvasConnector,
   type CanvasDistribution,
+  type CanvasDraft,
+  type CanvasDraftOrder,
   type CanvasElement,
   type CanvasElementStyle,
   type CanvasPoint,
   type CanvasShapeElement,
+  type CanvasStore,
 } from '../../../core/canvas'
 import { generateBlockId } from '../../../editor-core/plugins/blockIds'
 
 interface UseCanvasElementsOptions {
-  getYDoc: () => Y.Doc | null
-  getUndoManager: () => Y.UndoManager | null
+  getStore: () => CanvasStore | null
 }
 
 type CanvasElementPatch = Partial<Omit<CanvasElement, 'id' | 'kind'>>
 
-function reflowBoundConnectors(ydoc: Y.Doc, id: string) {
-  const types = getCanvasSharedTypes(ydoc)
-  const element = types.elements.get(id)
+function reflowBoundConnectors(draft: CanvasDraft, id: string) {
+  const element = draft.elements.get(id)
   if (!element) return
-  for (const [connectorId, connector] of types.connectors.entries()) {
+  for (const [connectorId, connector] of draft.connectors.entries()) {
     const next = reflowConnectorBinding(connector, 'element', id, element)
-    if (next !== connector) types.connectors.set(connectorId, next)
+    if (next !== connector) draft.connectors.set(connectorId, next)
   }
 }
 
-function rewriteOrder(order: Y.Array<string>, ids: readonly string[]) {
+function rewriteOrder(order: CanvasDraftOrder, ids: readonly string[]) {
   if (order.length) order.delete(0, order.length)
   if (ids.length) order.push([...ids])
 }
 
-function nextElementZIndex(elements: Y.Map<CanvasElement>): number {
+function nextElementZIndex(elements: Map<string, CanvasElement>): number {
   return Math.max(-1, ...Array.from(elements.values(), element => element.zIndex)) + 1
 }
 
@@ -81,40 +79,40 @@ function applyElementPatch(element: CanvasElement, patch: CanvasElementPatch): C
 }
 
 /**
- * Owns all persistent canvas object mutations. Every public operation produces
- * one Yjs undo item, including batch layout and clipboard actions.
+ * Owns all persistent canvas object mutations. Every public operation is one
+ * `CanvasStore.commit()` call, i.e. one undo step.
  */
 export function useCanvasElements(options: UseCanvasElementsOptions) {
-  function withGesture(callback: Parameters<typeof runCanvasGesture>[2]): boolean {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return false
-    runCanvasGesture(ydoc, options.getUndoManager(), callback)
+  function withGesture(mutate: (draft: CanvasDraft) => void): boolean {
+    const store = options.getStore()
+    if (!store) return false
+    store.commit(mutate)
     return true
   }
 
   function updateElement(id: string, patch: CanvasElementPatch): boolean {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return false
-    const element = getCanvasSharedTypes(ydoc).elements.get(id)
+    const store = options.getStore()
+    if (!store) return false
+    const element = store.snapshot.elements[id]
     if (!element || element.locked && patch.locked !== false) return false
-    runCanvasGesture(ydoc, options.getUndoManager(), ({ elements }) => {
-      const current = elements.get(id)
+    store.commit((draft) => {
+      const current = draft.elements.get(id)
       if (!current) return
-      elements.set(id, applyElementPatch(current, patch))
-      reflowBoundConnectors(ydoc, id)
+      draft.elements.set(id, applyElementPatch(current, patch))
+      reflowBoundConnectors(draft, id)
     })
     return true
   }
 
   function updateElements(patches: Readonly<Record<string, CanvasElementPatch>>) {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return
-    runCanvasGesture(ydoc, options.getUndoManager(), ({ elements }) => {
+    const store = options.getStore()
+    if (!store) return
+    store.commit((draft) => {
       for (const [id, patch] of Object.entries(patches)) {
-        const current = elements.get(id)
+        const current = draft.elements.get(id)
         if (!current || current.locked && patch.locked !== false) continue
-        elements.set(id, applyElementPatch(current, patch))
-        reflowBoundConnectors(ydoc, id)
+        draft.elements.set(id, applyElementPatch(current, patch))
+        reflowBoundConnectors(draft, id)
       }
     })
   }
@@ -131,14 +129,14 @@ export function useCanvasElements(options: UseCanvasElementsOptions) {
   }
 
   function moveElements(ids: readonly string[], delta: CanvasPoint) {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return
-    runCanvasGesture(ydoc, options.getUndoManager(), ({ elements }) => {
+    const store = options.getStore()
+    if (!store) return
+    store.commit((draft) => {
       for (const id of ids) {
-        const element = elements.get(id)
+        const element = draft.elements.get(id)
         if (!element || element.locked) continue
-        elements.set(id, applyElementPatch(element, { x: element.x + delta.x, y: element.y + delta.y }))
-        reflowBoundConnectors(ydoc, id)
+        draft.elements.set(id, applyElementPatch(element, { x: element.x + delta.x, y: element.y + delta.y }))
+        reflowBoundConnectors(draft, id)
       }
     })
   }
@@ -150,10 +148,10 @@ export function useCanvasElements(options: UseCanvasElementsOptions) {
     bounds: Partial<CanvasBounds> = {},
     style?: CanvasElementStyle,
   ): string {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return ''
+    const store = options.getStore()
+    if (!store) return ''
     const id = createElementId()
-    runCanvasGesture(ydoc, options.getUndoManager(), ({ elements, order }) => {
+    store.commit(({ elements, order }) => {
       elements.set(id, {
         id,
         kind: 'shape',
@@ -171,10 +169,10 @@ export function useCanvasElements(options: UseCanvasElementsOptions) {
   }
 
   function addTextElement(x: number, y: number, text = '', bounds: Partial<CanvasBounds> = {}): string {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return ''
+    const store = options.getStore()
+    if (!store) return ''
     const id = createElementId()
-    runCanvasGesture(ydoc, options.getUndoManager(), ({ elements, order }) => {
+    store.commit(({ elements, order }) => {
       elements.set(id, {
         id,
         kind: 'text',
@@ -192,11 +190,11 @@ export function useCanvasElements(options: UseCanvasElementsOptions) {
   }
 
   function addStroke(kind: 'freehand' | 'highlighter', points: CanvasPoint[], style?: CanvasElementStyle): string {
-    const ydoc = options.getYDoc()
-    if (!ydoc || points.length < 2) return ''
+    const store = options.getStore()
+    if (!store || points.length < 2) return ''
     const id = createElementId()
     const bounds = strokeBounds(points)
-    runCanvasGesture(ydoc, options.getUndoManager(), ({ elements, order }) => {
+    store.commit(({ elements, order }) => {
       elements.set(id, {
         id,
         kind,
@@ -213,10 +211,10 @@ export function useCanvasElements(options: UseCanvasElementsOptions) {
   }
 
   function addImageElement(src: string, alt: string, bounds: CanvasBounds): string {
-    const ydoc = options.getYDoc()
-    if (!ydoc || !src) return ''
+    const store = options.getStore()
+    if (!store || !src) return ''
     const id = createElementId()
-    runCanvasGesture(ydoc, options.getUndoManager(), ({ elements, order }) => {
+    store.commit(({ elements, order }) => {
       elements.set(id, {
         id,
         kind: 'image',
@@ -231,10 +229,10 @@ export function useCanvasElements(options: UseCanvasElementsOptions) {
   }
 
   function addConnector(connector: Omit<CanvasConnector, 'id' | 'zIndex'>): string {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return ''
+    const store = options.getStore()
+    if (!store) return ''
     const id = createElementId()
-    runCanvasGesture(ydoc, options.getUndoManager(), ({ connectors, order }) => {
+    store.commit(({ connectors, order }) => {
       connectors.set(id, { ...connector, id, zIndex: order.length })
       order.push([id])
     })
@@ -249,19 +247,18 @@ export function useCanvasElements(options: UseCanvasElementsOptions) {
   }
 
   function deleteCanvasItem(id: string): boolean {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return false
-    const types = getCanvasSharedTypes(ydoc)
-    if (!types.elements.has(id) && !types.connectors.has(id)) return false
-    runCanvasGesture(ydoc, options.getUndoManager(), (shared) => {
-      if (shared.connectors.has(id)) shared.connectors.delete(id)
-      if (shared.elements.has(id)) {
-        shared.elements.delete(id)
-        for (const [connectorId, connector] of shared.connectors.entries()) {
+    const store = options.getStore()
+    if (!store) return false
+    if (!(id in store.snapshot.elements) && !(id in store.snapshot.connectors)) return false
+    store.commit((draft) => {
+      if (draft.connectors.has(id)) draft.connectors.delete(id)
+      if (draft.elements.has(id)) {
+        draft.elements.delete(id)
+        for (const [connectorId, connector] of draft.connectors.entries()) {
           const fromTarget = connector.from.binding?.target === 'element' && connector.from.binding.targetId === id
           const toTarget = connector.to.binding?.target === 'element' && connector.to.binding.targetId === id
           if (fromTarget || toTarget) {
-            shared.connectors.set(connectorId, {
+            draft.connectors.set(connectorId, {
               ...connector,
               from: fromTarget ? { x: connector.from.x, y: connector.from.y } : connector.from,
               to: toTarget ? { x: connector.to.x, y: connector.to.y } : connector.to,
@@ -269,33 +266,33 @@ export function useCanvasElements(options: UseCanvasElementsOptions) {
           }
         }
       }
-      const index = shared.order.toArray().indexOf(id)
-      if (index >= 0) shared.order.delete(index, 1)
+      const index = draft.order.toArray().indexOf(id)
+      if (index >= 0) draft.order.delete(index, 1)
     })
     return true
   }
 
   function deleteCanvasItems(ids: readonly string[]) {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return
+    const store = options.getStore()
+    if (!store) return
     const targets = new Set(ids)
-    runCanvasGesture(ydoc, options.getUndoManager(), (shared) => {
+    store.commit((draft) => {
       for (const id of targets) {
-        shared.elements.delete(id)
-        shared.connectors.delete(id)
+        draft.elements.delete(id)
+        draft.connectors.delete(id)
       }
-      for (const [connectorId, connector] of shared.connectors.entries()) {
+      for (const [connectorId, connector] of draft.connectors.entries()) {
         const fromTarget = connector.from.binding?.target === 'element' && targets.has(connector.from.binding.targetId)
         const toTarget = connector.to.binding?.target === 'element' && targets.has(connector.to.binding.targetId)
         if (fromTarget || toTarget) {
-          shared.connectors.set(connectorId, {
+          draft.connectors.set(connectorId, {
             ...connector,
             from: fromTarget ? { x: connector.from.x, y: connector.from.y } : connector.from,
             to: toTarget ? { x: connector.to.x, y: connector.to.y } : connector.to,
           })
         }
       }
-      rewriteOrder(shared.order, shared.order.toArray().filter(id => !targets.has(id)))
+      rewriteOrder(draft.order, draft.order.toArray().filter(id => !targets.has(id)))
     })
   }
 
@@ -304,44 +301,44 @@ export function useCanvasElements(options: UseCanvasElementsOptions) {
   }
 
   function patchStyle(ids: readonly string[], patch: CanvasElementStyle) {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return
+    const store = options.getStore()
+    if (!store) return
     // fontSize/fontFamily changes resize text elements to fit their content;
     // that box is content-derived, so a later text or font change supersedes
     // any size this patch computes here (and shapes keep their own box).
     const resizesText = 'fontSize' in patch || 'fontFamily' in patch
-    runCanvasGesture(ydoc, options.getUndoManager(), ({ elements }) => {
+    store.commit((draft) => {
       for (const id of ids) {
-        const element = elements.get(id)
+        const element = draft.elements.get(id)
         if (!element || element.locked) continue
         const style = { ...element.style, ...patch }
         if (element.kind === 'text' && resizesText) {
           const { width, height } = textElementSize(element.text, style)
-          elements.set(id, { ...element, style, width, height })
-          reflowBoundConnectors(ydoc, id)
+          draft.elements.set(id, { ...element, style, width, height })
+          reflowBoundConnectors(draft, id)
         } else {
-          elements.set(id, { ...element, style })
+          draft.elements.set(id, { ...element, style })
         }
       }
     })
   }
 
   function setText(id: string, text: string) {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return
-    runCanvasGesture(ydoc, options.getUndoManager(), ({ elements, connectors }) => {
-      const element = elements.get(id)
+    const store = options.getStore()
+    if (!store) return
+    store.commit((draft) => {
+      const element = draft.elements.get(id)
       // Text elements are content-sized: any prior manual resize is
       // superseded here, matching the intended "grows with content" behavior.
       if (element?.kind === 'text') {
         const { width, height } = textElementSize(text, element.style ?? {})
-        elements.set(id, { ...element, text, width, height })
-        reflowBoundConnectors(ydoc, id)
+        draft.elements.set(id, { ...element, text, width, height })
+        reflowBoundConnectors(draft, id)
       } else if (element?.kind === 'shape') {
-        elements.set(id, { ...element, text })
+        draft.elements.set(id, { ...element, text })
       }
-      const connector = connectors.get(id)
-      if (connector) connectors.set(id, { ...connector, label: text })
+      const connector = draft.connectors.get(id)
+      if (connector) draft.connectors.set(id, { ...connector, label: text })
     })
   }
 
@@ -360,9 +357,9 @@ export function useCanvasElements(options: UseCanvasElementsOptions) {
   }
 
   function arrange(ids: readonly string[], direction: 'front' | 'back' | 'forward' | 'backward') {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return
-    runCanvasGesture(ydoc, options.getUndoManager(), ({ elements, connectors, order }) => {
+    const store = options.getStore()
+    if (!store) return
+    store.commit(({ elements, connectors, order }) => {
       const selected = new Set(ids)
       const current = order.toArray()
       let next = [...current]
@@ -389,25 +386,23 @@ export function useCanvasElements(options: UseCanvasElementsOptions) {
   }
 
   function align(ids: readonly string[], alignment: CanvasAlignment) {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return
-    const types = getCanvasSharedTypes(ydoc)
-    const selected = ids.flatMap(id => types.elements.get(id) ? [types.elements.get(id)!] : [])
+    const store = options.getStore()
+    if (!store) return
+    const selected = ids.flatMap(id => store.snapshot.elements[id] ? [store.snapshot.elements[id]] : [])
     const positions = alignElements(selected, alignment)
     updateElements(positions)
   }
 
   function distribute(ids: readonly string[], direction: CanvasDistribution) {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return
-    const types = getCanvasSharedTypes(ydoc)
-    const selected = ids.flatMap(id => types.elements.get(id) ? [types.elements.get(id)!] : [])
+    const store = options.getStore()
+    if (!store) return
+    const selected = ids.flatMap(id => store.snapshot.elements[id] ? [store.snapshot.elements[id]] : [])
     updateElements(distributeElements(selected, direction))
   }
 
   function insertClipboard(payload: CanvasClipboardPayload, offset: CanvasPoint = { x: 24, y: 24 }): string[] {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return []
+    const store = options.getStore()
+    if (!store) return []
     const idMap = new Map(payload.elements.map(element => [element.id, createElementId()]))
     const connectorIdMap = new Map(payload.connectors.map(connector => [connector.id, createElementId()]))
     const groupIdMap = new Map(
@@ -415,7 +410,7 @@ export function useCanvasElements(options: UseCanvasElementsOptions) {
         .map(groupId => [groupId, createElementId()]),
     )
     const inserted: string[] = []
-    runCanvasGesture(ydoc, options.getUndoManager(), ({ elements, connectors, order }) => {
+    store.commit(({ elements, connectors, order }) => {
       for (const source of payload.elements) {
         const id = idMap.get(source.id)!
         const groupId = source.groupId ? groupIdMap.get(source.groupId) : undefined

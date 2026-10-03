@@ -102,7 +102,10 @@ pub async fn query_notes(
         .map_err(|error| error.to_string())?
 }
 
-fn query_notes_impl(
+/// `pub(crate)` so a best-effort caller elsewhere in `commands` (e.g. a
+/// snapshot restore's index-refresh assertion in tests) can query the index
+/// synchronously without going through the async `query_notes` command.
+pub(crate) fn query_notes_impl(
     workspace_path: String,
     request: NoteQueryRequest,
 ) -> Result<Vec<NoteRow>, String> {
@@ -385,9 +388,11 @@ mod tests {
                 tags: tags.iter().map(|tag| tag.to_string()).collect(),
                 date: date.map(str::to_string),
                 status,
+                extra: Default::default(),
             }),
             content: serde_json::json!({ "type": "doc", "content": [] }),
             canvas: None,
+            extra: Default::default(),
         }
     }
 

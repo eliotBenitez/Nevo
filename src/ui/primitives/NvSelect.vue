@@ -285,12 +285,17 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="nv-select" :style="{ '--nv-select-min-width': triggerMinWidth }">
+  <div class="nv-select tw:min-w-(--nv-select-min-width)" :style="{ '--nv-select-min-width': triggerMinWidth }">
     <button
       ref="triggerRef"
       type="button"
-      class="nv-select__trigger"
-      :class="{ 'is-open': isOpen, 'is-disabled': disabled }"
+      class="nv-select__trigger tw:group tw:inline-flex tw:h-8 tw:w-full tw:cursor-pointer tw:items-center tw:justify-between tw:gap-2.5 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:pr-2.5 tw:pl-[11px] tw:font-nv-ui tw:text-[12.5px] tw:font-medium tw:text-content-primary tw:transition-[background-color,box-shadow,color] tw:duration-150 tw:focus-visible:bg-(--surface-raised) tw:focus-visible:shadow-[0_0_0_2px_var(--input-ring)] tw:focus-visible:outline-none tw:disabled:cursor-not-allowed tw:disabled:opacity-60"
+      :class="[
+        isOpen
+          ? 'is-open tw:bg-(--surface-raised) tw:shadow-[0_0_0_2px_var(--input-ring)]'
+          : 'tw:bg-(--input-bg) tw:hover:bg-[color-mix(in_oklab,var(--input-bg)_88%,var(--text-primary)_6%)]',
+        disabled && 'is-disabled',
+      ]"
       :disabled="disabled"
       :aria-controls="menuId"
       :aria-expanded="isOpen"
@@ -298,10 +303,10 @@ onBeforeUnmount(() => {
       @click="isOpen ? closeMenu() : openMenu()"
       @keydown="onTriggerKeydown"
     >
-      <span class="nv-select__value" :class="{ 'is-placeholder': !selectedOption }">
+      <span class="nv-select__value tw:min-w-0 tw:truncate tw:text-left" :class="[!selectedOption && 'is-placeholder tw:text-content-muted']">
         {{ selectedOption?.label ?? placeholder }}
       </span>
-      <ChevronDown :size="14" class="nv-select__chevron" />
+      <ChevronDown :size="14" class="nv-select__chevron tw:shrink-0 tw:transition-[color,transform] tw:duration-150 tw:group-hover:text-accent" :class="isOpen ? 'tw:rotate-180 tw:text-accent' : 'tw:text-content-muted'" />
     </button>
 
     <Teleport to="body">
@@ -309,7 +314,7 @@ onBeforeUnmount(() => {
         v-if="isOpen"
         :id="menuId"
         ref="menuRef"
-        class="nv-select__menu"
+        class="nv-select__menu tw:fixed tw:min-w-[140px] tw:overflow-auto tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--menu-bg) tw:p-1 tw:shadow-(--menu-shadow) tw:focus:outline-none"
         tabindex="-1"
         role="listbox"
         :aria-activedescendant="activeIndex >= 0 ? `${menuId}-option-${activeIndex}` : undefined"
@@ -328,22 +333,19 @@ onBeforeUnmount(() => {
           :id="`${menuId}-option-${index}`"
           :key="option.value"
           type="button"
-          class="nv-select__option"
-          :class="{
-            'is-active': index === activeIndex,
-            'is-selected': option.value === modelValue,
-          }"
+          class="nv-select__option tw:flex tw:min-h-[34px] tw:w-full tw:cursor-pointer tw:items-start tw:justify-between tw:gap-3 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border-0 tw:px-2.5 tw:py-2 tw:text-left tw:text-inherit"
+          :class="[index === activeIndex ? 'is-active tw:bg-surface-subtle' : 'tw:bg-transparent', option.value === modelValue && 'is-selected']"
           role="option"
           :aria-selected="option.value === modelValue"
           :data-index="index"
           @mouseenter="setActiveIndex(index)"
           @click="selectValue(option.value)"
         >
-          <span class="nv-select__option-copy">
-            <span class="nv-select__option-label">{{ option.label }}</span>
-            <span v-if="option.description" class="nv-select__option-description">{{ option.description }}</span>
+          <span class="nv-select__option-copy tw:flex tw:min-w-0 tw:flex-col tw:gap-0.5">
+            <span class="nv-select__option-label tw:font-nv-ui tw:text-[12.5px] tw:font-medium" :class="option.value === modelValue ? 'tw:text-content-primary' : 'tw:text-content-secondary'">{{ option.label }}</span>
+            <span v-if="option.description" class="nv-select__option-description tw:text-[11px] tw:leading-[1.4] tw:text-content-muted">{{ option.description }}</span>
           </span>
-          <Check v-if="option.value === modelValue" :size="14" class="nv-select__check" />
+          <Check v-if="option.value === modelValue" :size="14" class="nv-select__check tw:mt-px tw:shrink-0 tw:text-accent" />
         </button>
       </div>
     </Teleport>

@@ -1,0 +1,32 @@
+/* src/app/components/editor/EditorFindBar.vue
+   Vue Transition auto-generates these class names from the `name` prop, so
+   they cannot be expressed as Tailwind utilities in the template. */
+.nv-find-bar-fade-enter-active,
+.nv-find-bar-fade-leave-active {
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.nv-find-bar-fade-enter-from,
+.nv-find-bar-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nv-find-bar-fade-enter-active,
+  .nv-find-bar-fade-leave-active {
+    transition: none;
+  }
+}
+
+/* Document decorations for active matches — src/editor-core/plugins/find-in-note.ts */
+.nv-find-match {
+  border-radius: 2px;
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 30%, transparent);
+}
+
+.nv-find-match--active {
+  background: color-mix(in oklab, var(--accent) 35%, transparent);
+  box-shadow: 0 0 0 1.5px var(--accent);
+}

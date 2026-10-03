@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 import { ChevronLeft, ChevronRight, X, Calendar } from 'lucide-vue-next'
+import { formatDateOnly, parseDateOnly } from '../../utils/dateOnly'
 
 interface Props {
   modelValue: string | null
@@ -21,14 +22,14 @@ const popoverRef = ref<HTMLDivElement | null>(null)
 const popoverPos = ref({ top: 0, left: 0 })
 
 const today = new Date()
-const todayIso = today.toISOString().slice(0, 10)
+const todayIso = formatDateOnly(today)
 
 const viewDate = ref(new Date(today.getFullYear(), today.getMonth(), 1))
 
 const displayLabel = computed(() => {
   if (!props.modelValue) return null
-  const d = new Date(props.modelValue)
-  if (isNaN(d.getTime())) return null
+  const d = parseDateOnly(props.modelValue)
+  if (!d) return null
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 })
 
@@ -52,7 +53,7 @@ const calGrid = computed(() => {
   for (let w = 0; w < 6; w++) {
     const week = []
     for (let d = 0; d < 7; d++) {
-      const iso = cur.toISOString().slice(0, 10)
+      const iso = formatDateOnly(cur)
       week.push({
         date: new Date(cur),
         iso,
@@ -91,8 +92,8 @@ function clear(e: MouseEvent) {
 async function open() {
   if (props.disabled || isOpen.value) return
   if (props.modelValue) {
-    const d = new Date(props.modelValue)
-    if (!isNaN(d.getTime())) viewDate.value = new Date(d.getFullYear(), d.getMonth(), 1)
+    const d = parseDateOnly(props.modelValue)
+    if (d) viewDate.value = new Date(d.getFullYear(), d.getMonth(), 1)
   }
   isOpen.value = true
   await nextTick()
@@ -131,18 +132,22 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="ndp-root">
+  <div class="ndp-root tw:inline-flex">
     <button
       ref="triggerRef"
       type="button"
-      class="ndp-trigger"
-      :class="{ 'ndp-trigger--open': isOpen, 'ndp-trigger--disabled': disabled, 'ndp-trigger--filled': !!modelValue }"
+      class="ndp-trigger tw:inline-flex tw:h-8 tw:min-w-[120px] tw:cursor-pointer tw:items-center tw:gap-1.5 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:px-2.5 tw:text-xs tw:transition-[background-color,box-shadow] tw:duration-100 tw:enabled:hover:bg-[color-mix(in_oklab,var(--input-bg)_88%,var(--text-primary)_6%)] tw:disabled:cursor-not-allowed tw:disabled:opacity-50"
+      :class="[
+        isOpen ? 'ndp-trigger--open tw:bg-(--surface-raised) tw:shadow-[0_0_0_2px_var(--input-ring)]' : 'tw:bg-(--input-bg)',
+        disabled && 'ndp-trigger--disabled',
+        modelValue ? 'ndp-trigger--filled tw:text-content-primary' : 'tw:text-content-muted',
+      ]"
       :disabled="disabled"
       @click="isOpen ? close() : open()"
     >
-      <Calendar :size="12" class="ndp-trigger__icon" />
-      <span class="ndp-trigger__label">{{ displayLabel ?? placeholder }}</span>
-      <button v-if="modelValue" type="button" class="ndp-clear" @click="clear">
+      <Calendar :size="12" class="ndp-trigger__icon tw:shrink-0 tw:text-content-muted" />
+      <span class="ndp-trigger__label tw:flex-1 tw:truncate tw:text-left">{{ displayLabel ?? placeholder }}</span>
+      <button v-if="modelValue" type="button" class="ndp-clear tw:grid tw:size-3.5 tw:shrink-0 tw:cursor-pointer tw:place-items-center tw:rounded-full tw:border-0 tw:bg-(--hover-strong) tw:p-0 tw:text-content-muted tw:transition-colors tw:duration-100 tw:hover:bg-accent tw:hover:text-content-on-accent" @click="clear">
         <X :size="10" />
       </button>
     </button>
@@ -151,38 +156,44 @@ onBeforeUnmount(() => {
       <div
         v-if="isOpen"
         ref="popoverRef"
-        class="ndp-popover"
+        class="ndp-popover tw:fixed tw:z-[300] tw:w-60 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--menu-bg) tw:p-2.5 tw:shadow-(--menu-shadow)"
         :style="{ top: popoverPos.top + 'px', left: popoverPos.left + 'px' }"
       >
         <!-- Month nav -->
-        <div class="ndp-nav">
-          <button type="button" class="ndp-nav__btn" @click="prevMonth">
+        <div class="ndp-nav tw:mb-2 tw:flex tw:items-center tw:gap-1">
+          <button type="button" class="ndp-nav__btn tw:grid tw:size-[22px] tw:cursor-pointer tw:place-items-center tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:text-content-muted tw:transition-colors tw:duration-100 tw:hover:bg-(--hover-strong)" @click="prevMonth">
             <ChevronLeft :size="12" />
           </button>
-          <span class="ndp-nav__title">{{ monthTitle }}</span>
-          <button type="button" class="ndp-nav__btn" @click="nextMonth">
+          <span class="ndp-nav__title tw:flex-1 tw:text-center tw:text-xs tw:font-semibold tw:text-content-primary">{{ monthTitle }}</span>
+          <button type="button" class="ndp-nav__btn tw:grid tw:size-[22px] tw:cursor-pointer tw:place-items-center tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:text-content-muted tw:transition-colors tw:duration-100 tw:hover:bg-(--hover-strong)" @click="nextMonth">
             <ChevronRight :size="12" />
           </button>
         </div>
 
         <!-- Day-of-week headers -->
-        <div class="ndp-dow">
-          <span v-for="d in DOW" :key="d" class="ndp-dow__cell">{{ d }}</span>
+        <div class="ndp-dow tw:mb-1 tw:grid tw:grid-cols-7">
+          <span v-for="d in DOW" :key="d" class="ndp-dow__cell tw:py-0.5 tw:text-center tw:text-[10px] tw:font-semibold tw:text-content-muted">{{ d }}</span>
         </div>
 
         <!-- Grid -->
-        <div class="ndp-grid">
+        <div class="ndp-grid tw:grid tw:grid-cols-7 tw:gap-0.5">
           <template v-for="(week, wi) in calGrid" :key="wi">
             <button
               v-for="day in week"
               :key="day.iso"
               type="button"
-              class="ndp-day"
-              :class="{
-                'ndp-day--muted': !day.inMonth,
-                'ndp-day--today': day.isToday,
-                'ndp-day--selected': day.isSelected,
-              }"
+              class="ndp-day tw:grid tw:aspect-square tw:cursor-pointer tw:place-items-center tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border-0 tw:text-[11.5px] tw:transition-colors tw:duration-100"
+              :class="[
+                !day.inMonth && 'ndp-day--muted',
+                day.isToday && 'ndp-day--today',
+                day.isSelected && 'ndp-day--selected',
+                day.isToday && !day.isSelected && 'tw:font-bold',
+                day.isSelected && 'tw:font-semibold',
+                day.isSelected
+                  ? 'tw:bg-accent tw:hover:bg-accent tw:hover:opacity-90'
+                  : 'tw:bg-transparent tw:hover:bg-(--hover-strong)',
+                day.isSelected ? 'tw:text-content-on-accent' : day.isToday ? 'tw:text-accent' : day.inMonth ? 'tw:text-content-primary' : 'tw:text-content-muted',
+              ]"
               @click="selectDay(day.iso)"
             >
               {{ day.date.getDate() }}
@@ -195,64 +206,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.ndp-root { display: inline-flex; }
-
-.ndp-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 8px;
-  border-radius: calc(6px * var(--radius-scale, 1));
-  border: 1px solid var(--line-2, var(--border-subtle));
-  background: var(--glass-3, var(--surface-1));
-  color: var(--text-3, var(--text-secondary));
-  font-size: 12px;
-  cursor: pointer;
-  transition: border-color 0.12s, background 0.12s;
-  min-width: 120px;
-}
-
-.ndp-trigger:hover:not(.ndp-trigger--disabled) {
-  border-color: var(--line-strong, var(--border-muted));
-}
-
-.ndp-trigger--open { border-color: var(--accent); }
-
-.ndp-trigger--filled { color: var(--text-1, var(--text-primary)); }
-
-.ndp-trigger--disabled { opacity: 0.5; cursor: not-allowed; }
-
-.ndp-trigger__icon { flex-shrink: 0; color: var(--text-4, var(--text-muted)); }
-
-.ndp-trigger__label { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.ndp-clear {
-  display: grid;
-  place-items: center;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: none;
-  background: var(--hover-strong, var(--surface-2));
-  color: var(--text-4, var(--text-muted));
-  cursor: pointer;
-  flex-shrink: 0;
-  padding: 0;
-  transition: background 0.1s, color 0.1s;
-}
-.ndp-clear:hover { background: var(--accent); color: white; }
-
-/* Popover */
 .ndp-popover {
-  position: fixed;
-  z-index: 300;
-  width: 240px;
-  background: var(--glass-3, var(--surface-1));
-  border: 1px solid var(--line-2, var(--border-subtle));
-  border-radius: calc(10px * var(--radius-scale, 1));
-  box-shadow: 0 16px 48px -8px oklch(0 0 0 / 0.35);
-  padding: 10px;
   animation: ndp-in 0.12s ease;
 }
 
@@ -261,85 +215,4 @@ onBeforeUnmount(() => {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* Nav */
-.ndp-nav {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-bottom: 8px;
-}
-
-.ndp-nav__btn {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: calc(5px * var(--radius-scale, 1));
-  border: none;
-  background: none;
-  color: var(--text-3, var(--text-secondary));
-  cursor: pointer;
-  transition: background 0.1s;
-}
-.ndp-nav__btn:hover { background: var(--hover-strong, var(--surface-2)); }
-
-.ndp-nav__title {
-  flex: 1;
-  text-align: center;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-1, var(--text-primary));
-}
-
-/* Day-of-week */
-.ndp-dow {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  margin-bottom: 4px;
-}
-
-.ndp-dow__cell {
-  text-align: center;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-4, var(--text-muted));
-  padding: 2px 0;
-}
-
-/* Grid */
-.ndp-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-}
-
-.ndp-day {
-  aspect-ratio: 1;
-  display: grid;
-  place-items: center;
-  border-radius: calc(6px * var(--radius-scale, 1));
-  border: none;
-  background: none;
-  font-size: 11.5px;
-  color: var(--text-1, var(--text-primary));
-  cursor: pointer;
-  transition: background 0.1s, color 0.1s;
-}
-
-.ndp-day:hover { background: var(--hover-strong, var(--surface-2)); }
-
-.ndp-day--muted { color: var(--text-4, var(--text-muted)); }
-
-.ndp-day--today {
-  font-weight: 700;
-  color: var(--accent);
-}
-
-.ndp-day--selected {
-  background: var(--accent);
-  color: white;
-  font-weight: 600;
-}
-
-.ndp-day--selected:hover { background: var(--accent); opacity: 0.9; }
 </style>

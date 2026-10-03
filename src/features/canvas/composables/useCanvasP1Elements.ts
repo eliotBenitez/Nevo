@@ -1,28 +1,26 @@
-import type * as Y from 'yjs'
 import {
   emptyCanvasRichText,
   eraseStrokeSegments,
-  getCanvasSharedTypes,
   layoutMindMap as calculateMindMapLayout,
-  runCanvasGesture,
   type CanvasBounds,
+  type CanvasConnector,
   type CanvasElement,
   type CanvasPoint,
   type CanvasRichTextDocument,
+  type CanvasStore,
   type CanvasStrokeElement,
 } from '../../../core/canvas'
 import { generateBlockId } from '../../../editor-core/plugins/blockIds'
 
 interface UseCanvasP1ElementsOptions {
-  getYDoc: () => Y.Doc | null
-  getUndoManager: () => Y.UndoManager | null
+  getStore: () => CanvasStore | null
 }
 
 function createElementId(): string {
   return generateBlockId()
 }
 
-function nextElementZIndex(elements: Y.Map<CanvasElement>): number {
+function nextElementZIndex(elements: Map<string, CanvasElement>): number {
   return Math.max(-1, ...Array.from(elements.values(), element => element.zIndex)) + 1
 }
 
@@ -38,13 +36,13 @@ function strokeBounds(points: readonly CanvasPoint[]): CanvasBounds {
 }
 
 function applyMindMapLayout(
-  elements: Y.Map<CanvasElement>,
-  connectors: ReturnType<typeof getCanvasSharedTypes>['connectors'],
+  elements: Map<string, CanvasElement>,
+  connectors: Map<string, CanvasConnector>,
   mapId: string,
 ) {
   const layout = calculateMindMapLayout(
-    Object.fromEntries(elements.entries()),
-    Object.fromEntries(connectors.entries()),
+    Object.fromEntries(elements),
+    Object.fromEntries(connectors),
     mapId,
   )
   for (const [elementId, patch] of Object.entries(layout.elements)) {
@@ -57,13 +55,13 @@ function applyMindMapLayout(
   }
 }
 
-/** Owns P1-only persistent object mutations while sharing the same Yjs undo boundary. */
+/** Owns P1-only persistent object mutations while sharing the same undo boundary. */
 export function useCanvasP1Elements(options: UseCanvasP1ElementsOptions) {
   function addRichNote(x: number, y: number, bounds: Partial<CanvasBounds> = {}): string {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return ''
+    const store = options.getStore()
+    if (!store) return ''
     const id = createElementId()
-    runCanvasGesture(ydoc, options.getUndoManager(), ({ elements, order }) => {
+    store.commit(({ elements, order }) => {
       elements.set(id, {
         id,
         kind: 'note',
@@ -81,10 +79,10 @@ export function useCanvasP1Elements(options: UseCanvasP1ElementsOptions) {
   }
 
   function addNoteLink(x: number, y: number, note: { id: string; title: string; icon?: string }): string {
-    const ydoc = options.getYDoc()
-    if (!ydoc || !note.id) return ''
+    const store = options.getStore()
+    if (!store || !note.id) return ''
     const id = createElementId()
-    runCanvasGesture(ydoc, options.getUndoManager(), ({ elements, order }) => {
+    store.commit(({ elements, order }) => {
       elements.set(id, {
         id,
         kind: 'note-link',
@@ -104,10 +102,10 @@ export function useCanvasP1Elements(options: UseCanvasP1ElementsOptions) {
   }
 
   function addFrame(x: number, y: number, bounds: Partial<CanvasBounds> = {}, title = ''): string {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return ''
+    const store = options.getStore()
+    if (!store) return ''
     const id = createElementId()
-    runCanvasGesture(ydoc, options.getUndoManager(), ({ elements, order }) => {
+    store.commit(({ elements, order }) => {
       const presentationOrder = Array.from(elements.values())
         .filter(element => element.kind === 'frame')
         .reduce((highest, element) => Math.max(highest, element.presentationOrder), -1) + 1
@@ -129,10 +127,10 @@ export function useCanvasP1Elements(options: UseCanvasP1ElementsOptions) {
   }
 
   function addMindMapRoot(x: number, y: number, text = ''): string {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return ''
+    const store = options.getStore()
+    if (!store) return ''
     const id = createElementId()
-    runCanvasGesture(ydoc, options.getUndoManager(), ({ elements, order }) => {
+    store.commit(({ elements, order }) => {
       elements.set(id, {
         id,
         kind: 'shape',
@@ -152,11 +150,11 @@ export function useCanvasP1Elements(options: UseCanvasP1ElementsOptions) {
   }
 
   function addMindMapChild(parentId: string): string {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return ''
+    const store = options.getStore()
+    if (!store) return ''
     const id = createElementId()
     let created = false
-    runCanvasGesture(ydoc, options.getUndoManager(), ({ elements, connectors, order }) => {
+    store.commit(({ elements, connectors, order }) => {
       const parent = elements.get(parentId)
       if (parent?.kind !== 'shape' || !parent.mindMap || parent.locked) return
       created = true
@@ -203,30 +201,30 @@ export function useCanvasP1Elements(options: UseCanvasP1ElementsOptions) {
   }
 
   function layoutMindMap(id: string): boolean {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return false
-    const source = getCanvasSharedTypes(ydoc).elements.get(id)
+    const store = options.getStore()
+    if (!store) return false
+    const source = store.snapshot.elements[id]
     if (source?.kind !== 'shape' || !source.mindMap) return false
-    runCanvasGesture(ydoc, options.getUndoManager(), ({ elements, connectors }) => {
+    store.commit(({ elements, connectors }) => {
       applyMindMapLayout(elements, connectors, source.mindMap!.mapId)
     })
     return true
   }
 
   function setRichText(id: string, content: CanvasRichTextDocument) {
-    const ydoc = options.getYDoc()
-    if (!ydoc) return
-    runCanvasGesture(ydoc, options.getUndoManager(), ({ elements }) => {
+    const store = options.getStore()
+    if (!store) return
+    store.commit(({ elements }) => {
       const element = elements.get(id)
       if (element?.kind === 'note' && !element.locked) elements.set(id, { ...element, content })
     })
   }
 
   function eraseStrokeParts(eraser: readonly CanvasPoint[], radius: number): string[] {
-    const ydoc = options.getYDoc()
-    if (!ydoc || eraser.length === 0) return []
+    const store = options.getStore()
+    if (!store || eraser.length === 0) return []
     const affected: string[] = []
-    runCanvasGesture(ydoc, options.getUndoManager(), ({ elements, connectors, order }) => {
+    store.commit(({ elements, connectors, order }) => {
       for (const [id, element] of elements.entries()) {
         if ((element.kind !== 'freehand' && element.kind !== 'highlighter') || element.locked) continue
         const segments = eraseStrokeSegments(element.points, eraser, radius)

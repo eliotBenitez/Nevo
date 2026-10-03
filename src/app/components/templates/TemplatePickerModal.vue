@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { Copy, Pencil, Plus, Search, Trash2, X } from 'lucide-vue-next'
+import { Copy, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import type { TemplateDocument, TemplateFieldValues } from '../../../types/template'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { buildTemplateFieldDefaults, createEmptyTemplateContent, validateTemplateFieldValues } from '../../../utils/templates'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvCheckbox from '../../../ui/primitives/NvCheckbox.vue'
+import NvModal from '../../../ui/primitives/NvModal.vue'
 import { useConfirmDialog } from '../../../ui/composables/useConfirmDialog'
 import TemplateEditor from './TemplateEditor.vue'
 
@@ -238,368 +239,144 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div v-if="open" class="template-modal-backdrop" @click.self="emit('close')">
-      <section class="template-modal" role="dialog" aria-modal="true" :aria-label="t('templates.title')">
-        <header class="template-modal__header">
-          <div>
-            <h2>{{ mode === 'create-note' ? t('templates.createTitle') : t('templates.insertTitle') }}</h2>
-            <p>{{ t('templates.subtitle') }}</p>
-          </div>
-          <NvButton variant="ghost" size="sm" icon :aria-label="t('workspace.context.cancel')" @click="emit('close')">
-            <X :size="16" />
-          </NvButton>
-        </header>
-
-        <div class="template-modal__toolbar">
-          <label class="template-search">
-            <Search :size="15" />
-            <input v-model="query" type="search" :placeholder="t('templates.search')" />
-          </label>
-          <NvButton size="sm" @click="startCreate"><Plus :size="14" />{{ t('templates.newTemplate') }}</NvButton>
-        </div>
-
-        <p v-if="error" class="template-error">{{ error }}</p>
-
-        <div class="template-modal__body">
-          <div class="template-list" :aria-busy="loading">
-            <button
-              v-for="template in filteredTemplates"
-              :key="template.id"
-              type="button"
-              class="template-list__item"
-              :class="{ 'template-list__item--active': selectedTemplate?.id === template.id }"
-              @click="selectTemplate(template)"
-            >
-              <span class="template-list__icon">{{ template.icon }}</span>
-              <span class="template-list__copy">
-                <span class="template-list__name">{{ template.name }}</span>
-                <span class="template-list__description">{{ template.description || template.id }}</span>
-              </span>
-              <span v-if="template.builtIn" class="template-pill">{{ t('templates.builtIn') }}</span>
-            </button>
-            <div v-if="!loading && !filteredTemplates.length" class="template-empty">{{ t('templates.empty') }}</div>
-          </div>
-
-          <aside v-if="selectedTemplate" class="template-detail">
-            <div class="template-detail__heading">
-              <div class="template-detail__icon">{{ selectedTemplate.icon }}</div>
-              <div>
-                <h3>{{ selectedTemplate.name }}</h3>
-                <p>{{ selectedTemplate.description }}</p>
-              </div>
-            </div>
-
-            <div v-if="selectedTemplate.fields.length" class="template-fields">
-              <label
-                v-for="field in selectedTemplate.fields"
-                :key="field.id"
-                class="template-field"
-              >
-                <span>{{ field.label }}<strong v-if="field.required">*</strong></span>
-                <textarea
-                  v-if="field.type === 'multiline'"
-                  :value="stringFieldValue(field.id)"
-                  rows="3"
-                  @input="setStringFieldValue(field.id, ($event.target as HTMLTextAreaElement).value)"
-                  @blur="touched = true"
-                />
-                <select
-                  v-else-if="field.type === 'select'"
-                  :value="stringFieldValue(field.id)"
-                  @change="setStringFieldValue(field.id, ($event.target as HTMLSelectElement).value)"
-                  @blur="touched = true"
-                >
-                  <option value=""></option>
-                  <option v-for="option in field.options ?? []" :key="option" :value="option">{{ option }}</option>
-                </select>
-                <NvCheckbox
-                  v-else-if="field.type === 'checkbox'"
-                  :model-value="boolFieldValue(field.id)"
-                  @update:model-value="setBoolFieldValue(field.id, $event); touched = true"
-                />
-                <input
-                  v-else
-                  :value="stringFieldValue(field.id)"
-                  :type="field.type === 'date' ? 'date' : 'text'"
-                  @input="setStringFieldValue(field.id, ($event.target as HTMLInputElement).value)"
-                  @blur="touched = true"
-                />
-                <small v-if="touched && missingRequiredFields.includes(field.id)">{{ t('templates.required') }}</small>
-              </label>
-            </div>
-            <div v-else class="template-no-fields">{{ t('templates.noFields') }}</div>
-
-            <div class="template-actions">
-              <NvButton variant="ghost" size="sm" @click="startEdit(selectedTemplate)">
-                <Pencil :size="14" />{{ selectedTemplate.builtIn ? t('templates.duplicateEdit') : t('templates.edit') }}
-              </NvButton>
-              <NvButton variant="ghost" size="sm" @click="duplicateTemplate(selectedTemplate)">
-                <Copy :size="14" />{{ t('templates.duplicate') }}
-              </NvButton>
-              <NvButton v-if="!selectedTemplate.builtIn" variant="ghost" size="sm" @click="deleteTemplate(selectedTemplate)">
-                <Trash2 :size="14" />{{ t('templates.delete') }}
-              </NvButton>
-            </div>
-          </aside>
-        </div>
-
-        <footer class="template-modal__footer">
-          <NvButton variant="ghost" @click="emit('close')">{{ t('workspace.context.cancel') }}</NvButton>
-          <NvButton :disabled="!canUseTemplate" @click="submitTemplate">
-            {{ mode === 'create-note' ? t('templates.createNote') : t('templates.insert') }}
-          </NvButton>
-        </footer>
-      </section>
-
-      <TemplateEditor
-        v-if="editorOpen"
-        :open="editorOpen"
-        :mode="editorMode"
-        :workspace-path="workspacePath"
-        :template="editingTemplate"
-        @close="editorOpen = false"
-        @saved="onTemplateSaved"
-      />
+  <NvModal
+    :open="open"
+    size="lg"
+    :title="mode === 'create-note' ? t('templates.createTitle') : t('templates.insertTitle')"
+    :description="t('templates.subtitle')"
+    panel-class="template-picker-panel"
+    @close="emit('close')"
+  >
+    <div class="template-modal__toolbar tw:flex tw:items-center tw:justify-between tw:gap-3 tw:px-4 tw:py-3.5 tw:border-b tw:border-solid tw:border-border-subtle">
+      <label class="template-search tw:min-w-[240px] tw:flex-1 tw:flex tw:items-center tw:gap-2 tw:h-[34px] tw:px-2.5 tw:border tw:border-solid tw:border-border-subtle tw:rounded-[calc(7px*var(--radius-scale,1))] tw:bg-surface-overlay">
+        <Search :size="15" />
+        <input v-model="query" class="tw:w-full tw:border-0 tw:p-0 tw:outline-none tw:bg-transparent tw:text-content-primary tw:font-inherit" type="search" :placeholder="t('templates.search')" />
+      </label>
+      <NvButton size="sm" @click="startCreate"><Plus :size="14" />{{ t('templates.newTemplate') }}</NvButton>
     </div>
+
+    <p v-if="error" class="template-error tw:text-danger tw:text-xs tw:m-0 tw:px-4 tw:pt-2">{{ error }}</p>
+
+    <div class="template-modal__body tw:flex-1 tw:min-h-[360px] tw:grid tw:grid-cols-[minmax(260px,0.92fr)_minmax(300px,1.08fr)] tw:overflow-hidden max-[760px]:tw:grid-cols-1">
+      <div class="template-list tw:overflow-auto tw:p-2.5 tw:border-r tw:border-solid tw:border-border-subtle max-[760px]:tw:max-h-[240px] max-[760px]:tw:border-r-0 max-[760px]:tw:border-b max-[760px]:tw:border-b-border-subtle" :aria-busy="loading">
+        <button
+          v-for="template in filteredTemplates"
+          :key="template.id"
+          type="button"
+          class="template-list__item tw:w-full tw:grid tw:grid-cols-[32px_1fr_auto] tw:items-center tw:gap-2.5 tw:p-2.5 tw:border tw:border-solid tw:rounded-[calc(7px*var(--radius-scale,1))] tw:text-inherit tw:text-left tw:cursor-pointer tw:hover:border-border-subtle tw:hover:bg-surface-overlay"
+          :class="selectedTemplate?.id === template.id ? 'template-list__item--active tw:border-border-subtle tw:bg-surface-overlay' : 'tw:border-transparent tw:bg-transparent'"
+          @click="selectTemplate(template)"
+        >
+          <span class="template-list__icon tw:grid tw:place-items-center tw:size-8 tw:rounded-[calc(7px*var(--radius-scale,1))] tw:bg-(--accent-soft)">{{ template.icon }}</span>
+          <span class="template-list__copy tw:min-w-0 tw:grid tw:gap-0.5">
+            <span class="template-list__name tw:text-[13px] tw:font-semibold">{{ template.name }}</span>
+            <span class="template-list__description tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-content-secondary tw:text-xs">{{ template.description || template.id }}</span>
+          </span>
+          <span v-if="template.builtIn" class="template-pill tw:border tw:border-solid tw:border-border-subtle tw:rounded-full tw:py-0.5 tw:px-[7px] tw:text-content-secondary tw:text-[11px]">{{ t('templates.builtIn') }}</span>
+        </button>
+        <div v-if="!loading && !filteredTemplates.length" class="template-empty tw:text-content-secondary tw:text-xs">{{ t('templates.empty') }}</div>
+      </div>
+
+      <aside v-if="selectedTemplate" class="template-detail tw:overflow-auto tw:p-4">
+        <div class="template-detail__heading tw:flex tw:gap-3 tw:items-start tw:mb-4 [&_h3]:tw:m-0 [&_h3]:tw:text-[15px] [&_p]:tw:mt-[3px] [&_p]:tw:mb-0 [&_p]:tw:text-content-secondary [&_p]:tw:text-xs">
+          <div class="template-detail__icon tw:grid tw:place-items-center tw:size-8 tw:rounded-[calc(7px*var(--radius-scale,1))] tw:bg-(--accent-soft)">{{ selectedTemplate.icon }}</div>
+          <div>
+            <h3>{{ selectedTemplate.name }}</h3>
+            <p>{{ selectedTemplate.description }}</p>
+          </div>
+        </div>
+
+        <div v-if="selectedTemplate.fields.length" class="template-fields tw:grid tw:gap-3">
+          <label
+            v-for="field in selectedTemplate.fields"
+            :key="field.id"
+            class="template-field tw:grid tw:gap-1.5 tw:text-xs tw:text-content-secondary [&_strong]:tw:text-danger [&_small]:tw:text-danger [&_input]:tw:w-full [&_input]:tw:border [&_input]:tw:border-solid [&_input]:tw:border-border-subtle [&_input]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_input]:tw:bg-surface-overlay [&_input]:tw:text-content-primary [&_input]:tw:py-[7px] [&_input]:tw:px-[9px] [&_input]:tw:font-inherit [&_textarea]:tw:w-full [&_textarea]:tw:border [&_textarea]:tw:border-solid [&_textarea]:tw:border-border-subtle [&_textarea]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_textarea]:tw:bg-surface-overlay [&_textarea]:tw:text-content-primary [&_textarea]:tw:py-[7px] [&_textarea]:tw:px-[9px] [&_textarea]:tw:font-inherit [&_select]:tw:w-full [&_select]:tw:border [&_select]:tw:border-solid [&_select]:tw:border-border-subtle [&_select]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_select]:tw:bg-surface-overlay [&_select]:tw:text-content-primary [&_select]:tw:py-[7px] [&_select]:tw:px-[9px] [&_select]:tw:font-inherit"
+          >
+            <span>{{ field.label }}<strong v-if="field.required">*</strong></span>
+            <textarea
+              v-if="field.type === 'multiline'"
+              :value="stringFieldValue(field.id)"
+              rows="3"
+              @input="setStringFieldValue(field.id, ($event.target as HTMLTextAreaElement).value)"
+              @blur="touched = true"
+            />
+            <select
+              v-else-if="field.type === 'select'"
+              :value="stringFieldValue(field.id)"
+              @change="setStringFieldValue(field.id, ($event.target as HTMLSelectElement).value)"
+              @blur="touched = true"
+            >
+              <option value=""></option>
+              <option v-for="option in field.options ?? []" :key="option" :value="option">{{ option }}</option>
+            </select>
+            <NvCheckbox
+              v-else-if="field.type === 'checkbox'"
+              :model-value="boolFieldValue(field.id)"
+              @update:model-value="setBoolFieldValue(field.id, $event); touched = true"
+            />
+            <input
+              v-else
+              :value="stringFieldValue(field.id)"
+              :type="field.type === 'date' ? 'date' : 'text'"
+              @input="setStringFieldValue(field.id, ($event.target as HTMLInputElement).value)"
+              @blur="touched = true"
+            />
+            <small v-if="touched && missingRequiredFields.includes(field.id)">{{ t('templates.required') }}</small>
+          </label>
+        </div>
+        <div v-else class="template-no-fields tw:text-content-secondary tw:text-xs">{{ t('templates.noFields') }}</div>
+
+        <div class="template-actions tw:flex tw:flex-wrap tw:gap-2 tw:mt-[18px]">
+          <NvButton variant="ghost" size="sm" @click="startEdit(selectedTemplate)">
+            <Pencil :size="14" />{{ selectedTemplate.builtIn ? t('templates.duplicateEdit') : t('templates.edit') }}
+          </NvButton>
+          <NvButton variant="ghost" size="sm" @click="duplicateTemplate(selectedTemplate)">
+            <Copy :size="14" />{{ t('templates.duplicate') }}
+          </NvButton>
+          <NvButton v-if="!selectedTemplate.builtIn" variant="ghost" size="sm" @click="deleteTemplate(selectedTemplate)">
+            <Trash2 :size="14" />{{ t('templates.delete') }}
+          </NvButton>
+        </div>
+      </aside>
+    </div>
+
+    <template #footer>
+      <NvButton variant="ghost" @click="emit('close')">{{ t('workspace.context.cancel') }}</NvButton>
+      <NvButton :disabled="!canUseTemplate" @click="submitTemplate">
+        {{ mode === 'create-note' ? t('templates.createNote') : t('templates.insert') }}
+      </NvButton>
+    </template>
+  </NvModal>
+
+  <!-- TemplateEditor is an inline, backdrop-less panel (out of scope for this
+       migration) that previously stacked on top of the picker as a later
+       sibling inside the same teleported backdrop. NvModal owns its own
+       Teleport now, so this needs its own to land after it in <body> and
+       keep stacking above the picker panel. -->
+  <Teleport to="body">
+    <TemplateEditor
+      v-if="editorOpen"
+      :open="editorOpen"
+      :mode="editorMode"
+      :workspace-path="workspacePath"
+      :template="editingTemplate"
+      @close="editorOpen = false"
+      @saved="onTemplateSaved"
+    />
   </Teleport>
 </template>
 
-<style scoped>
-.template-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1200;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgb(8 10 14 / 0.54);
-  backdrop-filter: blur(10px);
-}
-
-.template-modal {
-  width: min(880px, calc(100vw - 32px));
-  max-height: min(760px, calc(100vh - 32px));
+<!-- The panel element lives inside NvModal's template and is teleported to
+     <body>, so a scoped rule would not reach it. Fills NvModal's body
+     edge-to-edge instead of the primitive's own 18px inset, matching
+     WorkspaceSettingsModal's `settings-modal-panel` treatment for the same
+     full-bleed multi-pane layout. -->
+<style>
+.template-picker-panel .nv-modal__body {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border-subtle);
-  border-radius: calc(8px * var(--radius-scale, 1));
-  background: var(--surface-1);
-  color: var(--text-primary);
-  box-shadow: var(--shadow-lg);
-  overflow: hidden;
-}
-
-.template-modal__header,
-.template-modal__footer,
-.template-modal__toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.template-modal__header {
-  justify-content: space-between;
-}
-
-.template-modal__header h2,
-.template-detail h3 {
-  margin: 0;
-  font-size: 15px;
-}
-
-.template-modal__header p,
-.template-detail p {
-  margin: 3px 0 0;
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-
-.template-modal__toolbar {
-  justify-content: space-between;
-}
-
-.template-search {
-  min-width: 240px;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 34px;
-  padding: 0 10px;
-  border: 1px solid var(--border-subtle);
-  border-radius: calc(7px * var(--radius-scale, 1));
-  background: var(--surface-2);
-}
-
-.template-search input,
-.template-field input,
-.template-field textarea,
-.template-field select {
-  width: 100%;
-  border: 1px solid var(--border-subtle);
-  border-radius: calc(6px * var(--radius-scale, 1));
-  background: var(--surface-2);
-  color: var(--text-primary);
-  padding: 7px 9px;
-  font: inherit;
-}
-
-.template-search input {
-  border: 0;
+  min-height: 0;
   padding: 0;
-  outline: 0;
-  background: transparent;
-}
-
-.template-modal__body {
-  min-height: 360px;
-  display: grid;
-  grid-template-columns: minmax(260px, 0.92fr) minmax(300px, 1.08fr);
   overflow: hidden;
-}
-
-.template-list {
-  overflow: auto;
-  padding: 10px;
-  border-right: 1px solid var(--border-subtle);
-}
-
-.template-list__item {
-  width: 100%;
-  display: grid;
-  grid-template-columns: 32px 1fr auto;
-  align-items: center;
-  gap: 10px;
-  padding: 10px;
-  border: 1px solid transparent;
-  border-radius: calc(7px * var(--radius-scale, 1));
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.template-list__item:hover,
-.template-list__item--active {
-  border-color: var(--border-subtle);
-  background: var(--surface-2);
-}
-
-.template-list__icon,
-.template-detail__icon {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: calc(7px * var(--radius-scale, 1));
-  background: var(--accent-soft);
-}
-
-.template-list__copy {
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-}
-
-.template-list__name {
-  font-size: 13px;
-  font-weight: 650;
-}
-
-.template-list__description {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-
-.template-pill {
-  border: 1px solid var(--border-subtle);
-  border-radius: 999px;
-  padding: 2px 7px;
-  color: var(--text-secondary);
-  font-size: 11px;
-}
-
-.template-detail {
-  overflow: auto;
-  padding: 16px;
-}
-
-.template-detail__heading {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  margin-bottom: 16px;
-}
-
-.template-fields {
-  display: grid;
-  gap: 12px;
-}
-
-.template-field {
-  display: grid;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.template-field strong,
-.template-field small,
-.template-error {
-  color: var(--danger, #ff6b6b);
-}
-
-.template-field--wide {
-  grid-column: 1 / -1;
-}
-
-.template-no-fields,
-.template-empty {
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-
-.template-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 18px;
-}
-
-.template-modal__footer {
-  justify-content: flex-end;
-  margin-top: auto;
-  border-top: 1px solid var(--border-subtle);
-  border-bottom: 0;
-}
-
-.template-icon-btn {
-  display: inline-grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--border-subtle);
-  border-radius: calc(6px * var(--radius-scale, 1));
-  background: var(--surface-2);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-@media (max-width: 760px) {
-  .template-modal__body {
-    grid-template-columns: 1fr;
-  }
-
-  .template-list {
-    max-height: 240px;
-    border-right: 0;
-    border-bottom: 1px solid var(--border-subtle);
-  }
 }
 </style>

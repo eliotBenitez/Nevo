@@ -17,7 +17,7 @@ pub struct CanvasLayout {
     pub group_id: Option<String>,
 }
 
-/// Backward-compatible JSON mirror of the live Canvas Yjs shared types.
+/// A note's canvas source of truth, persisted in `note.json`.
 ///
 /// Elements and connectors remain `Value` at this filesystem boundary so a
 /// newer frontend can preserve known v1 payloads without coupling Rust note IO

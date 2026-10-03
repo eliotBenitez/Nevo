@@ -2,6 +2,9 @@ import { appLogger } from '../../../utils/logger'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import type { EditorCore } from './useEditorCore'
 import { noteCommands } from '../../../tauri/commands'
+import { MAX_ASSET_MB, isWithinAssetLimit } from '../../../core/assets/assetLimits'
+import { useToast } from '../../../ui/composables/useToast'
+import { i18n } from '../../../i18n'
 
 const FILE_MIME_MAP: Record<string, string> = {
   pdf: 'application/pdf', zip: 'application/zip', json: 'application/json', csv: 'text/csv',
@@ -19,6 +22,21 @@ export function useFileUpload(
   onOverlaysUpdate: () => void,
 ) {
   const workspaceStore = useWorkspaceStore()
+
+  function rejectOversizedAsset(fileName: string, size: number) {
+    const { showToast } = useToast()
+    showToast({
+      variant: 'error',
+      message: i18n.global.t('editor.assets.tooLarge', { fileName, limit: `${MAX_ASSET_MB} MB` }),
+    })
+    void appLogger.warn({
+      source: 'frontend.editor',
+      event: 'import_file',
+      message: 'Rejected a file import over the size limit',
+      workspacePath: getWorkspacePath(),
+      payload: { fileName, size },
+    })
+  }
 
   function requestFilePicker(targetPos: number | null = null) {
     core.pendingFileTargetPos = targetPos
@@ -59,7 +77,12 @@ export function useFileUpload(
     const backend = workspaceStore.backend
     if (!backend) return
 
-    const bytes = Array.from(new Uint8Array(await file.arrayBuffer()))
+    if (!isWithinAssetLimit(file.size)) {
+      rejectOversizedAsset(file.name, file.size)
+      return
+    }
+
+    const bytes = new Uint8Array(await file.arrayBuffer())
     const imported = await backend.importImageAsset(file.name, bytes)
     applyImportedFile(imported.src, file.name, file.type || 'application/octet-stream', file.size, targetPos)
   }

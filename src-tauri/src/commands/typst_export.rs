@@ -64,7 +64,7 @@ fn resolve_assets(
     Ok(resolved)
 }
 
-fn compile_document(
+pub(crate) fn compile_document(
     source: String,
     assets: Vec<(String, Vec<u8>)>,
 ) -> Result<PagedDocument, String> {

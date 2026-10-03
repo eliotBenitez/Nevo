@@ -4,6 +4,10 @@ import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { Archive, Download, FolderArchive } from 'lucide-vue-next'
 import NvButton from '../../../ui/primitives/NvButton.vue'
+import SettingsSectionHeader from './ui/SettingsSectionHeader.vue'
+import SettingsGroup from './ui/SettingsGroup.vue'
+import SettingsRow from './ui/SettingsRow.vue'
+import SettingsObjectCard from './ui/SettingsObjectCard.vue'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { useWorkspaceTransfer, type TransferStage } from '../../../composables/useWorkspaceTransfer'
 import { useConfirmDialog } from '../../../ui/composables/useConfirmDialog'
@@ -43,136 +47,90 @@ async function runMerge() {
 </script>
 
 <template>
-  <section class="panel settings-backup-panel">
-    <header class="panel-header">
-      <div>
-        <h2 class="panel-title">{{ t('workspaceTransfer.panelTitle') }}</h2>
-        <p class="panel-sub">{{ t('workspaceTransfer.panelDescription') }}</p>
-      </div>
-    </header>
+  <section class="panel tw:flex tw:h-full tw:min-h-0 tw:flex-col settings-backup-panel">
+    <SettingsSectionHeader
+      :title="t('workspaceTransfer.panelTitle')"
+      :description="t('workspaceTransfer.panelDescription')"
+    />
 
-    <div class="panel-body">
-      <div v-if="!isLocal" class="settings-card backup-notice">
-        <FolderArchive :size="15" aria-hidden="true" />
+    <div class="panel-body tw:flex tw:min-h-0 tw:flex-1 tw:flex-col tw:gap-5 tw:overflow-auto tw:overscroll-contain tw:px-[30px] tw:pt-[18px] tw:pb-[30px]">
+      <SettingsObjectCard v-if="!isLocal" class="backup-notice tw:flex tw:items-center tw:gap-2.5 tw:py-3 tw:px-3.5 tw:text-content-secondary tw:text-[12.5px]">
+        <template #icon>
+          <FolderArchive :size="15" aria-hidden="true" />
+        </template>
         <span>{{ t('workspaceTransfer.localOnly') }}</span>
-      </div>
+      </SettingsObjectCard>
 
-      <div class="group">
-        <div class="group-label">{{ t('workspaceTransfer.export.title') }}</div>
-        <div class="settings-card" :class="{ 'settings-row--muted': !isLocal }">
-          <div class="settings-row">
-            <div class="row-copy">
-              <div class="row-title">{{ t('workspaceTransfer.export.title') }}</div>
-              <div class="row-sub">{{ t('workspaceTransfer.export.description') }}</div>
+      <SettingsGroup :title="t('workspaceTransfer.export.title')">
+        <SettingsRow
+          :title="t('workspaceTransfer.export.title')"
+          :description="t('workspaceTransfer.export.description')"
+          :disabled="!isLocal"
+        >
+          <NvButton
+            :disabled="!isLocal || isBusy"
+            :loading="isBusy && activeAction === 'export'"
+            @click="runExport"
+          >
+            <Archive :size="14" />
+            {{ t('workspaceTransfer.export.action') }}
+          </NvButton>
+        </SettingsRow>
+
+        <div v-if="isBusy && activeAction === 'export'" class="settings-row backup-progress-row tw:block">
+          <div class="backup-progress tw:w-full tw:grid tw:gap-1.5">
+            <div class="backup-progress__label tw:flex tw:justify-between tw:text-content-secondary tw:text-[11.5px]">
+              <span>{{ stageLabel }}</span>
+              <span v-if="progress !== null">{{ progress }}%</span>
             </div>
-            <NvButton
-              :disabled="!isLocal || isBusy"
-              :loading="isBusy && activeAction === 'export'"
-              @click="runExport"
-            >
-              <Archive :size="14" />
-              {{ t('workspaceTransfer.export.action') }}
-            </NvButton>
-          </div>
-
-          <div v-if="isBusy && activeAction === 'export'" class="settings-row settings-row--border backup-progress-row">
-            <div class="backup-progress">
-              <div class="backup-progress__label">
-                <span>{{ stageLabel }}</span>
-                <span v-if="progress !== null">{{ progress }}%</span>
-              </div>
-              <div class="backup-progress__track">
-                <div
-                  class="backup-progress__fill"
-                  :class="{ 'backup-progress__fill--indeterminate': progress === null }"
-                  :style="progress !== null ? { width: `${progress}%` } : undefined"
-                />
-              </div>
+            <div class="backup-progress__track tw:h-1.5 tw:rounded-full tw:bg-surface-subtle tw:overflow-hidden">
+              <div
+                class="backup-progress__fill tw:h-full tw:rounded-full tw:bg-accent tw:transition-[width] tw:duration-[160ms] tw:ease-[ease] motion-reduce:tw:transition-none"
+                :class="{ 'backup-progress__fill--indeterminate': progress === null }"
+                :style="progress !== null ? { width: `${progress}%` } : undefined"
+              />
             </div>
           </div>
         </div>
-      </div>
+      </SettingsGroup>
 
-      <div class="group">
-        <div class="group-label">{{ t('workspaceTransfer.import.title') }}</div>
-        <div class="settings-card" :class="{ 'settings-row--muted': !isLocal }">
-          <div class="settings-row">
-            <div class="row-copy">
-              <div class="row-title">{{ t('workspaceTransfer.import.mergeTitle') }}</div>
-              <div class="row-sub">{{ t('workspaceTransfer.import.mergeDescription') }}</div>
+      <SettingsGroup :title="t('workspaceTransfer.import.title')">
+        <SettingsRow
+          :title="t('workspaceTransfer.import.mergeTitle')"
+          :description="t('workspaceTransfer.import.mergeDescription')"
+          :disabled="!isLocal"
+        >
+          <NvButton
+            :disabled="!isLocal || isBusy"
+            :loading="isBusy && activeAction === 'merge'"
+            @click="runMerge"
+          >
+            <Download :size="14" />
+            {{ t('workspaceTransfer.import.mergeAction') }}
+          </NvButton>
+        </SettingsRow>
+
+        <div v-if="isBusy && activeAction === 'merge'" class="settings-row backup-progress-row tw:block">
+          <div class="backup-progress tw:w-full tw:grid tw:gap-1.5">
+            <div class="backup-progress__label tw:flex tw:justify-between tw:text-content-secondary tw:text-[11.5px]">
+              <span>{{ stageLabel }}</span>
+              <span v-if="progress !== null">{{ progress }}%</span>
             </div>
-            <NvButton
-              :disabled="!isLocal || isBusy"
-              :loading="isBusy && activeAction === 'merge'"
-              @click="runMerge"
-            >
-              <Download :size="14" />
-              {{ t('workspaceTransfer.import.mergeAction') }}
-            </NvButton>
-          </div>
-
-          <div v-if="isBusy && activeAction === 'merge'" class="settings-row settings-row--border backup-progress-row">
-            <div class="backup-progress">
-              <div class="backup-progress__label">
-                <span>{{ stageLabel }}</span>
-                <span v-if="progress !== null">{{ progress }}%</span>
-              </div>
-              <div class="backup-progress__track">
-                <div
-                  class="backup-progress__fill"
-                  :class="{ 'backup-progress__fill--indeterminate': progress === null }"
-                  :style="progress !== null ? { width: `${progress}%` } : undefined"
-                />
-              </div>
+            <div class="backup-progress__track tw:h-1.5 tw:rounded-full tw:bg-surface-subtle tw:overflow-hidden">
+              <div
+                class="backup-progress__fill tw:h-full tw:rounded-full tw:bg-accent tw:transition-[width] tw:duration-[160ms] tw:ease-[ease] motion-reduce:tw:transition-none"
+                :class="{ 'backup-progress__fill--indeterminate': progress === null }"
+                :style="progress !== null ? { width: `${progress}%` } : undefined"
+              />
             </div>
           </div>
         </div>
-      </div>
+      </SettingsGroup>
     </div>
   </section>
 </template>
 
 <style scoped>
-.backup-notice {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  color: var(--text-2, var(--text-secondary));
-  font-size: 12.5px;
-}
-
-.backup-progress-row {
-  display: block;
-}
-
-.backup-progress {
-  width: 100%;
-  display: grid;
-  gap: 6px;
-}
-
-.backup-progress__label {
-  display: flex;
-  justify-content: space-between;
-  color: var(--text-2, var(--text-secondary));
-  font-size: 11.5px;
-}
-
-.backup-progress__track {
-  height: 6px;
-  border-radius: 999px;
-  background: var(--line-2, color-mix(in oklab, var(--text-1) 12%, transparent));
-  overflow: hidden;
-}
-
-.backup-progress__fill {
-  height: 100%;
-  border-radius: 999px;
-  background: var(--accent);
-  transition: width 160ms ease;
-}
-
 .backup-progress__fill--indeterminate {
   width: 40%;
   animation: backup-progress-indeterminate 1.1s ease-in-out infinite;
@@ -184,10 +142,6 @@ async function runMerge() {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .backup-progress__fill {
-    transition: none;
-  }
-
   .backup-progress__fill--indeterminate {
     animation: none;
   }

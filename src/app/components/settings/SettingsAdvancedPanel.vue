@@ -5,11 +5,14 @@ import { useWorkspaceStore } from '../../../stores/workspace'
 import { appLogger } from '../../../utils/logger'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvToggle from '../../../ui/primitives/NvToggle.vue'
+import SettingsSectionHeader from './ui/SettingsSectionHeader.vue'
+import SettingsGroup from './ui/SettingsGroup.vue'
+import SettingsRow from './ui/SettingsRow.vue'
 import { systemCommands } from '../../../tauri/commands'
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
-const { settings, activePath } = storeToRefs(workspaceStore)
+const { settings, activePath, appMetadata } = storeToRefs(workspaceStore)
 
 async function revealLogs() {
   try {
@@ -30,73 +33,66 @@ async function revealSettings() {
 </script>
 
 <template>
-  <section class="panel settings-advanced-panel">
-    <header class="panel-header">
-      <div>
-        <h2 class="panel-title">{{ t('settings.sections.advanced') }}</h2>
-        <p class="panel-sub">{{ t('settings.advanced.description') }}</p>
-      </div>
-    </header>
+  <section class="panel tw:flex tw:h-full tw:min-h-0 tw:flex-col settings-advanced-panel">
+    <SettingsSectionHeader
+      :title="t('settings.sections.advanced')"
+      :description="t('settings.advanced.description')"
+    />
 
-    <div class="panel-body">
-      <div class="group">
-        <div class="group-label">{{ t('settings.advanced.groups.diagnostics') }}</div>
-        <div class="settings-card">
-          <div class="settings-row">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.advanced.schemaMetadata.title') }}</div>
-              <div class="row-sub">{{ t('settings.advanced.schemaMetadata.description') }}</div>
-            </div>
-            <span class="mono-inline">{{ settings.advanced.schemaVersion }}</span>
-          </div>
+    <div class="panel-body tw:flex tw:min-h-0 tw:flex-1 tw:flex-col tw:gap-5 tw:overflow-auto tw:overscroll-contain tw:px-[30px] tw:pt-[18px] tw:pb-[30px]">
+      <SettingsGroup :title="t('settings.advanced.groups.diagnostics')">
+        <SettingsRow
+          :title="t('settings.advanced.schemaMetadata.title')"
+          :description="t('settings.advanced.schemaMetadata.description')"
+        >
+          <span class="mono-inline tw:text-content-muted tw:text-[11.5px] tw:font-nv-mono">{{ settings.advanced.schemaVersion }}</span>
+        </SettingsRow>
 
-          <div class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.advanced.experimentalGraphTools.title') }}</div>
-              <div class="row-sub">{{ t('settings.advanced.experimentalGraphTools.description') }}</div>
-            </div>
-            <NvToggle
-              :model-value="settings.advanced.experimentalGraphTools"
-              @update:model-value="v => workspaceStore.updateSettings(draft => { draft.advanced.experimentalGraphTools = v })"
-            />
-          </div>
+        <SettingsRow
+          :title="t('settings.advanced.experimentalGraphTools.title')"
+          :description="t('settings.advanced.experimentalGraphTools.description')"
+        >
+          <NvToggle
+            :aria-label="t('settings.advanced.experimentalGraphTools.title')"
+            :model-value="settings.advanced.experimentalGraphTools"
+            @update:model-value="v => workspaceStore.updateSettings(draft => { draft.advanced.experimentalGraphTools = v })"
+          />
+        </SettingsRow>
 
-          <div class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.advanced.developerLogging.title') }}</div>
-              <div class="row-sub">{{ t('settings.advanced.developerLogging.description') }}</div>
-            </div>
-            <NvToggle
-              :model-value="settings.advanced.developerLogging"
-              @update:model-value="v => workspaceStore.updateSettings(draft => { draft.advanced.developerLogging = v })"
-            />
-          </div>
+        <SettingsRow
+          :title="t('settings.advanced.developerLogging.title')"
+          :description="t('settings.advanced.developerLogging.description')"
+        >
+          <NvToggle
+            :aria-label="t('settings.advanced.developerLogging.title')"
+            :model-value="settings.advanced.developerLogging"
+            @update:model-value="v => workspaceStore.updateSettings(draft => { draft.advanced.developerLogging = v })"
+          />
+        </SettingsRow>
 
-          <div class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.advanced.revealLogs.title') }}</div>
-              <div class="row-sub">{{ t('settings.advanced.revealLogs.description') }}</div>
-            </div>
-            <NvButton @click="revealLogs">{{ t('settings.advanced.revealLogs.action') }}</NvButton>
-          </div>
+        <SettingsRow
+          v-if="appMetadata?.supportsRevealInFileManager"
+          :title="t('settings.advanced.revealLogs.title')"
+          :description="t('settings.advanced.revealLogs.description')"
+        >
+          <NvButton @click="revealLogs">{{ t('settings.advanced.revealLogs.action') }}</NvButton>
+        </SettingsRow>
 
-          <div class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.advanced.rawSettings.title') }}</div>
-              <div class="row-sub">{{ t('settings.advanced.rawSettings.description') }}</div>
-            </div>
-            <NvButton @click="revealSettings">{{ t('settings.advanced.rawSettings.reveal') }}</NvButton>
-          </div>
+        <SettingsRow
+          v-if="appMetadata?.supportsRevealInFileManager"
+          :title="t('settings.advanced.rawSettings.title')"
+          :description="t('settings.advanced.rawSettings.description')"
+        >
+          <NvButton @click="revealSettings">{{ t('settings.advanced.rawSettings.reveal') }}</NvButton>
+        </SettingsRow>
 
-          <div class="settings-row settings-row--border">
-            <div class="row-copy">
-              <div class="row-title">{{ t('settings.advanced.resetSettings.title') }}</div>
-              <div class="row-sub">{{ t('settings.advanced.resetSettings.description') }}</div>
-            </div>
-            <NvButton @click="workspaceStore.resetSettings()">{{ t('settings.advanced.resetSettings.action') }}</NvButton>
-          </div>
-        </div>
-      </div>
+        <SettingsRow
+          :title="t('settings.advanced.resetSettings.title')"
+          :description="t('settings.advanced.resetSettings.description')"
+        >
+          <NvButton @click="workspaceStore.resetSettings()">{{ t('settings.advanced.resetSettings.action') }}</NvButton>
+        </SettingsRow>
+      </SettingsGroup>
     </div>
   </section>
 </template>

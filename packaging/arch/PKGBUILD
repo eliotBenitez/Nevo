@@ -1,0 +1,43 @@
+# This recipe is consumed by build.sh. The helper exports the package metadata
+# and points NEVO_PACKAGE_ROOT at the data tree produced by Tauri's Debian
+# bundler, which already contains the binary, desktop entry, and icons.
+
+pkgname=nevo
+pkgver="${NEVO_PKGVER:?NEVO_PKGVER is required; run packaging/arch/build.sh}"
+pkgrel="${NEVO_PKGREL:?NEVO_PKGREL is required; run packaging/arch/build.sh}"
+pkgdesc='Local-first visual workspace and knowledge editor'
+arch=("${NEVO_PKGARCH:?NEVO_PKGARCH is required; run packaging/arch/build.sh}")
+url='https://github.com/eliotBenitez/Nevo'
+license=('AGPL-3.0-only')
+depends=(
+  'alsa-lib'
+  'cairo'
+  'desktop-file-utils'
+  'gdk-pixbuf2'
+  'glib2'
+  'gstreamer'
+  'gst-plugins-base'
+  'gtk3'
+  'hicolor-icon-theme'
+  'libsoup3'
+  'pango'
+  'webkit2gtk-4.1'
+)
+optdepends=(
+  'gst-libav: additional audio and video codecs'
+  'gst-plugins-bad: additional audio and video codecs'
+  'gst-plugins-good: additional audio and video codecs'
+  'gst-plugins-ugly: additional audio and video codecs'
+)
+options=('!debug' '!emptydirs')
+source=()
+sha256sums=()
+
+package() {
+  if [[ ! -d "${NEVO_PACKAGE_ROOT:?NEVO_PACKAGE_ROOT is required}/usr" ]]; then
+    error 'NEVO_PACKAGE_ROOT does not contain a usr directory'
+    return 1
+  fi
+
+  cp -a "${NEVO_PACKAGE_ROOT}/." "${pkgdir}/"
+}

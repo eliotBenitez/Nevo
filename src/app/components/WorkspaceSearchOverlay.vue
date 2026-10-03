@@ -138,20 +138,20 @@ watch(() => props.open, (open) => {
 
 <template>
   <Teleport to="body">
-    <div v-if="open" class="search-overlay-backdrop" @click.self="emit('close')">
+    <div v-if="open" class="search-overlay-backdrop tw:fixed tw:inset-0 tw:z-[240] tw:flex tw:justify-center tw:pt-[12vh] tw:px-6 tw:pb-6 tw:bg-scrim max-[719px]:tw:p-0 max-[719px]:tw:bg-surface-canvas" @click.self="emit('close')">
       <section
         ref="dialogRef"
-        class="search-overlay"
+        class="search-overlay tw:w-[min(640px,100%)] tw:h-fit tw:max-h-[min(64vh,560px)] tw:flex tw:flex-col tw:overflow-hidden tw:border tw:border-solid tw:border-transparent tw:rounded-[calc(16px*var(--radius-scale,1))] tw:bg-surface-overlay tw:shadow-[var(--shadow-overlay)] max-[719px]:tw:w-screen max-[719px]:tw:h-[100dvh] max-[719px]:tw:max-h-[100dvh] max-[719px]:tw:border-0 max-[719px]:tw:rounded-none max-[719px]:tw:bg-surface-canvas max-[719px]:tw:shadow-none"
         role="dialog"
         aria-modal="true"
         :aria-label="t('workspace.searchOverlay.ariaLabel')"
       >
-        <div class="search-overlay__field">
-          <Search :size="16" class="search-overlay__icon" />
+        <div class="search-overlay__field tw:flex tw:items-center tw:flex-shrink-0 tw:gap-2.5 tw:mt-2 tw:mx-2 tw:mb-0 tw:px-3 tw:py-3.5 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:bg-surface-subtle max-[719px]:tw:min-h-[calc(64px+max(var(--safe-area-top),0px))] max-[719px]:tw:m-0 max-[719px]:tw:pt-[max(var(--safe-area-top),0px)] max-[719px]:tw:pr-[calc(8px+max(var(--safe-area-right),0px))] max-[719px]:tw:pb-0 max-[719px]:tw:pl-[calc(16px+max(var(--safe-area-left),0px))] max-[719px]:tw:gap-3 max-[719px]:tw:rounded-none max-[719px]:tw:bg-transparent">
+          <Search :size="16" class="search-overlay__icon tw:flex-shrink-0 tw:text-content-muted" />
           <input
             ref="inputRef"
             v-model="query"
-            class="search-overlay__input"
+            class="search-overlay__input tw:w-full tw:min-w-0 tw:border-0 tw:outline-none tw:bg-transparent tw:text-content-primary tw:text-[15px] tw:placeholder:text-content-muted max-[719px]:tw:min-h-11 max-[719px]:tw:text-base"
             type="search"
             role="combobox"
             autocomplete="off"
@@ -163,7 +163,7 @@ watch(() => props.open, (open) => {
           />
           <button
             type="button"
-            class="search-overlay__close"
+            class="search-overlay__close tw:grid tw:flex-shrink-0 tw:place-items-center tw:size-[26px] tw:border-0 tw:rounded-full tw:bg-transparent tw:text-content-muted tw:cursor-pointer tw:hover:bg-(--hover) tw:hover:text-content-secondary tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-1 max-[719px]:tw:size-11 max-[719px]:tw:text-content-secondary"
             :aria-label="t('workspace.searchOverlay.close')"
             @click="emit('close')"
           >
@@ -171,49 +171,49 @@ watch(() => props.open, (open) => {
           </button>
         </div>
 
-        <div :id="listboxId" class="search-overlay__results" role="listbox">
+        <div :id="listboxId" class="search-overlay__results tw:overflow-auto tw:p-2.5 max-[719px]:tw:flex-1 max-[719px]:tw:pt-3 max-[719px]:tw:pr-[calc(12px+max(var(--safe-area-right),0px))] max-[719px]:tw:pb-[calc(16px+max(var(--safe-area-bottom),0px))] max-[719px]:tw:pl-[calc(12px+max(var(--safe-area-left),0px))]" role="listbox">
           <template v-if="visibleGroups.length">
-            <section v-for="group in visibleGroups" :key="group.id" class="search-overlay__group">
-              <div class="search-overlay__group-title">{{ groupTitle(group.id) }}</div>
+            <section v-for="group in visibleGroups" :key="group.id" class="search-overlay__group [&:not(:first-child)]:tw:mt-2.5">
+              <div class="search-overlay__group-title tw:mb-1.5 tw:text-content-muted tw:text-[10px] tw:font-bold tw:tracking-[0.08em] tw:uppercase">{{ groupTitle(group.id) }}</div>
               <button
                 v-for="result in group.items"
                 :id="resultOptionId(`${result.type}:${result.id}`)"
                 :key="`${result.type}:${result.id}`"
                 type="button"
                 role="option"
-                class="search-overlay__result"
-                :class="{ 'is-active': activeResultKey === `${result.type}:${result.id}` }"
+                class="search-overlay__result tw:w-full tw:flex tw:flex-col tw:gap-1 tw:px-3 tw:py-2.5 tw:border-0 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:text-inherit tw:text-left tw:cursor-pointer tw:hover:bg-surface-subtle tw:focus-visible:bg-surface-subtle tw:focus-visible:outline-none tw:focus-visible:shadow-[inset_0_0_0_2px_var(--accent)] max-[719px]:tw:min-h-14 max-[719px]:tw:p-3"
+                :class="activeResultKey === `${result.type}:${result.id}` ? 'is-active tw:bg-surface-subtle' : 'tw:bg-transparent'"
                 :aria-selected="activeResultKey === `${result.type}:${result.id}`"
                 @mousedown.prevent
                 @click="selectResult(result)"
               >
-                <div class="search-overlay__result-head">
-                  <span class="search-overlay__result-title">{{ result.type === 'block' ? result.noteTitle : result.title }}</span>
-                  <span v-if="resultSubtitle(result)" class="search-overlay__result-subtitle">{{ resultSubtitle(result) }}</span>
+                <div class="search-overlay__result-head tw:flex tw:items-baseline tw:justify-between tw:gap-2.5">
+                  <span class="search-overlay__result-title tw:text-content-primary tw:text-[13px] tw:font-semibold">{{ result.type === 'block' ? result.noteTitle : result.title }}</span>
+                  <span v-if="resultSubtitle(result)" class="search-overlay__result-subtitle tw:text-content-muted tw:text-[11px]">{{ resultSubtitle(result) }}</span>
                 </div>
-                <div class="search-overlay__result-body">{{ resultBody(result) }}</div>
+                <div class="search-overlay__result-body tw:text-content-muted tw:text-[11.5px] tw:leading-[1.45]">{{ resultBody(result) }}</div>
               </button>
             </section>
-            <div v-if="isLoadingBlocks" class="search-overlay__loading" role="status" aria-live="polite">
+            <div v-if="isLoadingBlocks" class="search-overlay__loading tw:flex tw:items-center tw:gap-2 tw:mt-2.5 tw:px-3 tw:py-2.5 tw:rounded-[calc(10px*var(--radius-scale,1))] tw:bg-[color-mix(in_oklab,var(--hover)_80%,transparent)] tw:text-content-muted tw:text-[11.5px]" role="status" aria-live="polite">
               <span class="search-overlay__spinner" aria-hidden="true" />
               <span>{{ t('workspace.titlebarSearch.loadingShort') }}</span>
             </div>
           </template>
 
-          <div v-else-if="normalizedQuery" class="search-overlay__empty" role="status" aria-live="polite">
-            <div v-if="isLoadingBlocks" class="search-overlay__loading search-overlay__loading--empty">
+          <div v-else-if="normalizedQuery" class="search-overlay__empty tw:px-4 tw:py-[22px]" role="status" aria-live="polite">
+            <div v-if="isLoadingBlocks" class="search-overlay__loading search-overlay__loading--empty tw:flex tw:items-center tw:gap-2 tw:mt-0 tw:p-0 tw:bg-transparent tw:text-content-secondary tw:font-semibold">
               <span class="search-overlay__spinner" aria-hidden="true" />
               <span>{{ t('workspace.titlebarSearch.loadingTitle') }}</span>
             </div>
-            <div v-else class="search-overlay__empty-title">{{ t('workspace.titlebarSearch.emptyTitle') }}</div>
-            <div class="search-overlay__empty-subtitle">
+            <div v-else class="search-overlay__empty-title tw:text-content-secondary tw:text-[13px] tw:font-semibold">{{ t('workspace.titlebarSearch.emptyTitle') }}</div>
+            <div class="search-overlay__empty-subtitle tw:mt-1 tw:text-content-muted tw:text-xs tw:leading-[1.45]">
               {{ isLoadingBlocks ? t('workspace.titlebarSearch.loading') : t('workspace.titlebarSearch.emptyDescription') }}
             </div>
           </div>
 
-          <div v-else class="search-overlay__empty">
-            <div class="search-overlay__empty-title">{{ t('workspace.titlebarSearch.idleTitle') }}</div>
-            <div class="search-overlay__empty-subtitle">{{ t('workspace.titlebarSearch.idleDescription') }}</div>
+          <div v-else class="search-overlay__empty tw:px-4 tw:py-[22px]">
+            <div class="search-overlay__empty-title tw:text-content-secondary tw:text-[13px] tw:font-semibold">{{ t('workspace.titlebarSearch.idleTitle') }}</div>
+            <div class="search-overlay__empty-subtitle tw:mt-1 tw:text-content-muted tw:text-xs tw:leading-[1.45]">{{ t('workspace.titlebarSearch.idleDescription') }}</div>
           </div>
         </div>
       </section>
@@ -222,193 +222,6 @@ watch(() => props.open, (open) => {
 </template>
 
 <style scoped>
-.search-overlay-backdrop {
-  position: fixed;
-  z-index: 240;
-  inset: 0;
-  display: flex;
-  justify-content: center;
-  padding: 12vh 24px 24px;
-  background: rgb(0 0 0 / 42%);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-}
-
-.search-overlay {
-  width: min(640px, 100%);
-  height: fit-content;
-  max-height: min(64vh, 560px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid var(--line-2);
-  border-radius: calc(18px * var(--radius-scale, 1));
-  background: color-mix(in oklab, var(--glass-2) 98%, var(--canvas-1));
-  box-shadow:
-    0 28px 70px oklch(0 0 0 / 0.28),
-    inset 0 1px 0 oklch(1 0 0 / 0.06);
-  backdrop-filter: blur(28px) saturate(155%);
-  -webkit-backdrop-filter: blur(28px) saturate(155%);
-}
-
-.search-overlay__field {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  gap: 10px;
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--line-1);
-}
-
-.search-overlay__icon {
-  flex-shrink: 0;
-  color: var(--text-4);
-}
-
-.search-overlay__input {
-  width: 100%;
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--text-1);
-  font-size: 15px;
-}
-
-.search-overlay__input::placeholder {
-  color: var(--text-4);
-}
-
-.search-overlay__close {
-  display: grid;
-  flex-shrink: 0;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-4);
-  cursor: pointer;
-}
-
-.search-overlay__close:hover,
-.search-overlay__close:focus-visible {
-  background: var(--hover);
-  color: var(--text-2);
-}
-
-.search-overlay__close:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-.search-overlay__results {
-  overflow: auto;
-  padding: 10px;
-}
-
-.search-overlay__group + .search-overlay__group {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line-1);
-}
-
-.search-overlay__group-title {
-  margin-bottom: 6px;
-  color: var(--text-4);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.search-overlay__result {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
-  border: 0;
-  border-radius: calc(12px * var(--radius-scale, 1));
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.search-overlay__result:hover,
-.search-overlay__result.is-active,
-.search-overlay__result:focus-visible {
-  background: color-mix(in oklab, var(--accent) 16%, transparent);
-}
-
-.search-overlay__result:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 1px var(--accent);
-}
-
-.search-overlay__result-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.search-overlay__result-title {
-  color: var(--text-1);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.search-overlay__result-subtitle {
-  color: var(--text-4);
-  font-size: 11px;
-}
-
-.search-overlay__result-body {
-  color: var(--text-3);
-  font-size: 11.5px;
-  line-height: 1.45;
-}
-
-.search-overlay__empty {
-  padding: 22px 16px;
-}
-
-.search-overlay__empty-title {
-  color: var(--text-2);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.search-overlay__empty-subtitle {
-  margin-top: 4px;
-  color: var(--text-4);
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.search-overlay__loading {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-  padding: 9px 12px;
-  border-radius: calc(10px * var(--radius-scale, 1));
-  background: color-mix(in oklab, var(--hover) 80%, transparent);
-  color: var(--text-3);
-  font-size: 11.5px;
-}
-
-.search-overlay__loading--empty {
-  margin-top: 0;
-  padding: 0;
-  background: transparent;
-  color: var(--text-2);
-  font-weight: 600;
-}
-
 .search-overlay__spinner {
   width: 12px;
   height: 12px;
@@ -426,63 +239,6 @@ watch(() => props.open, (open) => {
 @media (prefers-reduced-motion: reduce) {
   .search-overlay__spinner {
     animation-duration: 1600ms;
-  }
-}
-
-@media (max-width: 719px) {
-  .search-overlay-backdrop {
-    padding: 0;
-    background: var(--canvas-1);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-
-  .search-overlay {
-    width: 100vw;
-    height: 100dvh;
-    max-height: 100dvh;
-    border: 0;
-    border-radius: 0;
-    background: var(--canvas-1);
-    box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-
-  .search-overlay__field {
-    min-height: calc(64px + max(var(--safe-area-top), 0px));
-    padding:
-      max(var(--safe-area-top), 0px)
-      calc(8px + max(var(--safe-area-right), 0px))
-      0
-      calc(16px + max(var(--safe-area-left), 0px));
-    gap: 12px;
-    background: color-mix(in oklab, var(--glass-1) 96%, var(--canvas-1));
-  }
-
-  .search-overlay__input {
-    min-height: 44px;
-    font-size: 16px;
-  }
-
-  .search-overlay__close {
-    width: 44px;
-    height: 44px;
-    color: var(--text-2);
-  }
-
-  .search-overlay__results {
-    flex: 1;
-    padding:
-      12px
-      calc(12px + max(var(--safe-area-right), 0px))
-      calc(16px + max(var(--safe-area-bottom), 0px))
-      calc(12px + max(var(--safe-area-left), 0px));
-  }
-
-  .search-overlay__result {
-    min-height: 56px;
-    padding: 12px;
   }
 }
 </style>

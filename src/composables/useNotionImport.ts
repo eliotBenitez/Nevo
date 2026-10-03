@@ -3,7 +3,6 @@ import { useTreeStore } from '../stores/tree'
 import { useWorkspaceStore } from '../stores/workspace'
 import { useNoteStore } from '../stores/note'
 import {
-  collabCommands,
   importNotionAssets,
   noteCommands,
   pickAndScanNotionExport,
@@ -130,7 +129,6 @@ export function useNotionImport(): {
     if (!workspacePath) throw new Error('Local workspace path is unavailable')
     const updatedAt = new Date().toISOString()
     await noteCommands.saveNote(workspacePath, { ...note, content, updatedAt })
-    await collabCommands.deleteYjsState(workspacePath, note.id)
     noteStore.invalidateNoteCache(note.id)
     treeStore.syncNoteMeta(note.id, { title: note.title, icon: note.icon }, updatedAt)
   }

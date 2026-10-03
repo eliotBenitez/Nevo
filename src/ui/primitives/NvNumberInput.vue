@@ -11,6 +11,7 @@ interface Props {
   placeholder?: string
   size?: 'sm' | 'md'
   allowEmpty?: boolean
+  ariaLabel?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -21,6 +22,7 @@ const props = withDefaults(defineProps<Props>(), {
   min: undefined,
   max: undefined,
   allowEmpty: false,
+  ariaLabel: undefined,
 })
 
 const emit = defineEmits<{ 'update:modelValue': [value: number] }>()
@@ -70,12 +72,12 @@ function onKeydown(event: KeyboardEvent) {
 
 <template>
   <div
-    class="nni-root"
-    :class="[`nni-root--${size}`, disabled && 'nni-root--disabled']"
+    class="nni-root tw:inline-flex tw:items-center tw:overflow-hidden tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--input-bg) tw:transition-[background-color,box-shadow] tw:duration-100 tw:focus-within:bg-(--surface-raised) tw:focus-within:shadow-[0_0_0_2px_var(--input-ring)]"
+    :class="[size === 'sm' ? 'nni-root--sm tw:h-8' : 'nni-root--md tw:h-[34px]', disabled && 'nni-root--disabled tw:pointer-events-none tw:opacity-50']"
   >
     <button
       type="button"
-      class="nni-step"
+      class="nni-step tw:grid tw:h-full tw:w-6 tw:shrink-0 tw:cursor-pointer tw:place-items-center tw:border-0 tw:border-r tw:border-solid tw:border-r-(--border-subtle) tw:bg-transparent tw:text-content-muted tw:transition-colors tw:duration-100 tw:enabled:hover:bg-(--hover-strong) tw:enabled:hover:text-content-primary tw:enabled:active:bg-(--press) tw:disabled:cursor-not-allowed"
       :disabled="disabled || !canDecrement"
       tabindex="-1"
       @click="decrement"
@@ -85,7 +87,8 @@ function onKeydown(event: KeyboardEvent) {
 
     <input
       type="number"
-      class="nni-input"
+      :aria-label="ariaLabel"
+      class="nni-input tw:w-[52px] tw:min-w-0 tw:flex-1 tw:border-0 tw:bg-transparent tw:p-0 tw:text-center tw:font-nv-ui tw:text-xs tw:font-medium tw:text-content-primary tw:caret-accent tw:outline-none tw:placeholder:font-normal tw:placeholder:text-content-muted"
       :value="allowEmpty && !Number.isFinite(modelValue) ? '' : modelValue"
       :min="min"
       :max="max"
@@ -98,7 +101,7 @@ function onKeydown(event: KeyboardEvent) {
 
     <button
       type="button"
-      class="nni-step"
+      class="nni-step tw:grid tw:h-full tw:w-6 tw:shrink-0 tw:cursor-pointer tw:place-items-center tw:border-0 tw:border-l tw:border-solid tw:border-l-(--border-subtle) tw:bg-transparent tw:text-content-muted tw:transition-colors tw:duration-100 tw:enabled:hover:bg-(--hover-strong) tw:enabled:hover:text-content-primary tw:enabled:active:bg-(--press) tw:disabled:cursor-not-allowed"
       :disabled="disabled || !canIncrement"
       tabindex="-1"
       @click="increment"
@@ -109,86 +112,8 @@ function onKeydown(event: KeyboardEvent) {
 </template>
 
 <style scoped>
-.nni-root {
-  display: inline-flex;
-  align-items: center;
-  border-radius: calc(7px * var(--radius-scale, 1));
-  border: 1px solid var(--line-2);
-  background: var(--glass-3, var(--surface-1));
-  transition: border-color 0.12s, box-shadow 0.12s;
-  overflow: hidden;
-}
-
-.nni-root:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-soft);
-}
-
-.nni-root--disabled {
-  opacity: 0.48;
-  pointer-events: none;
-}
-
-/* Sizes */
-.nni-root--sm { height: 28px; }
-.nni-root--md { height: 32px; }
-
 /* Native spinner hidden */
 .nni-input::-webkit-outer-spin-button,
 .nni-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .nni-input { -moz-appearance: textfield; }
-
-.nni-input {
-  flex: 1;
-  min-width: 0;
-  width: 52px;
-  border: none;
-  background: transparent;
-  outline: none;
-  text-align: center;
-  font: 500 12px var(--font-ui);
-  color: var(--text-1);
-  padding: 0;
-  caret-color: var(--accent);
-}
-
-.nni-input::placeholder {
-  color: var(--text-4);
-  font-weight: 400;
-}
-
-.nni-step {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 100%;
-  flex-shrink: 0;
-  border: none;
-  background: transparent;
-  color: var(--text-3);
-  cursor: pointer;
-  transition: background 0.1s, color 0.1s;
-}
-
-.nni-step:first-child {
-  border-right: 1px solid var(--line-1);
-}
-
-.nni-step:last-child {
-  border-left: 1px solid var(--line-1);
-}
-
-.nni-step:hover:not(:disabled) {
-  background: var(--hover-strong);
-  color: var(--text-1);
-}
-
-.nni-step:active:not(:disabled) {
-  background: var(--press);
-}
-
-.nni-step:disabled {
-  color: var(--text-4);
-  cursor: not-allowed;
-}
 </style>

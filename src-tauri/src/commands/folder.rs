@@ -136,6 +136,7 @@ pub(crate) fn create_folder_sync(
         order,
         children: vec![],
         notes: vec![],
+        extra: Default::default(),
     };
     let folder_id = folder.id.clone();
     if !insert_folder(&mut manifest.tree, &parent_id, folder.clone()) {
@@ -224,6 +225,9 @@ pub(crate) fn delete_folder_sync(
                     deleted_at: Utc::now().to_rfc3339(),
                     original_parent_id: None, // Since folder is deleted, restore to root
                     icon: Some(meta.icon.clone()),
+                    // See the matching comment in note::crud's trash push: the
+                    // note's unknown fields survive delete + restore.
+                    extra: meta.extra.clone(),
                 });
             }
         }

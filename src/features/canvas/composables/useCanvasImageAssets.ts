@@ -1,6 +1,11 @@
 import { shallowRef, type Ref } from 'vue'
 import type { CanvasBounds, CanvasPoint } from '../../../core/canvas'
 import type { WorkspaceBackend } from '../../../core/workspace-backend'
+import { MAX_ASSET_MB, isWithinAssetLimit } from '../../../core/assets/assetLimits'
+import { i18n } from '../../../i18n'
+import { rgbaToPngBytes } from '../../../utils/rgbaToPng'
+
+export { rgbaToPngBytes }
 
 interface CanvasImageActions {
   addImageElement: (src: string, alt: string, bounds: CanvasBounds) => string
@@ -26,8 +31,8 @@ function fitImage(point: CanvasPoint, dimensions: ImageDimensions): CanvasBounds
   return { x: point.x - width / 2, y: point.y - height / 2, width, height }
 }
 
-function fileBytes(file: File): Promise<number[]> {
-  return file.arrayBuffer().then(buffer => Array.from(new Uint8Array(buffer)))
+function fileBytes(file: File): Promise<Uint8Array> {
+  return file.arrayBuffer().then(buffer => new Uint8Array(buffer))
 }
 
 async function imageDimensions(file: Blob): Promise<ImageDimensions> {
@@ -40,18 +45,6 @@ async function imageDimensions(file: Blob): Promise<ImageDimensions> {
   } finally {
     URL.revokeObjectURL(url)
   }
-}
-
-export function rgbaToPngBytes(rgba: Uint8Array, width: number, height: number): number[] {
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const context = canvas.getContext('2d')
-  if (!context) throw new Error('2D canvas context unavailable')
-  context.putImageData(new ImageData(new Uint8ClampedArray(rgba), width, height), 0, 0)
-  const encoded = canvas.toDataURL('image/png').split(',')[1] ?? ''
-  const binary = atob(encoded)
-  return Array.from(binary, character => character.charCodeAt(0))
 }
 
 export function useCanvasImageAssets(options: UseCanvasImageAssetsOptions) {
@@ -67,6 +60,10 @@ export function useCanvasImageAssets(options: UseCanvasImageAssetsOptions) {
     if (!file.type.startsWith('image/')) return
     const backend = options.getBackend()
     if (!backend) return
+    if (!isWithinAssetLimit(file.size)) {
+      errorMessage.value = i18n.global.t('editor.assets.tooLarge', { fileName: file.name, limit: `${MAX_ASSET_MB} MB` })
+      return
+    }
     importing.value = true
     errorMessage.value = ''
     try {
@@ -104,7 +101,14 @@ export function useCanvasImageAssets(options: UseCanvasImageAssetsOptions) {
       const { width, height } = await image.size()
       if (!width || !height) return false
       const bytes = rgbaToPngBytes(await image.rgba(), width, height)
-      const imported = await backend.importImageAsset('pasted-canvas-image.png', bytes)
+      if (!isWithinAssetLimit(bytes.length)) {
+        errorMessage.value = i18n.global.t('editor.assets.tooLarge', {
+          fileName: 'pasted-canvas-image.png',
+          limit: `${MAX_ASSET_MB} MB`,
+        })
+        return false
+      }
+      const imported = await backend.importImageAsset('pasted-canvas-image.png', Uint8Array.from(bytes))
       await insertImported(imported.src, '', { width, height })
       return true
     } catch {

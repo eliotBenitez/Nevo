@@ -112,6 +112,39 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
+describe('WorkspaceSidebar workspace subtitle', () => {
+  it('falls back to the generic label until the manifest has loaded', async () => {
+    const wrapper = mountSidebar()
+    await flushUi()
+    expect(wrapper.get('.workspace-subtitle').text()).toBe('Local workspace')
+    wrapper.unmount()
+  })
+
+  it('renders the live note count and updates it when a note is added', async () => {
+    const wrapper = mountSidebar()
+    const workspaceStore = useWorkspaceStore()
+    const note = (id: string) => ({ id, title: id, icon: '📄', folderId: null, updatedAt: '2026-09-27T00:00:00.000Z' })
+    workspaceStore.manifest = {
+      id: 'ws',
+      name: 'Workspace',
+      glyph: 'W',
+      gradient: 'linear-gradient(red, blue)',
+      schemaVersion: 1,
+      createdAt: '2026-09-27T00:00:00.000Z',
+      rootOrder: ['a', 'b'],
+      tree: [{ id: 'f', title: 'Folder', icon: '📁', parentId: null, order: 0, children: [], notes: [{ ...note('c'), folderId: 'f' }] }],
+      rootNotes: [note('a'), note('b')],
+    }
+    await flushUi()
+    expect(wrapper.get('.workspace-subtitle').text()).toBe('3 notes · locally')
+
+    workspaceStore.manifest.rootNotes.push(note('d'))
+    await flushUi()
+    expect(wrapper.get('.workspace-subtitle').text()).toBe('4 notes · locally')
+    wrapper.unmount()
+  })
+})
+
 describe('WorkspaceSidebar', () => {
   it('renders Home as the first active system destination', async () => {
     const wrapper = mountSidebar()
@@ -383,6 +416,48 @@ const treeWithNestedNotes: TreeNode[] = [
     },
   },
 ]
+
+describe('WorkspaceSidebar folder note counts', () => {
+  it('hides the count on an empty folder row', async () => {
+    const wrapper = mountSidebar({ tree: treeWithFolder })
+    await flushUi()
+    const folderRow = wrapper.findAll('.tree-row').find(row => row.text().includes('Projects'))!
+    expect(folderRow.find('.tree-folder-count').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('shows notes-in-folder-plus-descendants on a folder row', async () => {
+    const wrapper = mountSidebar({ tree: treeWithNestedNotes })
+    await flushUi()
+    const folderRow = wrapper.findAll('.tree-row').find(row => row.text().includes('Projects'))!
+    expect(folderRow.get('.tree-folder-count').text()).toBe('1')
+    wrapper.unmount()
+  })
+
+  it('never renders a count on a note row', async () => {
+    const wrapper = mountSidebar({ tree: treeWithNestedNotes })
+    await flushUi()
+    const noteRow = wrapper.findAll('.tree-row').find(row => row.text().includes('Root note'))!
+    expect(noteRow.find('.tree-folder-count').exists()).toBe(false)
+    wrapper.unmount()
+  })
+})
+
+describe('WorkspaceSidebar folder actions', () => {
+  it('renders a Plus icon button with an accessible label on folder rows and triggers create-note-in-folder', async () => {
+    const wrapper = mountSidebar({ tree: treeWithFolder })
+    await flushUi()
+    const folderRow = wrapper.findAll('.tree-row').find(row => row.text().includes('Projects'))!
+    const addBtn = folderRow.find('.tree-folder-add')
+    expect(addBtn.exists()).toBe(true)
+    expect(addBtn.attributes('aria-label')).toBe('New note')
+    expect(addBtn.find('svg').exists()).toBe(true)
+
+    await addBtn.trigger('click')
+    expect(wrapper.emitted('create-note-in-folder')).toEqual([['folder-1']])
+    wrapper.unmount()
+  })
+})
 
 describe('WorkspaceSidebar drag-and-drop', () => {
   it('renders tree rows as draggable', async () => {

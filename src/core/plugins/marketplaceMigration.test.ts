@@ -1,16 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
-import * as Y from 'yjs'
-import { prosemirrorJSONToYDoc, yDocToProsemirrorJSON } from 'y-prosemirror'
-import { Schema } from 'prosemirror-model'
-import { nevoBaseSchema } from '../../editor-core/schema'
 import {
   SANDBOX_PROTOCOL_VERSION,
   type SandboxWorkerRequest,
   type SandboxWorkerResponse,
 } from '../../editor-core/plugin-host/sandboxProtocol'
-import { workspaceCommands, collabCommands } from '../../tauri/commands'
+import { workspaceCommands, noteCommands } from '../../tauri/commands'
 import { collectWorkspaceNoteIds, runMarketplacePluginTransaction } from './marketplaceMigration'
 import type { PluginManifest, WorkspaceManifest } from '../../types/workspace'
+import type { NoteDocument } from '../../types/note'
 
 vi.mock('../../tauri/commands', () => ({
   workspaceCommands: {
@@ -22,8 +19,8 @@ vi.mock('../../tauri/commands', () => ({
     marketplaceCommitPlugin: vi.fn(),
     marketplaceAbortPlugin: vi.fn(),
   },
-  collabCommands: {
-    loadYjsState: vi.fn(),
+  noteCommands: {
+    loadNote: vi.fn(),
   },
 }))
 
@@ -127,17 +124,7 @@ describe('marketplace plugin migration', () => {
     expect(collectWorkspaceNoteIds(workspace())).toEqual(['root-note', 'nested-note'])
   })
 
-  it('validates staged contributions and migrates real Y.Doc copies before commit', async () => {
-    const oldSchema = new Schema({
-      nodes: nevoBaseSchema.spec.nodes.addToEnd('callout_block', {
-        group: 'block',
-        content: 'block+',
-        attrs: { variant: { default: 'info' } },
-        toDOM: () => ['aside', 0],
-        parseDOM: [{ tag: 'aside' }],
-      }),
-      marks: nevoBaseSchema.spec.marks,
-    })
+  it('validates staged contributions and migrates each note\'s content before commit', async () => {
     const oldDocument = {
       type: 'doc',
       content: [{
@@ -149,7 +136,6 @@ describe('marketplace plugin migration', () => {
         }],
       }],
     }
-    const oldYdoc = prosemirrorJSONToYDoc(oldSchema, oldDocument, 'prosemirror')
     const preparedManifest: PluginManifest = {
       id: 'plugin.callout',
       name: 'Callout',
@@ -203,8 +189,15 @@ describe('marketplace plugin migration', () => {
         },
       },
     })
-    vi.mocked(collabCommands.loadYjsState).mockImplementation(async (_path, noteId) =>
-      noteId === 'root-note' ? Y.encodeStateAsUpdate(oldYdoc) : new Uint8Array())
+    vi.mocked(noteCommands.loadNote).mockImplementation(async (_path, noteId) => ({
+      id: noteId,
+      title: noteId,
+      icon: '📄',
+      folderId: null,
+      createdAt: '2026-07-18T00:00:00.000Z',
+      updatedAt: '2026-07-18T00:00:00.000Z',
+      content: noteId === 'root-note' ? oldDocument : { type: 'doc', content: [] },
+    } as NoteDocument))
     vi.mocked(workspaceCommands.revokePluginCodeSession).mockResolvedValue(undefined)
     vi.mocked(workspaceCommands.marketplaceAbortPlugin).mockResolvedValue(undefined)
     vi.mocked(workspaceCommands.marketplaceCommitPlugin).mockImplementation(async (
@@ -213,11 +206,7 @@ describe('marketplace plugin migration', () => {
       _fingerprint,
       migration,
     ) => {
-      const encoded = migration?.collabStatesBase64?.['root-note']
-      expect(encoded).toBeTruthy()
-      const migratedYdoc = new Y.Doc()
-      Y.applyUpdate(migratedYdoc, Uint8Array.from(atob(encoded!), character => character.charCodeAt(0)))
-      expect(yDocToProsemirrorJSON(migratedYdoc, 'prosemirror')).toEqual({
+      expect(migration?.migratedContent?.['root-note']).toEqual({
         type: 'doc',
         content: [{
           type: 'callout_block',
@@ -228,6 +217,9 @@ describe('marketplace plugin migration', () => {
           }],
         }],
       })
+      // The nested note contributed no plugin nodes, so it is loaded (to
+      // check for them) but never included in the migrated bundle.
+      expect(migration?.migratedContent?.['nested-note']).toBeUndefined()
       expect(migration?.workspaceStorage).toEqual({ migrated: true })
       return preparedManifest
     })

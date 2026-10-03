@@ -4,6 +4,9 @@
 
 use std::path::{Path, PathBuf};
 
+use crate::commands::note::notebook::{
+    validate_note_for_write, validate_serialized_size, DocumentFormat,
+};
 use crate::commands::note::NoteDocument;
 use crate::commands::path_utils::write_atomic;
 use crate::commands::workspace::{FolderMeta, WorkspaceManifest};
@@ -60,6 +63,11 @@ pub(super) fn copy_and_remap_notes(
             .map_err(|error| format!("Unable to read imported note {old_id}: {error}"))?;
         let mut doc: NoteDocument = serde_json::from_str(&raw)
             .map_err(|error| format!("Imported note {old_id} is not valid JSON: {error}"))?;
+        let raw_value: serde_json::Value = serde_json::from_str(&raw)
+            .map_err(|error| format!("Imported note {old_id} is not valid JSON: {error}"))?;
+        if validate_note_for_write(&doc)? == DocumentFormat::Notebook {
+            validate_serialized_size(&raw_value)?;
+        }
 
         let new_id = maps
             .notes

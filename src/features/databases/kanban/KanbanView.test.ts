@@ -3,6 +3,7 @@ import { defineComponent, nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createI18n } from 'vue-i18n'
+import { createMemoryHistory, createRouter, RouterView } from 'vue-router'
 import KanbanView from './KanbanView.vue'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { kanbanCommands } from '../../../tauri/commands'
@@ -25,6 +26,13 @@ vi.mock('../../../tauri/commands', async () => {
   }
 })
 
+const editorFlush = vi.fn(async () => false)
+const KanbanCardEditorPaneStub = defineComponent({
+  props: { card: { type: Object, required: true }, board: { type: Object, required: true } },
+  setup(_props, { expose }) { expose({ flush: editorFlush }) },
+  template: '<section class="card-editor-pane-stub" />',
+})
+
 const KanbanColumnStub = defineComponent({
   props: {
     column: {
@@ -35,12 +43,18 @@ const KanbanColumnStub = defineComponent({
       type: Array,
       required: true,
     },
+    selectedCardId: {
+      type: String,
+      default: null,
+    },
   },
+  emits: ['open-card'],
   template: `
     <div
       class="kanban-column-stub"
       :data-column-id="column.id"
       :data-card-count="cards.length"
+      :data-selected-card-id="selectedCardId"
     >
       {{ column.name }}
     </div>
@@ -259,6 +273,64 @@ describe('KanbanView', () => {
       vi.mocked(kanbanCommands.listCards).mock.invocationCallOrder[0],
     )
 
+    wrapper.unmount()
+  })
+
+  it('opens a selected card in the split editor beside the board', async () => {
+    vi.mocked(kanbanCommands.listBoards).mockResolvedValue([makeBoard()])
+    vi.mocked(kanbanCommands.listCards).mockResolvedValue([makeCard()])
+    const wrapper = await mountViewWithStubs('board-1', {
+      KanbanColumn: KanbanColumnStub,
+      KanbanCardEditorPane: true,
+    })
+
+    wrapper.findComponent(KanbanColumnStub).vm.$emit('open-card', 'card-1')
+    await flushUi()
+
+    expect(wrapper.find('.kb-view--split').exists()).toBe(true)
+    expect(wrapper.find('.kanban-column-stub').attributes('data-selected-card-id')).toBe('card-1')
+    expect(wrapper.findComponent({ name: 'KanbanCardEditorPane' }).exists()).toBe(true)
+    expect(wrapper.find('.km-card-modal').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('cancels route leave and board changes when the card editor cannot flush', async () => {
+    vi.mocked(kanbanCommands.listBoards).mockResolvedValue([makeBoard()])
+    vi.mocked(kanbanCommands.listCards).mockResolvedValue([makeCard()])
+    editorFlush.mockClear()
+    editorFlush.mockResolvedValue(false)
+
+    setActivePinia(createPinia())
+    const workspaceStore = useWorkspaceStore()
+    workspaceStore.activeHandle = { kind: 'local', path: '/workspace' }
+    const i18n = createI18n({ legacy: false, locale: 'en', messages: { en: enMessages, ru: ruMessages } })
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/workspace/board/:boardId', component: KanbanView, props: route => ({ boardId: String(route.params.boardId) }) },
+        { path: '/workspace', component: defineComponent({ template: '<div />' }) },
+      ],
+    })
+    const app = defineComponent({ components: { RouterView }, template: '<RouterView />' })
+    const wrapper = mount(app, {
+      global: {
+        plugins: [router, i18n],
+        stubs: { KanbanColumn: KanbanColumnStub, KanbanCardEditorPane: KanbanCardEditorPaneStub },
+      },
+    })
+
+    await router.push('/workspace/board/board-1')
+    await flushUi()
+    wrapper.findComponent(KanbanColumnStub).vm.$emit('open-card', 'card-1')
+    await flushUi()
+
+    await router.push('/workspace')
+    expect(router.currentRoute.value.path).toBe('/workspace/board/board-1')
+    expect(wrapper.find('.kb-view--split').exists()).toBe(true)
+
+    await router.push('/workspace/board/board-2')
+    expect(router.currentRoute.value.params.boardId).toBe('board-1')
+    expect(editorFlush).toHaveBeenCalledTimes(2)
     wrapper.unmount()
   })
 

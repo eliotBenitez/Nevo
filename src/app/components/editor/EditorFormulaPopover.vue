@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { editorPopupInputClass } from './editorPopupClasses'
 import { nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import EditorPopupPanel from './EditorPopupPanel.vue'
@@ -57,7 +58,7 @@ function onInput(event: Event) {
     <input
       id="formula-input"
       ref="inputRef"
-      class="editor-popup-panel__input"
+      class="editor-popup-panel__input" :class="editorPopupInputClass"
       :value="formula"
       :placeholder="t('editor.table.formulaPlaceholder')"
       spellcheck="false"

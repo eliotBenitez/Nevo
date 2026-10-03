@@ -158,9 +158,9 @@ const groups = computed<Group[]>(() => {
 </script>
 
 <template>
-  <div class="kb-group">
-    <div v-if="groupBy !== 'status'" class="kb-group__controls">
-      <span class="kb-group__controls-label">{{ t('kanban.groups.chooseField') }}</span>
+  <div class="kb-group tw:flex tw:flex-1 tw:flex-col tw:overflow-hidden">
+    <div v-if="groupBy !== 'status'" class="kb-group__controls tw:flex tw:items-center tw:gap-2.5 tw:pt-3.5 tw:px-4">
+      <span class="kb-group__controls-label tw:text-[11px] tw:text-content-muted tw:uppercase tw:tracking-[0.04em]">{{ t('kanban.groups.chooseField') }}</span>
       <NvSelect
         :model-value="selectedFieldId"
         :options="fieldOptions"
@@ -170,7 +170,7 @@ const groups = computed<Group[]>(() => {
       />
     </div>
 
-    <div v-if="groupBy !== 'status' && !selectedField" class="kb-group__empty-state">
+    <div v-if="groupBy !== 'status' && !selectedField" class="kb-group__empty-state tw:flex tw:flex-1 tw:flex-col tw:items-center tw:justify-center tw:gap-2.5 tw:text-[var(--text-muted,var(--text-secondary))]">
       <p>{{ t('kanban.groups.noFieldSelected') }}</p>
       <button
         v-if="availableFields.length > 0"
@@ -182,19 +182,19 @@ const groups = computed<Group[]>(() => {
       </button>
     </div>
 
-    <div v-else class="kb-group__lane">
-      <div v-for="group in groups" :key="group.key" class="kb-group__col">
-        <div class="kb-group__header">
-          <span v-if="group.dot" class="kb-group__dot" :style="{ background: group.dot }" />
-          <span class="kb-group__label">{{ group.label }}</span>
-          <span class="kb-group__count">{{ group.cards.length }}</span>
-          <div class="kb-group__spacer" />
-          <button type="button" class="kb-group__add-btn" @click="emit('add-card', group.key)">
+    <div v-else class="kb-group__lane tw:flex tw:flex-1 tw:items-start tw:gap-2.5 tw:overflow-x-auto tw:overflow-y-hidden tw:pt-3.5 tw:px-4 tw:pb-5">
+      <div v-for="group in groups" :key="group.key" class="kb-group__col tw:flex tw:w-60 tw:min-w-60 tw:shrink-0 tw:flex-col tw:gap-1.5">
+        <div class="kb-group__header tw:flex tw:items-center tw:gap-1.5 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle tw:px-2.5 tw:py-1.5 tw:text-[11.5px] tw:font-[550] tw:text-content-primary">
+          <span v-if="group.dot" class="kb-group__dot tw:size-[7px] tw:rounded-full" :style="{ background: group.dot }" />
+          <span class="kb-group__label tw:min-w-0 tw:flex-1 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap">{{ group.label }}</span>
+          <span class="kb-group__count tw:font-nv-mono tw:text-[10.5px] tw:text-content-muted">{{ group.cards.length }}</span>
+          <div class="kb-group__spacer tw:flex-1" />
+          <button type="button" class="kb-group__add-btn tw:flex tw:size-[18px] tw:items-center tw:justify-center tw:rounded-[calc(4px*var(--radius-scale,1))] tw:border-none tw:bg-transparent tw:text-content-muted tw:cursor-pointer" @click="emit('add-card', group.key)">
             <Plus :size="10" />
           </button>
         </div>
 
-        <div class="kb-group__cards">
+        <div class="kb-group__cards tw:flex tw:flex-col tw:gap-[5px]">
           <KanbanCardVue
             v-for="card in group.cards"
             :key="card.id"
@@ -204,7 +204,7 @@ const groups = computed<Group[]>(() => {
             :compact="true"
             @click="emit('open-card', card.id)"
           />
-          <div v-if="!group.cards.length" class="kb-group__empty">
+          <div v-if="!group.cards.length" class="kb-group__empty tw:px-1.5 tw:py-2.5 tw:text-center tw:text-[11.5px] tw:text-content-muted">
             {{ t('kanban.board.dropCard') }}
           </div>
         </div>
@@ -212,118 +212,3 @@ const groups = computed<Group[]>(() => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.kb-group {
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.kb-group__controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 16px 0;
-}
-
-.kb-group__controls-label {
-  font-size: 11px;
-  color: var(--text-4, var(--text-muted));
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.kb-group__empty-state {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  color: var(--text-3, var(--text-secondary));
-}
-
-.kb-group__lane {
-  flex: 1;
-  display: flex;
-  gap: 10px;
-  padding: 14px 16px 20px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  align-items: flex-start;
-}
-
-.kb-group__col {
-  width: 240px;
-  min-width: 240px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.kb-group__header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: calc(8px * var(--radius-scale, 1));
-  background: var(--glass-2, var(--surface-1));
-  border: 1px solid var(--line-2, var(--border-subtle));
-  font-size: 11.5px;
-  font-weight: 550;
-  color: var(--text-1, var(--text-primary));
-}
-
-.kb-group__dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-}
-
-.kb-group__label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.kb-group__count {
-  font-size: 10.5px;
-  color: var(--text-4, var(--text-muted));
-  font-family: var(--font-mono, monospace);
-}
-
-.kb-group__spacer {
-  flex: 1;
-}
-
-.kb-group__add-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: calc(4px * var(--radius-scale, 1));
-  border: none;
-  background: none;
-  color: var(--text-4, var(--text-muted));
-  cursor: pointer;
-}
-
-.kb-group__cards {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.kb-group__empty {
-  font-size: 11.5px;
-  color: var(--text-4, var(--text-muted));
-  padding: 10px 6px;
-  text-align: center;
-}
-</style>

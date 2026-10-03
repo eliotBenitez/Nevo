@@ -117,33 +117,38 @@ const aliasHint = computed(() => {
 </script>
 
 <template>
-  <div v-if="open && (filteredNotes.length > 0 || createEnabled)" ref="menuRef" class="editor-overlay link-picker" :style="menuStyle">
-    <div class="link-picker__header">
-      <span class="link-picker__header-label">[[</span>
-      <span class="link-picker__header-query">{{ query || t('noteEmbed.searchPlaceholder') }}</span>
-      <span class="nv-kbd link-picker__header-esc">{{ t('common.keyboard.esc') }}</span>
+  <div
+    v-if="open && (filteredNotes.length > 0 || createEnabled)"
+    ref="menuRef"
+    class="editor-overlay link-picker tw:fixed tw:z-60 tw:w-[300px] tw:max-w-[min(300px,calc(100vw-24px))] tw:max-h-[min(360px,calc(100vh-24px))] tw:overflow-x-hidden tw:overflow-y-auto tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--menu-bg) tw:shadow-(--shadow-overlay)"
+    :style="menuStyle"
+  >
+    <div class="link-picker__header tw:sticky tw:top-0 tw:flex tw:items-center tw:justify-between tw:gap-2 tw:bg-(--menu-bg) tw:px-3 tw:py-2">
+      <span class="link-picker__header-label tw:font-nv-mono tw:text-[13px] tw:leading-none tw:text-accent">[[</span>
+      <span class="link-picker__header-query tw:flex-1 tw:truncate tw:font-nv-ui tw:text-[12.5px] tw:leading-none tw:text-content-secondary">{{ query || t('noteEmbed.searchPlaceholder') }}</span>
+      <span class="nv-kbd link-picker__header-esc tw:text-[10px]">{{ t('common.keyboard.esc') }}</span>
     </div>
     <button
       v-for="(note, index) in filteredNotes"
       :key="note.id"
-      class="link-picker__item"
-      :class="{ 'is-active': index === clampedActiveIndex }"
+      class="link-picker__item tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2.5 tw:rounded-none tw:border-0 tw:px-3 tw:py-[7px] tw:text-left tw:font-nv-ui tw:text-[13px] tw:leading-[1.35] tw:text-content-secondary tw:transition-[background] tw:duration-140 tw:hover:bg-(--accent-soft)"
+      :class="index === clampedActiveIndex ? 'is-active tw:bg-(--accent-soft)' : 'tw:bg-transparent'"
       @mousedown="emit('itemMousedown', $event)"
       @click="emit('select', note)"
     >
-      <span class="link-picker__icon">{{ note.icon }}</span>
-      <span class="link-picker__title">{{ note.title }}</span>
+      <span class="link-picker__icon tw:flex-[0_0_20px] tw:text-center tw:text-[15px] tw:leading-none">{{ note.icon }}</span>
+      <span class="link-picker__title tw:min-w-0 tw:truncate tw:text-[13.2px] tw:font-medium tw:text-content-primary">{{ note.title }}</span>
     </button>
     <button
       v-if="createEnabled"
-      class="link-picker__item link-picker__create"
-      :class="{ 'is-active': filteredNotes.length === 0 }"
+      class="link-picker__item link-picker__create tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2.5 tw:rounded-none tw:border-0 tw:px-3 tw:py-[7px] tw:text-left tw:font-nv-ui tw:text-[13px] tw:leading-[1.35] tw:text-content-secondary tw:transition-[background] tw:duration-140 tw:hover:bg-(--accent-soft)"
+      :class="filteredNotes.length === 0 ? 'is-active tw:bg-(--accent-soft)' : 'tw:bg-transparent'"
       :title="t('editor.linkPicker.createNote', { title: noteTitleQuery })"
       @mousedown="emit('itemMousedown', $event)"
       @click="onCreateClick"
     >
-      <span class="link-picker__icon link-picker__create-icon">✨</span>
-      <span class="link-picker__title">{{ t('editor.linkPicker.createNote', { title: noteTitleQuery }) }}</span>
+      <span class="link-picker__icon link-picker__create-icon tw:flex-[0_0_20px] tw:text-center tw:text-[15px] tw:leading-none">✨</span>
+      <span class="link-picker__title tw:min-w-0 tw:truncate tw:text-[13.2px] tw:font-medium tw:text-content-primary">{{ t('editor.linkPicker.createNote', { title: noteTitleQuery }) }}</span>
     </button>
     <div v-if="aliasHint" class="link-picker__hint">{{ aliasHint }}</div>
   </div>

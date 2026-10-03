@@ -3,8 +3,8 @@ import type { CanvasDocumentFrame } from '../../core/canvas'
 /**
  * Translates the single document frame's geometry into CSS custom properties
  * and data attributes on the ProseMirror root element. This is the entire
- * bridge between Yjs frame state and layout — ProseMirror itself never knows
- * about the canvas, and no PM transaction/decoration is involved.
+ * bridge between canvas store frame state and layout — ProseMirror itself
+ * never knows about the canvas, and no PM transaction/decoration is involved.
  */
 export function applyCanvasFrameStyle(element: HTMLElement, frame: CanvasDocumentFrame): void {
   element.style.setProperty('--canvas-frame-x', `${frame.x}px`)

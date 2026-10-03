@@ -4,6 +4,7 @@ import {
   validateTransactionIntent,
 } from '../../../editor-core/plugin-host/sandboxTransactions'
 import { getActiveEditor } from './activeEditorRegistry'
+import type { NoteFormatResult } from '../../../core/notebook/types'
 
 /**
  * Editor operations the MCP bridge asks the webview to perform. Kept free of
@@ -41,6 +42,12 @@ export class EditorUnavailableError extends Error {
   }
 }
 
+export function assertEditorFormatSupportsEdit(format: NoteFormatResult | null): void {
+  if (format && format.status !== 'document') {
+    throw new EditorUnavailableError('MCP editor.applyEdit is not supported for this note format.')
+  }
+}
+
 function requireActiveEditor(expectedNoteId?: string | null) {
   const active = getActiveEditor()
   if (!active) {
@@ -50,7 +57,7 @@ function requireActiveEditor(expectedNoteId?: string | null) {
   }
   if (expectedNoteId && expectedNoteId !== active.noteId) {
     // Editing a note that is not on screen would mean writing the file behind
-    // the editor's back, which the editor then overwrites from its Y.Doc.
+    // the editor's back, which the editor then overwrites on its next autosave.
     throw new EditorUnavailableError(
       `Note ${expectedNoteId} is not the note currently open (${active.noteId}). Only the open note can be edited.`,
     )
