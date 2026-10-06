@@ -2,11 +2,12 @@
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, History, Menu, PanelLeft, Settings2, X } from 'lucide-vue-next'
+import { History, Menu, PanelLeft, Settings2, X } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import WindowControls from '../ui/primitives/WindowControls.vue'
 import WorkspaceRightPanel from './components/WorkspaceRightPanel.vue'
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
+import WorkspaceDrawer from './components/WorkspaceDrawer.vue'
 import WorkspaceHome from './components/WorkspaceHome.vue'
 import WorkspaceHomeFavoritesManager from './components/WorkspaceHomeFavoritesManager.vue'
 import MobileBoardsView from './components/mobile/MobileBoardsView.vue'
@@ -275,6 +276,7 @@ async function handleMobileBack() {
     return
   }
   if (isHistoryIndex.value) {
+    if (hasInAppBackEntry()) { router.back(); return }
     await router.push('/workspace')
     return
   }
@@ -294,7 +296,16 @@ async function handleMobileBack() {
     await router.push('/workspace')
     return
   }
+  if (isGraphView.value && hasInAppBackEntry()) {
+    router.back()
+    return
+  }
   await router.push('/workspace')
+}
+
+function hasInAppBackEntry(): boolean {
+  const back = (router.options.history.state as { back?: unknown } | undefined)?.back
+  return typeof back === 'string' && back.startsWith('/workspace')
 }
 
 useMobileBackButton(handleMobileBack, workspaceBackEnabled)
@@ -449,6 +460,7 @@ const workspaceHome = useWorkspaceHome({
   pluginItems: computed(() => pluginUiContributions.value.sidebarItems),
   pluginUiReady,
   updateSettings: workspaceStore.updateSettings,
+  notePreviews: computed(() => workspaceStore.sidebarNotePreviews),
 })
 const homeFavoriteKeys = computed(() =>
   settings.value.general.homeFavorites.map(workspaceHomeFavoriteKey),
@@ -1037,7 +1049,7 @@ function consumePendingBlockTarget() { pendingBlockTarget.value = null }
       </div>
       <TitleBarSearch :search-shortcut="workspaceSearchShortcut" @open="runWorkspaceSearch()" />
       <div class="titlebar-trailing tw:flex tw:items-center tw:justify-self-end tw:gap-2 tw:min-w-0">
-        <div v-if="useCompactHeader" class="titlebar-actions tw:flex tw:items-center tw:gap-1.5 tw:flex-none tw:[-webkit-app-region:no-drag]">
+        <div v-if="useCompactHeader && !runtime.isMobileRuntime" class="titlebar-actions tw:flex tw:items-center tw:gap-1.5 tw:flex-none tw:[-webkit-app-region:no-drag]">
           <button type="button" class="nv-btn titlebar-action-btn tw:min-w-7 tw:focus-visible:outline-none tw:focus-visible:shadow-[0_0_0_2px_var(--accent-soft),0_0_0_1px_var(--accent)]" :title="t('workspace.system.history')" @click="openHistory()"><History :size="13" /><span class="titlebar-action-label">{{ t('workspace.system.history') }}</span></button>
           <button type="button" class="nv-btn titlebar-action-btn tw:min-w-7 tw:focus-visible:outline-none tw:focus-visible:shadow-[0_0_0_2px_var(--accent-soft),0_0_0_1px_var(--accent)]" :title="t('workspace.system.settings')" @click="openSettings()"><Settings2 :size="13" /><span class="titlebar-action-label">{{ t('workspace.system.settings') }}</span></button>
         </div>
@@ -1272,58 +1284,51 @@ function consumePendingBlockTarget() { pendingBlockTarget.value = null }
     />
   </div>
 
-  <Teleport to="body">
-    <div v-if="useDrawerNavigation && mobileSidebarOpen" class="workspace-drawer-backdrop tw:fixed tw:inset-0 tw:z-[55] tw:flex tw:justify-start tw:bg-scrim" @click.self="mobileSidebarOpen = false">
-      <div class="workspace-drawer-panel tw:w-[min(92vw,340px)] tw:h-full tw:flex tw:flex-col tw:bg-(--frame-bg) tw:border-r-0 tw:shadow-(--shadow-overlay)">
-        <div class="workspace-drawer-bar tw:flex tw:items-center tw:justify-between tw:gap-2 tw:p-3 tw:border-b-0">
-          <button type="button" class="nv-btn tw:focus-visible:outline-none tw:focus-visible:shadow-[0_0_0_2px_var(--accent-soft),0_0_0_1px_var(--accent)]" @click="backToOnboarding"><ArrowLeft :size="12" /><span>{{ t('workspace.back') }}</span></button>
-          <button type="button" class="nv-btn workspace-drawer-close tw:focus-visible:outline-none tw:focus-visible:shadow-[0_0_0_2px_var(--accent-soft),0_0_0_1px_var(--accent)]" :aria-label="t('workspace.closeDrawer')" @click="mobileSidebarOpen = false">
-            <X :size="14" />
-            <span>{{ t('workspace.closeDrawer') }}</span>
-          </button>
-        </div>
-        <WorkspaceSidebar
-          :workspace-name="manifest?.name ?? t('workspace.noWorkspace')"
-          :workspace-glyph="manifest?.glyph ?? 'N'"
-          :tree="sidebarTree"
-          :active-note-id="isHistoryView || isHistoryIndex ? null : activeNoteId"
-          :active-folder-id="activeFolderId"
-          :boards="boardsMeta"
-          :active-board-id="activeBoardId"
-          :kanban-enabled="kanbanEnabled"
-          :backend-kind="workspaceStore.backendKind"
-          :sidebar-mode="sidebarContentMode"
-          :note-previews="workspaceStore.sidebarNotePreviews"
-          :plugin-items="pluginUiContributions.sidebarItems"
-          :home-favorite-keys="homeFavoriteKeys"
-          @preview-tags="sidebarModeOverride = 'tag-preview'"
-          @create-note="createNote"
-          @create-notebook="createNotebook"
-          @create-note-in-folder="createNoteInFolder"
-          @create-folder="createFolder"
-          @import-md="importMd"
-          @import-obsidian="openObsidianImport"
-          @import-notion="openNotionImport"
-          @import-into-folder="importMdToFolder"
-          @import-into-note="importMdIntoNote"
-          @open-note="openNote"
-          @open-folder="openFolder"
-          @tree-action="onTreeAction"
-          @open-history="openHistory()"
-          @open-trash="openTrash"
-          @open-settings="openSettings"
-          @open-graph="openGraph"
-          @open-board="openBoard"
-          @open-plugin-item="openPluginItem"
-          @open-home="openWorkspaceHome"
-          @toggle-home="toggleHomeFavorite"
-          @create-board="createBoard"
-          @board-action="onBoardAction"
-          @back-to-onboarding="backToOnboarding"
-        />
-      </div>
-    </div>
-  </Teleport>
+  <WorkspaceDrawer
+    :open="useDrawerNavigation && mobileSidebarOpen"
+    @close="mobileSidebarOpen = false"
+    @back="backToOnboarding"
+  >
+    <WorkspaceSidebar
+      :workspace-name="manifest?.name ?? t('workspace.noWorkspace')"
+      :workspace-glyph="manifest?.glyph ?? 'N'"
+      :tree="sidebarTree"
+      :active-note-id="isHistoryView || isHistoryIndex ? null : activeNoteId"
+      :active-folder-id="activeFolderId"
+      :boards="boardsMeta"
+      :active-board-id="activeBoardId"
+      :kanban-enabled="kanbanEnabled"
+      :backend-kind="workspaceStore.backendKind"
+      :sidebar-mode="sidebarContentMode"
+      :note-previews="workspaceStore.sidebarNotePreviews"
+      :plugin-items="pluginUiContributions.sidebarItems"
+      :home-favorite-keys="homeFavoriteKeys"
+      @preview-tags="sidebarModeOverride = 'tag-preview'"
+      @create-note="createNote"
+      @create-notebook="createNotebook"
+      @create-note-in-folder="createNoteInFolder"
+      @create-folder="createFolder"
+      @import-md="importMd"
+      @import-obsidian="openObsidianImport"
+      @import-notion="openNotionImport"
+      @import-into-folder="importMdToFolder"
+      @import-into-note="importMdIntoNote"
+      @open-note="openNote"
+      @open-folder="openFolder"
+      @tree-action="onTreeAction"
+      @open-history="openHistory()"
+      @open-trash="openTrash"
+      @open-settings="openSettings"
+      @open-graph="openGraph"
+      @open-board="openBoard"
+      @open-plugin-item="openPluginItem"
+      @open-home="openWorkspaceHome"
+      @toggle-home="toggleHomeFavorite"
+      @create-board="createBoard"
+      @board-action="onBoardAction"
+      @back-to-onboarding="backToOnboarding"
+    />
+  </WorkspaceDrawer>
 
   <WorkspaceSearchOverlay
     :open="searchOverlayOpen"

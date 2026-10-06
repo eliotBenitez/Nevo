@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Minus, Plus } from 'lucide-vue-next'
+import { Minus, Plus } from '@lucide/vue'
+import { i18n } from '../../i18n'
 
 interface Props {
   modelValue: number
@@ -12,6 +13,8 @@ interface Props {
   size?: 'sm' | 'md'
   allowEmpty?: boolean
   ariaLabel?: string
+  decreaseLabel?: string
+  increaseLabel?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -23,7 +26,13 @@ const props = withDefaults(defineProps<Props>(), {
   max: undefined,
   allowEmpty: false,
   ariaLabel: undefined,
+  decreaseLabel: undefined,
+  increaseLabel: undefined,
 })
+
+// The global instance, not useI18n(): this primitive also renders inside editor
+// node views (database cells) that are mounted without the app's i18n plugin.
+const t = i18n.global.t
 
 const emit = defineEmits<{ 'update:modelValue': [value: number] }>()
 
@@ -80,6 +89,7 @@ function onKeydown(event: KeyboardEvent) {
       class="nni-step tw:grid tw:h-full tw:w-6 tw:shrink-0 tw:cursor-pointer tw:place-items-center tw:border-0 tw:border-r tw:border-solid tw:border-r-(--border-subtle) tw:bg-transparent tw:text-content-muted tw:transition-colors tw:duration-100 tw:enabled:hover:bg-(--hover-strong) tw:enabled:hover:text-content-primary tw:enabled:active:bg-(--press) tw:disabled:cursor-not-allowed"
       :disabled="disabled || !canDecrement"
       tabindex="-1"
+      :aria-label="decreaseLabel ?? t('common.decrease')"
       @click="decrement"
     >
       <Minus :size="10" />
@@ -104,6 +114,7 @@ function onKeydown(event: KeyboardEvent) {
       class="nni-step tw:grid tw:h-full tw:w-6 tw:shrink-0 tw:cursor-pointer tw:place-items-center tw:border-0 tw:border-l tw:border-solid tw:border-l-(--border-subtle) tw:bg-transparent tw:text-content-muted tw:transition-colors tw:duration-100 tw:enabled:hover:bg-(--hover-strong) tw:enabled:hover:text-content-primary tw:enabled:active:bg-(--press) tw:disabled:cursor-not-allowed"
       :disabled="disabled || !canIncrement"
       tabindex="-1"
+      :aria-label="increaseLabel ?? t('common.increase')"
       @click="increment"
     >
       <Plus :size="10" />

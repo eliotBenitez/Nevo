@@ -82,3 +82,20 @@ export function filterSidebarPreviewsByTags(
       return preview.tags.some(tag => selected.has(tag.toLowerCase()))
     })
 }
+
+type PluralTranslate = (key: string, plural: number, options: { named: Record<string, unknown> }) => string
+
+/**
+ * Summary line for a notebook preview, whose ink has no text to show
+ * ("Notebook · 3 pages"). Returns null for ordinary notes. The caller passes
+ * vue-i18n's `t` and the plural choice resolver for its locale.
+ */
+export function notebookPreviewSummary(
+  preview: Pick<SidebarNotePreview, 'documentKind' | 'notebookPageCount'>,
+  t: PluralTranslate,
+  pluralChoice: (count: number) => number,
+): string | null {
+  if (preview.documentKind !== 'notebook') return null
+  const pages = preview.notebookPageCount ?? 0
+  return t('workspace.sidebarPreview.notebookSummary', pluralChoice(pages), { named: { total: pages } })
+}

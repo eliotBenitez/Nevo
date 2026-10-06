@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronDown, Columns3 } from 'lucide-vue-next'
-import NvPopupMenu from '../../../ui/primitives/NvPopupMenu.vue'
+import { ChevronDown } from '@lucide/vue'
+import KanbanTableFieldMenu from './KanbanTableFieldMenu.vue'
+import { pluralChoice } from '../../../utils/plural-index'
 import type { KanbanBoard, KanbanCard, KanbanPropertyOption } from '../../../types/kanban'
-import { findCardField, getBoardStatusProperty, getCardFieldDescriptors, getCardStatusValue } from './kanbanFields'
+import { findCardField, getBoardStatusProperty, getCardFieldDescriptors, getCardStatusValue, localizeDefaultKanbanLabel } from './kanbanFields'
 
 interface Props {
   board: KanbanBoard
@@ -25,6 +26,8 @@ watch(showProgressColumn, value => {
 })
 
 const statusProp = computed(() => getBoardStatusProperty(props.board))
+const localizeLabel = (label: string) => localizeDefaultKanbanLabel(label, key => t(key))
+const statusHeader = computed(() => statusProp.value ? localizeLabel(statusProp.value.name) : t('kanban.table.status'))
 
 const availableFields = computed(() => getCardFieldDescriptors(props.cards))
 const visibleColumns = computed(() =>
@@ -54,7 +57,7 @@ const groups = computed(() => {
 
   return options.map(option => ({
     id: option.id,
-    name: option.name,
+    name: localizeLabel(option.name),
     dot: option.color,
     cards: filteredCards.value.filter(card => getCardStatusValue(card, props.board) === option.id),
   })).filter(group => group.cards.length > 0)
@@ -73,6 +76,16 @@ const avgProgress = computed(() => {
 
   if (!numericValues.length) return null
   return Math.round(numericValues.reduce((sum, value) => sum + value, 0) / numericValues.length)
+})
+
+const summaryText = computed(() => {
+  const loc = String(locale.value)
+  const cardsTotal = filteredCards.value.length
+  const groupsTotal = groups.value.length
+  return [
+    t('kanban.table.cards', pluralChoice(loc, cardsTotal), { named: { cards: cardsTotal } }),
+    t('kanban.table.groups', pluralChoice(loc, groupsTotal), { named: { groups: groupsTotal } }),
+  ].join(' · ')
 })
 
 function toggleGroup(id: string) {
@@ -172,51 +185,27 @@ function getCardTags(card: KanbanCard, colId: string): KanbanPropertyOption[] {
 
 <template>
   <div class="kb-table tw:flex tw:min-h-0 tw:flex-1 tw:flex-col tw:overflow-hidden">
-    <div class="kb-table__toolbar tw:flex tw:justify-end tw:px-5 tw:pt-3">
-      <NvPopupMenu placement="bottom-end" width="240px">
-        <template #trigger>
-          <button type="button" class="kb-table__field-btn tw:inline-flex tw:h-[30px] tw:items-center tw:gap-1.5 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle tw:px-3 tw:text-content-secondary tw:cursor-pointer">
-            <Columns3 :size="12" />
-            {{ t('kanban.table.chooseFields') }}
-          </button>
-        </template>
-        <div class="kb-table__field-content tw:flex tw:flex-col tw:gap-1.5 tw:px-0.5 tw:py-1">
-          <label class="kb-table__field-option tw:flex tw:items-center tw:gap-2 tw:text-xs tw:text-content-secondary">
-            <input
-              type="checkbox"
-              v-model="showProgressColumn"
-            />
-            <span>{{ t('kanban.card.progress') }}</span>
-            <span class="kb-table__field-type tw:ml-auto tw:text-[11px] tw:text-content-muted">progress</span>
-          </label>
-          <div v-if="availableFields.length" class="kb-table__field-separator tw:my-1 tw:h-px tw:bg-[var(--border-subtle,var(--border-subtle))]" />
-          <label v-for="field in availableFields" :key="field.id" class="kb-table__field-option tw:flex tw:items-center tw:gap-2 tw:text-xs tw:text-content-secondary">
-            <input
-              type="checkbox"
-              :checked="selectedFieldIds.includes(field.id)"
-              @change="toggleVisibleField(field.id)"
-            />
-            <span>{{ field.name }}</span>
-            <span class="kb-table__field-type tw:ml-auto tw:text-[11px] tw:text-content-muted">{{ field.type }}</span>
-          </label>
-          <div v-if="!availableFields.length" class="kb-table__field-empty tw:ml-auto tw:text-[11px] tw:text-content-muted">
-            {{ t('kanban.table.noFields') }}
-          </div>
-        </div>
-      </NvPopupMenu>
+    <div class="kb-table__toolbar tw:flex tw:justify-end tw:px-5 tw:pt-3 tw:max-[760px]:hidden">
+      <KanbanTableFieldMenu
+        v-model:show-progress="showProgressColumn"
+        :fields="availableFields"
+        :selected-field-ids="selectedFieldIds"
+        trigger-class="kb-table__field-btn tw:inline-flex tw:h-[30px] tw:items-center tw:gap-1.5 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle tw:px-3 tw:text-content-secondary tw:cursor-pointer"
+        @toggle-field="toggleVisibleField"
+      />
     </div>
 
-    <div class="kb-table__scroll tw:flex-1 tw:overflow-auto tw:px-5 tw:pt-3.5 tw:pb-6">
-      <table class="kb-table__el tw:w-full tw:border-collapse tw:overflow-hidden tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-[var(--border-default,var(--border-subtle))] tw:bg-surface-raised">
+    <div class="kb-table__scroll tw:flex-1 tw:overflow-auto tw:px-5 tw:pt-3.5 tw:pb-6 tw:max-[760px]:pt-2 tw:max-[760px]:pr-[calc(12px+max(var(--safe-area-right),0px))] tw:max-[760px]:pb-3 tw:max-[760px]:pl-[calc(12px+max(var(--safe-area-left),0px))]">
+      <table class="kb-table__el tw:w-full tw:border-collapse tw:bg-surface-raised">
         <thead>
-          <tr class="kb-table__head-row tw:border-b tw:border-solid tw:border-[var(--border-default,var(--border-subtle))] tw:bg-[var(--hover,var(--surface-overlay))]">
+          <tr class="kb-table__head-row tw:border-x-0 tw:border-t-0 tw:border-b tw:border-solid tw:border-[var(--border-default,var(--border-subtle))] tw:bg-[var(--hover,var(--surface-overlay))]">
             <th class="kb-table__th kb-table__th--check tw:w-7 tw:px-3 tw:py-0 tw:text-left tw:text-[10.5px] tw:font-semibold tw:tracking-[0.04em] tw:text-content-muted tw:whitespace-nowrap tw:uppercase" />
-            <th class="kb-table__th kb-table__th--title tw:min-w-[220px] tw:px-[13px] tw:py-2.5 tw:text-left tw:text-[10.5px] tw:font-semibold tw:tracking-[0.04em] tw:text-content-muted tw:whitespace-nowrap tw:uppercase">{{ t('kanban.table.title') }}</th>
-            <th class="kb-table__th kb-table__th--status tw:w-[120px] tw:px-[13px] tw:py-2.5 tw:text-left tw:text-[10.5px] tw:font-semibold tw:tracking-[0.04em] tw:text-content-muted tw:whitespace-nowrap tw:uppercase">{{ statusProp?.name ?? t('kanban.table.status') }}</th>
-            <th v-if="showProgressColumn" class="kb-table__th kb-table__th--progress tw:px-[13px] tw:py-2.5 tw:text-left tw:text-[10.5px] tw:font-semibold tw:tracking-[0.04em] tw:text-content-muted tw:whitespace-nowrap tw:uppercase">
+            <th class="kb-table__th kb-table__th--title tw:min-w-[220px] tw:px-[13px] tw:py-2.5 tw:max-[760px]:py-2 tw:text-left tw:text-[10.5px] tw:font-semibold tw:tracking-[0.04em] tw:text-content-muted tw:whitespace-nowrap tw:uppercase">{{ t('kanban.table.title') }}</th>
+            <th class="kb-table__th kb-table__th--status tw:w-[120px] tw:px-[13px] tw:py-2.5 tw:max-[760px]:py-2 tw:text-left tw:text-[10.5px] tw:font-semibold tw:tracking-[0.04em] tw:text-content-muted tw:whitespace-nowrap tw:uppercase">{{ statusHeader }}</th>
+            <th v-if="showProgressColumn" class="kb-table__th kb-table__th--progress tw:px-[13px] tw:py-2.5 tw:max-[760px]:py-2 tw:text-left tw:text-[10.5px] tw:font-semibold tw:tracking-[0.04em] tw:text-content-muted tw:whitespace-nowrap tw:uppercase">
               {{ t('kanban.card.progress') }}
             </th>
-            <th v-for="col in visibleColumns" :key="col.id" class="kb-table__th tw:px-[13px] tw:py-2.5 tw:text-left tw:text-[10.5px] tw:font-semibold tw:tracking-[0.04em] tw:text-content-muted tw:whitespace-nowrap tw:uppercase">
+            <th v-for="col in visibleColumns" :key="col.id" class="kb-table__th tw:px-[13px] tw:py-2.5 tw:max-[760px]:py-2 tw:text-left tw:text-[10.5px] tw:font-semibold tw:tracking-[0.04em] tw:text-content-muted tw:whitespace-nowrap tw:uppercase">
               {{ col.name }}
             </th>
           </tr>
@@ -243,19 +232,19 @@ function getCardTags(card: KanbanCard, colId: string): KanbanPropertyOption[] {
               <tr
                 v-for="card in group.cards"
                 :key="card.id"
-                class="kb-table__row tw:border-b tw:border-solid tw:border-[var(--border-subtle,var(--border-subtle))] tw:cursor-pointer tw:hover:bg-[var(--hover,var(--surface-raised))]"
+                class="kb-table__row tw:border-x-0 tw:border-t-0 tw:border-b tw:border-solid tw:border-[var(--border-subtle,var(--border-subtle))] tw:cursor-pointer tw:hover:bg-[var(--hover,var(--surface-raised))]"
                 :class="selectedCardId === card.id ? 'kb-table__row--selected tw:bg-[var(--accent-soft,rgb(161_98_7/0.10))] tw:outline tw:outline-1 tw:outline-solid tw:-outline-offset-1 tw:outline-[color-mix(in_oklab,var(--accent)_34%,transparent)]' : ''"
                 @click="selectedCardId = card.id; emit('open-card', card.id)"
               >
-                <td class="kb-table__td kb-table__td--check tw:w-7 tw:px-3 tw:py-2.5 tw:text-[12.5px] tw:text-content-secondary tw:align-middle tw:whitespace-nowrap">
+                <td class="kb-table__td kb-table__td--check tw:w-7 tw:px-3 tw:py-2.5 tw:max-[760px]:py-2 tw:text-[12.5px] tw:text-content-secondary tw:align-middle tw:whitespace-nowrap">
                   <span class="kb-table__check-dot tw:inline-block tw:size-1 tw:bg-content-muted" />
                 </td>
-                <td class="kb-table__td kb-table__td--title tw:flex tw:min-w-[220px] tw:items-center tw:gap-1.5 tw:max-w-[220px] tw:overflow-hidden tw:px-[13px] tw:py-2.5 tw:text-[13px] tw:font-[450] tw:text-ellipsis tw:whitespace-nowrap tw:text-content-primary tw:align-middle">
+                <td class="kb-table__td kb-table__td--title tw:flex tw:min-w-[220px] tw:items-center tw:gap-1.5 tw:max-w-[220px] tw:overflow-hidden tw:px-[13px] tw:py-2.5 tw:max-[760px]:py-2 tw:text-[13px] tw:font-[450] tw:text-ellipsis tw:whitespace-nowrap tw:text-content-primary tw:align-middle">
                   <span v-if="card.icon" class="kb-table__icon">{{ card.icon }}</span>
                   {{ card.title || t('kanban.table.noTitle') }}
                   <span v-if="selectedCardId === card.id" class="kb-table__caret tw:h-3.5 tw:w-[1.5px] tw:rounded-[calc(1px*var(--radius-scale,1))] tw:bg-accent" />
                 </td>
-                <td class="kb-table__td kb-table__td--status tw:max-w-[220px] tw:overflow-hidden tw:px-[13px] tw:py-2.5 tw:text-[12.5px] tw:text-content-secondary tw:text-ellipsis tw:whitespace-nowrap tw:align-middle">
+                <td class="kb-table__td kb-table__td--status tw:max-w-[220px] tw:overflow-hidden tw:px-[13px] tw:py-2.5 tw:max-[760px]:py-2 tw:text-[12.5px] tw:text-content-secondary tw:text-ellipsis tw:whitespace-nowrap tw:align-middle">
                   <span
                     v-if="getStatusOption(card)"
                     class="kb-table__status tw:inline-flex tw:h-[18px] tw:items-center tw:gap-[5px] tw:rounded-full tw:bg-[var(--hover-strong,var(--surface-overlay))] tw:px-[7px] tw:text-[10.5px] tw:font-medium"
@@ -267,10 +256,10 @@ function getCardTags(card: KanbanCard, colId: string): KanbanPropertyOption[] {
                       class="kb-table__status-dot tw:size-1.5 tw:rounded-full tw:bg-current"
                       :style="getStatusOption(card)?.color ? { background: getStatusOption(card)?.color } : {}"
                     />
-                    {{ getStatusOption(card)?.name }}
+                    {{ localizeLabel(getStatusOption(card)?.name ?? '') }}
                   </span>
                 </td>
-                <td v-if="showProgressColumn" class="kb-table__td kb-table__td--progress tw:max-w-[220px] tw:overflow-hidden tw:px-[13px] tw:py-2.5 tw:text-[12.5px] tw:text-content-secondary tw:text-ellipsis tw:whitespace-nowrap tw:align-middle">
+                <td v-if="showProgressColumn" class="kb-table__td kb-table__td--progress tw:max-w-[220px] tw:overflow-hidden tw:px-[13px] tw:py-2.5 tw:max-[760px]:py-2 tw:text-[12.5px] tw:text-content-secondary tw:text-ellipsis tw:whitespace-nowrap tw:align-middle">
                   <div v-if="typeof card.progress === 'number'" class="kb-table__progress-wrapper tw:flex tw:w-full tw:max-w-[120px] tw:items-center tw:gap-2">
                     <div class="kb-table__progress-bar tw:h-1 tw:flex-1 tw:overflow-hidden tw:rounded-full tw:bg-[var(--border-default,var(--border-subtle))]">
                       <div class="kb-table__progress-fill tw:h-full tw:rounded-full tw:bg-[var(--accent,#3b82f6)]" :style="{ width: card.progress + '%' }" />
@@ -282,7 +271,7 @@ function getCardTags(card: KanbanCard, colId: string): KanbanPropertyOption[] {
                 <td
                   v-for="col in visibleColumns"
                   :key="col.id"
-                  class="kb-table__td tw:max-w-[220px] tw:overflow-hidden tw:px-[13px] tw:py-2.5 tw:text-[12.5px] tw:text-content-secondary tw:text-ellipsis tw:whitespace-nowrap tw:align-middle"
+                  class="kb-table__td tw:max-w-[220px] tw:overflow-hidden tw:px-[13px] tw:py-2.5 tw:max-[760px]:py-2 tw:text-[12.5px] tw:text-content-secondary tw:text-ellipsis tw:whitespace-nowrap tw:align-middle"
                   :style="(!isTagsColumn(col) && getFieldColor(card, col.id)) ? { color: getFieldColor(card, col.id) } : {}"
                 >
                   <template v-if="isTagsColumn(col)">
@@ -308,12 +297,12 @@ function getCardTags(card: KanbanCard, colId: string): KanbanPropertyOption[] {
         </tbody>
 
         <tfoot>
-          <tr class="kb-table__sum-row tw:border-t tw:border-solid tw:border-[var(--border-default,var(--border-subtle))] tw:bg-[var(--hover,var(--surface-raised))]">
-            <td class="kb-table__td tw:max-w-[220px] tw:overflow-hidden tw:px-[13px] tw:py-2.5 tw:text-[12.5px] tw:text-content-secondary tw:text-ellipsis tw:whitespace-nowrap tw:align-middle" />
-            <td class="kb-table__td kb-table__td--sum tw:max-w-[220px] tw:overflow-hidden tw:px-[13px] tw:py-2.5 tw:text-[11px] tw:text-content-muted tw:text-ellipsis tw:whitespace-nowrap tw:align-middle">
-              {{ t('kanban.table.items', { n: filteredCards.length, g: groups.length }) }}
+          <tr class="kb-table__sum-row tw:max-[760px]:hidden tw:border-x-0 tw:border-b-0 tw:border-t tw:border-solid tw:border-[var(--border-default,var(--border-subtle))] tw:bg-[var(--hover,var(--surface-raised))]">
+            <td class="kb-table__td tw:max-w-[220px] tw:overflow-hidden tw:px-[13px] tw:py-2.5 tw:max-[760px]:py-2 tw:text-[12.5px] tw:text-content-secondary tw:text-ellipsis tw:whitespace-nowrap tw:align-middle" />
+            <td class="kb-table__td kb-table__td--sum tw:max-w-[220px] tw:overflow-hidden tw:px-[13px] tw:py-2.5 tw:max-[760px]:py-2 tw:text-[11px] tw:text-content-muted tw:text-ellipsis tw:whitespace-nowrap tw:align-middle">
+              {{ summaryText }}
             </td>
-            <td v-for="_ in ((showProgressColumn ? 2 : 1) + visibleColumns.length)" :key="_" class="kb-table__td tw:max-w-[220px] tw:overflow-hidden tw:px-[13px] tw:py-2.5 tw:text-[12.5px] tw:text-content-secondary tw:text-ellipsis tw:whitespace-nowrap tw:align-middle">
+            <td v-for="_ in ((showProgressColumn ? 2 : 1) + visibleColumns.length)" :key="_" class="kb-table__td tw:max-w-[220px] tw:overflow-hidden tw:px-[13px] tw:py-2.5 tw:max-[760px]:py-2 tw:text-[12.5px] tw:text-content-secondary tw:text-ellipsis tw:whitespace-nowrap tw:align-middle">
               <span v-if="(_ === (showProgressColumn ? 2 : 1)) && avgProgress !== null" class="kb-table__sum-prog tw:font-nv-mono tw:text-[10.5px] tw:text-content-muted">
                 {{ t('kanban.table.avgProgress', { n: avgProgress }) }}
               </span>
@@ -321,6 +310,19 @@ function getCardTags(card: KanbanCard, colId: string): KanbanPropertyOption[] {
           </tr>
         </tfoot>
       </table>
+    </div>
+
+    <div class="kb-table__bar tw:hidden tw:shrink-0 tw:items-center tw:justify-between tw:gap-2 tw:border-x-0 tw:border-b-0 tw:border-t tw:border-solid tw:border-[var(--border-default,var(--border-subtle))] tw:pt-1 tw:pr-[calc(12px+max(var(--safe-area-right),0px))] tw:pb-[calc(4px+max(var(--safe-area-bottom),0px))] tw:pl-[calc(12px+max(var(--safe-area-left),0px))] tw:max-[760px]:flex">
+      <span class="kb-table__bar-summary tw:min-w-0 tw:truncate tw:text-[11px] tw:text-content-muted">
+        {{ summaryText }}<template v-if="avgProgress !== null"> · {{ t('kanban.table.avgProgress', { n: avgProgress }) }}</template>
+      </span>
+      <KanbanTableFieldMenu
+        v-model:show-progress="showProgressColumn"
+        :fields="availableFields"
+        :selected-field-ids="selectedFieldIds"
+        trigger-class="kb-table__field-btn tw:relative tw:inline-flex tw:h-9 tw:shrink-0 tw:items-center tw:gap-1.5 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle tw:px-3 tw:text-content-secondary tw:cursor-pointer tw:after:absolute tw:after:-inset-1 tw:after:content-['']"
+        @toggle-field="toggleVisibleField"
+      />
     </div>
   </div>
 </template>

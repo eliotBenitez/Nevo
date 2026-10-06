@@ -33,7 +33,7 @@ import {
   FileText,
   LayoutTemplate,
   Mic,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import type { NevoSlashItem } from '../../../types/editor-plugin'
 
 export interface SlashMenuEntry {

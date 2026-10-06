@@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n'
 import {
   Pilcrow, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, SquareCode, MessageSquareQuote, CheckSquare,
   Copy, Trash2, Link, ArrowUpToLine, ArrowDownToLine, List, ListOrdered,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import NvMenuItem from '../../../ui/primitives/NvMenuItem.vue'
 import NvMenuSeparator from '../../../ui/primitives/NvMenuSeparator.vue'
 import NvMenuLabel from '../../../ui/primitives/NvMenuLabel.vue'

@@ -19,7 +19,10 @@ describe('Kanban mobile layout', () => {
     const column = readFileSync('src/features/databases/kanban/KanbanColumn.vue', 'utf8')
 
     expect(toolbar).toContain('overflow-x: auto')
-    expect(toolbar).toContain('min-height: 44px')
+    expect(toolbar).toContain('min-height: 36px')
+    expect(toolbar).toContain('mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent)')
+    // Transparent ::after insets keep the effective touch target at 44px.
+    expect(toolbar).toContain('inset: -4px;')
     // Column width/scroll-snap live in a Tailwind arbitrary value now (no
     // spaces allowed inside `[...]`), not a plain CSS media-query rule.
     expect(column).toContain('calc(100vw_-_32px')

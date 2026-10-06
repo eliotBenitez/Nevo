@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Inbox } from 'lucide-vue-next'
+import { Inbox } from '@lucide/vue'
 import NvButton from '../../ui/primitives/NvButton.vue'
 import HistoryBlockContent from './HistoryBlockContent.vue'
 import HistoryDiffRow from './HistoryDiffRow.vue'

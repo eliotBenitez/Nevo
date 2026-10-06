@@ -3,6 +3,18 @@ import type { ComputedRef, Ref } from 'vue'
 import { NOTEBOOK_A4_HEIGHT, NOTEBOOK_A4_WIDTH } from '../../../core/notebook/types'
 
 const PAGE_GAP = 44
+const MIN_ZOOM = 0.35
+const MAX_ZOOM = 3.5
+// Horizontal chrome around a page: NotebookPage's shell pads 30px on each side,
+// plus a little slack so rounding never leaves a sliver cut off.
+const FIT_WIDTH_MARGIN = 64
+
+/** Zoom that fits an A4 page into the container width, capped at 100% so wide containers keep the default. */
+export function fitNotebookWidthZoom(containerWidth: number): number {
+  if (!Number.isFinite(containerWidth) || containerWidth <= 0) return 1
+  const fit = (containerWidth - FIT_WIDTH_MARGIN) / NOTEBOOK_A4_WIDTH
+  return Math.min(1, Math.max(MIN_ZOOM, fit))
+}
 
 export interface NotebookViewport {
   zoom: Ref<number>
@@ -27,6 +39,7 @@ export function createNotebookViewport(pageCount: () => number): NotebookViewpor
   const viewportHeight = ref(800)
   const viewportWidth = ref(800)
   let getElement: () => HTMLElement | null = () => null
+  let initialFitDone = false
   const rowHeight = computed(() => NOTEBOOK_A4_HEIGHT * zoom.value + PAGE_GAP)
   const totalHeight = computed(() => Math.max(1, pageCount()) * rowHeight.value)
   const selectedIndex = computed(() => Math.max(0, Math.min(pageCount() - 1, Math.floor(scrollTop.value / rowHeight.value))))
@@ -48,6 +61,10 @@ export function createNotebookViewport(pageCount: () => number): NotebookViewpor
     scrollTop.value = Math.max(0, element.scrollTop)
     viewportHeight.value = Math.max(1, element.clientHeight)
     viewportWidth.value = Math.max(1, element.clientWidth)
+    if (!initialFitDone && element.clientWidth > 0) {
+      initialFitDone = true
+      zoom.value = fitNotebookWidthZoom(element.clientWidth)
+    }
   }
 
   function setZoom(value: number): void {
@@ -55,7 +72,8 @@ export function createNotebookViewport(pageCount: () => number): NotebookViewpor
   }
 
   function setZoomAt(value: number, localY: number, localX = 0): void {
-    const next = Math.min(3.5, Math.max(0.35, Number.isFinite(value) ? value : zoom.value))
+    initialFitDone = true
+    const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number.isFinite(value) ? value : zoom.value))
     if (next === zoom.value) return
     const element = getElement()
     const oldZoom = zoom.value

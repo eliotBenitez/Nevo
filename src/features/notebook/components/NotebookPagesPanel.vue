@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { Copy, ChevronDown, ChevronUp, Plus, Trash2, X } from 'lucide-vue-next'
+import { Copy, ChevronDown, ChevronUp, Plus, Trash2, X } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import type { NotebookPageV1 } from '../../../core/notebook/types'
 import NvButton from '../../../ui/primitives/NvButton.vue'

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { LockKeyhole, RotateCw } from 'lucide-vue-next'
+import { LockKeyhole, RotateCw } from '@lucide/vue'
 import type { CSSProperties } from 'vue'
 
 defineProps<{

@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft } from 'lucide-vue-next'
+import { ArrowLeft } from '@lucide/vue'
 // Loaded here (not main.ts) so onboarding's CSS ships with this route, not app startup.
 import '../../styles/onboarding.css'
 import WelcomeView from './components/WelcomeView.vue'

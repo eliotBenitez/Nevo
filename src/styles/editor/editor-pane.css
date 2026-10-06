@@ -49,8 +49,17 @@
 }
 
 .doc-body--active-emphasis .nv-prosemirror > .nv-active-block,
+.doc-body--active-emphasis .nv-prosemirror > .nv-active-root,
 .doc-body--active-emphasis .nv-prosemirror:not(:focus-within) > * {
   opacity: 1;
+}
+
+/* Inside a list on the active path, dim sibling items and the active item's
+   other children (nested lists) instead of the whole top-level list. */
+.doc-body--active-emphasis .nv-prosemirror:focus-within .nv-active-list > li:not(.nv-active-list-item),
+.doc-body--active-emphasis .nv-prosemirror:focus-within .nv-active-list-item > :not(.nv-active-block, .nv-active-list) {
+  opacity: 0.42;
+  transition: opacity 180ms ease;
 }
 
 .caret--steady {

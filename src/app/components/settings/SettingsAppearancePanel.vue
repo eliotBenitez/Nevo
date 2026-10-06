@@ -14,6 +14,7 @@ import NvColorPicker from '../../../ui/primitives/NvColorPicker.vue'
 import SettingsSectionHeader from './ui/SettingsSectionHeader.vue'
 import SettingsGroup from './ui/SettingsGroup.vue'
 import SettingsRow from './ui/SettingsRow.vue'
+import { useEditorFontOptions } from '../../composables/useEditorFontOptions'
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
@@ -101,11 +102,7 @@ const motionOptions = ['system', 'reduce', 'full'].map(v => ({
 }))
 const scrollbarOptions = ['hidden', 'thin', 'system'].map(v => ({ value: v, label: opt('scrollbarVisibility', v) }))
 
-const fontOptions = [
-  { value: 'ui', label: 'Geist' },
-  { value: 'serif', label: 'Instrument Serif' },
-  { value: 'mono', label: 'Geist Mono' },
-]
+const fontOptions = useEditorFontOptions()
 
 const roundnessLevels: InterfaceRoundness[] = ['sharp', 'default', 'soft']
 const roundnessLabels: Record<InterfaceRoundness, string> = {
@@ -282,7 +279,7 @@ const roundnessIndex = computed({
           <NvSelect
             :model-value="settings.appearance.editorFontFamily || 'ui'"
             :options="fontOptions"
-            :min-width="150"
+            :min-width="200"
             @update:model-value="v => workspaceStore.updateSettings(draft => { draft.appearance.editorFontFamily = v as any })"
           />
         </SettingsRow>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { LayoutDashboard, LoaderCircle, PencilLine, Plus, Save, Trash2 } from 'lucide-vue-next'
+import { LayoutDashboard, LoaderCircle, PencilLine, Plus, Save, Trash2 } from '@lucide/vue'
 import { useKanbanStore } from '../../../stores/kanban'
 import NvModal from '../../../ui/primitives/NvModal.vue'
 

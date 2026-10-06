@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, markRaw, ref, watch, type CSSProperties } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-vue-next'
+import { MoreHorizontal, Pencil, Plus, Trash2 } from '@lucide/vue'
 import type { KanbanBoard, KanbanBoardCardViewSettings, KanbanCard, KanbanPropertyOption } from '../../../types/kanban'
 import KanbanCardVue from './KanbanCard.vue'
+import { localizeDefaultKanbanLabel } from './kanbanFields'
 import NvPopupMenu from '../../../ui/primitives/NvPopupMenu.vue'
 import type { NvMenuItemDef } from '../../../ui/primitives/menu-types'
 
@@ -41,11 +42,12 @@ const { t } = useI18n()
 const dropZoneIndex = ref<number | null>(null)
 const cardsEl = ref<HTMLDivElement | null>(null)
 const isEditingName = ref(false)
-const draftName = ref(props.column.name)
+const displayName = computed(() => localizeDefaultKanbanLabel(props.column.name, key => t(key)))
+const draftName = ref(displayName.value)
 const quickAddOpen = ref(false)
 const quickAddTitle = ref('')
 
-watch(() => props.column.name, name => {
+watch(displayName, name => {
   if (!isEditingName.value) draftName.value = name
 })
 
@@ -128,15 +130,16 @@ function onColumnDrop(event: DragEvent) {
 }
 
 function startRename() {
-  draftName.value = props.column.name
+  draftName.value = displayName.value
   isEditingName.value = true
 }
 
 function submitRename() {
   const nextName = draftName.value.trim()
   isEditingName.value = false
-  if (!nextName || nextName === props.column.name) {
-    draftName.value = props.column.name
+  // Unchanged text (raw or localized) must not write a translated seed name back into board data.
+  if (!nextName || nextName === props.column.name || nextName === displayName.value) {
+    draftName.value = displayName.value
     return
   }
   emit('rename-column', props.column.id, nextName)
@@ -144,7 +147,7 @@ function submitRename() {
 
 function cancelRename() {
   isEditingName.value = false
-  draftName.value = props.column.name
+  draftName.value = displayName.value
 }
 
 function requestDeleteColumn() {
@@ -198,13 +201,13 @@ function dropZoneClass(zoneIndex: number) {
     @dragleave="onColumnDragLeave"
   >
     <!-- Column header -->
-    <div class="kb-column__header tw:flex tw:min-h-[38px] tw:flex-wrap tw:items-center tw:gap-[7px] tw:px-[9px] tw:pt-2 tw:pb-[7px]">
+    <div class="kb-column__header tw:flex tw:min-h-[38px] tw:flex-wrap tw:items-center tw:gap-[7px] tw:px-[9px] tw:pt-2 tw:pb-[7px] tw:max-[760px]:min-h-9 tw:max-[760px]:gap-1 tw:max-[760px]:py-0 tw:max-[760px]:pr-1">
       <span
         class="kb-column__pill tw:inline-flex tw:h-[22px] tw:min-w-0 tw:max-w-[150px] tw:items-center tw:gap-1.5 tw:rounded-full tw:px-2"
         :style="column.color ? { '--kb-column-color': column.color } : {}"
       >
         <span class="kb-column__dot tw:size-[7px] tw:shrink-0 tw:rounded-full tw:bg-current" />
-        <span class="kb-column__pill-text tw:min-w-0 tw:shrink tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-[12.5px] tw:font-[550]">{{ isEditingName ? t('kanban.view.editingColumn') : column.name }}</span>
+        <span class="kb-column__pill-text tw:min-w-0 tw:shrink tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-[12.5px] tw:font-[550]">{{ isEditingName ? t('kanban.view.editingColumn') : displayName }}</span>
       </span>
       <input
         v-if="isEditingName"
@@ -236,7 +239,7 @@ function dropZoneClass(zoneIndex: number) {
       <div class="kb-column__spacer tw:flex-1" />
       <button
         type="button"
-        class="kb-column__icon-btn tw:flex tw:size-5 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-none tw:bg-transparent tw:text-content-muted tw:transition-colors tw:duration-100 tw:cursor-pointer tw:hover:bg-[var(--hover-strong,var(--surface-overlay))] tw:hover:text-content-secondary tw:max-[760px]:size-11"
+        class="kb-column__icon-btn tw:flex tw:size-5 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-none tw:bg-transparent tw:text-content-muted tw:transition-colors tw:duration-100 tw:cursor-pointer tw:hover:bg-[var(--hover-strong,var(--surface-overlay))] tw:hover:text-content-secondary tw:max-[760px]:relative tw:max-[760px]:size-9 tw:max-[760px]:after:absolute tw:max-[760px]:after:-inset-x-0.5 tw:max-[760px]:after:-inset-y-1 tw:max-[760px]:after:content-['']"
         :title="t('kanban.board.addCard')"
         :aria-label="t('kanban.board.addCard')"
         @click="openQuickAdd"
@@ -252,7 +255,7 @@ function dropZoneClass(zoneIndex: number) {
         <template #trigger>
           <button
             type="button"
-            class="kb-column__icon-btn tw:flex tw:size-5 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-none tw:bg-transparent tw:text-content-muted tw:transition-colors tw:duration-100 tw:cursor-pointer tw:hover:bg-[var(--hover-strong,var(--surface-overlay))] tw:hover:text-content-secondary tw:max-[760px]:size-11"
+            class="kb-column__icon-btn tw:flex tw:size-5 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-none tw:bg-transparent tw:text-content-muted tw:transition-colors tw:duration-100 tw:cursor-pointer tw:hover:bg-[var(--hover-strong,var(--surface-overlay))] tw:hover:text-content-secondary tw:max-[760px]:relative tw:max-[760px]:size-9 tw:max-[760px]:after:absolute tw:max-[760px]:after:-inset-x-0.5 tw:max-[760px]:after:-inset-y-1 tw:max-[760px]:after:content-['']"
             :title="t('kanban.view.columnMenu')"
             :aria-label="t('kanban.view.columnMenu')"
           >
@@ -265,7 +268,7 @@ function dropZoneClass(zoneIndex: number) {
     <!-- Cards list -->
     <div
       ref="cardsEl"
-      class="kb-column__cards tw:flex tw:flex-1 tw:flex-col tw:gap-px tw:overflow-y-auto tw:px-2 tw:pt-[7px] tw:pb-[5px]"
+      class="kb-column__cards tw:flex tw:flex-1 tw:flex-col tw:gap-px tw:overflow-y-auto tw:px-2 tw:pt-[7px] tw:pb-[5px] tw:max-[760px]:pt-0"
       :class="cards.length === 0 ? 'kb-column__cards--empty tw:min-h-20' : 'tw:min-h-12'"
     >
       <template
@@ -281,6 +284,7 @@ function dropZoneClass(zoneIndex: number) {
           :is-selected="selectedCardId === item.card.id"
           :floating-style="floatingCardId === item.card.id ? floatingCardStyle ?? undefined : undefined"
           :compact="compact"
+          hide-status
           :view-settings="viewSettings"
           @click="emit('open-card', item.card.id)"
           @dragstart="onCardDragStart"

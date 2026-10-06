@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
-import { ArrowLeft, Kanban, Plus, Zap, X } from 'lucide-vue-next'
+import { ArrowLeft, Kanban, Plus, Zap, X } from '@lucide/vue'
 import { storeToRefs } from 'pinia'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import { useKanbanStore } from '../../../stores/kanban'
@@ -18,7 +18,7 @@ import KanbanAddCardModal from './KanbanAddCardModal.vue'
 import { useFirstUseHint } from '../../onboarding/hints/useFirstUseHint'
 import type { KanbanBoard, KanbanBoardCardViewSettings, KanbanCard } from '../../../types/kanban'
 import type { KanbanViewMode, KanbanGroupBy } from './KanbanToolbar.vue'
-import { createKanbanId } from './kanbanFields'
+import { createKanbanId, localizeDefaultKanbanLabel } from './kanbanFields'
 import {
   applyFilters,
   applySort,
@@ -28,11 +28,12 @@ import {
   type KanbanSortRule,
 } from './kanbanFilterSort'
 import { useKanbanPointerDrag } from './composables/useKanbanPointerDrag'
+import { pluralChoice } from '../../../utils/plural-index'
 
 interface Props { boardId: string }
 const props = defineProps<Props>()
 const emit = defineEmits<{ 'back': [] }>()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 useFirstUseHint('kanbanViews')
 
@@ -107,6 +108,7 @@ const filterFields = computed(() => {
       high: t('kanban.card.priorityLevels.high'),
       urgent: t('kanban.card.priorityLevels.urgent'),
     },
+    localizeLabel: label => localizeDefaultKanbanLabel(label, key => t(key)),
   })
 })
 const filterSortContext = computed(() =>
@@ -265,7 +267,8 @@ function onBoardDragEnd() {
 const dropStatusName = computed(() => {
   if (!dropTargetColumnId.value || !board.value) return ''
   const opts = kanbanStore.columnsForBoard(board.value)
-  return opts.find(o => o.id === dropTargetColumnId.value)?.name ?? ''
+  const name = opts.find(o => o.id === dropTargetColumnId.value)?.name
+  return name ? localizeDefaultKanbanLabel(name, key => t(key)) : ''
 })
 
 async function openCard(cardId: string) {
@@ -383,10 +386,10 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
     </div>
 
     <!-- Page header -->
-    <div class="kb-view__header tw:flex tw:shrink-0 tw:items-center tw:gap-2 tw:px-5 tw:pt-3.5 tw:pb-2.5 tw:max-[760px]:box-border tw:max-[760px]:min-h-[calc(60px+max(var(--safe-area-top),0px))] tw:max-[760px]:pt-[calc(8px+max(var(--safe-area-top),0px))] tw:max-[760px]:pr-[calc(12px+max(var(--safe-area-right),0px))] tw:max-[760px]:pb-2 tw:max-[760px]:pl-[calc(12px+max(var(--safe-area-left),0px))]">
+    <div class="kb-view__header tw:flex tw:shrink-0 tw:items-center tw:gap-2 tw:px-5 tw:pt-3.5 tw:pb-2.5 tw:max-[760px]:box-border tw:max-[760px]:min-h-[calc(48px+max(var(--safe-area-top),0px))] tw:max-[760px]:pt-[calc(6px+max(var(--safe-area-top),0px))] tw:max-[760px]:pr-[calc(12px+max(var(--safe-area-right),0px))] tw:max-[760px]:pb-1 tw:max-[760px]:pl-[calc(12px+max(var(--safe-area-left),0px))]">
       <button
         type="button"
-        class="nv-btn kb-view__back tw:text-content-muted tw:focus-visible:outline-none tw:focus-visible:shadow-[0_0_0_2px_var(--accent-soft),0_0_0_1px_var(--accent)] tw:max-[760px]:grid tw:max-[760px]:size-11 tw:max-[760px]:shrink-0 tw:max-[760px]:place-items-center tw:max-[760px]:p-0"
+        class="nv-btn kb-view__back tw:text-content-muted tw:focus-visible:outline-none tw:focus-visible:shadow-[0_0_0_2px_var(--accent-soft),0_0_0_1px_var(--accent)] tw:max-[760px]:relative tw:max-[760px]:grid tw:max-[760px]:size-9 tw:max-[760px]:shrink-0 tw:max-[760px]:place-items-center tw:max-[760px]:p-0 tw:max-[760px]:after:absolute tw:max-[760px]:after:-inset-1 tw:max-[760px]:after:content-['']"
         :aria-label="t('kanban.common.back')"
         @click="emit('back')"
       >
@@ -394,7 +397,7 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
       </button>
       <NvNoteIcon :value="board.icon" :size="18" class="kb-view__icon tw:text-lg tw:leading-none" />
       <h1 class="kb-view__title tw:m-0 tw:min-w-0 tw:flex-1 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-xl tw:font-[650] tw:text-content-primary tw:max-[760px]:text-lg">{{ board.title }}</h1>
-      <span class="kb-view__card-count tw:shrink-0 tw:font-nv-mono tw:text-[11px] tw:text-content-muted tw:max-[760px]:hidden">{{ t('kanban.view.cardCount', { n: boardCards.length }) }}</span>
+      <span class="kb-view__card-count tw:shrink-0 tw:font-nv-mono tw:text-[11px] tw:text-content-muted tw:max-[760px]:hidden">{{ t('kanban.view.cardCount', pluralChoice(String(locale), boardCards.length), { named: { cards: boardCards.length } }) }}</span>
     </div>
 
     <!-- Toolbar -->

@@ -165,6 +165,10 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     }
   }
 
+  function isCoarsePointer(): boolean {
+    return typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
+  }
+
   function showForBlock(pos: number): boolean {
     const view = core.editorView
     if (!view || blockHandle.isDragging) return false
@@ -186,7 +190,7 @@ export function useBlockHandle(core: EditorCore, options: UseBlockHandleOptions 
     if (blockRect.width === 0 && blockRect.height === 0) return false
 
     const handleBounds = options.getHandleBoundaryEl?.()?.getBoundingClientRect()
-    const nextPosition = resolveBlockHandlePosition(blockRect, handleBounds)
+    const nextPosition = resolveBlockHandlePosition(blockRect, handleBounds, isCoarsePointer())
 
     if (
       blockHandle.visible

@@ -2,7 +2,7 @@ import { computed, type Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { NevoSandboxSidebarItem, NevoSandboxWorkspaceView } from '../../types/editor-plugin'
 import type { KanbanBoardMeta } from '../../types/kanban'
-import type { FolderMeta, NoteMeta } from '../../types/note'
+import type { FolderMeta, NoteMeta, SidebarNotePreview } from '../../types/note'
 import type { WorkspaceHomeFavorite, WorkspaceManifest, WorkspaceSettings } from '../../types/workspace'
 import { workspaceHomeFavoriteKey } from '../../utils/workspace-settings/normalizers'
 
@@ -18,6 +18,8 @@ export interface WorkspaceHomeItem {
   updatedAt: string | null
   available: boolean
   loading: boolean
+  /** Localized type caption ("Note", "Notebook", "Folder", ...) shown under the title. */
+  typeLabel: string
 }
 
 interface UseWorkspaceHomeOptions {
@@ -29,6 +31,8 @@ interface UseWorkspaceHomeOptions {
   pluginItems: Ref<NevoSandboxSidebarItem[]>
   pluginUiReady: Ref<boolean>
   updateSettings: (mutator: (draft: WorkspaceSettings) => void) => Promise<void>
+  /** Note previews carry each note's document kind, which the manifest does not record. */
+  notePreviews?: Ref<SidebarNotePreview[]>
 }
 
 function collectWorkspaceEntities(manifest: WorkspaceManifest | null) {
@@ -68,7 +72,22 @@ export function useWorkspaceHome(options: UseWorkspaceHomeOptions) {
     return result
   })
 
+  const notebookIds = computed(() => new Set(
+    (options.notePreviews?.value ?? [])
+      .filter(preview => preview.documentKind === 'notebook')
+      .map(preview => preview.noteId),
+  ))
+
+  function typeLabel(favorite: WorkspaceHomeFavorite): string {
+    if (favorite.kind === 'note' && notebookIds.value.has(favorite.id)) return t('workspace.home.types.notebook')
+    return t(`workspace.home.types.${favorite.kind}`)
+  }
+
   function resolveFavorite(favorite: WorkspaceHomeFavorite): WorkspaceHomeItem {
+    return { ...resolveFavoriteTarget(favorite), typeLabel: typeLabel(favorite) }
+  }
+
+  function resolveFavoriteTarget(favorite: WorkspaceHomeFavorite): Omit<WorkspaceHomeItem, 'typeLabel'> {
     const key = workspaceHomeFavoriteKey(favorite)
     if (favorite.kind === 'graph') {
       return {

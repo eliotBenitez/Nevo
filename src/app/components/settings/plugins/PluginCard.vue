@@ -2,7 +2,7 @@
 import { computed, markRaw } from 'vue'
 import type { Component } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { FolderOpen, Github, Kanban, LayoutTemplate, Network, BarChart3, Settings, Trash2 } from 'lucide-vue-next'
+import { FolderOpen, GitBranch, Kanban, LayoutTemplate, Network, BarChart3, Settings, Trash2 } from '@lucide/vue'
 import type { PluginManifest } from '../../../../types/workspace'
 import { isSystemPluginId, SYSTEM_PLUGIN_SHORT_IDS } from '../../../../utils/system-plugins'
 import NvButton from '../../../../ui/primitives/NvButton.vue'
@@ -32,7 +32,7 @@ const systemPluginIcons: Record<string, Component> = {
   'nevo.templates': markRaw(LayoutTemplate),
   'nevo.vega': markRaw(BarChart3),
   'nevo.markmap': markRaw(Network),
-  'nevo.github-sync': markRaw(Github),
+  'nevo.github-sync': markRaw(GitBranch),
 }
 
 const title = computed(() => {

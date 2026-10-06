@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Upload } from 'lucide-vue-next'
+import { Upload } from '@lucide/vue'
 import NvModal from '../../../../ui/primitives/NvModal.vue'
 import NvSelect from '../../../../ui/primitives/NvSelect.vue'
 import { parseCsv, inferColumnType, detectDelimiter, CSV_DELIMITERS } from '../../../../utils/csv/parseCsv'

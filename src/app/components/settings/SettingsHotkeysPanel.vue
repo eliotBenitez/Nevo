@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Keyboard, RotateCcw, Search } from 'lucide-vue-next'
+import { Keyboard, RotateCcw, Search } from '@lucide/vue'
 import { useSettingsHotkeys } from '../../composables/useSettingsHotkeys'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import SettingsSectionHeader from './ui/SettingsSectionHeader.vue'

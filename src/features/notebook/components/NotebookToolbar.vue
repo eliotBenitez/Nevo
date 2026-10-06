@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Download, Eraser, Hand, Highlighter, ImagePlus, LassoSelect, Minus, MousePointer2, Move, MoveUpRight, PanelLeft, PenLine, Plus, Redo2, Ruler, Spline, Undo2 } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { Download, Eraser, Hand, Highlighter, ImagePlus, LassoSelect, Minus, Move, MoveUpRight, PanelLeft, PenLine, Plus, Redo2, Ruler, Spline, Spotlight, Undo2 } from '@lucide/vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvNumberInput from '../../../ui/primitives/NvNumberInput.vue'
@@ -70,7 +70,7 @@ const tools = computed(() => [
   { id: 'marker' as const, label: t('notebook.tools.marker'), icon: Highlighter },
   { id: 'eraser' as const, label: t('notebook.tools.eraser'), icon: Eraser },
   { id: 'lasso' as const, label: t('notebook.tools.lasso'), icon: LassoSelect },
-  { id: 'laser' as const, label: t('notebook.tools.laser'), icon: MousePointer2 },
+  { id: 'laser' as const, label: t('notebook.tools.laser'), icon: Spotlight },
   { id: 'arrow' as const, label: t('notebook.tools.arrow'), icon: MoveUpRight },
   { id: 'line' as const, label: t('notebook.tools.line'), icon: Minus },
   { id: 'move' as const, label: t('notebook.tools.move'), icon: Move },
@@ -90,6 +90,13 @@ const paperOptions = computed(() => [
   { value: 'grid', label: t('notebook.paper.grid') },
   { value: 'ruled', label: t('notebook.paper.ruled') },
 ])
+
+// On phones the tool strip scrolls horizontally; keep the active tool in view.
+watch(() => props.tool, async () => {
+  await nextTick()
+  const active = root.value?.querySelector<HTMLElement>('.notebook-toolbar__tools [aria-pressed="true"]')
+  if (active && typeof active.scrollIntoView === 'function') active.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+})
 
 function updateWidth(width: number): void {
   if (props.tool === 'marker') emit('update:markerWidth', width)
@@ -118,6 +125,7 @@ function updateWidth(width: number): void {
           :presets="presets"
           :recents="recents"
           :quick-colors="quickColors"
+          :show-quick="false"
           :label="t('notebook.tools.color')"
           @update:model-value="emit('update:color', $event)"
           @add-preset="emit('addPreset', $event)"
@@ -194,12 +202,12 @@ function updateWidth(width: number): void {
         <NvButton variant="ghost" icon :disabled="!canRedo" :aria-label="t('notebook.redo')" @click="emit('redo')">
           <Redo2 :size="16" aria-hidden="true" />
         </NvButton>
-        <span class="notebook-toolbar__separator" aria-hidden="true" />
-        <NvButton variant="ghost" icon :aria-label="t('notebook.zoomOut')" @click="emit('zoomOut')">
+        <span class="notebook-toolbar__separator notebook-toolbar__zoom-control" aria-hidden="true" />
+        <NvButton class="notebook-toolbar__zoom-control" variant="ghost" icon :aria-label="t('notebook.zoomOut')" @click="emit('zoomOut')">
           <Minus :size="16" aria-hidden="true" />
         </NvButton>
-        <span class="notebook-toolbar__zoom" aria-live="polite">{{ Math.round(zoom * 100) }}%</span>
-        <NvButton variant="ghost" icon :aria-label="t('notebook.zoomIn')" @click="emit('zoomIn')">
+        <span class="notebook-toolbar__zoom notebook-toolbar__zoom-control" aria-live="polite">{{ Math.round(zoom * 100) }}%</span>
+        <NvButton class="notebook-toolbar__zoom-control" variant="ghost" icon :aria-label="t('notebook.zoomIn')" @click="emit('zoomIn')">
           <Plus :size="16" aria-hidden="true" />
         </NvButton>
       </div>
@@ -277,13 +285,6 @@ function updateWidth(width: number): void {
 .notebook-toolbar--compact .notebook-toolbar__actions { grid-column: 1 / -1; grid-row: 2; justify-self: end; }
 .notebook-toolbar--compact .notebook-toolbar__export-label { display: none; }
 
-@container notebook-editor (max-width: 560px) {
-  .notebook-toolbar__tools { grid-column: 1 / -1; grid-row: 2; width: 100%; }
-  .notebook-toolbar :deep(.notebook-color-control__quick) { display: none; }
-  .notebook-toolbar__style, .notebook-toolbar--compact .notebook-toolbar__style { grid-row: 3; justify-self: center; flex-wrap: wrap; justify-content: center; max-width: 100%; }
-  .notebook-toolbar__actions, .notebook-toolbar--compact .notebook-toolbar__actions { grid-row: 4; justify-self: center; }
-}
-
 @media (pointer: coarse) {
   .notebook-toolbar :deep(.nv-btn) { min-width: 44px; min-height: 44px; height: 44px; }
   .notebook-toolbar :deep(.nv-btn--icon) { width: 44px; }
@@ -298,10 +299,73 @@ function updateWidth(width: number): void {
     .notebook-toolbar__actions { grid-column: 1 / -1; grid-row: 2; justify-self: end; }
     .notebook-toolbar__export-label { display: none; }
   }
+}
+
+/* Touch tablets: 36px controls instead of the 44px phone size, so the toolbar
+   reads as a tool palette rather than a stack of big chips. Each button keeps a
+   ~42x44px hit area through a transparent ::after, and the tool strip spacing
+   (36px + 6px gap) keeps neighbouring hit areas from overlapping. */
+@media (pointer: coarse) {
+  @container notebook-editor (min-width: 561px) {
+    .notebook-toolbar { min-height: 0; padding: 6px 12px; row-gap: 6px; }
+    .notebook-toolbar :deep(.nv-btn) { position: relative; min-width: 36px; min-height: 36px; height: 36px; }
+    .notebook-toolbar :deep(.nv-btn--icon) { width: 36px; }
+    .notebook-toolbar :deep(.nv-btn)::after { content: ''; position: absolute; inset: -4px -3px; }
+    .notebook-toolbar__tools, .notebook-toolbar__actions, .notebook-dash, .notebook-eraser-mode { gap: 6px; }
+    .notebook-toolbar__style { gap: 8px; }
+    .notebook-width :deep(.nni-root), .notebook-toolbar__paper-select :deep(.nv-select__trigger) { min-height: 36px; height: 36px; }
+    .notebook-width :deep(.nni-step) { width: 36px; }
+    .notebook-toolbar .notebook-toolbar__style :deep(.nv-color-picker__trigger--swatch) { width: 36px; height: 36px; }
+    .notebook-toolbar .notebook-toolbar__style :deep(.notebook-color-control__quick-swatch) { width: 28px; height: 28px; }
+  }
+}
+
+/* Phone width: two rows instead of four or five. Row 1 holds the pages toggle, a
+   horizontally scrolling tool strip and export; row 2 the pen style (scrolling
+   when the line or eraser options add buttons) with undo/redo pinned right.
+   Declared last so it overrides the wider and coarse-pointer layouts above. */
+@container notebook-editor (max-width: 560px) {
+  .notebook-toolbar, .notebook-toolbar--compact { grid-template-columns: auto minmax(0, 1fr) auto; row-gap: 4px; }
+  .notebook-toolbar__left, .notebook-toolbar__right { display: contents; }
+  .notebook-toolbar__pages-toggle { grid-column: 1; grid-row: 1; justify-self: start; }
+  .notebook-toolbar__export, .notebook-toolbar--compact .notebook-toolbar__export { grid-column: 3; grid-row: 1; justify-self: end; }
+  .notebook-toolbar__export-label { display: none; }
+  .notebook-toolbar__tools,
+  .notebook-toolbar__style,
+  .notebook-toolbar--compact .notebook-toolbar__style {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    justify-self: stretch;
+    /* Room for focus rings, which a scroll container would otherwise clip. */
+    margin: -3px;
+    padding: 3px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .notebook-toolbar__tools::-webkit-scrollbar,
+  .notebook-toolbar__style::-webkit-scrollbar { display: none; }
+  .notebook-toolbar__tools > *, .notebook-toolbar__style > * { flex: none; }
+  /* Fade the trailing edge so a cut-off row reads as scrollable; the end padding
+     lets the last control scroll clear of the fade. */
+  .notebook-toolbar__tools,
+  .notebook-toolbar__style,
+  .notebook-toolbar--compact .notebook-toolbar__style {
+    padding-inline-end: 28px;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
+  .notebook-toolbar__tools { grid-column: 2; grid-row: 1; width: auto; }
+  .notebook-toolbar__style, .notebook-toolbar--compact .notebook-toolbar__style { grid-column: 1 / 3; grid-row: 2; }
+  .notebook-toolbar__actions, .notebook-toolbar--compact .notebook-toolbar__actions { grid-column: 3; grid-row: 2; justify-self: end; }
+  .notebook-toolbar :deep(.notebook-color-control__quick) { display: none; }
+  .notebook-width__unit { display: none; }
+}
+
+/* Touch phones zoom with a pinch (useNotebookInteraction), so the zoom buttons go. */
+@media (pointer: coarse) {
   @container notebook-editor (max-width: 560px) {
-    .notebook-toolbar__tools { grid-column: 1 / -1; grid-row: 2; }
-    .notebook-toolbar__style { grid-row: 3; justify-self: center; }
-    .notebook-toolbar__actions { grid-row: 4; justify-self: center; }
+    .notebook-toolbar__zoom-control { display: none; }
   }
 }
 </style>

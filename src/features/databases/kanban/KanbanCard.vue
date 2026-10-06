@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, type CSSProperties } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { GripVertical } from 'lucide-vue-next'
+import { GripVertical } from '@lucide/vue'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import type { KanbanBoard, KanbanBoardCardViewSettings, KanbanCard, KanbanCardField, KanbanCardPriority, KanbanPropertyOption } from '../../../types/kanban'
-import { getBoardStatusProperty, getCardStatusValue, computeTaskProgress } from './kanbanFields'
+import { getBoardStatusProperty, getCardStatusValue, computeTaskProgress, localizeDefaultKanbanLabel } from './kanbanFields'
 
 interface Props {
   card: KanbanCard
@@ -16,6 +16,8 @@ interface Props {
   isSelected?: boolean
   isHighlighted?: boolean
   compact?: boolean
+  // Set when the card sits in a column of the status property: the column already conveys the status.
+  hideStatus?: boolean
 }
 
 const props = defineProps<Props>()
@@ -43,6 +45,9 @@ const statusOption = computed(() => {
   if (!val) return null
   return statusProp.value.options?.find(o => o.id === val) ?? null
 })
+
+const showStatusChip = computed(() => !!statusOption.value && !isCompactCard.value && !props.hideStatus)
+const statusLabel = computed(() => statusOption.value ? localizeDefaultKanbanLabel(statusOption.value.name, key => t(key)) : '')
 
 const visiblePropertySet = computed(() => {
   const ids = settings.value.visiblePropertyIds
@@ -287,11 +292,11 @@ function getTagColorStyle(tag: KanbanPropertyOption) {
 
     <div
       class="kb-card__inner tw:flex tw:min-w-0 tw:flex-1 tw:flex-col"
-      :class="isCompactCard ? 'tw:gap-[5px] tw:py-2 tw:pr-2.5 tw:pl-0.5' : 'tw:gap-[7px] tw:pt-2.5 tw:pr-[11px] tw:pb-[11px] tw:pl-0.5'"
+      :class="isCompactCard ? 'tw:gap-[5px] tw:py-2 tw:pr-2.5 tw:pl-0.5 tw:max-[760px]:py-2.5' : 'tw:gap-[7px] tw:pt-2.5 tw:pr-[11px] tw:pb-[11px] tw:pl-0.5 tw:max-[760px]:py-3'"
     >
-      <div v-if="(statusOption && !isCompactCard) || priorityColor" class="kb-card__status-row tw:flex tw:items-center">
+      <div v-if="showStatusChip || priorityColor" class="kb-card__status-row tw:flex tw:items-center">
         <span
-          v-if="statusOption && !isCompactCard"
+          v-if="statusOption && showStatusChip"
           class="kb-card__status tw:inline-flex tw:h-[18px] tw:items-center tw:gap-[5px] tw:rounded-full tw:bg-[var(--hover-strong,var(--surface-overlay))] tw:px-[7px] tw:text-[10.5px] tw:font-medium tw:text-[var(--text-muted,var(--text-secondary))]"
           :style="statusOption.color
             ? { background: statusOption.color + '22', color: statusOption.color }
@@ -301,7 +306,7 @@ function getTagColorStyle(tag: KanbanPropertyOption) {
             class="kb-card__status-dot tw:size-1.5 tw:shrink-0 tw:rounded-full tw:bg-[var(--text-muted,currentColor)]"
             :style="statusOption.color ? { background: statusOption.color } : {}"
           />
-          {{ statusOption.name }}
+          {{ statusLabel }}
         </span>
         <span
           v-if="priorityColor"

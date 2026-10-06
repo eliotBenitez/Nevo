@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Trash2 } from 'lucide-vue-next'
+import { Trash2 } from '@lucide/vue'
 // Loaded here (not main.ts) so this modal's CSS ships only when a card opens.
 import '../../../styles/features/kanban-modal.css'
 import type { KanbanBoard, KanbanCard, KanbanCardField, KanbanCardPriority } from '../../../types/kanban'

@@ -4,6 +4,7 @@ import { mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import en from '../../locales/en.json'
 import { createDefaultWorkspaceSettings } from '../../utils/workspace-settings'
+import type { SidebarNotePreview } from '../../types/note'
 import type { WorkspaceManifest, WorkspaceSettings } from '../../types/workspace'
 import { useWorkspaceHome } from './useWorkspaceHome'
 
@@ -62,6 +63,7 @@ function mountHome(settingsOverride?: Partial<WorkspaceSettings['general']>) {
   const pluginItems = ref([])
   const pluginUiReady = ref(true)
   const kanbanEnabled = ref(true)
+  const notePreviews = ref<SidebarNotePreview[]>([])
   let home!: ReturnType<typeof useWorkspaceHome>
   const updateSettings = async (mutator: (draft: WorkspaceSettings) => void) => {
     const draft = JSON.parse(JSON.stringify(settings.value)) as WorkspaceSettings
@@ -79,15 +81,35 @@ function mountHome(settingsOverride?: Partial<WorkspaceSettings['general']>) {
         pluginItems,
         pluginUiReady,
         updateSettings,
+        notePreviews,
       })
       return () => null
     },
   })
   const wrapper = mount(Harness, { global: { plugins: [i18n] } })
-  return { wrapper, home, manifest, settings, pluginViews, pluginUiReady, kanbanEnabled }
+  return { wrapper, home, manifest, settings, pluginViews, pluginUiReady, kanbanEnabled, notePreviews }
 }
 
 describe('useWorkspaceHome', () => {
+  it('captions notebooks as notebooks once their previews report the document kind', () => {
+    const { wrapper, home, notePreviews } = mountHome({ homeFavorites: [{ kind: 'note', id: 'note-2' }, { kind: 'board', id: 'board-1' }] })
+    const typeOf = (title: string) => home.recentItems.value.find(item => item.title === title)?.typeLabel
+
+    // Before previews load, every note falls back to the generic caption.
+    expect(typeOf('Beta')).toBe('Note')
+
+    notePreviews.value = [
+      { noteId: 'note-2', title: 'Beta', icon: '📓', folderPath: 'Projects', updatedAt: '', tags: [], previewText: '', documentKind: 'notebook' },
+      { noteId: 'note-1', title: 'Alpha', icon: '📄', folderPath: '', updatedAt: '', tags: [], previewText: 'Text' },
+    ]
+    expect(typeOf('Beta')).toBe('Notebook')
+    expect(typeOf('Alpha')).toBe('Note')
+    expect(typeOf('Roadmap')).toBe('Board')
+    expect(home.favoriteItems.value.map(item => item.typeLabel)).toEqual(['Notebook', 'Board'])
+    wrapper.unmount()
+  })
+
+
   it('resolves every favorite type and combines recent notes and boards stably', () => {
     const { wrapper, home } = mountHome({
       homeFavorites: [

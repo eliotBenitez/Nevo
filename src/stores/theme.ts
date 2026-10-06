@@ -13,6 +13,7 @@ import type {
 } from '../types/workspace'
 import { useWorkspaceStore } from './workspace'
 import { applyWebviewZoom } from '../tauri/webview'
+import { syncAndroidSystemBars } from '../utils/androidSystemBars'
 
 type Theme = ThemeMode
 type ResolvedTheme = 'light' | 'dark'
@@ -66,6 +67,7 @@ export const useThemeStore = defineStore('theme', () => {
     document.documentElement.classList.remove('theme-dark', 'theme-light')
     document.documentElement.classList.add(`theme-${resolved}`)
     appliedTheme = resolved
+    syncAndroidSystemBars(resolved)
   }
 
   function applyTheme(t: Theme, options: { animate?: boolean } = {}) {

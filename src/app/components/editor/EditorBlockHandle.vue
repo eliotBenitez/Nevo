@@ -34,7 +34,7 @@ import {
   Link2,
   Plus,
   BarChart3,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 
 defineProps<{
   visible: boolean
@@ -130,8 +130,8 @@ const { t } = useI18n()
     <button
       type="button"
       class="block-handle__btn block-handle__insert-below tw:hidden tw:h-[22px] tw:w-4 tw:shrink-0 tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:p-0 tw:text-content-muted tw:transition-[background,color] tw:duration-80 tw:hover:bg-(--hover) tw:hover:text-content-secondary tw:coarse:flex tw:coarse:h-11 tw:coarse:w-11 tw:coarse:touch-none tw:coarse:text-content-secondary tw:coarse:active:bg-(--hover-strong) tw:coarse:active:text-accent"
-      :aria-label="t('editor.blockMenu.insertBelow')"
-      :title="t('editor.blockMenu.insertBelow')"
+      :aria-label="t('editor.blockHandle.insertBelow')"
+      :title="t('editor.blockHandle.insertBelow')"
       @mousedown.prevent.stop
       @click.prevent.stop="emit('insertBelow')"
     >

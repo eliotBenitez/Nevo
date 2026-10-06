@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { Check, Plus } from 'lucide-vue-next'
+import { Check, Plus } from '@lucide/vue'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import type { WorkspaceHomeItem } from '../../composables/useWorkspaceHome'
 
@@ -16,11 +16,11 @@ const { t } = useI18n()
 </script>
 
 <template>
-  <div class="home-manager__candidate tw:flex tw:min-h-[56px] tw:relative tw:items-center tw:gap-2 tw:py-1 tw:px-1.5 tw:rounded-none tw:bg-transparent" :title="`${item.title} — ${t(`workspace.home.types.${item.kind}`)}`">
+  <div class="home-manager__candidate tw:flex tw:min-h-[56px] tw:relative tw:items-center tw:gap-2 tw:py-1 tw:px-1.5 tw:rounded-none tw:bg-transparent" :title="`${item.title} — ${item.typeLabel}`">
     <span class="home-manager__item-icon tw:grid tw:w-[34px] tw:h-[34px] tw:flex-none tw:place-items-center tw:rounded-[9px] tw:bg-(--hover)"><NvNoteIcon :value="item.icon" :size="17" /></span>
     <span class="home-manager__item-copy tw:flex tw:min-w-0 tw:flex-1 tw:flex-col tw:gap-0.5">
       <strong class="tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-xs tw:font-[620]">{{ item.title }}</strong>
-      <span class="tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-content-muted tw:text-[10px]">{{ t(`workspace.home.types.${item.kind}`) }}</span>
+      <span class="tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-content-muted tw:text-[10px]">{{ item.typeLabel }}</span>
     </span>
     <button
       type="button"

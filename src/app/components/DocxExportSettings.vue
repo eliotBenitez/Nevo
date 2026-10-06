@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { Minus, Plus, RectangleHorizontal, RectangleVertical } from 'lucide-vue-next'
+import { Minus, Plus, RectangleHorizontal, RectangleVertical } from '@lucide/vue'
 import type { DocxOrientation, DocxPaperFormat } from '../../utils/noteExport/docxOptions'
 
 defineProps<{

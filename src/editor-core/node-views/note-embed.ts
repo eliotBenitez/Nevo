@@ -1,7 +1,7 @@
 import { markRaw, render } from 'vue'
 import type { Node as PMNode } from 'prosemirror-model'
 import type { EditorView, NodeView } from 'prosemirror-view'
-import { ExternalLink, Link, Trash2 } from 'lucide-vue-next'
+import { ExternalLink, Link, Trash2 } from '@lucide/vue'
 import { resolveNodePosition, getStringAttr, renderNodeOverflowMenu, type CoreNodeViewOptions, type NodeViewPosition } from './utils'
 import {
   createViewportRenderController,

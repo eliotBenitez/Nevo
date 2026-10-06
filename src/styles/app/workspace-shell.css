@@ -22,7 +22,8 @@
 .workspace-body {
   flex: 1; display: flex; min-height: 0; overflow: hidden;
   background: var(--frame-bg);
-  padding: 0 var(--island-inset) var(--island-inset) 0;
+  /* The bottom safe area keeps the island clear of a tablet's gesture bar. */
+  padding: 0 var(--island-inset) calc(var(--island-inset) + max(var(--safe-area-bottom), 0px)) 0;
 }
 .workspace-body--inset-left { padding-left: var(--island-inset); }
 .workspace-sidebar-shell { flex: 0 0 var(--app-sidebar-width, 272px); width: var(--app-sidebar-width, 272px); overflow: hidden; transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), flex-basis 0.22s cubic-bezier(0.4, 0, 0.2, 1); contain: layout paint; }
@@ -73,7 +74,7 @@
 .workspace-sidebar-toggle--collapsed { opacity: 0.45; }
 
 .workspace-drawer-backdrop { padding: max(var(--safe-area-top), 0px) 0 max(var(--safe-area-bottom), 0px); }
-.workspace-drawer-panel .sidebar { width: 100%; height: 100%; flex: 1; border-right: none; border-radius: 0; }
+.workspace-drawer-panel .sidebar { width: 100%; min-height: 0; flex: 1; border-right: none; border-radius: 0; }
 .workspace-drawer-panel .nv-btn,
 .workspace-drawer-panel .sidebar-board-item,
 .workspace-drawer-panel .sidebar-system__item,

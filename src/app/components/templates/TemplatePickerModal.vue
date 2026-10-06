@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { Copy, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next'
+import { Copy, Pencil, Plus, Search, Trash2 } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import type { TemplateDocument, TemplateFieldValues } from '../../../types/template'
 import { useWorkspaceStore } from '../../../stores/workspace'
@@ -247,7 +247,7 @@ onBeforeUnmount(() => {
     panel-class="template-picker-panel"
     @close="emit('close')"
   >
-    <div class="template-modal__toolbar tw:flex tw:items-center tw:justify-between tw:gap-3 tw:px-4 tw:py-3.5 tw:border-b tw:border-solid tw:border-border-subtle">
+    <div class="template-modal__toolbar tw:flex tw:items-center tw:justify-between tw:gap-3 tw:px-4 tw:py-3.5 tw:border-x-0 tw:border-t-0 tw:border-b tw:border-solid tw:border-border-subtle">
       <label class="template-search tw:min-w-[240px] tw:flex-1 tw:flex tw:items-center tw:gap-2 tw:h-[34px] tw:px-2.5 tw:border tw:border-solid tw:border-border-subtle tw:rounded-[calc(7px*var(--radius-scale,1))] tw:bg-surface-overlay">
         <Search :size="15" />
         <input v-model="query" class="tw:w-full tw:border-0 tw:p-0 tw:outline-none tw:bg-transparent tw:text-content-primary tw:font-inherit" type="search" :placeholder="t('templates.search')" />
@@ -258,7 +258,7 @@ onBeforeUnmount(() => {
     <p v-if="error" class="template-error tw:text-danger tw:text-xs tw:m-0 tw:px-4 tw:pt-2">{{ error }}</p>
 
     <div class="template-modal__body tw:flex-1 tw:min-h-[360px] tw:grid tw:grid-cols-[minmax(260px,0.92fr)_minmax(300px,1.08fr)] tw:overflow-hidden max-[760px]:tw:grid-cols-1">
-      <div class="template-list tw:overflow-auto tw:p-2.5 tw:border-r tw:border-solid tw:border-border-subtle max-[760px]:tw:max-h-[240px] max-[760px]:tw:border-r-0 max-[760px]:tw:border-b max-[760px]:tw:border-b-border-subtle" :aria-busy="loading">
+      <div class="template-list tw:overflow-auto tw:p-2.5 tw:border-y-0 tw:border-l-0 tw:border-r tw:border-solid tw:border-border-subtle max-[760px]:tw:max-h-[240px] max-[760px]:tw:border-r-0 max-[760px]:tw:border-b max-[760px]:tw:border-b-border-subtle" :aria-busy="loading">
         <button
           v-for="template in filteredTemplates"
           :key="template.id"

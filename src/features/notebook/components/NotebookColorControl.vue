@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Pencil, Plus, X } from 'lucide-vue-next'
+import { Check, Pencil, Plus, X } from '@lucide/vue'
 import NvColorPicker from '../../../ui/primitives/NvColorPicker.vue'
 import { colorsMatch, normalizeHex, type ColorOption } from '../../../utils/colorConversion'
 import {

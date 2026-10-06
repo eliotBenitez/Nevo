@@ -1,3 +1,9 @@
+// Everything here except `RecorderError::code` and `RecordedAudioAsset` is
+// only reachable from the `#[cfg(desktop)]` commands in `mod.rs`; mobile
+// builds compile it (the helpers are unit tested on every target) but
+// never call it.
+#![cfg_attr(mobile, allow(dead_code))]
+
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;

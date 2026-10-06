@@ -171,4 +171,27 @@ describe('KanbanColumn', () => {
 
     wrapper.unmount()
   })
+  it('localizes default column names for display and hides card status chips', () => {
+    const i18n = createI18n({ legacy: false, locale: 'ru', messages: { en: enMessages, ru: ruMessages } })
+    const board = makeBoard()
+    board.propertyDefinitions[0].options = [{ id: 'todo', name: 'To Do' }]
+    const card: KanbanCard = {
+      id: 'card-1',
+      boardId: 'board-1',
+      title: 'Ship it',
+      content: { type: 'doc', content: [] },
+      properties: { status: 'todo' },
+      fields: [],
+      columnOrder: 0,
+      createdAt: '2026-05-16T10:00:00.000Z',
+      updatedAt: '2026-05-16T10:00:00.000Z',
+    }
+    const wrapper = mount(KanbanColumn, {
+      props: { board, column: { id: 'todo', name: 'To Do' }, cards: [card] },
+      global: { plugins: [i18n] },
+    })
+    expect(wrapper.find('.kb-column__pill-text').text()).toBe(ruMessages.kanban.defaultStatuses.toDo)
+    expect(wrapper.find('.kb-card__status').exists()).toBe(false)
+    wrapper.unmount()
+  })
 })

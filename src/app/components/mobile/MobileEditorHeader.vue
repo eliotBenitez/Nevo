@@ -6,7 +6,7 @@ import {
   Info,
   PanelsTopLeft,
   Share2,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import NvMenuItem from '../../../ui/primitives/NvMenuItem.vue'
 import NvMenuSeparator from '../../../ui/primitives/NvMenuSeparator.vue'

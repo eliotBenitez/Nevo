@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, type Component } from 'vue'
-import * as LucideIcons from 'lucide-vue-next'
+import * as LucideIcons from '@lucide/vue'
 import { lucideExportNameFromToken } from '../../utils/noteIcon'
 import { isGlyphToken } from '../../utils/workspaceGlyphs'
 import NvGlyph from './NvGlyph.vue'

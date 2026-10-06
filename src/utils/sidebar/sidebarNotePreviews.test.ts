@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { BlockNode, SidebarNotePreview } from '../../types/note'
-import { buildSidebarPreviewText, filterSidebarPreviewsByTags, sortSidebarPreviews } from './sidebarNotePreviews'
+import { i18n } from '../../i18n'
+import { pluralChoice } from '../plural-index'
+import { buildSidebarPreviewText, filterSidebarPreviewsByTags, notebookPreviewSummary, sortSidebarPreviews } from './sidebarNotePreviews'
 
 describe('sidebar note previews', () => {
   it('builds preview text from blocks and skips empty service blocks', () => {
@@ -40,5 +42,28 @@ describe('sidebar note previews', () => {
     expect(sortSidebarPreviews(previews, 'name-asc').map(item => item.noteId)).toEqual(['c', 'b', 'a'])
     expect(sortSidebarPreviews(previews, 'name-desc').map(item => item.noteId)).toEqual(['a', 'b', 'c'])
     expect(sortSidebarPreviews(previews, 'updated').map(item => item.noteId)).toEqual(['b', 'c', 'a'])
+  })
+})
+
+describe('notebookPreviewSummary', () => {
+  function summary(locale: 'en' | 'ru', preview: Pick<SidebarNotePreview, 'documentKind' | 'notebookPageCount'>) {
+    const previous = i18n.global.locale.value
+    i18n.global.locale.value = locale
+    try {
+      return notebookPreviewSummary(preview, i18n.global.t, count => pluralChoice(locale, count))
+    } finally {
+      i18n.global.locale.value = previous
+    }
+  }
+
+  it('summarizes notebooks with a pluralized page count', () => {
+    expect(summary('ru', { documentKind: 'notebook', notebookPageCount: 1 })).toBe('Тетрадь · 1 страница')
+    expect(summary('ru', { documentKind: 'notebook', notebookPageCount: 3 })).toBe('Тетрадь · 3 страницы')
+    expect(summary('ru', { documentKind: 'notebook', notebookPageCount: 5 })).toBe('Тетрадь · 5 страниц')
+    expect(summary('en', { documentKind: 'notebook', notebookPageCount: 2 })).toBe('Notebook · 2 pages')
+  })
+
+  it('leaves ordinary notes to their text preview', () => {
+    expect(summary('en', {})).toBeNull()
   })
 })

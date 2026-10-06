@@ -147,6 +147,65 @@ describe('active block emphasis', () => {
     }
   })
 
+  it('marks the list path so emphasis keeps the active list item opaque', () => {
+    const content: BlockNode = {
+      type: 'doc',
+      content: [
+        { type: 'paragraph', content: [{ type: 'text', text: 'intro' }] },
+        {
+          type: 'bullet_list',
+          content: [
+            {
+              type: 'list_item',
+              content: [{ type: 'paragraph', content: [{ type: 'text', text: 'item one' }] }],
+            },
+            {
+              type: 'list_item',
+              content: [
+                { type: 'paragraph', content: [{ type: 'text', text: 'item two' }] },
+                {
+                  type: 'ordered_list',
+                  content: [
+                    {
+                      type: 'list_item',
+                      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'nested item' }] }],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    const { view, mount, destroy } = mountEditor(content)
+
+    try {
+      setCursor(view, findTextBlockPosition(view.state.doc, 'nested item').contentFrom + 1)
+
+      const root = mount.querySelector('.nv-prosemirror > .nv-active-root, .ProseMirror > .nv-active-root')
+      expect(root?.tagName).toBe('UL')
+      expect([...mount.querySelectorAll('.nv-active-list')].map(el => el.tagName)).toEqual(['UL', 'OL'])
+      const activeItems = [...mount.querySelectorAll('li.nv-active-list-item')]
+      expect(activeItems).toHaveLength(2)
+      expect(activeItems.some(item => item.textContent === 'item one')).toBe(false)
+      expect(mount.querySelector('.nv-active-block')?.textContent).toBe('nested item')
+
+      setCursor(view, findTextBlockPosition(view.state.doc, 'intro').contentFrom + 1)
+      expect(mount.querySelector('.nv-active-root, .nv-active-list, .nv-active-list-item')).toBeNull()
+    } finally {
+      destroy()
+    }
+  })
+
+  it('keeps the active top-level ancestor opaque and dims sibling list items', () => {
+    const editorPaneCss = readFileSync('src/styles/editor/editor-pane.css', 'utf8')
+
+    expect(editorPaneCss).toContain('.nv-prosemirror > .nv-active-root')
+    expect(editorPaneCss).toMatch(/\.nv-active-list > li:not\(\.nv-active-list-item\)[^{]*{[^}]*opacity: 0\.42/s)
+  })
+
   it('keeps list active-block indicator offset separate from the default block offset', () => {
     const editorProseCss = readFileSync('src/styles/editor-prose/prose-text.css', 'utf8')
 

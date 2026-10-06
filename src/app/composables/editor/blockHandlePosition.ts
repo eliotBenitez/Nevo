@@ -22,6 +22,10 @@ export const BLOCK_HANDLE_HEIGHT = 22
 export const BLOCK_HANDLE_BOUNDARY_MARGIN = 4
 export const BLOCK_HANDLE_TOP_OFFSET = 3
 export const BLOCK_HANDLE_LEFT_OFFSET = 28
+// Coarse-pointer handle: three 44px buttons plus padding/border, translated 32px left by the component.
+export const BLOCK_HANDLE_COARSE_HEIGHT = 52
+export const BLOCK_HANDLE_COARSE_TRANSLATE_X = 32
+export const BLOCK_HANDLE_COARSE_GAP = 4
 export const DRAG_THRESHOLD = 4
 export const AUTOSCROLL_EDGE = 48
 export const AUTOSCROLL_SPEED = 14
@@ -39,9 +43,20 @@ export function extractBlockIconAttrs(node: PMNode): { level?: number; kind?: st
 }
 
 export function resolveBlockHandlePosition(
-  blockRect: Pick<DOMRect, 'top' | 'left'>,
-  bounds?: Pick<DOMRect, 'left'> | null,
+  blockRect: Pick<DOMRect, 'top' | 'left'> & { bottom?: number },
+  bounds?: Pick<DOMRect, 'left'> & { top?: number } | null,
+  coarse = false,
 ) {
+  if (coarse) {
+    // The touch handle is too wide for the gutter, so it sits above the block (below it when
+    // there is no room) with its visual left edge aligned to the block content.
+    const above = blockRect.top - BLOCK_HANDLE_COARSE_HEIGHT - BLOCK_HANDLE_COARSE_GAP
+    const minTop = bounds?.top ?? 0
+    const top = above >= minTop || blockRect.bottom === undefined
+      ? above
+      : blockRect.bottom + BLOCK_HANDLE_COARSE_GAP
+    return { top, left: blockRect.left + BLOCK_HANDLE_COARSE_TRANSLATE_X }
+  }
   const preferredLeft = blockRect.left - BLOCK_HANDLE_LEFT_OFFSET
   const maxLeft = blockRect.left
   const minLeft = bounds ? bounds.left + BLOCK_HANDLE_WIDTH + BLOCK_HANDLE_BOUNDARY_MARGIN : preferredLeft

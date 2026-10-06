@@ -1,5 +1,5 @@
 import { computed, markRaw, type Ref } from 'vue'
-import { Download, Network, Search, Upload } from 'lucide-vue-next'
+import { Download, Network, Search, Upload } from '@lucide/vue'
 import type { NoteDocument, TreeNode } from '../../../types/note'
 import type { WorkspaceSettings } from '../../../types/workspace'
 import type { NvMenuItemDef } from '../../../ui/primitives/menu-types'

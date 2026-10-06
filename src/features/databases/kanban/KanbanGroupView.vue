@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Plus } from 'lucide-vue-next'
+import { Plus } from '@lucide/vue'
 import type { KanbanBoard, KanbanCard, KanbanPropertyType } from '../../../types/kanban'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import KanbanCardVue from './KanbanCard.vue'

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createNotebookViewport } from './useNotebookViewport'
+import { createNotebookViewport, fitNotebookWidthZoom } from './useNotebookViewport'
 
 describe('createNotebookViewport', () => {
   it('keeps one page above and below the visible page in the virtual window', () => {
@@ -33,5 +33,31 @@ describe('createNotebookViewport', () => {
     expect(viewport.visibleRange.value.start).toBe(19)
     expect(viewport.visibleRange.value.end).toBeGreaterThan(22)
     expect(viewport.visibleRange.value.end - viewport.visibleRange.value.start).toBeGreaterThan(3)
+  })
+})
+
+describe('fit width zoom', () => {
+  it('fits a narrow container and keeps 100% when the page fits', () => {
+    expect(fitNotebookWidthZoom(412)).toBeCloseTo((412 - 64) / 595)
+    // The fitted page plus its 30px side padding must fit a 412px phone.
+    expect(fitNotebookWidthZoom(412) * 595 + 60).toBeLessThanOrEqual(412)
+    expect(fitNotebookWidthZoom(1200)).toBe(1)
+    expect(fitNotebookWidthZoom(0)).toBe(1)
+    expect(fitNotebookWidthZoom(50)).toBe(0.35)
+  })
+
+  it('applies the fit once on first measurement and not after a user zoom', () => {
+    const viewport = createNotebookViewport(() => 3)
+    const element = { scrollTop: 0, clientHeight: 800, clientWidth: 412 } as HTMLElement
+    viewport.onScroll({ currentTarget: element } as unknown as Event)
+    expect(viewport.zoom.value).toBeCloseTo((412 - 64) / 595)
+    viewport.setZoom(1)
+    viewport.onScroll({ currentTarget: element } as unknown as Event)
+    expect(viewport.zoom.value).toBe(1)
+
+    const chosen = createNotebookViewport(() => 3)
+    chosen.setZoom(2)
+    chosen.onScroll({ currentTarget: element } as unknown as Event)
+    expect(chosen.zoom.value).toBe(2)
   })
 })

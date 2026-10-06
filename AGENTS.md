@@ -45,7 +45,8 @@ For implementation tasks:
 6. Update `changes.md` only after the implementation is successfully verified.
 7. Update the affected document from the map above when the change alters startup, layering, state ownership, a persisted schema, or a load-bearing test suite. A stale `ARCHITECTURE.md` or `docs/data-model.md` misleads every later agent.
 8. Run `graphify update .` after source or project documentation changes.
-9. In the final response, list completed work, checks actually run, and any known failures or skipped checks.
+9. Commit each completed task to the `dev` branch.
+10. In the final response, list completed work, checks actually run, and any known failures or skipped checks.
 
 If the repository already has unrelated lint or test failures, do not expand the task to fix them. Run focused checks for changed files, state the baseline failure clearly, and ensure the change introduces no additional failure.
 
@@ -113,7 +114,7 @@ Use `pnpm` because the repository includes `pnpm-lock.yaml`. CI uses Node 22 and
 | `src/**/*.ts`, `src/**/*.vue`, frontend config | Focused Vitest tests, ESLint on changed TS/Vue files, and `pnpm build` when types or public component contracts changed |
 | `src/editor-core/**` | Relevant editor test plus `src/editor-core/__tests__/serialization.test.ts` and `regression.test.ts` when schema/serialization behavior is affected |
 | `src/locales/**`, `src/i18n.ts`, locale types | `pnpm exec vitest run src/locales/locales.test.ts src/i18n.test.ts` |
-| `src/styles/**`, `src/ui/**`, visual Vue changes | Focused tests and a visual review of the real app for light/dark, relevant responsive sizes, and keyboard focus: Linux `pnpm qa` (Tauri/WebKitGTK; `.codex/skills/nevo-visual-qa`), Windows `.codex/skills/nevo-windows-qa` (Tauri/WebView2); report platform-specific gaps separately |
+| `src/styles/**`, `src/ui/**`, visual Vue changes | Focused tests and a visual review of the real app for light/dark, relevant responsive sizes, and keyboard focus: Linux `pnpm qa` (Tauri/WebKitGTK; `.codex/skills/nevo-visual-qa`), Windows `.codex/skills/nevo-windows-qa` (Tauri/WebView2), Android phone/tablet `.codex/skills/nevo-android-qa` (Android WebView emulators) for mobile or touch changes; report platform-specific gaps separately |
 | `src/tauri/**` | Relevant frontend wrapper tests; verify command names and payload casing against Rust |
 | `src-tauri/**` | `cargo fmt --check` and targeted or full `cargo test` |
 | Workspace manifests, SQLite, migrations, import/export | Round-trip, legacy-data, failure-path, and no-data-loss regression coverage |
@@ -155,7 +156,7 @@ Rust follows `rustfmt`. Avoid blocking async runtimes, unchecked path constructi
 
 ## Git and Pull Requests
 
-Use recent history when it clarifies conventions, but verify behavior against the current tree. Use short imperative commit subjects. Keep commits focused. PRs should include a summary, testing notes, linked issues when applicable, screenshots or recordings for UI changes, and explicit risk notes for filesystem, workspace data, export/import, plugin sandboxing, networking, permissions, or migrations.
+Commit every completed task to the `dev` branch. Use recent history when it clarifies conventions, but verify behavior against the current tree. Use short imperative commit subjects. Keep commits focused. PRs should include a summary, testing notes, linked issues when applicable, screenshots or recordings for UI changes, and explicit risk notes for filesystem, workspace data, export/import, plugin sandboxing, networking, permissions, or migrations.
 
 ## Codex Model Roles
 
@@ -178,6 +179,10 @@ On Windows, `.codex/skills/nevo-windows-qa` uses
 `tools/visual-qa/windows-session.ps1` and `windows-qa.mjs` for the same renderer
 checks in a separate Tauri/WebView2 QA profile, without Linux desktop tools.
 Viewport emulation does not test native OS window resizing or dialogs.
+
+For Android, `.codex/skills/nevo-android-qa` uses `tools/visual-qa/android-qa.mjs`
+to install a debug APK on the `nevo-phone` and `nevo-tablet` emulators and drive
+the real Android WebView over adb-forwarded DevTools.
 
 **Machine-local, not in git:** everything under `.claude/` and `.agents/` (ignored in `.gitignore`), and `graphify-out/`. On a machine that has them, `.claude/skills/` carries per-domain checklists for the high-fan-out changes — editor blocks, i18n keys, plugin capabilities, Tauri commands, releases, verification — plus the `nevo-executor` subagent and the `/delegate` and `/verify` commands.
 

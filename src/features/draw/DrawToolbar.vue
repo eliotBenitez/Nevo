@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MousePointer2, Pencil, Highlighter, Eraser, Square, Minus, ArrowUpRight, Circle, Diamond, Type, Undo2, Redo2, Trash2, Hand } from 'lucide-vue-next'
+import { MousePointer2, Pencil, Highlighter, Eraser, Square, Minus, ArrowUpRight, Circle, Diamond, Type, Undo2, Redo2, Trash2, Hand } from '@lucide/vue'
 import type { DrawTool } from '../../utils/draw/drawEngine'
 import type { DrawEditorTool } from './useDrawEditor'
 

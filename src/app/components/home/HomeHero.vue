@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Search, Sparkles } from 'lucide-vue-next'
+import { Search, Sparkles } from '@lucide/vue'
 import { formatBytes } from '../../../utils/format-bytes'
 import { pluralChoice } from '../../../utils/plural-index'
 
@@ -40,7 +40,7 @@ const meta = computed(() => {
     >
       <Search :size="15" aria-hidden="true" />
       <span class="tw:min-w-0 tw:flex-1 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap">{{ t('workspace.home.search') }}</span>
-      <kbd class="tw:py-0.5 tw:px-[5px] tw:border-0 tw:rounded tw:text-content-muted tw:font-nv-mono tw:text-[10.5px] tw:bg-[color-mix(in_oklab,var(--island-bg)_84%,var(--text-primary))] tw:max-[719px]:hidden">{{ searchShortcut }}</kbd>
+      <kbd class="tw:py-0.5 tw:px-[5px] tw:border-0 tw:rounded tw:text-content-muted tw:font-nv-mono tw:text-[10.5px] tw:bg-[color-mix(in_oklab,var(--island-bg)_84%,var(--text-primary))] tw:max-[719px]:hidden tw:[@media(hover:none)_and_(pointer:coarse)]:hidden">{{ searchShortcut }}</kbd>
     </button>
   </header>
 </template>

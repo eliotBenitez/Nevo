@@ -2,7 +2,7 @@
 import { reactive, watch, computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
-import { Save } from 'lucide-vue-next'
+import { Save } from '@lucide/vue'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { COVER_GRADIENTS } from '../../../utils/workspaceGradients'
 import type { SidebarLayout, WorkspaceManifest } from '../../../types/workspace'

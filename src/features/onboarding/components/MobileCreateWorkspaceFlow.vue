@@ -5,7 +5,7 @@ import {
   ArrowLeft,
   Check,
   ChevronRight,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import { useMobileBackButton } from '../../../composables/useMobileBackButton'
 
 type WorkspaceTemplate = 'empty' | 'researcher' | 'pm' | 'writer'

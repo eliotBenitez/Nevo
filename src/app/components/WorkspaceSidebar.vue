@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { watchDebounced } from '@vueuse/core'
-import { Download, FolderPen, History, Pin, PinOff, Search, Trash2, Upload } from 'lucide-vue-next'
+import { Download, FolderPen, History, Pin, PinOff, Search, Trash2, Upload } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import type { SidebarNotePreview, TreeNode } from '../../types/note'

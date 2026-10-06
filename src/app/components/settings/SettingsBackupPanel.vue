@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
-import { Archive, Download, FolderArchive } from 'lucide-vue-next'
+import { Archive, Download, FolderArchive } from '@lucide/vue'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import SettingsSectionHeader from './ui/SettingsSectionHeader.vue'
 import SettingsGroup from './ui/SettingsGroup.vue'

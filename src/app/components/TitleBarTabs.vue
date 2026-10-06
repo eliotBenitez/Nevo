@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from 'vue'
-import { X } from 'lucide-vue-next'
+import { X } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import NvNoteIcon from '../../ui/primitives/NvNoteIcon.vue'
 import type { TabEntry } from '../../stores/tabs'

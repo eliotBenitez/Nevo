@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
-import { Archive, Database, FileText, Folder, FolderOpen, HardDrive, Image, Plug, Trash2 } from 'lucide-vue-next'
+import { Archive, Database, FileText, Folder, FolderOpen, HardDrive, Image, Plug, Trash2 } from '@lucide/vue'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvNumberInput from '../../../ui/primitives/NvNumberInput.vue'
 import SettingsSectionHeader from './ui/SettingsSectionHeader.vue'

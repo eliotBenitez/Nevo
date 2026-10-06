@@ -1,11 +1,11 @@
 import { mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import en from '../../../locales/en.json'
 import NotebookToolbar from './NotebookToolbar.vue'
 import type { NotebookInputTool } from '../composables/useNotebookInput'
 
-function mountToolbar(tool: NotebookInputTool = 'pen') {
+function mountToolbar(tool: NotebookInputTool = 'pen', attachTo?: HTMLElement) {
   return mount(NotebookToolbar, {
     props: {
       tool, pagesOpen: false, color: '#000000', strokeWidth: 1.5, markerWidth: 12,
@@ -13,10 +13,34 @@ function mountToolbar(tool: NotebookInputTool = 'pen') {
       exporting: false, saveStatus: 'saved', error: null, lineDash: 'solid',
     },
     global: { plugins: [createI18n({ legacy: false, locale: 'en', messages: { en } })] },
+    ...(attachTo ? { attachTo } : {}),
   })
 }
 
 describe('NotebookToolbar', () => {
+  it('scrolls the newly active tool into view for the phone tool strip', async () => {
+    const scrollIntoView = vi.fn()
+    const original = HTMLElement.prototype.scrollIntoView
+    HTMLElement.prototype.scrollIntoView = scrollIntoView
+    try {
+      const wrapper = mountToolbar()
+      await wrapper.setProps({ tool: 'hand' })
+      await new Promise(resolve => setTimeout(resolve, 0))
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' })
+      expect(scrollIntoView.mock.contexts.at(-1)).toBe(wrapper.get('button[aria-label="Hand tool"]').element)
+      wrapper.unmount()
+    } finally {
+      HTMLElement.prototype.scrollIntoView = original
+    }
+  })
+
+  it('marks the zoom buttons so phones can hide them in favor of pinch zoom', () => {
+    const wrapper = mountToolbar()
+    expect(wrapper.get('button[aria-label="Zoom in"]').classes()).toContain('notebook-toolbar__zoom-control')
+    expect(wrapper.get('button[aria-label="Zoom out"]').classes()).toContain('notebook-toolbar__zoom-control')
+    wrapper.unmount()
+  })
+
   it('emits insertImage from the image button and disables it while importing', async () => {
     const wrapper = mountToolbar()
     const button = wrapper.get('button[aria-label="Insert image"]')
@@ -27,13 +51,22 @@ describe('NotebookToolbar', () => {
     wrapper.unmount()
   })
 
-  it('renders the palette trigger and forwards quick swatch picks and preset events', async () => {
-    const wrapper = mountToolbar()
-    expect(wrapper.find('input[type="color"]').exists()).toBe(false)
-    await wrapper.setProps({ quickColors: ['#dc2626'], recents: ['#dc2626'], presets: ['#abcdef'] })
-    await wrapper.get('.notebook-color-control__quick-swatch').trigger('click')
-    expect(wrapper.emitted('update:color')).toEqual([['#dc2626']])
-    wrapper.unmount()
+  it('keeps recent colors in the picker without a duplicate quick row', async () => {
+    const wrapper = mountToolbar('pen', document.body)
+    try {
+      await wrapper.setProps({ quickColors: ['#dc2626'], recents: ['#dc2626'], presets: ['#abcdef'] })
+      expect(wrapper.find('.notebook-color-control__quick').exists()).toBe(false)
+      await wrapper.get('.nv-color-picker__trigger').trigger('click')
+      expect(document.body.textContent).toContain(en.notebook.palette.recent)
+      const recentColor = document.body.querySelector<HTMLButtonElement>(`[role="group"][aria-label="${en.notebook.palette.recent}"] button[aria-label="${en.notebook.palette.colors.red}"]`)
+      expect(recentColor).not.toBeNull()
+      recentColor!.click()
+      await wrapper.vm.$nextTick()
+      expect(wrapper.emitted('update:color')).toEqual([['#dc2626']])
+    } finally {
+      wrapper.unmount()
+      document.body.innerHTML = ''
+    }
   })
 
   it('selects the laser pointer with an accessible toolbar button', async () => {

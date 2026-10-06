@@ -1,6 +1,6 @@
 import { onUnmounted, shallowRef, watch } from 'vue'
 import type { Ref } from 'vue'
-import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation } from 'd3-force'
+import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY } from 'd3-force'
 import type { SimulationNodeDatum, SimulationLinkDatum } from 'd3-force'
 import type { GraphEdge, GraphNode, GraphSnapshot } from '../../../types/graph'
 
@@ -58,8 +58,17 @@ export function useGraphSimulation(snapshot: Ref<GraphSnapshot | null>, width: R
       .force('link', forceLink<SimNode, SimLink>(links).id(d => d.id).distance(80).strength(0.4))
       .force('charge', forceManyBody<SimNode>().strength(d => -120 - d.degree * 20))
       .force('center', forceCenter(cx, cy).strength(0.05))
+      // Gravity keeps disconnected nodes (no link force) from drifting away.
+      .force('x', forceX<SimNode>(cx).strength(0.08))
+      .force('y', forceY<SimNode>(cy).strength(0.08))
       .force('collide', forceCollide<SimNode>(d => nodeRadius(d) + 8))
       .alphaDecay(0.02)
+
+    // Settle the layout synchronously before the first publish so the initial
+    // camera fit measures the real extent, not the tiny random seed cluster.
+    simulation.stop()
+    simulation.tick(nodes.length <= 400 ? 150 : 30)
+    simulation.restart()
 
     // Publish the live node array once. Rendering is driven by GraphCanvas's own
     // requestAnimationFrame loop, which reads these node objects directly while

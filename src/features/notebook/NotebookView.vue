@@ -434,7 +434,7 @@ onBeforeUnmount(() => { input.finish(); stopNotebookWatch(); if (updateNarrow) w
 .notebook-view :deep(.notebook-toolbar--selection .notebook-toolbar__save) { position:static; grid-column:1 / -1; justify-self:end; }
 .notebook-view :deep(.notebook-pages .nv-btn) { min-width:44px; min-height:44px; }
 .notebook-view__scroller { position:relative; flex:1; min-width:0; overflow:auto; overscroll-behavior:contain; background:var(--surface-0); outline:none; touch-action:none; }
-.notebook-view__scroller:focus-visible { box-shadow:inset 0 0 0 2px var(--focus-ring); }
+.notebook-view__scroller:focus-visible:not([data-pointer-focus]) { box-shadow:inset 0 0 0 2px var(--focus-ring); }
 .notebook-view__pages { display:flex; min-width:max-content; flex-direction:column; align-items:center; }
 .notebook-view--panning, .notebook-view--panning * { cursor:grabbing!important; }
 .notebook-view__unsupported { max-width:640px; margin:48px auto; padding:24px; color:var(--text-primary); }

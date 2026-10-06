@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { Search, X } from 'lucide-vue-next'
+import { Search, X } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import { useWorkspaceSearch } from '../composables/useWorkspaceSearch'
 import { useFocusTrap } from '../../ui/composables/useFocusTrap'

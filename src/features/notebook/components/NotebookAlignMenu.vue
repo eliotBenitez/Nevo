@@ -2,7 +2,7 @@
 import {
   AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical,
   AlignHorizontalDistributeCenter, AlignStartHorizontal, AlignStartVertical, AlignVerticalDistributeCenter,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import { computed, nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import NvButton from '../../../ui/primitives/NvButton.vue'

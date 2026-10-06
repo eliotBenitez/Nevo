@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronsUp, ChevronUp, ChevronDown, ChevronsDown, Copy, Trash2 } from 'lucide-vue-next'
+import { ChevronsUp, ChevronUp, ChevronDown, ChevronsDown, Copy, Trash2 } from '@lucide/vue'
 
 defineProps<{
   left: number

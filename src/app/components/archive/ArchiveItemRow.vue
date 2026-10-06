@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { FileText, Folder, RotateCcw, Trash2 } from 'lucide-vue-next'
+import { FileText, Folder, RotateCcw, Trash2 } from '@lucide/vue'
 import type { TrashedItem } from '../../../types/workspace'
 import type { RetentionTone } from '../../../utils/archive/retention'
 

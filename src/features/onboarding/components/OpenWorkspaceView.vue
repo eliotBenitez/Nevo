@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Archive, Folder, Plus, Search, Pin, Trash2, ArrowLeft, ArrowRight } from 'lucide-vue-next'
+import { Archive, Folder, Plus, Search, Pin, Trash2, ArrowLeft, ArrowRight } from '@lucide/vue'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import NevoMark from './NevoMark.vue'
 import PrivacyBadge from './PrivacyBadge.vue'

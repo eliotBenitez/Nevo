@@ -290,6 +290,14 @@
     }
   },
   "common": {
+    "datePicker": {
+      "placeholder": "Datum wählen",
+      "previousMonth": "Vorheriger Monat",
+      "nextMonth": "Nächster Monat",
+      "clear": "Datum löschen"
+    },
+    "decrease": "Verringern",
+    "increase": "Erhöhen",
     "close": "Schließen",
     "back": "Zurück",
     "loading": "Wird geladen…",
@@ -419,6 +427,7 @@
     "toggleRightPanel": "Rechtes Panel umschalten",
     "openDrawer": "Seitenleiste öffnen",
     "closeDrawer": "Seitenleiste schließen",
+    "drawerLabel": "Navigation",
     "createNote": "Neue Notiz",
     "createFolder": "Neuer Ordner",
     "importMd": ".md importieren",
@@ -486,6 +495,7 @@
       "removeFromHome": "Von Start entfernen",
       "types": {
         "note": "Notiz",
+        "notebook": "Notizbuch",
         "folder": "Ordner",
         "board": "Board",
         "graph": "Graph",
@@ -671,6 +681,7 @@
       "subtitle": "Erstellen Sie eine Notiz oder einen Ordner, um diesen Arbeitsbereich zu starten."
     },
     "sidebarPreview": {
+      "notebookSummary": "Notizbuch · {total} Seite | Notizbuch · {total} Seiten",
       "tagsLabel": "Notiz-Tags",
       "allNotesTitle": "Alle Notizen",
       "selectedTitle": "Ausgewählte Tags",
@@ -1371,6 +1382,10 @@
         "description": "Breite der zentrierten Lesespalte",
         "panelDescription": "Breite der zentrierten Lesespalte"
       },
+      "font": {
+        "title": "Dokumentschrift",
+        "description": "Schriftart für Notiztext im Editor"
+      },
       "fontSize": {
         "title": "Editor-Schriftgröße",
         "description": "Typografieskala der Schreibfläche",
@@ -2000,7 +2015,8 @@
     },
     "blockHandle": {
       "drag": "Ziehen zum Sortieren",
-      "options": "Block-Optionen"
+      "options": "Block-Optionen",
+      "insertBelow": "Block darunter einfügen"
     },
     "blockEmbed": {
       "header": "Eingebetteter Block",
@@ -2300,8 +2316,8 @@
     "filters": "Graphfilter",
     "untitled": "Unbenannt",
     "connections": "Verbindungen",
-    "nodes": "Knoten",
-    "edges": "Kanten",
+    "nodeCount": "{total} Knoten | {total} Knoten",
+    "edgeCount": "{total} Kante | {total} Kanten",
     "showLabels": "Beschriftungen",
     "showArrows": "Pfeile",
     "zoomIn": "Vergrößern",
@@ -2694,7 +2710,7 @@
       "boardNotFound": "Board nicht gefunden.",
       "boardUnavailable": "Board ist nicht verfügbar.",
       "moveFailed": "Verschieben fehlgeschlagen: {message}",
-      "cardCount": "{n} Elemente",
+      "cardCount": "{cards} Karte | {cards} Karten",
       "openAutomations": "Automatisierungen",
       "emptyTitle": "Ein leeres Board.",
       "emptyHint": "Fügen Sie Ihre erste Spalte hinzu und beginnen Sie, oder starten Sie aus einer Vorlage.",
@@ -2927,7 +2943,8 @@
       "chooseFields": "Felder wählen",
       "noFields": "Keine lokalen Felder",
       "noTitle": "Unbenannt",
-      "items": "{n} Elemente · {g} Gruppen",
+      "cards": "{cards} Karte | {cards} Karten",
+      "groups": "{groups} Gruppe | {groups} Gruppen",
       "avgProgress": "ø {n}%"
     },
     "propertyPanel": {
@@ -2969,7 +2986,7 @@
       "create": "Erstellen"
     },
     "embedded": {
-      "cardCount": "{n} Karten",
+      "cardCount": "{cards} Karte | {cards} Karten",
       "openFullView": "Vollständige Ansicht öffnen",
       "linkedTo": "Verknüpft mit {title}",
       "syncedSeconds": "vor {n}s synchronisiert",

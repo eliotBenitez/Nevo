@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { Search, X } from 'lucide-vue-next'
+import { Search, X } from '@lucide/vue'
 import type { CanvasNoteOption } from '../composables/useCanvasP1Features'
 
 const props = defineProps<{

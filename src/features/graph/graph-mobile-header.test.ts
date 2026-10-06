@@ -61,6 +61,21 @@ describe('GraphView mobile header', () => {
     wrapper.unmount()
   })
 
+  it('forwards the GraphHeader back action to its parent', async () => {
+    const wrapper = mount(GraphView, {
+      props: {
+        workspacePath: null,
+        manifest: null,
+      },
+      global: { plugins: [i18n] },
+    })
+
+    await wrapper.get('.graph-header__back').trigger('click')
+
+    expect(wrapper.emitted('back')).toHaveLength(1)
+    wrapper.unmount()
+  })
+
   it('loads the graph when a manifest is present without a filesystem workspace path', async () => {
     const wrapper = shallowMount(GraphView, {
       props: {

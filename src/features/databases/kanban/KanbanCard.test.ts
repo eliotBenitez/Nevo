@@ -4,6 +4,7 @@ import { createI18n } from 'vue-i18n'
 import KanbanCard from './KanbanCard.vue'
 import type { KanbanBoard, KanbanCard as KanbanCardType } from '../../../types/kanban'
 import enMessages from '../../../locales/en.json'
+import ruMessages from '../../../locales/ru.json'
 
 function makeBoard(): KanbanBoard {
   return {
@@ -209,5 +210,46 @@ describe('KanbanCard', () => {
     expect(wrapper.text()).not.toContain('Preview text from the body')
 
     wrapper.unmount()
+  })
+  describe('status chip', () => {
+    function mountCard(props: Record<string, unknown> = {}, extra: Partial<KanbanCardType> = {}) {
+      const i18n = createI18n({ legacy: false, locale: 'en', messages: { en: enMessages } })
+      return mount(KanbanCard, {
+        props: { card: { ...makeCard(), ...extra }, board: makeBoard(), ...props },
+        global: { plugins: [i18n] },
+      })
+    }
+
+    it('shows the status chip by default (grouped by another field)', () => {
+      const wrapper = mountCard()
+      expect(wrapper.find('.kb-card__status').exists()).toBe(true)
+      wrapper.unmount()
+    })
+
+    it('hides the status chip when the board is grouped by status', () => {
+      const wrapper = mountCard({ hideStatus: true })
+      expect(wrapper.find('.kb-card__status').exists()).toBe(false)
+      expect(wrapper.find('.kb-card__status-row').exists()).toBe(false)
+      wrapper.unmount()
+    })
+
+    it('keeps the priority indicator when the status chip is hidden', () => {
+      const wrapper = mountCard({ hideStatus: true }, { priority: 'high' })
+      expect(wrapper.find('.kb-card__status').exists()).toBe(false)
+      expect(wrapper.find('.kb-card__priority').exists()).toBe(true)
+      wrapper.unmount()
+    })
+
+    it('localizes default status names on the chip', () => {
+      const board = makeBoard()
+      board.propertyDefinitions[0].options = [{ id: 'todo', name: 'To Do' }]
+      const i18n = createI18n({ legacy: false, locale: 'ru', messages: { en: enMessages, ru: ruMessages } })
+      const wrapper = mount(KanbanCard, {
+        props: { card: makeCard(), board },
+        global: { plugins: [i18n] },
+      })
+      expect(wrapper.find('.kb-card__status').text()).toBe(ruMessages.kanban.defaultStatuses.toDo)
+      wrapper.unmount()
+    })
   })
 })

@@ -27,6 +27,22 @@
   }
 }
 
+@media (hover: none) and (pointer: coarse) {
+  .titlebar-search__hints {
+    display: none;
+  }
+
+  .titlebar-search__field {
+    position: relative;
+  }
+
+  .titlebar-search__field::before {
+    content: '';
+    position: absolute;
+    inset: -8px 0;
+  }
+}
+
 @media (max-width: 719px) {
   .titlebar-search {
     width: 100%;

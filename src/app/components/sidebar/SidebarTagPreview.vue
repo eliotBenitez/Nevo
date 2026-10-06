@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { MoreHorizontal, Tag } from 'lucide-vue-next'
+import { MoreHorizontal, Tag } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import type { SidebarNotePreview } from '../../../types/note'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
+import { pluralChoice } from '../../../utils/plural-index'
+import { notebookPreviewSummary } from '../../../utils/sidebar/sidebarNotePreviews'
 
 interface TagStat {
   label: string
@@ -38,7 +40,13 @@ const emit = defineEmits<{
   'dragend': []
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+
+function previewLine(preview: SidebarTagPreviewItem): string {
+  if (preview.previewText) return preview.previewText
+  return notebookPreviewSummary(preview, t, count => pluralChoice(String(locale.value), count))
+    || t('workspace.sidebarPreview.emptyPreview')
+}
 
 function isTagSelected(tag: string) {
   return props.selectedTags.has(tag.toLowerCase())
@@ -105,7 +113,7 @@ function isTagSelected(tag: string) {
               <span class="tag-preview-card__date tw:shrink-0 tw:text-content-muted tw:text-[10.5px]">{{ preview.formattedDate }}</span>
             </span>
             <span v-if="preview.folderPath" class="tag-preview-card__path tw:overflow-hidden tw:[display:-webkit-box] tw:[-webkit-box-orient:vertical] tw:[-webkit-line-clamp:1] tw:text-content-muted tw:text-[10.5px]">{{ preview.folderPath }}</span>
-            <span class="tag-preview-card__text tw:overflow-hidden tw:[display:-webkit-box] tw:[-webkit-box-orient:vertical] tw:[-webkit-line-clamp:2] tw:text-content-muted tw:text-[11.5px] tw:leading-[1.35]">{{ preview.previewText || t('workspace.sidebarPreview.emptyPreview') }}</span>
+            <span class="tag-preview-card__text tw:overflow-hidden tw:[display:-webkit-box] tw:[-webkit-box-orient:vertical] tw:[-webkit-line-clamp:2] tw:text-content-muted tw:text-[11.5px] tw:leading-[1.35]">{{ previewLine(preview) }}</span>
             <span class="tag-preview-card__tags tw:min-w-0 tw:flex tw:flex-wrap tw:gap-1">
               <span v-for="tag in preview.tags" :key="`${preview.noteId}-${tag}`" class="tag-preview-card__tag tw:max-w-full tw:rounded-full tw:bg-[color-mix(in_oklab,var(--accent)_11%,transparent)] tw:text-accent tw:text-[10.5px] tw:font-[620] tw:py-0.5 tw:px-1.5 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap">{{ tag }}</span>
             </span>

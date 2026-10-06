@@ -91,3 +91,31 @@
   background: var(--accent-soft) !important;
   box-shadow: 0 0 0 1px var(--accent-soft);
 }
+
+/* Touch: enlarge hit areas without changing the visual size, and expose the
+   close button, which otherwise only appears on hover. */
+@media (pointer: coarse) {
+  .title-tab {
+    position: relative;
+  }
+
+  .title-tab::before {
+    content: '';
+    position: absolute;
+    inset: -7px 0;
+  }
+
+  .tab-close::before {
+    content: '';
+    position: absolute;
+    inset: -11px;
+  }
+}
+
+@media (hover: none) {
+  .tab-close {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+  }
+}

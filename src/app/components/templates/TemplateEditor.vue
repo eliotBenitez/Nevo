@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { ChevronDown, ChevronUp, Plus, Trash2, X } from 'lucide-vue-next'
+import { ChevronDown, ChevronUp, Plus, Trash2, X } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import type { BlockNode } from '../../../types/note'
 import type { TemplateDocument, TemplateField, TemplateFieldType } from '../../../types/template'
@@ -173,7 +173,7 @@ watch(() => props.template, (newTpl) => {
 
 <template>
   <section class="template-editor tw:fixed tw:inset-0 tw:z-[var(--z-popover)] tw:m-auto tw:w-[min(760px,calc(100vw-32px))] tw:max-h-[min(820px,calc(100vh-32px))] tw:flex tw:flex-col tw:border tw:border-solid tw:border-border-subtle tw:rounded-[calc(8px*var(--radius-scale,1))] tw:bg-surface-raised tw:text-content-primary tw:shadow-2xl tw:overflow-hidden" role="dialog" aria-modal="true" :aria-label="t('templates.editorTitle')">
-    <header class="template-editor__header tw:flex tw:items-center tw:justify-between tw:gap-3 tw:px-4 tw:py-3.5 tw:border-b tw:border-solid tw:border-border-subtle [&_h2]:tw:m-0 [&_h2]:tw:text-[15px] [&_p]:tw:mt-[3px] [&_p]:tw:mb-0 [&_p]:tw:text-content-secondary [&_p]:tw:text-xs">
+    <header class="template-editor__header tw:flex tw:items-center tw:justify-between tw:gap-3 tw:px-4 tw:py-3.5 tw:border-x-0 tw:border-t-0 tw:border-b tw:border-solid tw:border-border-subtle [&_h2]:tw:m-0 [&_h2]:tw:text-[15px] [&_p]:tw:mt-[3px] [&_p]:tw:mb-0 [&_p]:tw:text-content-secondary [&_p]:tw:text-xs">
       <div>
         <h2>{{ t('templates.editorTitle') }}</h2>
         <p>{{ t('templates.editorSubtitle') }}</p>
@@ -253,7 +253,7 @@ watch(() => props.template, (newTpl) => {
             </div>
           </div>
 
-          <div v-if="field.type !== 'checkbox'" class="template-field-card__extra tw:grid tw:grid-cols-2 tw:gap-4 tw:pt-3 tw:border-t tw:border-dashed tw:border-border-subtle max-[760px]:tw:grid-cols-1">
+          <div v-if="field.type !== 'checkbox'" class="template-field-card__extra tw:grid tw:grid-cols-2 tw:gap-4 tw:pt-3 tw:border-x-0 tw:border-b-0 tw:border-t tw:border-dashed tw:border-border-subtle max-[760px]:tw:grid-cols-1">
             <div class="template-field-group tw:flex tw:flex-col tw:gap-1.5 [&_input]:tw:w-full [&_input]:tw:border [&_input]:tw:border-solid [&_input]:tw:border-border-subtle [&_input]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_input]:tw:bg-surface-overlay [&_input]:tw:text-content-primary [&_input]:tw:py-[7px] [&_input]:tw:px-[9px] [&_input]:tw:font-inherit [&_textarea]:tw:w-full [&_textarea]:tw:border [&_textarea]:tw:border-solid [&_textarea]:tw:border-border-subtle [&_textarea]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_textarea]:tw:bg-surface-overlay [&_textarea]:tw:text-content-primary [&_textarea]:tw:py-[7px] [&_textarea]:tw:px-[9px] [&_textarea]:tw:font-inherit">
               <span class="template-field-label tw:text-[11px] tw:font-semibold tw:text-content-secondary tw:uppercase tw:tracking-[0.02em]">{{ t('templates.defaultValue') }}</span>
               <input v-model="field.defaultValue" :placeholder="t('templates.defaultValue')" />
@@ -279,7 +279,7 @@ watch(() => props.template, (newTpl) => {
       </div>
     </div>
 
-    <footer class="template-editor__footer tw:flex tw:items-center tw:justify-end tw:gap-3 tw:px-4 tw:py-3.5 tw:border-t tw:border-solid tw:border-border-subtle">
+    <footer class="template-editor__footer tw:flex tw:items-center tw:justify-end tw:gap-3 tw:px-4 tw:py-3.5 tw:border-x-0 tw:border-b-0 tw:border-t tw:border-solid tw:border-border-subtle">
       <NvButton variant="ghost" @click="emit('close')">{{ t('workspace.context.cancel') }}</NvButton>
       <NvButton :disabled="saving" @click="saveEditableTemplate">{{ t('templates.save') }}</NvButton>
     </footer>

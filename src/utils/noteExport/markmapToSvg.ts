@@ -106,7 +106,7 @@ async function inlineForeignObjects(svg: SVGSVGElement): Promise<void> {
   }
 }
 
-type MathRenderer = { texToSvg: (tex: string, ownerDoc: Document) => SVGSVGElement }
+type MathRenderer = { texToSvg: (tex: string, ownerDoc: Document) => Promise<SVGSVGElement> }
 
 async function inlineForeignObject(
   fo: SVGForeignObjectElement,
@@ -164,7 +164,7 @@ async function emitNode(node: Node, ctx: EmitCtx): Promise<void> {
   const el = node as Element
   const tag = el.tagName.toLowerCase()
   if (tag === 'math' || el.classList.contains('katex')) {
-    emitMath(el, ctx)
+    await emitMath(el, ctx)
     return
   }
   if (tag === 'img') {
@@ -282,7 +282,7 @@ async function fetchAsDataUri(src: string): Promise<string | null> {
   }
 }
 
-function emitMath(el: Element, ctx: EmitCtx): void {
+async function emitMath(el: Element, ctx: EmitCtx): Promise<void> {
   const box = el.getBoundingClientRect()
   const cs = getComputedStyle(el)
   const color = cs.color || '#000'
@@ -298,7 +298,7 @@ function emitMath(el: Element, ctx: EmitCtx): void {
   // Render the math as vector paths via MathJax when possible (no font needed).
   if (ctx.mathjax && tex && box.width && box.height) {
     try {
-      const mathSvg = ctx.mathjax.texToSvg(tex, ctx.ownerDoc)
+      const mathSvg = await ctx.mathjax.texToSvg(tex, ctx.ownerDoc)
       recolor(mathSvg, color)
       mathSvg.setAttribute('x', round(x))
       mathSvg.setAttribute('y', round(y))
@@ -340,31 +340,13 @@ let mathjaxPromise: Promise<MathRenderer> | null = null
 function getMathjax(): Promise<MathRenderer> {
   if (!mathjaxPromise) {
     mathjaxPromise = (async () => {
-      const [
-        { mathjax },
-        { TeX },
-        { SVG },
-        { liteAdaptor },
-        { RegisterHTMLHandler },
-        { AllPackages },
-      ] = await Promise.all([
-        import('mathjax-full/js/mathjax.js'),
-        import('mathjax-full/js/input/tex.js'),
-        import('mathjax-full/js/output/svg.js'),
-        import('mathjax-full/js/adaptors/liteAdaptor.js'),
-        import('mathjax-full/js/handlers/html.js'),
-        import('mathjax-full/js/input/tex/AllPackages.js'),
-      ])
-      const adaptor = liteAdaptor()
-      RegisterHTMLHandler(adaptor)
-      const mjDoc = mathjax.document('', {
-        InputJax: new TeX({ packages: AllPackages }),
-        OutputJax: new SVG({ fontCache: 'none' }),
-      })
+      // Shared lazy MathJax v4 engine (see mathJaxEngine.ts for the v4 notes:
+      // explicit TeX package list, pre-settled dynamic font files).
+      const { renderTexToSvgMarkup } = await import('./mathJaxEngine')
       return {
-        texToSvg(tex: string, ownerDoc: Document): SVGSVGElement {
-          const node = mjDoc.convert(tex, { display: false })
-          const html = adaptor.innerHTML(node)
+        async texToSvg(tex: string, ownerDoc: Document): Promise<SVGSVGElement> {
+          const html = await renderTexToSvgMarkup(tex, false)
+          if (!html) throw new Error('MathJax rendering failed')
           const parsed = new DOMParser().parseFromString(html, 'image/svg+xml')
           return ownerDoc.importNode(parsed.documentElement, true) as unknown as SVGSVGElement
         },

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
-import { ArrowLeft, Search, SlidersHorizontal } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 // Loaded here (not main.ts) so the graph feature's CSS ships only when it's opened.
 import '../../styles/graph.css'
@@ -11,6 +10,7 @@ import type { WorkspaceManifest } from '../../types/workspace'
 import type { EdgeKind, GraphSnapshot } from '../../types/graph'
 import GraphCanvas from './components/GraphCanvas.vue'
 import GraphControls from './components/GraphControls.vue'
+import GraphHeader from './components/GraphHeader.vue'
 import GraphNodeTooltip from './components/GraphNodeTooltip.vue'
 import { useGraphData } from './composables/useGraphData'
 import { useGraphSimulation } from './composables/useGraphSimulation'
@@ -100,7 +100,7 @@ async function loadGraph() {
 
 const { simNodes, pinNode, unpinNode } = useGraphSimulation(snapshot, containerWidth, containerHeight)
 
-const camera = useGraphCamera(() => containerWidth.value, () => containerHeight.value)
+const camera = useGraphCamera(() => containerWidth.value, () => containerHeight.value, () => simNodes.value)
 const focusGraph = computed(() => {
   if (!snapshot.value) return null
   return {
@@ -160,46 +160,22 @@ function toggleFilter(kind: EdgeKind) {
   filters.value = next
 }
 
-watch(simNodes, (nodes) => {
-  if (nodes.length > 0 && camera.scale.value === 1 && camera.tx.value === 0) {
-    camera.fitToScreen(nodes)
-  }
-}, { once: true })
+let initialFitDone = false
+watch([simNodes, containerWidth, containerHeight], ([nodes]) => {
+  if (initialFitDone || nodes.length === 0) return
+  if (camera.fitToScreen(nodes)) initialFitDone = true
+}, { immediate: true, flush: 'post' })
 </script>
 
 <template>
   <div class="graph-view tw:flex tw:min-h-0 tw:flex-1 tw:flex-col tw:overflow-hidden tw:max-[719px]:relative">
-    <header class="graph-header tw:z-2 tw:flex tw:h-12 tw:shrink-0 tw:items-center tw:gap-2.5 tw:border-b-0 tw:bg-(--island-bg) tw:px-3 tw:max-[719px]:pointer-events-none tw:max-[719px]:absolute tw:max-[719px]:inset-x-0 tw:max-[719px]:top-0 tw:max-[719px]:z-20 tw:max-[719px]:grid tw:max-[719px]:h-auto tw:max-[719px]:min-h-[calc(58px_+_max(var(--safe-area-top),0px))] tw:max-[719px]:grid-cols-[44px_minmax(0,1fr)_44px] tw:max-[719px]:gap-2 tw:max-[719px]:bg-transparent tw:max-[719px]:pt-[max(var(--safe-area-top),0px)] tw:max-[719px]:pr-[calc(14px_+_max(var(--safe-area-right),0px))] tw:max-[719px]:pb-[7px] tw:max-[719px]:pl-[calc(12px_+_max(var(--safe-area-left),0px))]">
-      <button class="nv-btn tw:max-[719px]:pointer-events-auto tw:max-[719px]:grid tw:max-[719px]:size-11 tw:max-[719px]:min-w-11 tw:max-[719px]:place-items-center tw:max-[719px]:rounded-[calc(14px*var(--radius-scale,1))] tw:max-[719px]:border tw:max-[719px]:border-solid tw:max-[719px]:border-transparent tw:max-[719px]:bg-(--input-bg) tw:max-[719px]:p-0 tw:max-[719px]:shadow-[0_12px_30px_-22px_var(--shadow)]" @click="emit('back')">
-        <ArrowLeft :size="12" />
-        <span class="tw:max-[719px]:hidden">{{ t('graph.backToEditor') }}</span>
-      </button>
-
-      <div class="graph-header__search tw:flex tw:h-[30px] tw:max-w-80 tw:flex-1 tw:items-center tw:gap-[7px] tw:rounded-[calc(9px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--input-bg) tw:px-2.5 tw:transition-[border-color,box-shadow] tw:duration-150 tw:focus-within:border-accent tw:focus-within:shadow-[0_0_0_2px_var(--accent-soft)] tw:max-[719px]:pointer-events-auto tw:max-[719px]:h-11 tw:max-[719px]:w-full tw:max-[719px]:min-w-0 tw:max-[719px]:max-w-none tw:max-[719px]:rounded-[calc(14px*var(--radius-scale,1))] tw:max-[719px]:bg-(--island-bg) tw:max-[719px]:shadow-[0_12px_30px_-22px_var(--shadow)]">
-        <Search :size="13" class="graph-header__search-icon tw:shrink-0 tw:text-content-muted" />
-        <input
-          v-model="searchQuery"
-          class="graph-header__search-input tw:min-w-0 tw:flex-1 tw:border-none tw:bg-transparent tw:text-[12.5px] tw:text-content-primary tw:outline-none tw:placeholder:text-content-muted tw:max-[719px]:text-sm"
-          :placeholder="t('graph.searchPlaceholder')"
-        />
-      </div>
-
-      <div class="graph-header__meta tw:ml-auto tw:flex tw:items-center tw:gap-1.5 tw:max-[719px]:hidden">
-        <span class="graph-meta-pill tw:inline-flex tw:h-[22px] tw:items-center tw:rounded-[calc(20px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle tw:px-2 tw:font-nv-mono tw:text-[11px] tw:text-content-muted">{{ simNodes.length }} {{ t('graph.nodes') }}</span>
-        <span class="graph-meta-pill tw:inline-flex tw:h-[22px] tw:items-center tw:rounded-[calc(20px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle tw:px-2 tw:font-nv-mono tw:text-[11px] tw:text-content-muted">{{ filteredEdges.length }} {{ t('graph.edges') }}</span>
-      </div>
-
-      <button
-        type="button"
-        class="graph-header__filter tw:hidden tw:max-[719px]:pointer-events-auto tw:max-[719px]:grid tw:max-[719px]:size-11 tw:max-[719px]:place-items-center tw:max-[719px]:rounded-[calc(14px*var(--radius-scale,1))] tw:max-[719px]:border tw:max-[719px]:border-solid tw:max-[719px]:border-transparent tw:max-[719px]:bg-surface-subtle tw:max-[719px]:p-0 tw:max-[719px]:text-content-secondary tw:max-[719px]:shadow-[0_12px_30px_-22px_var(--shadow)] tw:max-[719px]:aria-pressed:bg-(--accent-soft) tw:max-[719px]:aria-pressed:text-accent"
-        :class="{ 'is-active': mobileFiltersOpen }"
-        :aria-label="t('graph.filters')"
-        :aria-pressed="mobileFiltersOpen"
-        @click="mobileFiltersOpen = !mobileFiltersOpen"
-      >
-        <SlidersHorizontal :size="18" aria-hidden="true" />
-      </button>
-    </header>
+    <GraphHeader
+      v-model:search-query="searchQuery"
+      v-model:mobile-filters-open="mobileFiltersOpen"
+      :node-count="simNodes.length"
+      :edge-count="filteredEdges.length"
+      @back="emit('back')"
+    />
 
     <div ref="containerRef" class="graph-body tw:relative tw:min-h-0 tw:flex-1 tw:overflow-hidden tw:bg-(--island-bg) tw:bg-[radial-gradient(circle,var(--border-default)_1px,transparent_1px)] tw:bg-[length:28px_28px]">
       <!-- Loading -->

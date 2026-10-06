@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { mobileWorkspaceViewClass, mobileViewHeaderClass, mobileViewEyebrowClass, mobileViewTitleClass, mobileIconButtonClass, mobileIconButtonStrongClass, mobileEmptyStateClass, mobileEmptyPanelClass, mobileEmptyMarkClass } from './mobileChromeClasses'
-import { ChevronRight, Columns3, Plus } from 'lucide-vue-next'
+import { ChevronRight, Columns3, Plus } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import type { KanbanBoardMeta } from '../../../types/kanban'

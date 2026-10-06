@@ -41,6 +41,20 @@ describe('resolveBlockHandlePosition', () => {
   })
 })
 
+describe('resolveBlockHandlePosition (coarse pointer)', () => {
+  it('places the touch handle above the block, aligned with its content', () => {
+    const position = resolveBlockHandlePosition({ top: 300, left: 24, bottom: 330 }, { left: 0, top: 80 }, true)
+
+    expect(position).toEqual({ top: 244, left: 56 })
+  })
+
+  it('falls below the block when there is no room above', () => {
+    const position = resolveBlockHandlePosition({ top: 90, left: 24, bottom: 120 }, { left: 0, top: 80 }, true)
+
+    expect(position.top).toBe(124)
+  })
+})
+
 describe('isPointInBlockHandleStickyArea', () => {
   it('keeps the handle sticky while the pointer crosses the gap to the block', () => {
     expect(isPointInBlockHandleStickyArea(
@@ -635,9 +649,10 @@ describe('EditorBlockHandle', () => {
     expect(dragButton.attributes('type')).toBe('button')
     expect(typeButton.attributes('type')).toBe('button')
 
-    expect(dragButton.attributes('aria-label')).toBeTruthy()
-    expect(typeButton.attributes('aria-label')).toBeTruthy()
-    expect(insertBelowButton.attributes('aria-label')).toBeTruthy()
+    expect(dragButton.attributes('aria-label')).toBe('Drag to reorder')
+    expect(typeButton.attributes('aria-label')).toBe('Block options')
+    expect(insertBelowButton.attributes('aria-label')).toBe('Insert block below')
+    expect(insertBelowButton.attributes('title')).toBe('Insert block below')
     await insertBelowButton.trigger('click')
     expect(onInsertBelow).toHaveBeenCalledTimes(1)
     wrapper.unmount()

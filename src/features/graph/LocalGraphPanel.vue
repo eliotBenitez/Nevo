@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { X, GitFork } from 'lucide-vue-next'
+import { X, GitFork } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 // Loaded here (not main.ts) so the graph feature's CSS ships only when it's opened.
 // (Duplicated with GraphView.vue's import: this panel can open without the
@@ -74,7 +74,7 @@ const hasNoConnections = computed(() => localSnapshot.value?.nodes.length === 1)
 
 const { simNodes, pinNode, unpinNode } = useGraphSimulation(localSnapshot, containerWidth, containerHeight)
 
-const camera = useGraphCamera(() => containerWidth.value, () => containerHeight.value)
+const camera = useGraphCamera(() => containerWidth.value, () => containerHeight.value, () => simNodes.value)
 const focusGraph = computed(() => {
   if (!localSnapshot.value) return null
   return {

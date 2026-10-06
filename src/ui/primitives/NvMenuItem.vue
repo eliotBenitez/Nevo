@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, inject, provide, nextTick, onBeforeUnmount, getCurrentInstance, markRaw, type Component } from 'vue'
-import { ChevronRight } from 'lucide-vue-next'
+import { ChevronRight } from '@lucide/vue'
 import { NvMenuContextKey, type NvMenuItemDef, type NvMenuContext } from './menu-types'
 import NvMenuSeparator from './NvMenuSeparator.vue'
 import NvMenuLabel from './NvMenuLabel.vue'

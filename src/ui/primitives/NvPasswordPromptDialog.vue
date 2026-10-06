@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { AlertTriangle, Check, Eye, EyeOff, KeyRound, X } from 'lucide-vue-next'
+import { AlertTriangle, Check, Eye, EyeOff, KeyRound, X } from '@lucide/vue'
 import NvButton from './NvButton.vue'
 import NvModal from './NvModal.vue'
 import { resolvePasswordPrompt, usePasswordPrompt } from '../composables/usePasswordPrompt'

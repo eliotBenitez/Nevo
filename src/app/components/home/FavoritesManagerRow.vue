@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowDown, ArrowUp, GripVertical, Trash2 } from 'lucide-vue-next'
+import { ArrowDown, ArrowUp, GripVertical, Trash2 } from '@lucide/vue'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import type { WorkspaceHomeItem } from '../../composables/useWorkspaceHome'
 
@@ -29,7 +29,7 @@ const statusLabel = computed(() => (
     ? t('workspace.home.favorites.loadingPlugin')
     : !props.item.available
       ? t('workspace.home.manager.unavailable')
-      : t(`workspace.home.types.${props.item.kind}`)
+      : props.item.typeLabel
 ))
 </script>
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Plus, Trash2, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-vue-next'
+import { Plus, Trash2, ArrowUp, ArrowDown, ArrowUpDown } from '@lucide/vue'
 import NvSelect from '../../../../ui/primitives/NvSelect.vue'
 import type { DbField, DbSortRule } from '../../../../types/database-block'
 import { createSortRule } from '../../../../editor-core/databaseFilterSort'

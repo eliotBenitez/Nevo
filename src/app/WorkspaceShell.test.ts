@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, nextTick } from 'vue'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
-import { createMemoryHistory, createRouter } from 'vue-router'
+import { createMemoryHistory, createRouter, createWebHistory } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
 import WorkspaceShell from './WorkspaceShell.vue'
 import en from '../locales/en.json'
@@ -17,6 +17,11 @@ import { createDefaultWorkspaceSettings } from '../utils/workspace-settings'
 import { updateViewport } from '../composables/useDeviceLayout'
 import { useToast } from '../ui/composables/useToast'
 import { createNotebook } from '../core/notebook'
+
+const mobileBack = vi.hoisted(() => ({ handlers: [] as Array<() => void | Promise<void>> }))
+vi.mock('../composables/useMobileBackButton', () => ({
+  useMobileBackButton: (handler: () => void | Promise<void>) => { mobileBack.handlers.push(handler) },
+}))
 
 vi.mock('../tauri/commands', async () => {
   const actual = await vi.importActual<typeof import('../tauri/commands')>('../tauri/commands')
@@ -191,6 +196,7 @@ async function flushAnimationFrame() {
 
 async function mountShell(options?: {
   initialRoute?: string
+  webHistory?: boolean
   manifestOverride?: Partial<ReturnType<typeof useWorkspaceStore>['manifest']>
 }) {
   const pinia = createPinia()
@@ -303,8 +309,9 @@ async function mountShell(options?: {
   ])
   vi.mocked(kanbanCommands.listBoards).mockResolvedValue([])
 
+  if (options?.webHistory) window.history.replaceState(null, '', '/')
   const router = createRouter({
-    history: createMemoryHistory(),
+    history: options?.webHistory ? createWebHistory() : createMemoryHistory(),
     routes: [
       { path: '/workspace', component: { template: '<div />' } },
       { path: '/workspace/note/:noteId', component: { template: '<div />' } },
@@ -313,6 +320,7 @@ async function mountShell(options?: {
       { path: '/workspace/history', component: { template: '<div />' } },
       { path: '/workspace/folder/:folderId', component: { template: '<div />' } },
       { path: '/workspace/graph', component: { template: '<div />' } },
+      { path: '/workspace/more', component: { template: '<div />' } },
       { path: '/workspace/board/:boardId', component: { template: '<div />' } },
       { path: '/workspace/plugin/nevo.kanban/:boardId', component: { template: '<div />' } },
       { path: '/workspace/plugin/:pluginId/:viewId?', component: { template: '<div />' } },
@@ -337,6 +345,7 @@ async function mountShell(options?: {
         HistoryNotePicker: HistoryNotePickerStub,
         WorkspaceHistoryModal: HistoryModalStub,
         KanbanView: KanbanViewStub,
+        GraphView: true,
         WindowControls: true,
       },
     },
@@ -349,11 +358,15 @@ async function mountShell(options?: {
   return { wrapper, router, workspaceStore, treeStore, noteStore, kanbanStore }
 }
 
+// WorkspaceShell registers its handler first; child components register after it.
+const shellBack = async () => { await mobileBack.handlers[0]?.() }
+
 let activeWrapper: VueWrapper | null = null
 
 describe('WorkspaceShell', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mobileBack.handlers.length = 0
     Object.defineProperty(window, 'innerWidth', { value: 1280, configurable: true })
     updateViewport()
   })
@@ -388,6 +401,35 @@ describe('WorkspaceShell', () => {
     expect(router.currentRoute.value.path).toBe('/workspace/note/new-notebook')
     expect(document.querySelector('#create-notebook-form')).toBeNull()
     create.mockRestore()
+  })
+
+  it.each(['/workspace/graph', '/workspace/history'])('returns from %s to the previous in-app screen on system back', async (path) => {
+    Object.defineProperty(window, 'innerWidth', { value: 412, configurable: true })
+    updateViewport()
+    const { wrapper, router } = await mountShell({ initialRoute: '/workspace/more', webHistory: true })
+
+    try {
+      await router.push(path)
+      await flushAnimationFrame()
+      await shellBack()
+      await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/workspace/more'))
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  it.each(['/workspace/graph', '/workspace/history'])('falls back to home on system back from %s without in-app history', async (path) => {
+    Object.defineProperty(window, 'innerWidth', { value: 412, configurable: true })
+    updateViewport()
+    const { wrapper, router } = await mountShell({ initialRoute: path, webHistory: true })
+
+    try {
+      await flushAnimationFrame()
+      await shellBack()
+      await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/workspace'))
+    } finally {
+      wrapper.unmount()
+    }
   })
 
   it('returns from note history to the note chooser', async () => {
@@ -760,6 +802,48 @@ describe('WorkspaceShell', () => {
     await flushUi()
 
     expect(document.body.querySelectorAll('.sidebar-stub')).toHaveLength(1)
+
+    wrapper.unmount()
+  })
+
+  it('hides duplicate compact-header History and Settings actions on mobile runtimes', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 800, configurable: true })
+    updateViewport()
+
+    const { wrapper, workspaceStore } = await mountShell()
+    expect(wrapper.findAll('.titlebar-action-btn')).toHaveLength(2)
+
+    for (const device of [
+      { width: 800, runtime: 'android', platform: 'android' },
+      { width: 1280, runtime: 'android', platform: 'android' },
+      { width: 900, runtime: 'ios', platform: 'ios' },
+    ] as const) {
+      Object.defineProperty(window, 'innerWidth', { value: device.width, configurable: true })
+      updateViewport()
+      workspaceStore.appMetadata = {
+        ...workspaceStore.appMetadata!,
+        runtime: device.runtime,
+        platform: device.platform,
+        supportsWindowControls: false,
+        supportsGlobalShortcuts: false,
+        supportsRevealInFileManager: false,
+        supportsWindowDragRegions: false,
+      }
+      await flushUi()
+
+      expect(wrapper.find('.titlebar-actions').exists()).toBe(false)
+    }
+
+    workspaceStore.appMetadata = {
+      ...workspaceStore.appMetadata!,
+      runtime: 'desktop',
+      platform: 'linux',
+      supportsWindowControls: true,
+    }
+    Object.defineProperty(window, 'innerWidth', { value: 800, configurable: true })
+    updateViewport()
+    await flushUi()
+    expect(wrapper.findAll('.titlebar-action-btn')).toHaveLength(2)
 
     wrapper.unmount()
   })

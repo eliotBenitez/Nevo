@@ -8,7 +8,7 @@ import {
   Archive,
   Network,
   Settings2,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 

@@ -2,7 +2,7 @@
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
-import { Cpu, ExternalLink, FolderOpen, HardDrive, Monitor, RefreshCw, Settings } from 'lucide-vue-next'
+import { Cpu, ExternalLink, FolderOpen, HardDrive, Monitor, RefreshCw, Settings } from '@lucide/vue'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { useAppUpdater } from '../../../composables/useAppUpdater'
 import { appLogger } from '../../../utils/logger'

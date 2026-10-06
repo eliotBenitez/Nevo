@@ -91,6 +91,8 @@ pnpm tauri dev      # run the app in development mode
 pnpm tauri build    # build production installers (.deb / .rpm / AppImage / .dmg / .msi / .exe)
 ```
 
+Android launcher resources are prepared automatically by `pnpm tauri:android:init`, `pnpm tauri:android:dev`, and `pnpm tauri:android:build`. If you invoke `pnpm tauri android ...` directly, run `pnpm tauri:android:icons` after Android initialization and before building.
+
 <details>
 <summary>Install Rust & pnpm (all platforms)</summary>
 

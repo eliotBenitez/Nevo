@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft, Copy, RotateCcw } from 'lucide-vue-next'
+import { ArrowLeft, Copy, RotateCcw } from '@lucide/vue'
 import NvNoteIcon from '../../ui/primitives/NvNoteIcon.vue'
 
 interface Props {

@@ -20,7 +20,7 @@ import {
   Table as TableIcon,
   Trash2,
   Type,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import type { NevoTableContext } from '../../../types/editor-plugin'
 

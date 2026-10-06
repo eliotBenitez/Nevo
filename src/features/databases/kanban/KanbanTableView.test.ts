@@ -76,9 +76,40 @@ describe('KanbanTableView', () => {
     expect(wrapper.text()).toContain('Выбрать поля')
     expect(wrapper.text()).toContain('Дата релиза')
     expect(wrapper.text()).toContain('Без названия')
-    expect(wrapper.text()).toContain('1 карточек · 1 групп')
+    expect(wrapper.text()).toContain('1 карточка · 1 группа')
     expect(wrapper.text()).not.toContain('items')
 
+    wrapper.unmount()
+  })
+  function mountTable(board: KanbanBoard, cards: KanbanCard[]) {
+    const i18n = createI18n({ legacy: false, locale: 'ru', messages: { en: enMessages, ru: ruMessages } })
+    return mount(KanbanTableView, { props: { board, cards }, global: { plugins: [i18n] } })
+  }
+
+  it('pluralizes the footer summary for Russian', () => {
+    const cases: Array<[number, string]> = [
+      [1, '1 карточка · 1 группа'],
+      [2, '2 карточки · 1 группа'],
+      [5, '5 карточек · 1 группа'],
+      [21, '21 карточка · 1 группа'],
+    ]
+    for (const [count, expected] of cases) {
+      const cards = Array.from({ length: count }, (_, index) => ({ ...makeCard(), id: `card-${index}` }))
+      const wrapper = mountTable(makeBoard(), cards)
+      expect(wrapper.text()).toContain(expected)
+      wrapper.unmount()
+    }
+  })
+
+  it('localizes default status names in the header, group rows and chips', () => {
+    const board = makeBoard()
+    board.propertyDefinitions[0].name = 'Status'
+    board.propertyDefinitions[0].options = [{ id: 'todo', name: 'To Do', color: '#3b82f6' }]
+    const wrapper = mountTable(board, [makeCard()])
+    expect(wrapper.find('.kb-table__th--status').text()).toBe(ruMessages.kanban.defaultStatuses.status)
+    expect(wrapper.find('.kb-table__group-name').text()).toBe(ruMessages.kanban.defaultStatuses.toDo)
+    expect(wrapper.find('.kb-table__status').text()).toBe(ruMessages.kanban.defaultStatuses.toDo)
+    expect(wrapper.text()).not.toContain('To Do')
     wrapper.unmount()
   })
 })

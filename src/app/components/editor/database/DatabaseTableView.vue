@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Plus, Trash2 } from 'lucide-vue-next'
+import { Plus, Trash2 } from '@lucide/vue'
 import NvPopupMenu from '../../../../ui/primitives/NvPopupMenu.vue'
 import DatabaseCell from './DatabaseCell.vue'
 import DatabaseFieldMenu from './DatabaseFieldMenu.vue'

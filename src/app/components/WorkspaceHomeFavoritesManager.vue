@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch, type CSSProperties } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowDown, ArrowUp, GripVertical, Search, Trash2 } from 'lucide-vue-next'
+import { ArrowDown, ArrowUp, GripVertical, Search, Trash2 } from '@lucide/vue'
 import NvModal from '../../ui/primitives/NvModal.vue'
 import FavoritesManagerRow from './home/FavoritesManagerRow.vue'
 import FavoritesManagerCandidate from './home/FavoritesManagerCandidate.vue'
@@ -72,7 +72,7 @@ const filteredCandidates = computed(() => {
     if (filter.value !== 'all' && item.kind !== filter.value) return false
     if (!normalizedQuery) return true
     return item.title.toLocaleLowerCase().includes(normalizedQuery)
-      || t(`workspace.home.types.${item.kind}`).toLocaleLowerCase().includes(normalizedQuery)
+      || item.typeLabel.toLocaleLowerCase().includes(normalizedQuery)
   })
 })
 
@@ -420,7 +420,7 @@ onBeforeUnmount(() => {
       <span class="home-manager__item-copy tw:flex tw:min-w-0 tw:flex-1 tw:flex-col tw:gap-0.5">
         <strong class="tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-xs tw:font-[620]">{{ floatingFavorite.title }}</strong>
         <span class="tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-content-muted tw:text-[10px]">
-          {{ floatingFavorite.loading ? t('workspace.home.favorites.loadingPlugin') : !floatingFavorite.available ? t('workspace.home.manager.unavailable') : t(`workspace.home.types.${floatingFavorite.kind}`) }}
+          {{ floatingFavorite.loading ? t('workspace.home.favorites.loadingPlugin') : !floatingFavorite.available ? t('workspace.home.manager.unavailable') : floatingFavorite.typeLabel }}
         </span>
       </span>
       <span class="home-manager__floating-actions tw:grid tw:w-24 tw:h-8 tw:flex-none tw:grid-cols-[repeat(3,32px)] tw:items-center tw:justify-end tw:text-content-muted">

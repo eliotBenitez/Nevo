@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, Circle, Ellipse, Shapes, Square, Triangle } from 'lucide-vue-next'
+import { Check, Circle, Ellipse, Shapes, Square, Triangle } from '@lucide/vue'
 import { computed, nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import NvButton from '../../../ui/primitives/NvButton.vue'

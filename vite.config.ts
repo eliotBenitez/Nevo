@@ -30,7 +30,10 @@ export default defineConfig(async () => ({
           // split into their own chunks via dynamic import().
           if (id.includes("/prosemirror-")) return "vendor-prosemirror"
           if (/\/(yjs|y-prosemirror|y-protocols|y-websocket)\//.test(id)) return "vendor-yjs"
-          if (/\/(vue|vue-router|@vue|pinia|@vueuse|vue-i18n)\//.test(id)) return "vendor-vue"
+          // Anchored to the package directory: a loose `/vue/` segment would
+          // also capture `@lucide/vue`, whose star-imported icon catalogue
+          // (~1 MiB) must stay in the lazy icon-picker chunk, not this one.
+          if (/\/node_modules\/(vue|vue-router|@vue|pinia|@vueuse|vue-i18n)\//.test(id)) return "vendor-vue"
           if (/\/(unified|remark-[^/]+|mdast-[^/]+|micromark[^/]*|unist-[^/]+)\//.test(id)) return "vendor-unified"
           if (id.includes("/katex/")) return "vendor-katex"
           if (id.includes("/highlight.js/")) return "vendor-highlight"

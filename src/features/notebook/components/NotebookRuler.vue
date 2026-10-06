@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Move, RotateCw } from 'lucide-vue-next'
+import { Move, RotateCw } from '@lucide/vue'
 import { NOTEBOOK_POINTS_PER_MM, NOTEBOOK_RULER_HEIGHT, NOTEBOOK_RULER_LENGTH } from '../../../core/notebook/ruler'
 import type { NotebookRulerPose } from '../../../core/notebook/ruler'
 import { useNotebookRuler } from '../composables/useNotebookRuler'

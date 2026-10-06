@@ -216,6 +216,18 @@ stop`. Windows results establish WebView2 behavior and do not replace Linux
 WebKitGTK evidence. Protocol/keyboard regression checks run with
 `node --test tools/visual-qa/windows-cdp.test.mjs`.
 
+**Android**: use `.codex/skills/nevo-android-qa/SKILL.md`. Build a debug APK
+(`pnpm tauri android build --debug --apk --target x86_64`), then
+`node tools/visual-qa/android-qa.mjs` boots the `nevo-phone`/`nevo-tablet` AVDs,
+installs and launches the app, and drives the real Android WebView through
+DevTools forwarded by adb (`status`, `shot`, `tap`, `type`, `key`, `eval`, `wait`,
+`nav`) plus device-level `shot --device`, `tap-xy`, `back`, `rotate` and `theme`.
+It refuses physical devices and any AVD not named `nevo-*`, and every page command
+checks that `get_app_metadata` reports `runtime: android`. Emulator results cover
+Android WebView layout, touch, safe areas, orientation and IME, not device
+performance. Helper regression checks run with
+`node --test tools/visual-qa/android-qa.test.mjs`.
+
 ## 7. Handwritten notebooks
 
 Selection-transform regressions cover shared-center uniform scaling/rotation,
@@ -253,8 +265,13 @@ pending ink before the dirty flag changes, failure, overlapping writes, checkpoi
 and no-op reopen. Native notebook tests cover the workspace gate, raw-field
 preservation, invalid writes, restore/transfer, destination failure, and compiled
 PDF page counts and dimensions.
+`notebookExport.worker.test.ts` executes the actual export worker handler with
+structured-cloned messages and checks its pages-array contract, blank and filled
+pages, paper inclusion, source preservation, and conversion-error responses.
 Save-transport regressions cover concurrent notes, worker failure/retry, immutable
-deltas including deleted unknown fields, and the raw UTF-8 IPC contract. Store tests
+deltas including deleted unknown fields, and the raw UTF-8 IPC contract. Native
+save tests also cover Android JSON byte arrays, equivalent lossless decoding,
+invalid byte values, unsupported bodies, and the serialized byte budget. Store tests
 mock the native transport boundary; transport tests execute the real patch/encoding
 logic, and mounted host tests retain the production session and navigation flow.
 `NotebookView.interaction.test.ts` mounts the real page, toolbar, and navigator:

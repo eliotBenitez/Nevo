@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Move, RotateCw } from 'lucide-vue-next'
+import { Move, RotateCw } from '@lucide/vue'
 import type { NotebookSelectionBounds } from '../../../core/notebook/selectionTransform'
 import type { NotebookSelectionHandle } from '../composables/useNotebookSelectionTransform'
 

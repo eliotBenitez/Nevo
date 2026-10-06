@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Plus, Trash2, Filter } from 'lucide-vue-next'
+import { Plus, Trash2, Filter } from '@lucide/vue'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import type {
   KanbanFilterField,

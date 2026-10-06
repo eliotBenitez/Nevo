@@ -12,7 +12,7 @@ const emit = defineEmits<{ 'open-item': [item: WorkspaceHomeItem] }>()
 const { t, locale } = useI18n()
 
 function itemType(item: WorkspaceHomeItem) {
-  return t(`workspace.home.types.${item.kind}`)
+  return item.typeLabel
 }
 
 function formatDate(value: string | null) {

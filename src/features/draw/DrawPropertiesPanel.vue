@@ -19,7 +19,7 @@ import {
   ArrowRight,
   Dot,
   Minus,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import NvColorPicker from '../../ui/primitives/NvColorPicker.vue'
 import type { ColorOption } from '../../utils/colorConversion'
 import type { DrawArrowShape, DrawArrowCap, DrawFillStyle, DrawStrokeStyle } from '../../utils/draw/drawEngine'

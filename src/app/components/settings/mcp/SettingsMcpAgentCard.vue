@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { AlertCircle, AlertTriangle, Info } from 'lucide-vue-next'
+import { AlertCircle, AlertTriangle, Info } from '@lucide/vue'
 import NvButton from '../../../../ui/primitives/NvButton.vue'
 import SettingsObjectCard from '../ui/SettingsObjectCard.vue'
 import SettingsMcpAgentIcon from './SettingsMcpAgentIcon.vue'

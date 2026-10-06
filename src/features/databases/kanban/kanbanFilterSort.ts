@@ -92,11 +92,13 @@ export function getFilterableFields(
     created: string
     updated: string
     priorityLevels: Record<KanbanCardPriority, string>
+    // Display-only: maps seed status names to localized text.
+    localizeLabel?: (label: string) => string
   },
 ): KanbanFilterField[] {
   const statusOptions = getBoardColumns(board).map(option => ({
     id: option.id,
-    name: option.name,
+    name: labels.localizeLabel ? labels.localizeLabel(option.name) : option.name,
     color: option.color,
   }))
 

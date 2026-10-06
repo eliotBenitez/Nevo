@@ -56,6 +56,10 @@ export interface SidebarNotePreview {
   updatedAt: string
   tags: string[]
   previewText: string
+  /** Present only for handwritten notebooks (`list_sidebar_note_previews`). */
+  documentKind?: 'notebook'
+  /** Page count of a notebook, which has no text to preview. */
+  notebookPageCount?: number
 }
 
 export interface NoteSnapshotMeta {

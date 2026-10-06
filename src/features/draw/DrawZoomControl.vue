@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Minus, Plus, Maximize } from 'lucide-vue-next'
+import { Minus, Plus, Maximize } from '@lucide/vue'
 
 defineProps<{
   zoomPercent: string

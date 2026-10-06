@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Maximize2, RefreshCw, LayoutGrid } from 'lucide-vue-next'
+import { Maximize2, RefreshCw, LayoutGrid } from '@lucide/vue'
 import type { KanbanBoard, KanbanCard } from '../../../types/kanban'
 import KanbanColumn from './KanbanColumn.vue'
 import { getBoardColumns, getCardStatusValue } from './kanbanFields'
+import { pluralChoice } from '../../../utils/plural-index'
 
 interface Props {
   board: KanbanBoard
@@ -19,7 +20,7 @@ const emit = defineEmits<{
   'open-card': [cardId: string]
   'add-card': [columnId: string]
 }>()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const dragCardId = ref<string | null>(null)
 
@@ -42,7 +43,7 @@ const syncLabel = computed(() => {
     <div class="ke-toolbar tw:flex tw:items-center tw:gap-[7px] tw:bg-transparent tw:px-3 tw:py-2">
       <LayoutGrid :size="12" class="ke-toolbar__icon tw:shrink-0 tw:text-content-muted" />
       <span class="ke-toolbar__title tw:text-xs tw:font-semibold tw:text-content-primary">{{ board.title }}</span>
-      <span class="ke-toolbar__count tw:font-nv-mono tw:text-[10.5px] tw:text-content-muted">{{ t('kanban.embedded.cardCount', { n: cards.length }) }}</span>
+      <span class="ke-toolbar__count tw:font-nv-mono tw:text-[10.5px] tw:text-content-muted">{{ t('kanban.embedded.cardCount', pluralChoice(String(locale), cards.length), { named: { cards: cards.length } }) }}</span>
       <div class="ke-toolbar__spacer tw:flex-1" />
       <button
         type="button"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Tag } from 'lucide-vue-next'
+import { Tag } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 
 interface TagStat {

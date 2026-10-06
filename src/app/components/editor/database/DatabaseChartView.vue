@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Plus, Trash2, Upload } from 'lucide-vue-next'
+import { Plus, Trash2, Upload } from '@lucide/vue'
 import NvPopupMenu from '../../../../ui/primitives/NvPopupMenu.vue'
 import NvSelect from '../../../../ui/primitives/NvSelect.vue'
 import { createDbId, type DbAggregate, type DbChartConfig, type DbChartKind, type DbChartSeries, type DbField, type DbRecord } from '../../../../types/database-block'

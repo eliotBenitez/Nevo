@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { FilePlus2 } from 'lucide-vue-next'
+import { FilePlus2 } from '@lucide/vue'
 import HomeHero from './home/HomeHero.vue'
 import HomeQuickActions from './home/HomeQuickActions.vue'
 import HomeFavorites from './home/HomeFavorites.vue'

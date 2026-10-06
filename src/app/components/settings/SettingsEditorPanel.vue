@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useWorkspaceStore } from '../../../stores/workspace'
@@ -9,28 +8,14 @@ import NvToggle from '../../../ui/primitives/NvToggle.vue'
 import SettingsSectionHeader from './ui/SettingsSectionHeader.vue'
 import SettingsGroup from './ui/SettingsGroup.vue'
 import SettingsRow from './ui/SettingsRow.vue'
-import { useSystemFonts } from '../../../composables/useSystemFonts'
+import { useEditorFontOptions } from '../../composables/useEditorFontOptions'
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
 const { settings } = storeToRefs(workspaceStore)
 const u = (fn: (draft: WorkspaceSettings) => void) => workspaceStore.updateSettings(fn)
 
-const { fonts: systemFonts } = useSystemFonts()
-
-const PRESET_OPTIONS = [
-  { value: 'ui', label: 'Geist', description: 'Sans-serif · App default' },
-  { value: 'serif', label: 'Instrument Serif', description: 'Serif · Editorial' },
-  { value: 'mono', label: 'Geist Mono', description: 'Monospace · Code-style' },
-]
-
-const fontOptions = computed(() => {
-  const presetValues = new Set(['ui', 'serif', 'mono'])
-  const system = systemFonts.value
-    .filter(f => !presetValues.has(f))
-    .map(f => ({ value: f, label: f, description: 'System font' }))
-  return [...PRESET_OPTIONS, ...system]
-})
+const fontOptions = useEditorFontOptions()
 
 function opt(key: string, value: string): string {
   return t(`settings.options.${key}.${value}`)

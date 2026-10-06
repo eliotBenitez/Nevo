@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Zap, Plus } from 'lucide-vue-next'
+import { Zap, Plus } from '@lucide/vue'
 import type { KanbanBoard, KanbanAutomation, KanbanTemplate } from '../../../types/kanban'
 import NvModal from '../../../ui/primitives/NvModal.vue'
 

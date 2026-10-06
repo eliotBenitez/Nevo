@@ -10,7 +10,7 @@ import {
   GitFork,
   ListTree,
   Tags,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import { useGraphStore } from '../../../stores/graph'

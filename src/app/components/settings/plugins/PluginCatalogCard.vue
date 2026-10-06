@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Download, ExternalLink, RefreshCw, Trash2 } from 'lucide-vue-next'
+import { Download, ExternalLink, RefreshCw, Trash2 } from '@lucide/vue'
 import type { MarketplaceCatalogItem, MarketplacePluginStatus, PluginManifest } from '../../../../types/workspace'
 import NvButton from '../../../../ui/primitives/NvButton.vue'
 import SettingsObjectCard from '../ui/SettingsObjectCard.vue'

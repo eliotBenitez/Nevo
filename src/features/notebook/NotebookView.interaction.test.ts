@@ -173,7 +173,7 @@ describe('NotebookView live interaction', () => {
     document.body.querySelector<HTMLButtonElement>('.nv-color-picker__swatch[aria-label="Red"]')!.click()
     await nextTick()
     expect(store.activeNote!.notebook!.pages[0].objects[0].color).toBe('#dc2626')
-    expect(wrapper.get('.notebook-color-control__quick-swatch').attributes('aria-label')).toBe('Red')
+    expect(wrapper.findComponent({ name: 'NotebookToolbar' }).props('recents')).toEqual(['#dc2626'])
     await wrapper.get('button[aria-label="Copy selection"]').trigger('click')
     expect(store.activeNote!.notebook!.pages[0].objects).toHaveLength(2)
     await wrapper.get('button[aria-label="Hand tool"]').trigger('click')
@@ -227,13 +227,13 @@ describe('NotebookView live interaction', () => {
     expect(JSON.stringify(store.activeNote!.notebook)).toBe(before)
     await wrapper.get('button[aria-label="Pen"]').trigger('click')
     expect((wrapper.get('.notebook-toolbar .nv-color-picker__trigger--swatch').element as HTMLElement).style.background).toBe('rgb(0, 0, 0)')
-    expect(wrapper.find('.notebook-color-control__quick-swatch').exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'NotebookToolbar' }).props('recents')).toEqual([])
     expect((wrapper.get('input[type="number"]').element as HTMLInputElement).value).toBe('1.5')
     dispatch('pointerdown', 30, 40, 50)
     dispatch('pointerup', 100, 70, 60)
     await nextTick()
     expect(store.activeNote!.notebook!.pages[0].objects).toHaveLength(1)
-    expect(wrapper.get('.notebook-color-control__quick-swatch').attributes('aria-label')).toBe('Black')
+    expect(wrapper.findComponent({ name: 'NotebookToolbar' }).props('recents')).toEqual(['#000000'])
   })
 
   it('records recent colors only for committed ink, not eraser or lasso gestures', async () => {
@@ -256,11 +256,11 @@ describe('NotebookView live interaction', () => {
     await wrapper.get('button[aria-label="Lasso select"]').trigger('click')
     stroke(5)
     await nextTick()
-    expect(wrapper.find('.notebook-color-control__quick-swatch').exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'NotebookToolbar' }).props('recents')).toEqual([])
     await wrapper.get('button[aria-label="Pen"]').trigger('click')
     stroke(6)
     await nextTick()
-    expect(wrapper.findAll('.notebook-color-control__quick-swatch').map(node => node.attributes('aria-label'))).toEqual(['Black'])
+    expect(wrapper.findComponent({ name: 'NotebookToolbar' }).props('recents')).toEqual(['#000000'])
   })
 
   it('adds a page when a stroke lands on the ghost page and removes it with one Ctrl+Z', async () => {

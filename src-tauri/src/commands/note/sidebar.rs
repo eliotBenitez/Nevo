@@ -19,6 +19,12 @@ pub struct SidebarNotePreview {
     pub updated_at: String,
     pub tags: Vec<String>,
     pub preview_text: String,
+    /// `"notebook"` for handwritten notebooks; omitted for ordinary documents.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub document_kind: Option<&'static str>,
+    /// Page count of a notebook, whose ink has no text to preview.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notebook_page_count: Option<usize>,
 }
 
 #[tauri::command]
@@ -128,7 +134,28 @@ fn read_preview(
         updated_at: note.updated_at,
         tags,
         preview_text: build_preview_text(&note.content, PREVIEW_LIMIT),
+        document_kind: preview_document_kind(&note.extra),
+        notebook_page_count: notebook_page_count(&note.extra),
     })
+}
+
+/// The manifest does not record a note's kind, so the preview carries it for
+/// surfaces such as Home that label notebooks. Only the known value is passed
+/// through; anything else is treated as an ordinary document.
+fn preview_document_kind(extra: &serde_json::Map<String, Value>) -> Option<&'static str> {
+    match extra.get("documentKind").and_then(Value::as_str) {
+        Some("notebook") => Some("notebook"),
+        _ => None,
+    }
+}
+
+fn notebook_page_count(extra: &serde_json::Map<String, Value>) -> Option<usize> {
+    preview_document_kind(extra)?;
+    extra
+        .get("notebook")
+        .and_then(|notebook| notebook.get("pages"))
+        .and_then(Value::as_array)
+        .map(Vec::len)
 }
 
 fn normalize_tags(tags: &[String]) -> Vec<String> {
@@ -217,7 +244,7 @@ fn truncate_preview(text: &str, max_len: usize) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::build_preview_text;
+    use super::{build_preview_text, notebook_page_count, preview_document_kind};
 
     #[test]
     fn preview_text_skips_empty_and_service_blocks() {
@@ -232,5 +259,52 @@ mod tests {
         });
 
         assert_eq!(build_preview_text(&doc, 180), "First line · Second line");
+    }
+
+    #[test]
+    fn preview_document_kind_reports_only_notebooks() {
+        let kind = |value: serde_json::Value| {
+            let extra = value.as_object().cloned().unwrap_or_default();
+            preview_document_kind(&extra)
+        };
+
+        assert_eq!(
+            kind(serde_json::json!({ "documentKind": "notebook" })),
+            Some("notebook")
+        );
+        assert_eq!(
+            kind(serde_json::json!({ "documentKind": "document" })),
+            None
+        );
+        assert_eq!(
+            kind(serde_json::json!({ "documentKind": "future-kind" })),
+            None
+        );
+        assert_eq!(kind(serde_json::json!({ "documentKind": 3 })), None);
+        assert_eq!(kind(serde_json::json!({})), None);
+    }
+
+    #[test]
+    fn notebook_page_count_reads_notebook_pages_only() {
+        let count = |value: serde_json::Value| {
+            let extra = value.as_object().cloned().unwrap_or_default();
+            notebook_page_count(&extra)
+        };
+
+        assert_eq!(
+            count(serde_json::json!({
+                "documentKind": "notebook",
+                "notebook": { "version": 1, "pages": [{}, {}, {}] }
+            })),
+            Some(3)
+        );
+        assert_eq!(
+            count(serde_json::json!({ "documentKind": "notebook", "notebook": {} })),
+            None
+        );
+        assert_eq!(
+            count(serde_json::json!({ "notebook": { "pages": [{}] } })),
+            None
+        );
     }
 }

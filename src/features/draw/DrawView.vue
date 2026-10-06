@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
-import { ArrowLeft, Shapes, Settings, Download } from 'lucide-vue-next'
+import { ArrowLeft, Shapes, Settings, Download } from '@lucide/vue'
 // Loaded here (not main.ts) so the draw feature's CSS ships only with this route.
 import './draw.css'
 import { useWorkspaceStore } from '../../stores/workspace'

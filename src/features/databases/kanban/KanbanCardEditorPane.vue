@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft, ChevronDown, MoreHorizontal, Settings2, Trash2 } from 'lucide-vue-next'
+import { ArrowLeft, ChevronDown, MoreHorizontal, Settings2, Trash2 } from '@lucide/vue'
 import type { KanbanBoard, KanbanCard, KanbanCardField, KanbanCardPriority } from '../../../types/kanban'
 import { useKanbanStore } from '../../../stores/kanban'
 import { useWorkspaceStore } from '../../../stores/workspace'
@@ -220,7 +220,7 @@ defineExpose({ flush })
       <NvMiniEditor :model-value="content" :placeholder="t('kanban.card.notesPlaceholder')" :workspace-path="workspace.activePath" :plugin-manifests="workspace.plugins" :settings="workspace.settings" :show-block-handle="false" class="kb-editor-content tw:min-h-[320px] tw:w-full" @update:model-value="value => { content = value; changed() }" />
       <div class="kb-editor-links" @click.capture="guardLinkedCardAction"><KanbanCardLinks :card="card" :board="board" /></div>
     </div>
-    <footer class="tw:flex tw:shrink-0 tw:items-center tw:gap-3 tw:border-t tw:border-solid tw:border-[var(--border-subtle)] tw:px-6 tw:py-2.5 tw:text-xs tw:text-content-muted" aria-live="polite">
+    <footer class="tw:flex tw:shrink-0 tw:items-center tw:gap-3 tw:border-x-0 tw:border-b-0 tw:border-t tw:border-solid tw:border-[var(--border-subtle)] tw:px-6 tw:py-2.5 tw:text-xs tw:text-content-muted" aria-live="polite">
       <span v-if="saveError" class="tw:text-content-danger">{{ t('kanban.card.saveFailed') }} <button class="tw:underline" @click="flush">{{ t('kanban.common.retry') }}</button></span>
       <span v-else-if="saving">{{ t('kanban.common.saving') }}</span>
       <span v-else-if="dirty">{{ t('kanban.card.saveHint') }}</span>
@@ -262,10 +262,32 @@ defineExpose({ flush })
   .kb-editor-back { display: inline-flex; min-width: 44px; min-height: 44px; }
 }
 @media (max-width: 760px) {
-  .kb-editor-header { gap: 10px; padding: 12px 14px; }
+  /* On phones the pane replaces the board full screen, so it owns the safe
+     areas the board header and lanes would otherwise pad (see KanbanView). */
+  .kb-editor-header {
+    gap: 10px;
+    padding:
+      calc(8px + max(var(--safe-area-top), 0px))
+      calc(14px + max(var(--safe-area-right), 0px))
+      12px
+      calc(14px + max(var(--safe-area-left), 0px));
+  }
   .kb-editor-header__top { gap: 8px; }
   .kb-editor-title { font-size: 25px; line-height: 1.2; }
-  .kb-editor-body { padding: 14px; }
+  .kb-editor-body {
+    padding:
+      14px
+      calc(14px + max(var(--safe-area-right), 0px))
+      14px
+      calc(14px + max(var(--safe-area-left), 0px));
+  }
+  .kb-editor-pane footer {
+    padding:
+      10px
+      calc(16px + max(var(--safe-area-right), 0px))
+      calc(10px + max(var(--safe-area-bottom), 0px))
+      calc(16px + max(var(--safe-area-left), 0px));
+  }
   .kb-editor-properties-trigger { min-height: 44px; }
   .kb-editor-properties-popover { right: -40px; }
 }

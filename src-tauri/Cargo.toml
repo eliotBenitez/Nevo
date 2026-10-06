@@ -71,3 +71,15 @@ windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Storage
 lto = "thin"
 codegen-units = 1
 strip = true
+
+# `tauri::generate_context!` brotli-compresses the whole frontend dist at
+# quality 9 inside a proc macro, and build-time dependencies are compiled at
+# opt-level 0 by default, so that step was needlessly slow on every release
+# build after a frontend change. The encoder is only a build dependency.
+[profile.release.package.brotli]
+opt-level = 3
+
+# Full debuginfo for ~800 third-party crates dominated `target/debug` size and
+# link time. Keep it only for our own crate, which is what gets debugged.
+[profile.dev.package."*"]
+debug = false

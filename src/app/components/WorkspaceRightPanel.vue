@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, reactive, ref } from 'vue'
-import { ChevronRight, ExternalLink, FileText, X } from 'lucide-vue-next'
+import { ChevronRight, ExternalLink, FileText, X } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import { refDebounced } from '@vueuse/core'
 import { storeToRefs } from 'pinia'

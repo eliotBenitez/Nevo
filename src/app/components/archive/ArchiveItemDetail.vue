@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Folder, Inbox, RotateCcw, Trash2 } from 'lucide-vue-next'
+import { Folder, Inbox, RotateCcw, Trash2 } from '@lucide/vue'
 import type { ArchiveItemViewModel } from '../../composables/useArchiveItems'
 import type { HistoryComparableBlock } from '../../../utils/noteHistory'
 import HistoryBlockContent from '../../../features/history/HistoryBlockContent.vue'

@@ -17,6 +17,7 @@ function setup() {
   const element = {
     scrollTop: 200, scrollLeft: 0, clientHeight: 500, clientWidth: 400,
     setPointerCapture: vi.fn(), releasePointerCapture: vi.fn(), focus: vi.fn(),
+    dataset: {} as DOMStringMap, addEventListener: vi.fn(),
     getBoundingClientRect: () => ({ top: 0, left: 0, width: 400, height: 500 }),
   } as unknown as HTMLElement
   const scroller = ref<HTMLElement | null>(element)
@@ -69,6 +70,11 @@ describe('useNotebookInteraction', () => {
     const { interaction, input, element, document } = setup()
     interaction.onPagePointerDown(document.currentPage.value.id, pointer(1, 'mouse', 100, 100))
     expect(element.focus).toHaveBeenCalledWith({ preventScroll: true })
+    // Pointer focus is marked so the canvas focus ring stays keyboard-only.
+    expect(element.dataset.pointerFocus).toBe('')
+    const blur = vi.mocked(element.addEventListener).mock.calls.find(([type]) => type === 'blur')?.[1] as () => void
+    blur()
+    expect(element.dataset.pointerFocus).toBeUndefined()
     interaction.onPointerUp(pointer(1, 'mouse', 120, 100))
     expect(input.isActive.value).toBe(false)
   })

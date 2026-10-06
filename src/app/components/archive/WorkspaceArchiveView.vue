@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft, Inbox, Search, SearchX } from 'lucide-vue-next'
+import { ArrowLeft, Inbox, Search, SearchX } from '@lucide/vue'
 import { useDeviceLayout } from '../../../composables/useDeviceLayout'
 import { useMobileBackButton } from '../../../composables/useMobileBackButton'
 import { useConfirmDialog } from '../../../ui/composables/useConfirmDialog'
@@ -107,7 +107,7 @@ onBeforeUnmount(() => {
     aria-labelledby="workspace-archive-heading"
   >
     <!-- Phone layout: single column with inline actions -->
-    <div v-if="isPhone" class="archive-phone tw:flex tw:h-full tw:min-h-0 tw:w-full tw:flex-col">
+    <div v-if="isPhone" class="archive-phone tw:flex tw:h-full tw:min-h-0 tw:w-full tw:flex-col tw:pt-[var(--safe-area-top,0px)] tw:pr-[var(--safe-area-right,0px)] tw:pb-[var(--safe-area-bottom,0px)] tw:pl-[var(--safe-area-left,0px)]">
       <header class="archive-phone__topbar tw:flex tw:h-12 tw:shrink-0 tw:items-center tw:px-3">
         <button
           type="button"

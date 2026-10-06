@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import type { KanbanBoard } from '../../../types/kanban'
 import NvModal from '../../../ui/primitives/NvModal.vue'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
-import { getBoardColumns } from './kanbanFields'
+import { getBoardColumns, localizeDefaultKanbanLabel } from './kanbanFields'
 
 interface Props {
   board: KanbanBoard
@@ -23,7 +23,7 @@ const title = ref('')
 const titleInputRef = ref<HTMLInputElement | null>(null)
 
 const columnOptions = computed(() =>
-  getBoardColumns(props.board).map(opt => ({ value: opt.id, label: opt.name }))
+  getBoardColumns(props.board).map(opt => ({ value: opt.id, label: localizeDefaultKanbanLabel(opt.name, key => t(key)) }))
 )
 
 const selectedColumnId = ref(

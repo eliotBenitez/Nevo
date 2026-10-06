@@ -1,5 +1,32 @@
 const LUCIDE_PREFIX = 'lucide:'
 
+/**
+ * Brand icons removed from `lucide-vue-next` in Lucide v1. Notes saved before
+ * the migration can reference them via picker tokens, so they map to the
+ * closest current glyph instead of falling back to the emoji placeholder.
+ */
+const LEGACY_BRAND_ALIASES: Record<string, string> = {
+  chrome: 'Globe',
+  chromium: 'Globe',
+  codepen: 'Code',
+  codesandbox: 'Box',
+  dribbble: 'Globe',
+  facebook: 'ThumbsUp',
+  figma: 'Component',
+  framer: 'Layers',
+  github: 'GitBranch',
+  gitlab: 'GitBranch',
+  instagram: 'Camera',
+  linkedin: 'Briefcase',
+  pocket: 'Bookmark',
+  'rail-symbol': 'TrainFront',
+  slack: 'MessageCircle',
+  trello: 'SquareKanban',
+  twitch: 'Tv',
+  twitter: 'Bird',
+  youtube: 'Play',
+}
+
 export function isLucideNoteIcon(value: string | null | undefined): boolean {
   if (typeof value !== 'string') return false
   return value.startsWith(LUCIDE_PREFIX)
@@ -30,10 +57,15 @@ export function lucideTokenFromExportName(exportName: string): string {
   return `${LUCIDE_PREFIX}${toKebabCase(exportName)}`
 }
 
-export function lucideExportNameFromToken(value: string): string | null {
+export function lucideExportNameFromToken(value: string | null | undefined): string | null {
   const lucideName = getLucideNameFromToken(value)
   if (!lucideName) return null
-  return kebabToPascalCase(lucideName)
+  // The old picker also offered `LucideX` prefixed exports, which produced
+  // `lucide:lucide-x` tokens; strip that prefix before alias/Pascal lookup.
+  const name = lucideName.replace(/^lucide-/, '')
+  const alias = LEGACY_BRAND_ALIASES[name]
+  if (alias) return alias
+  return kebabToPascalCase(name)
 }
 
 export function humanizeLucideName(exportName: string): string {

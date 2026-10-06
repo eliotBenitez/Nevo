@@ -14,12 +14,12 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 function itemType(item: WorkspaceHomeItem) {
-  return t(`workspace.home.types.${item.kind}`)
+  return item.typeLabel
 }
 </script>
 
 <template>
-  <section v-if="favoriteItems.length" class="workspace-home__section tw:mt-[30px]">
+  <section v-if="favoriteItems.length" class="workspace-home__section tw:mt-0 tw:max-[767px]:mt-[30px]">
     <div class="workspace-home__section-head tw:flex tw:min-h-8 tw:items-center tw:justify-between tw:gap-4 tw:mb-3 tw:max-[719px]:mb-2.5">
       <div>
         <h2 class="tw:m-0 tw:text-[15px] tw:font-[650] tw:tracking-normal">{{ t('workspace.home.favorites.title') }}</h2>
@@ -62,19 +62,21 @@ function itemType(item: WorkspaceHomeItem) {
     </div>
   </section>
 
-  <section v-else-if="!isWorkspaceEmpty" class="workspace-home__favorite-prompt tw:flex tw:w-full tw:min-h-[112px] tw:items-center tw:gap-4 tw:mt-[42px] tw:p-5 tw:border tw:border-solid tw:border-transparent tw:rounded-[17px] tw:bg-surface-subtle tw:max-[719px]:items-start tw:max-[719px]:flex-wrap tw:max-[719px]:mt-[30px] tw:max-[719px]:p-4">
-    <div class="tw:min-w-0 tw:flex-1">
-      <span class="workspace-home__section-kicker tw:text-content-muted tw:font-nv-mono tw:text-[10.5px] tw:font-medium tw:tracking-[0.06em] tw:uppercase">{{ t('workspace.home.favorites.kicker') }}</span>
-      <h2 class="tw:m-0 tw:text-[13px] tw:font-semibold">{{ t('workspace.home.favorites.emptyTitle') }}</h2>
-      <p class="tw:mt-1.5 tw:mb-0 tw:text-content-muted tw:text-[13px]">{{ t('workspace.home.favorites.emptySubtitle') }}</p>
+  <section v-else-if="!isWorkspaceEmpty" class="workspace-home__favorite-prompt tw:@container tw:w-full tw:min-h-[112px] tw:mt-0 tw:max-[767px]:mt-[42px] tw:p-5 tw:border tw:border-solid tw:border-transparent tw:rounded-[17px] tw:bg-surface-subtle tw:max-[719px]:mt-[30px] tw:max-[719px]:p-4">
+    <div class="tw:flex tw:items-center tw:gap-4 tw:@max-[440px]:flex-wrap tw:@max-[440px]:items-start">
+      <div class="tw:min-w-0 tw:flex-1">
+        <span class="workspace-home__section-kicker tw:text-content-muted tw:font-nv-mono tw:text-[10.5px] tw:font-medium tw:tracking-[0.06em] tw:uppercase">{{ t('workspace.home.favorites.kicker') }}</span>
+        <h2 class="tw:m-0 tw:text-[13px] tw:font-semibold">{{ t('workspace.home.favorites.emptyTitle') }}</h2>
+        <p class="tw:mt-1.5 tw:mb-0 tw:text-content-muted tw:text-[13px]">{{ t('workspace.home.favorites.emptySubtitle') }}</p>
+      </div>
+      <button
+        type="button"
+        class="nv-btn tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-2 tw:@max-[440px]:w-full tw:max-[719px]:min-h-11"
+        @click="emit('manage-favorites')"
+      >
+        {{ t('workspace.home.favorites.choose') }}
+      </button>
     </div>
-    <button
-      type="button"
-      class="nv-btn tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-2 tw:max-[719px]:w-full tw:max-[719px]:min-h-11"
-      @click="emit('manage-favorites')"
-    >
-      {{ t('workspace.home.favorites.choose') }}
-    </button>
   </section>
 </template>
 

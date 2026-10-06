@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { mobileWorkspaceViewClass, mobileViewHeaderClass, mobileViewEyebrowClass, mobileViewTitleClass, mobileIconButtonClass, mobileIconButtonStrongClass, mobileIconButtonDefaultClass, mobileLibraryTabClass, mobileLibraryTabBadgeClass, mobileEmptyStateClass } from './mobileChromeClasses'
-import { ChevronRight, FilePlus2, Filter, Folder, Search, Tag } from 'lucide-vue-next'
+import { ChevronRight, FilePlus2, Filter, Folder, Search, Tag } from '@lucide/vue'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import type { FolderMeta, NoteMeta, SidebarNotePreview } from '../../../types/note'
 import { folderNoteCount } from '../../../utils/folder-note-count'
+import { pluralChoice } from '../../../utils/plural-index'
+import { notebookPreviewSummary } from '../../../utils/sidebar/sidebarNotePreviews'
 
 type LibraryTab = 'all' | 'folders' | 'tags'
 
@@ -39,6 +41,13 @@ function notesInFolders(folders: FolderMeta[]): NoteMeta[] {
 const allFolders = computed(() => flattenFolders(props.folders))
 const allNotes = computed(() => [...props.rootNotes, ...notesInFolders(props.folders)])
 const previewByNoteId = computed(() => new Map(props.previews.map(preview => [preview.noteId, preview])))
+
+function previewLine(noteId: string): string {
+  const preview = previewByNoteId.value.get(noteId)
+  if (preview?.previewText) return preview.previewText
+  const notebook = preview && notebookPreviewSummary(preview, t, count => pluralChoice(String(locale.value), count))
+  return notebook || t('workspace.mobile.library.noPreview')
+}
 const normalizedQuery = computed(() => query.value.trim().toLocaleLowerCase(String(locale.value)))
 
 const tags = computed(() => {
@@ -231,7 +240,7 @@ function openSearch() {
           </span>
           <span class="mobile-library-row__copy tw:flex tw:min-w-0 tw:flex-1 tw:flex-col tw:gap-1">
             <strong class="tw:truncate tw:text-[15px] tw:font-[630] tw:tracking-[-0.01em]">{{ note.title }}</strong>
-            <span class="tw:line-clamp-2 tw:text-xs tw:leading-[1.4] tw:text-content-muted">{{ previewByNoteId.get(note.id)?.previewText || t('workspace.mobile.library.noPreview') }}</span>
+            <span class="tw:line-clamp-2 tw:text-xs tw:leading-[1.4] tw:text-content-muted">{{ previewLine(note.id) }}</span>
             <small class="tw:flex tw:min-h-[18px] tw:items-center tw:gap-[5px] tw:truncate tw:text-[10px] tw:text-content-muted">
               <template v-for="tag in previewByNoteId.get(note.id)?.tags.slice(0, 2)" :key="tag">
                 <em class="tw:rounded-full tw:border tw:border-transparent tw:bg-surface-subtle tw:px-1.5 tw:py-0.5 tw:not-italic tw:text-content-muted">#{{ tag }}</em>

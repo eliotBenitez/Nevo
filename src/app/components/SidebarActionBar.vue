@@ -4,7 +4,7 @@ import type { Component } from 'vue'
 import {
   ArrowDownAZ, ArrowDownUp, ArrowDownZA, ChevronDown, ChevronsDownUp, ChevronsUpDown,
   ArchiveRestore, BookOpen, Clock, FileText, FileUp, FolderInput, FolderPlus, Kanban, List, Plus, Upload,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import NvPopupMenu from '../../ui/primitives/NvPopupMenu.vue'
 import type { NvMenuItemDef } from '../../ui/primitives/menu-types'

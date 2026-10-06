@@ -290,6 +290,14 @@
     }
   },
   "common": {
+    "datePicker": {
+      "placeholder": "Choisir une date",
+      "previousMonth": "Mois précédent",
+      "nextMonth": "Mois suivant",
+      "clear": "Effacer la date"
+    },
+    "decrease": "Diminuer",
+    "increase": "Augmenter",
     "close": "Fermer",
     "back": "Retour",
     "loading": "Chargement…",
@@ -419,6 +427,7 @@
     "toggleRightPanel": "Basculer le panneau droit",
     "openDrawer": "Ouvrir la barre latérale",
     "closeDrawer": "Fermer la barre latérale",
+    "drawerLabel": "Navigation",
     "createNote": "Nouvelle note",
     "createFolder": "Nouveau dossier",
     "importMd": "Importer un .md",
@@ -486,6 +495,7 @@
       "removeFromHome": "Retirer de l’accueil",
       "types": {
         "note": "Note",
+        "notebook": "Carnet",
         "folder": "Dossier",
         "board": "Tableau",
         "graph": "Graphe",
@@ -671,6 +681,7 @@
       "subtitle": "Créez une note ou un dossier pour démarrer cet espace."
     },
     "sidebarPreview": {
+      "notebookSummary": "Carnet · {total} page | Carnet · {total} pages",
       "tagsLabel": "Étiquettes de note",
       "allNotesTitle": "Toutes les notes",
       "selectedTitle": "Étiquettes sélectionnées",
@@ -1371,6 +1382,10 @@
         "description": "Largeur de la colonne de lecture centrée",
         "panelDescription": "Largeur de la colonne de lecture centrée"
       },
+      "font": {
+        "title": "Police du document",
+        "description": "Police utilisée pour le texte des notes dans l’éditeur"
+      },
       "fontSize": {
         "title": "Taille de police de l'éditeur",
         "description": "Échelle typographique de la surface d'écriture",
@@ -2000,7 +2015,8 @@
     },
     "blockHandle": {
       "drag": "Glisser pour réorganiser",
-      "options": "Options du bloc"
+      "options": "Options du bloc",
+      "insertBelow": "Insérer un bloc en dessous"
     },
     "blockEmbed": {
       "header": "Bloc intégré",
@@ -2300,8 +2316,8 @@
     "filters": "Filtres du graphe",
     "untitled": "Sans titre",
     "connections": "connexions",
-    "nodes": "nœuds",
-    "edges": "liens",
+    "nodeCount": "{total} nœud | {total} nœuds",
+    "edgeCount": "{total} lien | {total} liens",
     "showLabels": "Étiquettes",
     "showArrows": "Flèches",
     "zoomIn": "Zoom avant",
@@ -2694,7 +2710,7 @@
       "boardNotFound": "Tableau introuvable.",
       "boardUnavailable": "Le tableau est indisponible.",
       "moveFailed": "Échec du déplacement : {message}",
-      "cardCount": "{n} éléments",
+      "cardCount": "{cards} carte | {cards} cartes",
       "openAutomations": "Automatisations",
       "emptyTitle": "Un tableau vide.",
       "emptyHint": "Ajoutez votre première colonne et commencez à suivre le travail, ou partez d'un modèle.",
@@ -2927,7 +2943,8 @@
       "chooseFields": "Choisir les champs",
       "noFields": "Aucun champ local",
       "noTitle": "Sans titre",
-      "items": "{n} éléments · {g} groupes",
+      "cards": "{cards} carte | {cards} cartes",
+      "groups": "{groups} groupe | {groups} groupes",
       "avgProgress": "moy {n}%"
     },
     "propertyPanel": {
@@ -2969,7 +2986,7 @@
       "create": "Créer"
     },
     "embedded": {
-      "cardCount": "{n} cartes",
+      "cardCount": "{cards} carte | {cards} cartes",
       "openFullView": "Ouvrir la vue complète",
       "linkedTo": "Lié à {title}",
       "syncedSeconds": "synchronisé il y a {n}s",

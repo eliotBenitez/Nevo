@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import { describe, expect, it } from 'vitest'
-import { BarChart3, Image as ImageIcon, Pilcrow } from 'lucide-vue-next'
+import { BarChart3, Image as ImageIcon, Pilcrow } from '@lucide/vue'
 import EditorBlockHandle from './EditorBlockHandle.vue'
 import en from '../../../locales/en.json'
 

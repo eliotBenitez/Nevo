@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Zap } from 'lucide-vue-next'
+import { Zap } from '@lucide/vue'
 import type { KanbanBoard } from '../../../types/kanban'
 
 interface Props {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft, ChevronRight, History, RotateCw, Search, X } from 'lucide-vue-next'
+import { ArrowLeft, ChevronRight, History, RotateCw, Search, X } from '@lucide/vue'
 import { useWorkspaceStore } from '../../stores/workspace'
 import { useTreeStore } from '../../stores/tree'
 import NvButton from '../../ui/primitives/NvButton.vue'

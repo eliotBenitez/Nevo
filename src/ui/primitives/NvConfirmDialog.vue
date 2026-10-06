@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { AlertTriangle, Check, CircleHelp, Trash2, X } from 'lucide-vue-next'
+import { AlertTriangle, Check, CircleHelp, Trash2, X } from '@lucide/vue'
 import NvButton from './NvButton.vue'
 import NvModal from './NvModal.vue'
 import { resolveConfirmDialog, useConfirmDialog } from '../composables/useConfirmDialog'

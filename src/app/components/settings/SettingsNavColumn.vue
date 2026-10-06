@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft, Search } from 'lucide-vue-next'
+import { ArrowLeft, Search } from '@lucide/vue'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { resolveBindingChord } from '../../../utils/workspace-settings'
 import type { SettingsSectionId } from '../../../types/workspace'
@@ -48,7 +48,7 @@ const workspaceName = computed(() => manifest.value?.name || t('workspace.noWork
         <span>{{ t('workspace.systemView.backToWorkspace') }}</span>
       </button>
       <b id="workspace-settings-heading" class="settings-nav-col__title tw:text-sm tw:font-semibold tw:text-content-primary">{{ t('settings.title') }}</b>
-      <span class="settings-nav-col__meta tw:text-xs tw:text-content-muted">{{ workspaceName }} · {{ shortcutChord }}</span>
+      <span class="settings-nav-col__meta tw:text-xs tw:text-content-muted">{{ workspaceName }}<span class="settings-nav-col__chord tw:[@media(hover:none)_and_(pointer:coarse)]:hidden"> · {{ shortcutChord }}</span></span>
     </div>
 
     <div class="settings-nav-col__search tw:mx-1 tw:mb-[10px]">

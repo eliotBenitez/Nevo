@@ -9,6 +9,10 @@ html, body, #app {
   overflow: hidden;
 }
 
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
 ::selection {
   background: color-mix(in oklab, var(--accent) 25%, transparent);
 }

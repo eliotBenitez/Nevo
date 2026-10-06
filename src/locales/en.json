@@ -290,6 +290,14 @@
     }
   },
   "common": {
+    "datePicker": {
+      "placeholder": "Pick a date",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "clear": "Clear date"
+    },
+    "decrease": "Decrease",
+    "increase": "Increase",
     "close": "Close",
     "back": "Back",
     "loading": "Loading…",
@@ -419,6 +427,7 @@
     "toggleRightPanel": "Toggle right panel",
     "openDrawer": "Open sidebar",
     "closeDrawer": "Close sidebar",
+    "drawerLabel": "Navigation",
     "createNote": "New note",
     "createFolder": "New folder",
     "importMd": "Import .md",
@@ -486,6 +495,7 @@
       "removeFromHome": "Remove from Home",
       "types": {
         "note": "Note",
+        "notebook": "Notebook",
         "folder": "Folder",
         "board": "Board",
         "graph": "Graph",
@@ -671,6 +681,7 @@
       "subtitle": "Create a note or folder to start this workspace."
     },
     "sidebarPreview": {
+      "notebookSummary": "Notebook · {total} page | Notebook · {total} pages",
       "tagsLabel": "Note tags",
       "allNotesTitle": "All notes",
       "selectedTitle": "Selected tags",
@@ -1371,6 +1382,10 @@
         "description": "Width of the centred reading column",
         "panelDescription": "Width of the centred reading column"
       },
+      "font": {
+        "title": "Document font",
+        "description": "Typeface used for note text in the editor"
+      },
       "fontSize": {
         "title": "Editor font size",
         "description": "Typography scale used in the writing surface",
@@ -2000,7 +2015,8 @@
     },
     "blockHandle": {
       "drag": "Drag to reorder",
-      "options": "Block options"
+      "options": "Block options",
+      "insertBelow": "Insert block below"
     },
     "blockEmbed": {
       "header": "Embedded block",
@@ -2300,8 +2316,8 @@
     "filters": "Graph filters",
     "untitled": "Untitled",
     "connections": "connections",
-    "nodes": "nodes",
-    "edges": "edges",
+    "nodeCount": "{total} node | {total} nodes",
+    "edgeCount": "{total} edge | {total} edges",
     "showLabels": "Labels",
     "showArrows": "Arrows",
     "zoomIn": "Zoom in",
@@ -2694,7 +2710,7 @@
       "boardNotFound": "Board not found.",
       "boardUnavailable": "Board is unavailable.",
       "moveFailed": "Move failed: {message}",
-      "cardCount": "{n} items",
+      "cardCount": "{cards} card | {cards} cards",
       "openAutomations": "Automations",
       "emptyTitle": "An empty board.",
       "emptyHint": "Add your first column and start tracking work, or start from a template.",
@@ -2927,7 +2943,8 @@
       "chooseFields": "Choose fields",
       "noFields": "No local fields yet",
       "noTitle": "Untitled",
-      "items": "{n} items · {g} groups",
+      "cards": "{cards} card | {cards} cards",
+      "groups": "{groups} group | {groups} groups",
       "avgProgress": "avg {n}%"
     },
     "propertyPanel": {
@@ -2969,7 +2986,7 @@
       "create": "Create"
     },
     "embedded": {
-      "cardCount": "{n} cards",
+      "cardCount": "{cards} card | {cards} cards",
       "openFullView": "Open full view",
       "linkedTo": "Linked to {title}",
       "syncedSeconds": "synced {n}s ago",

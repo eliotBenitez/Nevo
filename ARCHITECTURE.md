@@ -264,9 +264,11 @@ these groups in narrower editor panes, and coarse pointers retain larger targets
 It uses numeric width controls and always includes paper in PDF export.
 `savePatch` produces lossless immutable deltas; `saveTransport` sends them to a
 worker that reconstructs and serializes the complete note away from input handling.
-`src/tauri/notebookSave.ts` passes UTF-8 bytes to `save_notebook_note`, which validates
-them on a blocking worker and reuses the existing note lock, atomic save, and history
-flow. This is a transport optimization, not a second persisted format.
+`src/tauri/notebookSave.ts` passes UTF-8 bytes to `save_notebook_note`. The command
+accepts raw bytes and Tauri's Android JSON byte-array representation, enforces the
+same byte budget, and rejects invalid byte values. It decodes and validates the
+note on a blocking worker and reuses the existing note lock, atomic save, and
+history flow. Both transports preserve the same complete persisted note format.
 Shell background-save timers persist notebook checkpoints without finalizing the
 active pointer contact; explicit save, navigation, and focus loss still flush input.
 `commands/notebook_export/` validates vector commands and uses the existing Typst
@@ -316,7 +318,9 @@ change stored note icons.
 - **Graph** — `src/features/graph/index.ts` is the feature entry (`GraphView.vue` for the
   full graph, `LocalGraphPanel.vue` for the per-note local graph), backed by a D3
   force-directed layout and the Rust `graph_*` commands
-  (`src-tauri/src/commands/graph.rs`, not covered in depth here). The right panel's
+  (`src-tauri/src/commands/graph.rs`, not covered in depth here). `GraphHeader.vue`
+  renders navigation, search, counters, and the phone filter toggle; `GraphView`
+  owns search and filter state and forwards navigation events. The right panel's
   Graph tab lazily mounts `LocalGraphPanel` in embedded mode. It renders the active
   note and its direct incoming/outgoing neighbors from `useGraphStore`, with note
   metadata resolved from the workspace tree. The editor lifecycle loads these

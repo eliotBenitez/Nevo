@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
-import { ChevronLeft, ChevronRight, X, Calendar } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, X, Calendar } from '@lucide/vue'
 import { formatDateOnly, parseDateOnly } from '../../utils/dateOnly'
+import { i18n } from '../../i18n'
 
 interface Props {
   modelValue: string | null
@@ -10,9 +11,15 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  placeholder: 'Pick a date',
+  placeholder: undefined,
   disabled: false,
 })
+
+// The global instance, not useI18n(): pickers also render inside editor node
+// views and plugin surfaces that are mounted without the app's i18n plugin.
+const t = i18n.global.t
+const locale = computed(() => String(i18n.global.locale.value))
+const placeholderLabel = computed(() => props.placeholder ?? t('common.datePicker.placeholder'))
 
 const emit = defineEmits<{ 'update:modelValue': [value: string | null] }>()
 
@@ -30,14 +37,16 @@ const displayLabel = computed(() => {
   if (!props.modelValue) return null
   const d = parseDateOnly(props.modelValue)
   if (!d) return null
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  return d.toLocaleDateString(locale.value, { year: 'numeric', month: 'short', day: 'numeric' })
 })
 
 const monthTitle = computed(() =>
-  viewDate.value.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+  viewDate.value.toLocaleDateString(locale.value, { month: 'long', year: 'numeric' })
 )
 
-const DOW = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
+// Monday-first weekday initials in the app locale (2024-01-01 was a Monday).
+const DOW = computed(() => Array.from({ length: 7 }, (_, index) =>
+  new Date(2024, 0, 1 + index).toLocaleDateString(locale.value, { weekday: 'short' })))
 
 const calGrid = computed(() => {
   const year = viewDate.value.getFullYear()
@@ -146,8 +155,8 @@ onBeforeUnmount(() => {
       @click="isOpen ? close() : open()"
     >
       <Calendar :size="12" class="ndp-trigger__icon tw:shrink-0 tw:text-content-muted" />
-      <span class="ndp-trigger__label tw:flex-1 tw:truncate tw:text-left">{{ displayLabel ?? placeholder }}</span>
-      <button v-if="modelValue" type="button" class="ndp-clear tw:grid tw:size-3.5 tw:shrink-0 tw:cursor-pointer tw:place-items-center tw:rounded-full tw:border-0 tw:bg-(--hover-strong) tw:p-0 tw:text-content-muted tw:transition-colors tw:duration-100 tw:hover:bg-accent tw:hover:text-content-on-accent" @click="clear">
+      <span class="ndp-trigger__label tw:flex-1 tw:truncate tw:text-left">{{ displayLabel ?? placeholderLabel }}</span>
+      <button v-if="modelValue" type="button" class="ndp-clear tw:grid tw:size-3.5 tw:shrink-0 tw:cursor-pointer tw:place-items-center tw:rounded-full tw:border-0 tw:bg-(--hover-strong) tw:p-0 tw:text-content-muted tw:transition-colors tw:duration-100 tw:hover:bg-accent tw:hover:text-content-on-accent" :aria-label="t('common.datePicker.clear')" @click="clear">
         <X :size="10" />
       </button>
     </button>
@@ -161,11 +170,11 @@ onBeforeUnmount(() => {
       >
         <!-- Month nav -->
         <div class="ndp-nav tw:mb-2 tw:flex tw:items-center tw:gap-1">
-          <button type="button" class="ndp-nav__btn tw:grid tw:size-[22px] tw:cursor-pointer tw:place-items-center tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:text-content-muted tw:transition-colors tw:duration-100 tw:hover:bg-(--hover-strong)" @click="prevMonth">
+          <button type="button" class="ndp-nav__btn tw:grid tw:size-[22px] tw:cursor-pointer tw:place-items-center tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:text-content-muted tw:transition-colors tw:duration-100 tw:hover:bg-(--hover-strong)" :aria-label="t('common.datePicker.previousMonth')" @click="prevMonth">
             <ChevronLeft :size="12" />
           </button>
           <span class="ndp-nav__title tw:flex-1 tw:text-center tw:text-xs tw:font-semibold tw:text-content-primary">{{ monthTitle }}</span>
-          <button type="button" class="ndp-nav__btn tw:grid tw:size-[22px] tw:cursor-pointer tw:place-items-center tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:text-content-muted tw:transition-colors tw:duration-100 tw:hover:bg-(--hover-strong)" @click="nextMonth">
+          <button type="button" class="ndp-nav__btn tw:grid tw:size-[22px] tw:cursor-pointer tw:place-items-center tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:text-content-muted tw:transition-colors tw:duration-100 tw:hover:bg-(--hover-strong)" :aria-label="t('common.datePicker.nextMonth')" @click="nextMonth">
             <ChevronRight :size="12" />
           </button>
         </div>
@@ -213,6 +222,13 @@ onBeforeUnmount(() => {
 @keyframes ndp-in {
   from { opacity: 0; transform: scale(0.96) translateY(-4px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Touch: the 22px month arrows and the 14px clear dot are too small to hit. */
+@media (pointer: coarse) {
+  .ndp-nav__btn { width: 36px; height: 36px; }
+  .ndp-clear { position: relative; }
+  .ndp-clear::after { content: ''; position: absolute; inset: -10px; }
 }
 
 </style>

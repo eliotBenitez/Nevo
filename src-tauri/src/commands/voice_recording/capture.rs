@@ -4,14 +4,12 @@
 //! and everything that touches `cpal`/`hound` is `#[cfg(desktop)]`; mobile
 //! command stubs return `RecorderError::Unsupported` instead (see `mod.rs`).
 
-use std::path::Path;
-
 #[cfg(desktop)]
 use std::fs::File;
 #[cfg(desktop)]
 use std::io::BufWriter;
 #[cfg(desktop)]
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 #[cfg(desktop)]
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 #[cfg(desktop)]
@@ -23,6 +21,7 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 #[cfg(desktop)]
 use super::session::{RecorderError, StoppedRecording};
 
+#[cfg_attr(mobile, allow(dead_code))]
 pub const PREFERRED_SAMPLE_RATE: u32 = 16_000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

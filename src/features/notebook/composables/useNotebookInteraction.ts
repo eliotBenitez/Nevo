@@ -41,6 +41,18 @@ export function useNotebookInteraction(options: {
   let touchPan: { id: number; x: number; y: number; left: number; top: number } | null = null
   let mousePan: { id: number; x: number; y: number; left: number; top: number } | null = null
 
+  // Programmatic focus after any keyboard input matches :focus-visible in Chromium,
+  // so pointer-originated focus is marked to keep the canvas ring keyboard-only.
+  function focusScrollerFromPointer(): void {
+    const scroller = options.scroller.value
+    if (!scroller) return
+    if (scroller.dataset.pointerFocus === undefined) {
+      scroller.dataset.pointerFocus = ''
+      scroller.addEventListener('blur', () => { delete scroller.dataset.pointerFocus }, { once: true })
+    }
+    scroller.focus({ preventScroll: true })
+  }
+
   function touchDistance(): number {
     const [a, b] = [...touchPoints.values()]
     return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0
@@ -134,7 +146,7 @@ export function useNotebookInteraction(options: {
   function onPagePointerDown(pageId: string, event: PointerEvent): void {
     if (options.isOverlayActive?.()) return
     if (event.pointerType === 'mouse' && event.button !== 0) return
-    if (event.pointerType !== 'touch') options.scroller.value?.focus({ preventScroll: true })
+    if (event.pointerType !== 'touch') focusScrollerFromPointer()
     if (options.input.isActive.value) {
       options.input.pointerDown(event)
       return

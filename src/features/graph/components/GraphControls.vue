@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { RotateCcw } from 'lucide-vue-next'
+import { RotateCcw } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
+import { pluralChoice } from '../../../utils/plural-index'
 import type { EdgeKind } from '../../../types/graph'
 import { useFirstUseHint } from '../../onboarding/hints/useFirstUseHint'
 
@@ -27,7 +28,7 @@ const emit = defineEmits<{
   'toggle-filter': [kind: EdgeKind]
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 useFirstUseHint('graphFilters')
 
@@ -69,7 +70,7 @@ const KIND_DOT_CLASSES: Record<EdgeKind, string> = {
           @click="emit('zoom-in')"
         >+</button>
         <div class="gc-divider tw:mx-0.5 tw:h-4 tw:w-px tw:bg-line-default" />
-        <button class="gc-zoom__btn gc-zoom__reset tw:grid tw:size-7 tw:cursor-pointer tw:place-items-center tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border-none tw:bg-transparent tw:text-base tw:leading-none tw:font-light tw:text-content-muted tw:transition-colors tw:duration-100 tw:hover:bg-(--hover-strong) tw:hover:text-content-primary tw:max-[719px]:size-11 tw:max-[719px]:touch-manipulation" :title="t('graph.resetView')" @click="emit('reset')">
+        <button class="gc-zoom__btn gc-zoom__reset tw:grid tw:size-7 tw:cursor-pointer tw:place-items-center tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border-none tw:bg-transparent tw:text-base tw:leading-none tw:font-light tw:text-content-muted tw:transition-colors tw:duration-100 tw:hover:bg-(--hover-strong) tw:hover:text-content-primary tw:max-[719px]:size-11 tw:max-[719px]:touch-manipulation" :title="t('graph.resetView')" :aria-label="t('graph.resetView')" @click="emit('reset')">
           <RotateCcw :size="11" />
         </button>
       </div>
@@ -125,11 +126,9 @@ const KIND_DOT_CLASSES: Record<EdgeKind, string> = {
 
       <!-- Stats -->
       <div class="gc-stats tw:flex tw:items-center tw:gap-1 tw:px-0.5 tw:font-nv-mono tw:text-[11px] tw:text-content-muted tw:max-[719px]:hidden tw:max-[719px]:min-h-5 tw:max-[719px]:group-data-[open=true]:flex">
-        <span>{{ nodeCount }}</span>
-        <span class="gc-stats__label tw:text-content-muted tw:opacity-70">{{ t('graph.nodes') }}</span>
+        <span>{{ t('graph.nodeCount', pluralChoice(String(locale), nodeCount), { named: { total: nodeCount } }) }}</span>
         <span class="gc-stats__dot tw:opacity-40">·</span>
-        <span>{{ edgeCount }}</span>
-        <span class="gc-stats__label tw:text-content-muted tw:opacity-70">{{ t('graph.edges') }}</span>
+        <span>{{ t('graph.edgeCount', pluralChoice(String(locale), edgeCount), { named: { total: edgeCount } }) }}</span>
       </div>
     </div>
   </div>
