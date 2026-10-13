@@ -138,6 +138,56 @@
   background: transparent !important;
 }
 
+/* "Paper" look: a dotted canvas with nodes as softly raised cards. Colors come
+   from mermaidTheme.ts; geometry and depth live here because the sanitizer only
+   keeps presentation attributes, which these rules override. */
+.doc-editor .nv-prosemirror .nv-mermaid-block[data-empty='false'][data-error='false'] {
+  background:
+    radial-gradient(circle, color-mix(in oklab, var(--text-primary) 13%, transparent) 1px, transparent 1.2px) 0 0 / 16px 16px,
+    var(--surface-panel);
+  border-color: var(--border-subtle);
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-block[data-empty='false'][data-error='false'] .nv-mermaid-header {
+  background: var(--surface-panel);
+  box-shadow: 0 1px 0 var(--border-subtle);
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-render svg .node rect,
+.doc-editor .nv-prosemirror .nv-mermaid-render svg .node polygon,
+.doc-editor .nv-prosemirror .nv-mermaid-render svg .node circle,
+.doc-editor .nv-prosemirror .nv-mermaid-render svg rect.actor {
+  stroke-width: 1px;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.06)) drop-shadow(0 3px 8px rgb(0 0 0 / 0.07));
+}
+
+.theme-dark .doc-editor .nv-prosemirror .nv-mermaid-render svg .node rect,
+.theme-dark .doc-editor .nv-prosemirror .nv-mermaid-render svg .node polygon,
+.theme-dark .doc-editor .nv-prosemirror .nv-mermaid-render svg .node circle,
+.theme-dark .doc-editor .nv-prosemirror .nv-mermaid-render svg rect.actor {
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.4)) drop-shadow(0 4px 10px rgb(0 0 0 / 0.35));
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-render svg .node rect,
+.doc-editor .nv-prosemirror .nv-mermaid-render svg rect.actor {
+  rx: 10px;
+  ry: 10px;
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-render svg rect.note {
+  rx: 6px;
+  ry: 6px;
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-render svg .cluster rect {
+  rx: 14px;
+  ry: 14px;
+}
+
+.doc-editor .nv-prosemirror .nv-mermaid-render svg .flowchart-link {
+  stroke-width: 1.5px;
+}
+
 .doc-editor .nv-prosemirror .nv-mermaid-block[data-empty='true'] .nv-mermaid-render,
 .doc-editor .nv-prosemirror .nv-mermaid-block[data-error='true'] .nv-mermaid-render {
   color: var(--text-muted);

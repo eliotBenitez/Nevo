@@ -58,7 +58,7 @@ describe('Mermaid node view SVG rendering', () => {
     expect(mermaidInitialize).toHaveBeenCalledWith(expect.objectContaining({
       securityLevel: 'strict',
       htmlLabels: false,
-      flowchart: { htmlLabels: false },
+      flowchart: expect.objectContaining({ htmlLabels: false }),
     }))
     nodeView.destroy?.()
   })

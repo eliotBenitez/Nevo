@@ -13,6 +13,7 @@ import {
 } from './viewportRenderController'
 import { sanitizeMermaidSvg } from '../../utils/sanitizeMermaidSvg'
 import { MAX_EMBED_SOURCE_CHARS } from './embedLimits'
+import { getMermaidTheme, onMermaidThemeChange } from './mermaidTheme'
 
 let renderCounter = 0
 
@@ -28,27 +29,30 @@ function loadMermaid(): Promise<typeof import('mermaid')['default']> {
   return mermaidModulePromise
 }
 
-function getMermaidTheme(): 'dark' | 'neutral' {
-  return document.documentElement.classList.contains('theme-dark') ? 'dark' : 'neutral'
-}
-
-let initializedTheme: string | null = null
+let initializedThemeKey: string | null = null
 
 async function ensureMermaid(): Promise<typeof import('mermaid')['default']> {
   const mermaid = await loadMermaid()
-  const theme = getMermaidTheme()
-  if (theme !== initializedTheme) {
-    initializedTheme = theme
+  const { config, key } = getMermaidTheme()
+  if (key !== initializedThemeKey) {
+    initializedThemeKey = key
     // securityLevel 'strict' strips <script>/event handlers from rendered diagrams.
     // Diagram source may come from pasted or imported notes, so
     // 'loose' (which permits inline HTML/click handlers) is an XSS vector here.
     mermaid.initialize({
       startOnLoad: false,
-      theme,
+      ...config,
       securityLevel: 'strict',
       // Render labels as native SVG text so sanitation can preserve them safely.
       htmlLabels: false,
-      flowchart: { htmlLabels: false },
+      // Natural size: the sanitizer drops Mermaid's inline max-width, so useMaxWidth
+      // would stretch small diagrams to the full editor width. CSS caps wide ones.
+      flowchart: { htmlLabels: false, curve: 'basis', padding: 14, useMaxWidth: false },
+      sequence: { useMaxWidth: false },
+      class: { useMaxWidth: false },
+      state: { useMaxWidth: false },
+      er: { useMaxWidth: false },
+      pie: { useMaxWidth: false },
     })
   }
   return mermaid
@@ -165,6 +169,11 @@ export function createMermaidNodeView(node: PMNode, view: EditorView, getPos: No
     initialPlaceholderHeight: 220,
   })
 
+  const stopThemeWatch = onMermaidThemeChange(() => {
+    lastRenderedCode = ''
+    if (viewportController?.isActive()) viewportController.requestRender()
+  })
+
   const requestMermaidEdit = (event?: MouseEvent) => {
     const position = resolveNodePosition(getPos)
     if (typeof position !== 'number') return
@@ -199,6 +208,7 @@ export function createMermaidNodeView(node: PMNode, view: EditorView, getPos: No
     },
     destroy() {
       renderVersion++
+      stopThemeWatch()
       viewportController?.destroy()
       dom.removeEventListener('click', onClick)
     },
