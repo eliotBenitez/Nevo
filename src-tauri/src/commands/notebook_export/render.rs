@@ -306,7 +306,7 @@ mod tests {
     }
 
     fn pdf_page_count(pdf: &[u8]) -> usize {
-        let marker = b"/Type /Page";
+        let marker = b"/Type/Page";
         pdf.windows(marker.len() + 1)
             .filter(|window| &window[..marker.len()] == marker && window[marker.len()] != b's')
             .count()

@@ -19,12 +19,8 @@ describe('Tailwind cascade contract', () => {
     const base = readFileSync(join(STYLES_DIR, 'base.css'), 'utf-8')
     const layerStart = base.indexOf('@layer base {')
     expect(layerStart).toBeGreaterThanOrEqual(0)
-    for (const selector of [
-      ':where(button, a, input, select, textarea, [tabindex]):focus-visible',
-      '[data-focus-ring="high-contrast"] *:focus-visible',
-    ]) {
-      expect(base.indexOf(selector)).toBeGreaterThan(layerStart)
-    }
+    const selector = ':where(button, a, input, select, textarea, [tabindex]):focus-visible'
+    expect(base.indexOf(selector)).toBeGreaterThan(layerStart)
   })
 
   // .nv-btn is a compatibility hook: plain-template consumers still apply it

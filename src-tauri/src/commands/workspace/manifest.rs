@@ -524,9 +524,13 @@ mod tests {
     #[test]
     fn open_workspace_still_opens_the_current_schema_version() {
         let workspace = TestWorkspace::new();
-        // schema_version is already CURRENT_WORKSPACE_SCHEMA_VERSION from
-        // create_workspace — pins that the version gate never rejects `==`.
-        let manifest = open_workspace(workspace.path_string()).expect("must open");
+        // create_workspace starts at the initial schema; raise it to the current
+        // one to pin that the version gate never rejects `==`.
+        let path = workspace.path_string();
+        let mut current = load_manifest(&path).expect("load manifest");
+        current.schema_version = CURRENT_WORKSPACE_SCHEMA_VERSION;
+        save_manifest(&path, &current).expect("raise schema");
+        let manifest = open_workspace(path).expect("must open");
         assert_eq!(manifest.schema_version, CURRENT_WORKSPACE_SCHEMA_VERSION);
     }
 

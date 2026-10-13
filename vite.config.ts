@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import vue from "@vitejs/plugin-vue";
 import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
@@ -16,6 +16,8 @@ export default defineConfig(async () => ({
   test: {
     environment: "jsdom",
     globals: true,
+    // tools/ and build-tools/ tests use node:test; they run via `pnpm test:node`.
+    exclude: [...configDefaults.exclude, "tools/**", "build-tools/**", ".qa/**"],
   },
 
   build: {

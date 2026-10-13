@@ -50,7 +50,7 @@ export function loadViewportOverride(statePath, targetId, metadata) {
   let state
   try { state = JSON.parse(readFileSync(statePath, 'utf8')) } catch (error) {
     if (error.code === 'ENOENT') return null
-    throw new Error(`Unable to read QA viewport state: ${error.message}`)
+    throw new Error(`Unable to read QA viewport state: ${error.message}`, { cause: error })
   }
   if (state?.version !== 1 || !state.entries || typeof state.entries !== 'object' || Array.isArray(state.entries)) {
     throw new Error('QA viewport state has an unsupported format; remove .qa/windows/viewport.json to reset it')
@@ -73,7 +73,7 @@ export function saveViewportOverride(statePath, targetId, metadata, dimensions) 
     state = JSON.parse(readFileSync(statePath, 'utf8'))
     if (state?.version !== 1 || !state.entries || typeof state.entries !== 'object' || Array.isArray(state.entries)) throw new Error('unsupported format')
   } catch (error) {
-    if (error.code !== 'ENOENT') throw new Error(`Unable to update QA viewport state: ${error.message}`)
+    if (error.code !== 'ENOENT') throw new Error(`Unable to update QA viewport state: ${error.message}`, { cause: error })
   }
   state.entries[key] = { width: dimensions.width, height: dimensions.height }
   const temporaryPath = `${statePath}.${process.pid}.tmp`
@@ -82,7 +82,7 @@ export function saveViewportOverride(statePath, targetId, metadata, dimensions) 
     writeFileSync(temporaryPath, `${JSON.stringify(state, null, 2)}\n`, { flag: 'w' })
     renameSync(temporaryPath, statePath)
   } catch (error) {
-    throw new Error(`Unable to save QA viewport state: ${error.message}`)
+    throw new Error(`Unable to save QA viewport state: ${error.message}`, { cause: error })
   }
 }
 
@@ -157,7 +157,7 @@ export class CDPConnection {
         socket.addEventListener('close', onClose)
       })
     } catch (error) {
-      try { socket.close() } catch {}
+      try { socket.close() } catch { /* already closed */ }
       throw error
     }
     return new CDPConnection(socket, timeoutMs)

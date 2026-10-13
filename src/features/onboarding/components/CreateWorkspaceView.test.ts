@@ -150,8 +150,7 @@ describe('CreateWorkspaceView starter note', () => {
     await selectTemplate(view, 1) // 'researcher'
 
     await view.get('.footer-btn-create').trigger('click')
-    await flushPromises()
-    await flushPromises()
+    await vi.waitFor(() => expect(view.emitted('done')).toBeTruthy())
 
     const createNoteCalls = vi.mocked(noteCommands.createNote).mock.invocationCallOrder
     const createFolderCalls = vi.mocked(folderCommands.createFolder).mock.invocationCallOrder
@@ -172,8 +171,7 @@ describe('CreateWorkspaceView starter note', () => {
     // Default selected template is already 'empty'.
 
     await view.get('.footer-btn-create').trigger('click')
-    await flushPromises()
-    await flushPromises()
+    await vi.waitFor(() => expect(view.emitted('done')).toBeTruthy())
 
     expect(noteCommands.createNote).toHaveBeenCalledTimes(1)
     expect(vi.mocked(noteCommands.createNote).mock.calls[0][2]).toBe(en.onboarding.starterNote.title)

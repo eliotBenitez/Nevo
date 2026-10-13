@@ -244,7 +244,7 @@ defineExpose({ flush })
 .kb-editor-properties summary { list-style: none; }
 .kb-editor-properties summary::-webkit-details-marker { display: none; }
 .kb-editor-properties-trigger { box-sizing: border-box; border: 1px solid var(--border-subtle); }
-.kb-editor-properties-popover { position: absolute; top: calc(100% + 8px); right: 0; z-index: 20; width: min(360px, calc(100vw - 32px)); max-height: min(70vh, 620px); overflow: auto; padding: 14px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-raised); box-shadow: var(--shadow-pop); }
+.kb-editor-properties-popover { position: absolute; top: calc(100% + 8px); right: 0; z-index: 20; width: min(360px, calc(100vw - 32px)); max-height: min(70vh, 620px); overflow: auto; padding: 14px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-raised); box-shadow: var(--shadow-overlay); }
 .kb-editor-properties:not([open]) .kb-editor-properties-popover { display: none; }
 .kb-editor-title:focus-visible,
 .kb-editor-properties summary:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 4px; border-radius: 4px; }

@@ -352,6 +352,7 @@ mod tests {
             "id": "n1",
             "title": "Notebook",
             "icon": "N",
+            "cover": null,
             "folderId": null,
             "createdAt": "today",
             "updatedAt": "today",
