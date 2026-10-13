@@ -289,6 +289,12 @@ mod tests {
             paths::config_path_for(Agent::ClaudeDesktop, &env, "windows").expect("path"),
             appdata.join("Claude").join("claude_desktop_config.json")
         );
+        let msix = home.join("AppData/Local/Packages/Claude_pzs8sxrjxfjjc/LocalCache/Roaming");
+        std::fs::create_dir_all(msix.join("Claude")).expect("MSIX Claude directory");
+        assert_eq!(
+            paths::config_path_for(Agent::ClaudeDesktop, &env, "windows").expect("MSIX path"),
+            msix.join("Claude").join("claude_desktop_config.json")
+        );
         let env = HashMap::from([("HOME".to_string(), home.to_string_lossy().into_owned())]);
         assert!(paths::config_path_for(Agent::ClaudeDesktop, &env, "macos").is_err());
     }

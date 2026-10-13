@@ -89,10 +89,11 @@ pub fn config_path_for(
         Agent::ClaudeCode => home.join(".claude.json"),
         Agent::ClaudeDesktop => {
             let base = match platform {
-                "windows" => env
-                    .get("APPDATA")
-                    .map(PathBuf::from)
-                    .unwrap_or_else(|| home.join("AppData").join("Roaming")),
+                "windows" => msix_roaming(env, &home).unwrap_or_else(|| {
+                    env.get("APPDATA")
+                        .map(PathBuf::from)
+                        .unwrap_or_else(|| home.join("AppData").join("Roaming"))
+                }),
                 "macos" => home.join("Library").join("Application Support"),
                 _ => env
                     .get("XDG_CONFIG_HOME")
@@ -108,6 +109,21 @@ pub fn config_path_for(
         }
     };
     Ok(path)
+}
+
+/// The Store (MSIX) build of Claude Desktop sees `%APPDATA%` redirected into its
+/// package's private roaming folder, so its config never appears in the real `%APPDATA%`.
+fn msix_roaming(env: &HashMap<String, String>, home: &Path) -> Option<PathBuf> {
+    let local = env
+        .get("LOCALAPPDATA")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home.join("AppData").join("Local"));
+    std::fs::read_dir(local.join("Packages"))
+        .ok()?
+        .flatten()
+        .filter(|entry| entry.file_name().to_string_lossy().starts_with("Claude_"))
+        .map(|entry| entry.path().join("LocalCache").join("Roaming"))
+        .find(|roaming| roaming.join("Claude").is_dir())
 }
 
 pub fn is_development_executable(executable: &Path, checkout: &Path) -> bool {
