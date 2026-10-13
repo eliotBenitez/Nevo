@@ -87,6 +87,25 @@ pub fn config_path_for(
             codex_home.join("config.toml")
         }
         Agent::ClaudeCode => home.join(".claude.json"),
+        Agent::ClaudeDesktop => {
+            let base = match platform {
+                "windows" => env
+                    .get("APPDATA")
+                    .map(PathBuf::from)
+                    .unwrap_or_else(|| home.join("AppData").join("Roaming")),
+                "macos" => home.join("Library").join("Application Support"),
+                _ => env
+                    .get("XDG_CONFIG_HOME")
+                    .map(PathBuf::from)
+                    .unwrap_or_else(|| home.join(".config")),
+            };
+            let directory = base.join("Claude");
+            // Never create Claude's data directory: its absence means Claude Desktop is not installed.
+            if !directory.is_absolute() || !directory.is_dir() {
+                return Err("Claude Desktop is not installed".to_string());
+            }
+            directory.join("claude_desktop_config.json")
+        }
     };
     Ok(path)
 }

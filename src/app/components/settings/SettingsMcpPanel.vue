@@ -27,7 +27,7 @@ const workspaceStore = useWorkspaceStore()
 const { settings, activePath, backendKind, appMetadata } = storeToRefs(workspaceStore)
 
 const bridge = ref<McpBridgeInfo | null>(null)
-const agents = ['codex', 'claudeCode'] as const
+const agents = ['codex', 'claudeCode', 'claudeDesktop'] as const
 const agentStatuses = ref<McpAgentStatuses | null>(null)
 const agentError = ref<Partial<Record<McpAgent, string>>>({})
 const agentBusy = ref<Partial<Record<McpAgent, boolean>>>({})
@@ -66,7 +66,7 @@ async function refreshAgents() {
   } catch (error) {
     agentStatuses.value = null
     const message = String(error)
-    agentError.value = { codex: message, claudeCode: message }
+    agentError.value = Object.fromEntries(agents.map(agent => [agent, message]))
   }
 }
 

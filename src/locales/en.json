@@ -1807,6 +1807,7 @@
       "agents": {
         "codex": "Codex",
         "claudeCode": "Claude Code",
+        "claudeDesktop": "Claude Desktop",
         "desktopOnly": "Available in the desktop app only.",
         "loading": "Checking connection…",
         "connect": "Connect",

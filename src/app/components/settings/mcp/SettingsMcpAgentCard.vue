@@ -33,9 +33,12 @@ const cardTone = computed<'default' | 'warning'>(() => {
   return 'default'
 })
 
-const configPath = computed(() => {
-  return props.agent === 'codex' ? '~/.codex/config.toml' : '~/.claude.json'
-})
+const configPaths: Record<McpAgent, string> = {
+  codex: '~/.codex/config.toml',
+  claudeCode: '~/.claude.json',
+  claudeDesktop: 'claude_desktop_config.json',
+}
+const configPath = computed(() => configPaths[props.agent])
 
 const statusText = computed(() => {
   if (!props.desktop) return t('settings.mcp.agents.desktopOnly')

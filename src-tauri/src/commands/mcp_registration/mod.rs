@@ -17,6 +17,7 @@ static REGISTRATION_LOCK: Mutex<()> = Mutex::new(());
 pub enum Agent {
     Codex,
     ClaudeCode,
+    ClaudeDesktop,
 }
 
 impl Agent {
@@ -24,6 +25,7 @@ impl Agent {
         match value {
             "codex" => Ok(Self::Codex),
             "claudeCode" => Ok(Self::ClaudeCode),
+            "claudeDesktop" => Ok(Self::ClaudeDesktop),
             _ => Err("Unknown MCP agent".to_string()),
         }
     }
@@ -51,6 +53,7 @@ pub struct AgentStatus {
 pub struct AgentStatuses {
     pub codex: AgentStatus,
     pub claude_code: AgentStatus,
+    pub claude_desktop: AgentStatus,
 }
 
 fn installed_context(agent: Agent) -> Result<(std::path::PathBuf, Launcher), String> {
@@ -82,6 +85,7 @@ pub fn installed_statuses() -> AgentStatuses {
     AgentStatuses {
         codex: installed_status(Agent::Codex),
         claude_code: installed_status(Agent::ClaudeCode),
+        claude_desktop: installed_status(Agent::ClaudeDesktop),
     }
 }
 
@@ -111,7 +115,7 @@ pub struct Entry {
 fn entry(agent: Agent, raw: &str) -> Result<Option<Entry>, String> {
     match agent {
         Agent::Codex => codex::entry(raw),
-        Agent::ClaudeCode => claude::entry(raw),
+        Agent::ClaudeCode | Agent::ClaudeDesktop => claude::entry(raw),
     }
 }
 
@@ -167,9 +171,12 @@ pub fn connect(
     }
     let updated = match agent {
         Agent::Codex => codex::set(&raw, launcher, previous.kind == StatusKind::NeedsReconnect)?,
-        Agent::ClaudeCode => {
-            claude::set(&raw, launcher, previous.kind == StatusKind::NeedsReconnect)?
-        }
+        Agent::ClaudeCode | Agent::ClaudeDesktop => claude::set(
+            &raw,
+            launcher,
+            previous.kind == StatusKind::NeedsReconnect,
+            agent == Agent::ClaudeCode,
+        )?,
     };
     write::replace_if_unchanged(path, before.as_deref(), updated.as_bytes())?;
     Ok(status(agent, path, launcher))
@@ -187,7 +194,7 @@ pub fn disconnect(agent: Agent, path: &Path, launcher: &Launcher) -> Result<Agen
     }
     let updated = match agent {
         Agent::Codex => codex::remove(&raw)?,
-        Agent::ClaudeCode => claude::remove(&raw)?,
+        Agent::ClaudeCode | Agent::ClaudeDesktop => claude::remove(&raw)?,
     };
     write::replace_if_unchanged(path, before.as_deref(), updated.as_bytes())?;
     Ok(status(agent, path, launcher))
@@ -243,6 +250,47 @@ mod tests {
             status(Agent::ClaudeCode, &path, &launcher).kind,
             StatusKind::Connected
         );
+    }
+
+    #[test]
+    fn claude_desktop_connection_omits_the_code_only_type_field() {
+        let path = temp_path("claude_desktop_config.json");
+        std::fs::write(&path, r#"{"preferences":{"sidebarMode":"epitaxy"}}"#)
+            .expect("initial config");
+        let launcher = paths::Launcher::native("/opt/nevo/bin/nevo".into());
+        connect(Agent::ClaudeDesktop, &path, &launcher, false).expect("connect");
+        let value: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&path).expect("config")).expect("JSON");
+        assert_eq!(value["preferences"]["sidebarMode"], "epitaxy");
+        assert_eq!(value["mcpServers"]["nevo"]["command"], "/opt/nevo/bin/nevo");
+        assert!(value["mcpServers"]["nevo"].get("type").is_none());
+        assert_eq!(
+            status(Agent::ClaudeDesktop, &path, &launcher).kind,
+            StatusKind::Connected
+        );
+    }
+
+    #[test]
+    fn claude_desktop_path_follows_the_platform_and_requires_an_install() {
+        let home = temp_path("home");
+        let appdata = home.join("AppData").join("Roaming");
+        std::fs::create_dir_all(appdata.join("Claude")).expect("Claude directory");
+        let env = HashMap::from([
+            (
+                "USERPROFILE".to_string(),
+                home.to_string_lossy().into_owned(),
+            ),
+            (
+                "APPDATA".to_string(),
+                appdata.to_string_lossy().into_owned(),
+            ),
+        ]);
+        assert_eq!(
+            paths::config_path_for(Agent::ClaudeDesktop, &env, "windows").expect("path"),
+            appdata.join("Claude").join("claude_desktop_config.json")
+        );
+        let env = HashMap::from([("HOME".to_string(), home.to_string_lossy().into_owned())]);
+        assert!(paths::config_path_for(Agent::ClaudeDesktop, &env, "macos").is_err());
     }
 
     #[test]

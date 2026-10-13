@@ -20,7 +20,7 @@ export function getMcpBridgeInfo(): Promise<McpBridgeInfo | null> {
   return invoke<McpBridgeInfo | null>('get_mcp_bridge_info')
 }
 
-export type McpAgent = 'codex' | 'claudeCode'
+export type McpAgent = 'codex' | 'claudeCode' | 'claudeDesktop'
 
 export interface McpAgentStatus {
   kind: 'notConfigured' | 'connected' | 'needsReconnect' | 'conflict' | 'error'
@@ -30,6 +30,7 @@ export interface McpAgentStatus {
 export interface McpAgentStatuses {
   codex: McpAgentStatus
   claudeCode: McpAgentStatus
+  claudeDesktop: McpAgentStatus
 }
 
 export function getMcpAgentStatus(): Promise<McpAgentStatuses> {

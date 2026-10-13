@@ -47,6 +47,7 @@ describe('SettingsMcpPanel', () => {
     getMcpAgentStatus.mockResolvedValue({
       codex: { kind: 'notConfigured', message: null },
       claudeCode: { kind: 'notConfigured', message: null },
+      claudeDesktop: { kind: 'notConfigured', message: null },
     })
     connectMcpAgent.mockReset()
     disconnectMcpAgent.mockReset()
@@ -120,12 +121,14 @@ describe('SettingsMcpPanel', () => {
     getMcpAgentStatus.mockResolvedValue({
       codex: { kind: 'connected', message: null },
       claudeCode: { kind: 'notConfigured', message: null },
+      claudeDesktop: { kind: 'notConfigured', message: null },
     })
 
     const wrapper = mountPanel()
     await flushPromises()
 
     expect(agentRow(wrapper, 'codex').text()).toContain('Connected')
+    expect(agentRow(wrapper, 'claudeDesktop').find('button').attributes('aria-label')).toBe('Connect Claude Desktop')
     expect(agentRow(wrapper, 'claudeCode').text()).toContain('Not connected')
     expect(agentRow(wrapper, 'claudeCode').find('button').attributes('aria-label')).toBe('Connect Claude Code')
     expect(wrapper.text()).toContain('Not running')
@@ -137,9 +140,11 @@ describe('SettingsMcpPanel', () => {
     getMcpAgentStatus.mockResolvedValueOnce({
       codex: { kind: 'notConfigured', message: null },
       claudeCode: { kind: 'notConfigured', message: null },
+      claudeDesktop: { kind: 'notConfigured', message: null },
     }).mockResolvedValueOnce({
       codex: { kind: 'connected', message: null },
       claudeCode: { kind: 'notConfigured', message: null },
+      claudeDesktop: { kind: 'notConfigured', message: null },
     })
 
     const wrapper = mountPanel()
@@ -158,6 +163,7 @@ describe('SettingsMcpPanel', () => {
     getMcpAgentStatus.mockResolvedValue({
       codex: { kind: 'conflict', message: null },
       claudeCode: { kind: 'notConfigured', message: null },
+      claudeDesktop: { kind: 'notConfigured', message: null },
     })
     connectMcpAgent.mockResolvedValue({ kind: 'connected', message: null })
 
