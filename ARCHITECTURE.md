@@ -301,6 +301,14 @@ change stored note icons.
   the plugin host (`plugin-host/`, entry `plugin-host/index.ts`). Sandboxed plugins run in
   a Web Worker (`plugin-host/sandboxWorker.ts`) behind a capability-checked message
   protocol (`plugin-host/sandboxProtocol.ts`).
+- **Mermaid previews** — `src/editor-core/node-views/mermaid.ts` lazily renders
+  diagrams with strict security and native SVG text labels. The framework-agnostic
+  `src/utils/sanitizeMermaidSvg.ts` adapter converts allowlisted presentation CSS
+  into SVG attributes on a sanitized, detached diagram, then sanitizes again before
+  insertion. Stylesheets, HTML labels, and external resources never enter the editor
+  DOM; the shared stored-preview sanitizer remains unchanged. Presentation rules
+  follow source order with inline declarations applied last, rather than implementing
+  the full CSS specificity cascade. The source stays in the existing node attributes.
 - **Voice recording** — `src-tauri/src/commands/voice_recording/` captures microphone input
   on desktop with `cpal` and writes mono WAV with `hound`. The Rust commands return
   `unsupported` on Android and iOS, where the editor action is hidden. Recordings start
