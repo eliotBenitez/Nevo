@@ -66,3 +66,11 @@ dist-android
 fix
 # Local visual-QA sessions, profiles and screenshots (tools/visual-qa)
 .qa/
+
+# docs/: keep only plugin-development docs tracked
+/docs/data-model.md
+/docs/testing.md
+/docs/mcp-bridge.md
+/docs/decisions/
+/docs/design/
+/docs/superpowers/
