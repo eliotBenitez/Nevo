@@ -110,7 +110,9 @@ jobs:
         run: cargo install cargo-audit --locked
 
       - name: RustSec audit
-        run: cargo audit --file src-tauri/Cargo.lock
+        # quick-xml 0.38 is pinned by typst (citationberg) and 0.39 is a Linux build-time
+        # dependency of wayland-scanner; neither can be upgraded here. Revisit on typst bumps.
+        run: cargo audit --file src-tauri/Cargo.lock --ignore RUSTSEC-2026-0194 --ignore RUSTSEC-2026-0195
 
   windows-atomic-write:
     name: Windows atomic writes

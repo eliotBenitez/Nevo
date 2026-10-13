@@ -16,6 +16,7 @@ export default defineConfig(async () => ({
   test: {
     environment: "jsdom",
     globals: true,
+    globalSetup: ["./vitest.global-setup.ts"],
     // tools/ and build-tools/ tests use node:test; they run via `pnpm test:node`.
     exclude: [...configDefaults.exclude, "tools/**", "build-tools/**", ".qa/**"],
   },
