@@ -1,6 +1,6 @@
 import type { Node } from 'prosemirror-model'
 import type { EditorState } from 'prosemirror-state'
-import { Plugin, PluginKey, TextSelection } from 'prosemirror-state'
+import { AllSelection, Plugin, PluginKey, TextSelection } from 'prosemirror-state'
 import type { EditorView } from 'prosemirror-view'
 import { Decoration, DecorationSet } from 'prosemirror-view'
 
@@ -22,7 +22,10 @@ function topLevelRanges(doc: Node, from: number, to: number): Array<{ from: numb
 
 function buildDecorations(state: EditorState): DecorationSet {
   const { selection, doc } = state
-  if (!(selection instanceof TextSelection) || selection.empty) return DecorationSet.empty
+  // Ctrl+A twice yields an AllSelection, which must look like a block selection too.
+  if (!(selection instanceof TextSelection || selection instanceof AllSelection) || selection.empty) {
+    return DecorationSet.empty
+  }
 
   const { from, to } = selection
   const ranges = topLevelRanges(doc, from, to)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TextSelection } from 'prosemirror-state'
+import { AllSelection, TextSelection } from 'prosemirror-state'
 import { EditorView } from 'prosemirror-view'
 import { createNevoEditorState } from '../state'
 import { nevoBaseSchema } from '../schema'
@@ -157,6 +157,27 @@ describe('block selection', () => {
       expect(store.get('text/plain')).toBe('first block\n\nsecond block')
       expect(view.state.doc.childCount).toBe(1)
       expect(view.state.doc.textContent).toBe('third block')
+    } finally {
+      destroy()
+    }
+  })
+
+  it('decorates every top-level block for an AllSelection', () => {
+    const content: BlockNode = {
+      type: 'doc',
+      content: [
+        { type: 'paragraph', content: [{ type: 'text', text: 'first block' }] },
+        { type: 'paragraph', content: [{ type: 'text', text: 'second block' }] },
+      ],
+    }
+
+    const { view, mount, destroy } = mountEditor(content)
+
+    try {
+      view.dispatch(view.state.tr.setSelection(new AllSelection(view.state.doc)))
+
+      const selected = Array.from(mount.querySelectorAll('.nv-block-selection-range'))
+      expect(selected.map((element) => element.textContent)).toEqual(['first block', 'second block'])
     } finally {
       destroy()
     }

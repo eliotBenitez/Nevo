@@ -1314,9 +1314,9 @@ describe('editor regression', () => {
     expect(editorProseCss).toContain('.doc-editor .nv-prosemirror hr[data-nevo-divider].ProseMirror-selectednode')
   })
 
-  it('hides the native text highlight inside a multi-block selection', () => {
+  it('hides the native text highlight inside a block selection', () => {
     const tablesCss = readFileSync('src/styles/editor-prose/prose-tables.css', 'utf8')
-    const rule = tablesCss.slice(tablesCss.indexOf('.nv-block-selection-range *::selection'))
+    const rule = tablesCss.slice(tablesCss.indexOf('.nv-block-selected *::selection'))
 
     expect(rule.slice(0, rule.indexOf('}'))).toContain('background: transparent')
   })

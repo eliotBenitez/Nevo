@@ -127,8 +127,8 @@
   box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 9%, transparent);
 }
 
-.doc-editor .nv-prosemirror .nv-block-selection-range::selection,
-.doc-editor .nv-prosemirror .nv-block-selection-range *::selection {
-  /* Multi-block selection is shown by the block highlight only, not the text range. */
+.doc-editor .nv-prosemirror .nv-block-selected::selection,
+.doc-editor .nv-prosemirror .nv-block-selected *::selection {
+  /* A block selection is shown by the block highlight only, not the text range. */
   background: transparent;
 }
