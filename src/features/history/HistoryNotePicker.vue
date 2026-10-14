@@ -59,7 +59,7 @@ onMounted(() => { void loadNotes() })
 
 <template>
   <main class="history-picker tw:flex tw:h-full tw:min-h-0 tw:w-full tw:flex-col tw:bg-[var(--workspace-editor-surface,var(--surface-canvas))]">
-    <header class="tw:mx-auto tw:flex tw:w-full tw:shrink-0 tw:items-center tw:gap-3 tw:max-w-[1120px] tw:border-b-0 tw:px-5 tw:pt-6 tw:pb-2 tw:md:px-8 tw:md:pt-8 tw:md:pb-3">
+    <header class="tw:flex tw:w-full tw:shrink-0 tw:items-center tw:gap-3 tw:border-b-0 tw:px-4 tw:pt-[14px] tw:pb-2">
       <NvButton variant="ghost" :aria-label="t('workspace.back')" @click="emit('back')"><ArrowLeft :size="16" /></NvButton>
       <div>
         <h1 class="tw:m-0 tw:text-lg tw:font-semibold tw:text-content-primary">{{ t('workspace.history.pickerTitle') }}</h1>
@@ -67,7 +67,7 @@ onMounted(() => { void loadNotes() })
       </div>
     </header>
 
-    <div class="tw:mx-auto tw:flex tw:w-full tw:min-h-0 tw:flex-1 tw:max-w-[1120px] tw:flex-col tw:px-5 tw:pt-2 tw:pb-6 tw:md:px-8 tw:md:pt-3 tw:md:pb-8">
+    <div class="tw:flex tw:w-full tw:min-h-0 tw:flex-1 tw:flex-col tw:px-4 tw:pt-2 tw:pb-4">
       <div v-if="loading" role="status" :aria-label="t('workspace.history.pickerLoading')" class="tw:grid tw:min-h-0 tw:flex-1 tw:grid-cols-1 tw:grid-rows-1 tw:gap-8 tw:md:grid-cols-[230px_minmax(0,1fr)]">
         <div class="tw:hidden tw:md:block">
           <div class="tw:h-4 tw:w-24 tw:animate-pulse tw:rounded tw:bg-(--surface-subtle) tw:motion-reduce:animate-none" />
