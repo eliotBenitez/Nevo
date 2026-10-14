@@ -546,6 +546,62 @@ describe('editor regression', () => {
     }
   })
 
+  it.each([
+    ['at the end', 'task'.length, ['task', ''], [true, false]],
+    ['in the middle', 2, ['ta', 'sk'], [true, false]],
+    ['at the start', 0, ['', 'task'], [false, true]],
+  ] as const)('continues a checklist on Enter %s of a non-empty item', (_name, offset, texts, checked) => {
+    const content: BlockNode = {
+      type: 'doc',
+      content: [{ type: 'checklist_item', attrs: { checked: true }, content: [{ type: 'text', text: 'task' }] }],
+    }
+    const mount = document.createElement('div')
+    document.body.appendChild(mount)
+    const view = new EditorView(mount, { state: createNevoEditorState({ schema: nevoBaseSchema, content }).state })
+
+    try {
+      const start = findTextBlockContentPos(view.state.doc, 'task')
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, start + offset)))
+
+      expect(dispatchEditorKey(view, new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))).toBe(true)
+      expect(view.state.doc.childCount).toBe(2)
+      view.state.doc.forEach((node, _pos, index) => {
+        expect(node.type.name).toBe('checklist_item')
+        expect(node.textContent).toBe(texts[index])
+        expect(node.attrs.checked).toBe(checked[index])
+      })
+      expect(view.state.selection.$from.parent.textContent).toBe(offset === 0 ? 'task' : texts[1])
+    } finally {
+      view.destroy()
+      mount.remove()
+    }
+  })
+
+  it('exits a checklist into a paragraph on Enter from an empty item', () => {
+    const content: BlockNode = {
+      type: 'doc',
+      content: [
+        { type: 'checklist_item', content: [{ type: 'text', text: 'task' }] },
+        { type: 'checklist_item' },
+      ],
+    }
+    const mount = document.createElement('div')
+    document.body.appendChild(mount)
+    const view = new EditorView(mount, { state: createNevoEditorState({ schema: nevoBaseSchema, content }).state })
+
+    try {
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, view.state.doc.child(0).nodeSize + 1)))
+
+      expect(dispatchEditorKey(view, new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))).toBe(true)
+      expect(view.state.doc.child(0).type.name).toBe('checklist_item')
+      expect(view.state.doc.child(1).type.name).toBe('paragraph')
+      expect(view.state.selection.$from.parent.type.name).toBe('paragraph')
+    } finally {
+      view.destroy()
+      mount.remove()
+    }
+  })
+
   it('adds DOM-only markers to empty bullet list items', () => {
     const content: BlockNode = {
       type: 'doc',

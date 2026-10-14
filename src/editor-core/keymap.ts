@@ -168,6 +168,35 @@ function createExitEmptyListItemCommand(schema: Schema): Command {
   }
 }
 
+// Enter in a checklist item continues the checklist; Enter in an empty item exits it into a paragraph, like lists do.
+function createSplitChecklistItemCommand(schema: Schema): Command {
+  const checklistItem = schema.nodes.checklist_item
+  const paragraph = schema.nodes.paragraph
+
+  return (state, dispatch) => {
+    if (!checklistItem || !paragraph) return false
+    if (!(state.selection instanceof TextSelection)) return false
+    const { $from, $to } = state.selection
+    if ($from.parent.type !== checklistItem || !$from.sameParent($to)) return false
+
+    if ($from.parent.content.size === 0) {
+      if (dispatch) dispatch(state.tr.setBlockType($from.pos, $from.pos, paragraph).scrollIntoView())
+      return true
+    }
+    if (!dispatch) return true
+
+    const tr = state.tr.deleteSelection()
+    if ($from.parentOffset === 0) {
+      // At the start, keep the current item (and its checked state) intact and open an empty one above it.
+      tr.insert($from.before(), checklistItem.create({ checked: false }))
+    } else {
+      tr.split(tr.selection.from, 1, [{ type: checklistItem, attrs: { checked: false } }])
+    }
+    dispatch(tr.scrollIntoView())
+    return true
+  }
+}
+
 function createInsertListItemHardBreakCommand(schema: Schema): Command {
   const hardBreak = schema.nodes.hard_break
   const listItem = schema.nodes.list_item
@@ -217,6 +246,7 @@ export function createCoreKeymap(schema: Schema, commands: Map<string, Command>,
   const exitToggle = createExitToggleCommand(schema)
   const exitToggleOnDoubleEnter = createExitToggleOnDoubleEnterCommand(schema)
   const exitEmptyListItem = createExitEmptyListItemCommand(schema)
+  const splitChecklistItem = createSplitChecklistItemCommand(schema)
   const insertListItemHardBreak = createInsertListItemHardBreakCommand(schema)
   const insertHardBreak = createInsertHardBreakCommand(schema)
 
@@ -240,7 +270,7 @@ export function createCoreKeymap(schema: Schema, commands: Map<string, Command>,
     'Mod-Shift-7': commands.get('core.orderedList') ?? (() => false),
     'Mod-Shift-8': commands.get('core.bulletList') ?? (() => false),
     'Mod-Shift-9': commands.get('core.blockquote') ?? (() => false),
-    Enter: chainCommands(insertParagraphAfterSelectedBlock, newlineInCode, exitContainerOnDoubleEnter, exitToggleOnDoubleEnter, exitEmptyListItem, listItem ? splitListItem(listItem) : () => false, splitBlock),
+    Enter: chainCommands(insertParagraphAfterSelectedBlock, newlineInCode, exitContainerOnDoubleEnter, exitToggleOnDoubleEnter, splitChecklistItem, exitEmptyListItem, listItem ? splitListItem(listItem) : () => false, splitBlock),
     'Shift-Enter': chainCommands(newlineInCode, insertHardBreak),
     'Mod-Enter': chainCommands(insertParagraphAfterSelectedBlock, exitContainer, exitToggle, insertListItemHardBreak),
     'Ctrl-Enter': chainCommands(insertParagraphAfterSelectedBlock, exitContainer, exitToggle, insertListItemHardBreak),
