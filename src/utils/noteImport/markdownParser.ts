@@ -93,33 +93,42 @@ function inlineToContent(
   markdownLinkResolver?: MarkdownLinkResolver,
 ): BlockNode[] {
   const result: BlockNode[] = []
+  // remark emits `<u>` and `</u>` as separate inline html siblings; toggle the
+  // underline mark between them (the Markdown exporter writes underline this way).
+  let current = marks
   for (const node of nodes) {
     switch (node.type) {
+      case 'html': {
+        const tag = node.value.trim().toLowerCase()
+        if (tag === '<u>') current = [...marks, { type: 'underline' }]
+        else if (tag === '</u>') current = marks
+        break
+      }
       case 'text': {
         if (node.value) {
-          result.push(...textWithWikiLinks(node.value, marks, resolver))
+          result.push(...textWithWikiLinks(node.value, current, resolver))
         }
         break
       }
       case 'strong':
-        result.push(...inlineToContent(node.children as PhrasingContent[], [...marks, { type: 'strong' }], resolver, markdownLinkResolver))
+        result.push(...inlineToContent(node.children as PhrasingContent[], [...current, { type: 'strong' }], resolver, markdownLinkResolver))
         break
       case 'emphasis':
-        result.push(...inlineToContent(node.children as PhrasingContent[], [...marks, { type: 'em' }], resolver, markdownLinkResolver))
+        result.push(...inlineToContent(node.children as PhrasingContent[], [...current, { type: 'em' }], resolver, markdownLinkResolver))
         break
       case 'delete':
-        result.push(...inlineToContent((node as { children: PhrasingContent[] }).children, [...marks, { type: 'strike' }], resolver, markdownLinkResolver))
+        result.push(...inlineToContent((node as { children: PhrasingContent[] }).children, [...current, { type: 'strike' }], resolver, markdownLinkResolver))
         break
       case 'inlineCode':
         if (node.value) {
-          result.push({ type: 'text', text: node.value, marks: [...marks, { type: 'code' }] })
+          result.push({ type: 'text', text: node.value, marks: [...current, { type: 'code' }] })
         }
         break
       case 'link': {
         const internal = markdownLinkResolver?.(node.url) ?? null
         result.push(...inlineToContent(
           node.children as PhrasingContent[],
-          [...marks, internal
+          [...current, internal
             ? { type: 'internal_link', attrs: { noteId: internal.noteId, title: internal.title, anchor: internal.anchor ?? null, alias: null } }
             : { type: 'link', attrs: { href: node.url } }],
           resolver,
