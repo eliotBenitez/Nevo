@@ -64,6 +64,25 @@ export function useMathEditor(
     return { position: selection.from, node, isInline: node.type.name === 'math_inline' }
   }
 
+  // Latex the node had when the popover opened; restored if the edit is dismissed.
+  let originalLatex: string | null = null
+
+  function getPopoverMathNode() {
+    const nodePos = mathPopover.nodePos
+    if (!core.editorView || typeof nodePos !== 'number') return null
+    const node = core.editorView.state.doc.nodeAt(nodePos)
+    if (!node || (node.type.name !== 'math_inline' && node.type.name !== 'math_block')) return null
+    return { nodePos, node }
+  }
+
+  // Live preview: render the formula in the document while typing, kept out of undo history.
+  function previewLatex(latex: string) {
+    const target = getPopoverMathNode()
+    if (!target || !core.editorView || target.node.attrs.latex === latex) return
+    const tr = core.editorView.state.tr.setNodeMarkup(target.nodePos, undefined, { ...target.node.attrs, latex })
+    core.editorView.dispatch(tr.setMeta('addToHistory', false))
+  }
+
   function openMathPopoverForNode(position: number, anchorRect?: DOMRect) {
     if (!core.editorView) return
     const node = core.editorView.state.doc.nodeAt(position)
@@ -76,6 +95,7 @@ export function useMathEditor(
     mathPopover.nodePos = position
     mathPopover.latex = typeof node.attrs.latex === 'string' ? node.attrs.latex : ''
     mathPopover.isInline = node.type.name === 'math_inline'
+    originalLatex = mathPopover.latex
     mathPopover.position = { top: rect.bottom + 12, left: rect.left + rect.width / 2 }
 
     nextTick(() => {
@@ -85,6 +105,8 @@ export function useMathEditor(
   }
 
   function closeMathPopover() {
+    if (mathPopover.open && originalLatex !== null) previewLatex(originalLatex)
+    originalLatex = null
     mathPopover.open = false
     mathPopover.nodePos = null
   }
@@ -126,10 +148,12 @@ export function useMathEditor(
 
   function applyMathFromPopover() {
     if (!core.editorView || !core.coreCommands) return
-    const nodePos = mathPopover.nodePos
-    if (typeof nodePos !== 'number') return
-    const node = core.editorView.state.doc.nodeAt(nodePos)
-    if (!node || (node.type.name !== 'math_inline' && node.type.name !== 'math_block')) return
+    // Restore the pre-edit latex outside history so the commit below is a single undo step.
+    if (originalLatex !== null) previewLatex(originalLatex)
+    originalLatex = null
+    const target = getPopoverMathNode()
+    if (!target) return
+    const { nodePos, node } = target
 
     const tr = core.editorView.state.tr.setNodeMarkup(nodePos, undefined, { ...node.attrs, latex: mathPopover.latex })
     core.editorView.dispatch(tr.setSelection(NodeSelection.create(tr.doc, nodePos)).scrollIntoView())
@@ -145,6 +169,7 @@ export function useMathEditor(
     const node = core.editorView.state.doc.nodeAt(nodePos)
     if (!node || (node.type.name !== 'math_inline' && node.type.name !== 'math_block')) return
 
+    originalLatex = null
     core.editorView.dispatch(core.editorView.state.tr.delete(nodePos, nodePos + node.nodeSize).scrollIntoView())
     closeMathPopover()
     core.editorView.focus()
@@ -166,8 +191,9 @@ export function useMathEditor(
 
   watch(
     () => [mathPopover.open, mathPopover.latex] as const,
-    async ([open]) => {
+    async ([open, latex]) => {
       if (!open) return
+      previewLatex(latex)
       await nextTick()
       repositionMathPopover()
     },
