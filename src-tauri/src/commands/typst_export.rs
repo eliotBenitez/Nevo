@@ -167,8 +167,8 @@ mod tests {
     #[test]
     fn compiles_representative_source() {
         // Includes constructs that previously broke compilation: a bold run
-        // immediately followed by `(...)`, set-theory symbols, and adjacent
-        // single-letter math variables.
+        // immediately followed by `(...)` or `.word`, set-theory symbols, and
+        // adjacent single-letter math variables.
         let source = r##"#set document(title: "Doc")
 #set page(paper: "a4", flipped: false, margin: (top: 25mm, right: 20mm, bottom: 25mm, left: 20mm), numbering: "1", header: [#text(8pt, fill: luma(120))[Doc #h(1fr) 2026-06-01]])
 #set text(size: 11pt, font: ("Times New Roman", "Libertinus Serif"))
@@ -185,6 +185,8 @@ mod tests {
 == Title
 
 #strong[bold]\(Dirty Read\) and #emph[italic] and #raw("inline")
+
+#strong[Важно];.При этом#linebreak();#raw("x");.len
 
 #raw(block: true, lang: "rust", "fn main() {}")
 

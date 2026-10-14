@@ -63,6 +63,23 @@ describe('serializeNoteToTypst', () => {
     expect(source).toContain('#raw(block: true, lang: "rust", "fn main() {}")')
   })
 
+  it('terminates inline calls so following text is not parsed as a field access', () => {
+    const { source } = serializeNoteToTypst(note({
+      type: 'doc',
+      content: [{
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: 'Важно', marks: [{ type: 'strong' }] },
+          { type: 'text', text: '.При этом' },
+          { type: 'hard_break' },
+          { type: 'text', text: 'x', marks: [{ type: 'code' }] },
+          { type: 'text', text: '.len' },
+        ],
+      }],
+    }))
+    expect(source).toContain('#strong[Важно];.При этом#linebreak();#raw("x");.len')
+  })
+
   it('escapes typst special characters in text', () => {
     const { source } = serializeNoteToTypst(note({
       type: 'doc',

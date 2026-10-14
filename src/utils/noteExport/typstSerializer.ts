@@ -95,7 +95,9 @@ function escapeText(value: string): string {
 
 function wrapMarks(text: string, marks: BlockNode['marks']): string {
   if (!marks?.length) return text
-  if (marks.some(m => m.type === 'code')) return `#raw(${quote(text)})`
+  // A trailing `;` ends the embedded expression, so following text like `.При`
+  // is not parsed as a field access on the call result.
+  if (marks.some(m => m.type === 'code')) return `#raw(${quote(text)});`
 
   let out = text
   for (const mark of marks) {
@@ -117,14 +119,14 @@ function wrapMarks(text: string, marks: BlockNode['marks']): string {
       }
     }
   }
-  return out
+  return out === text ? out : `${out};`
 }
 
 function inlineContent(node: BlockNode, ctx: SerializeCtx): string {
   if (!node.content?.length) return ''
   return node.content.map(child => {
     if (child.type === 'text') return wrapMarks(escapeText(child.text ?? ''), child.marks)
-    if (child.type === 'hard_break') return '#linebreak()'
+    if (child.type === 'hard_break') return '#linebreak();'
     if (child.type === 'math_inline') return `$${latexToTypstMath(String(child.attrs?.latex ?? ''))}$`
     return inlineContent(child, ctx)
   }).join('')
@@ -327,7 +329,7 @@ function nodeToTypst(node: BlockNode, ctx: SerializeCtx): string {
     case 'column':
       return blockChildren(node, ctx)
     case 'hard_break':
-      return '#linebreak()'
+      return '#linebreak();'
     case 'database_block':
       return databaseBlockToTypst(node)
     default: {
