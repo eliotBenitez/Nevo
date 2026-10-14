@@ -42,8 +42,8 @@ const { t } = useI18n()
 // `@layer utilities` at equal specificity and Tailwind's generated order
 // does not preserve which one "wins" the way plain CSS source order did.
 const PICKER_BTN_BASE = 'tw:inline-flex tw:items-center tw:gap-[5px] tw:h-8 tw:px-3 tw:rounded-full tw:border tw:border-solid tw:text-[11.5px] tw:cursor-pointer tw:transition-[background-color,border-color,color,transform] tw:duration-100 tw:active:scale-[0.98] tw:max-[720px]:h-11 tw:max-[720px]:touch-manipulation'
-const PICKER_BTN_IDLE = 'tw:border-transparent tw:bg-(--surface-raised) tw:text-content-secondary tw:hover:bg-(--surface-overlay)'
-const PICKER_BTN_ACTIVE = 'is-active tw:border-transparent tw:bg-(--surface-selected) tw:text-content-primary tw:font-[550] tw:shadow-[inset_0_0_0_1px_var(--accent-line)]'
+const PICKER_BTN_IDLE = 'tw:border-transparent tw:bg-(--hover) tw:text-content-secondary tw:hover:bg-(--hover-strong)'
+const PICKER_BTN_ACTIVE = 'is-active tw:border-transparent tw:bg-(--surface-selected) tw:text-content-primary tw:font-[550]'
 function pickerBtnClass(active: boolean) {
   return `${PICKER_BTN_BASE} ${active ? PICKER_BTN_ACTIVE : PICKER_BTN_IDLE}`
 }
@@ -286,8 +286,8 @@ defineExpose({ collect })
         :class="pickerBtnClass(statusValue === opt.value)"
         :aria-pressed="statusValue === opt.value"
         :style="opt.color && statusValue === opt.value
-          ? { background: opt.color + '28', color: 'var(--text-primary)', borderColor: opt.color + '60' }
-          : opt.color ? { borderColor: opt.color + '40' } : {}"
+          ? { background: opt.color + '28', color: 'var(--text-primary)' }
+          : {}"
         @click="selectStatus(opt.value)"
       >
         <span
@@ -310,7 +310,7 @@ defineExpose({ collect })
         :class="pickerBtnClass(localPriority === opt.value)"
         :aria-pressed="localPriority === opt.value"
         :style="PRIORITY_COLORS[opt.value] && localPriority === opt.value
-          ? { background: PRIORITY_COLORS[opt.value]! + '28', color: 'var(--text-primary)', borderColor: PRIORITY_COLORS[opt.value]! + '60' }
+          ? { background: PRIORITY_COLORS[opt.value]! + '28', color: 'var(--text-primary)' }
           : {}"
         @click="selectPriority(opt.value)"
       >
