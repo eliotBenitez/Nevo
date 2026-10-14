@@ -42,7 +42,7 @@ For implementation tasks:
 3. Add or update regression coverage when behavior changes.
 4. Run the checks required by the verification matrix below.
 5. Review `git diff --check` and the final scoped diff.
-6. Update `changes.md` only after the implementation is successfully verified.
+6. Update `changes.md` only for changes directly related to the application, and only after the implementation is successfully verified (see "Change Log Maintenance").
 7. Update the affected document from the map above when the change alters startup, layering, state ownership, a persisted schema, or a load-bearing test suite. A stale `ARCHITECTURE.md` or `docs/data-model.md` misleads every later agent.
 8. Recheck callers, registration points, and affected tests against the final diff; update navigation guidance below when entry points or module responsibilities move.
 9. Commit each completed task to the `dev` branch.
@@ -52,7 +52,7 @@ If the repository already has unrelated lint or test failures, do not expand the
 
 ## Change Log Maintenance (`changes.md`)
 
-Update `changes.md` for implemented product changes, bug fixes, refactors, user-facing documentation, or agent-workflow changes. Do not update it for read-only analysis, explanations, diagnostics, or abandoned work.
+Record only changes directly related to the application in `changes.md`, such as application features, bug fixes, and refactors. Do not record project-only maintenance, development tooling or configuration, agent instructions or workflows, or other changes that do not affect the application. Do not update it for read-only analysis, explanations, diagnostics, or abandoned work.
 
 - Write entries in English, concisely, and in the past tense.
 - Preserve existing history and keep exactly one top-level section of each kind: `## 🆕 Added`, `## 🛠️ Fixed`, and `## 🔄 Updated / Improved`.
