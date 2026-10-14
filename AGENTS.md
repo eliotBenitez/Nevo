@@ -169,6 +169,17 @@ Use this division of responsibilities for Codex work in this repository:
 - Parallelize coding only for independent tasks with non-overlapping file ownership. The Sol orchestrator may also perform verification itself; a separate verifier agent is optional. Read-only answers and small documentation-only edits may be handled directly by Sol.
 - These instructions define roles; they do not change the running session's model. Select `gpt-6-sol` in the Codex session configuration for the main agent. If the requested model or delegation capability is unavailable, disclose the limitation and obtain the user's choice before substituting another model.
 
+## Ponytail
+
+When the Ponytail plugin is available, use `full` for coding tasks unless the user selects another mode or disables it. Read its bundled instructions before applying it. If unavailable, follow the principles below without blocking the task.
+
+- Understand the actual flow and callers before choosing the smallest coherent fix. Prefer existing project code, standard libraries, native platform features, and installed dependencies before adding new code or dependencies.
+- Avoid speculative abstractions, configuration, and scaffolding. Fix bugs at their shared root cause; do not merely shorten the diff by patching one symptom.
+- Use `lite` to implement the requested approach while suggesting a simpler alternative; use `ultra` only when the user requests aggressive simplification and reconsideration of requirements.
+- Use `ponytail-review` on the scoped diff before committing code changes to identify unnecessary complexity. It supplements correctness review and required verification. `ponytail-audit` reviews the whole repository; report its findings without applying unrelated changes.
+- Repository instructions and explicit user requirements take precedence over Ponytail defaults. Preserve module boundaries, data compatibility, security, accessibility, localization, and all required checks; fewer files or tests is not a reason to bypass them.
+- In Codex, invoke the available skills through `@ponytail`, `@ponytail-review`, or `@ponytail-help`, or request them by name in plain language. `stop ponytail` or `normal mode` disables the mode for the session until the user reactivates it.
+
 ## Agent Tooling
 
 Several agent harnesses read this repository (`CLAUDE.md`, `GEMINI.md`, and `.codex/` all defer to this file). Only some of the tooling is versioned, so check what is actually present before relying on it.
