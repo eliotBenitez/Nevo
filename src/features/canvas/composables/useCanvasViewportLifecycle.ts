@@ -54,7 +54,9 @@ export function useCanvasViewportLifecycle(options: UseCanvasViewportLifecycleOp
 
   async function toggleFullscreen() {
     if (document.fullscreenElement) await document.exitFullscreen()
-    else await options.viewport.value?.requestFullscreen()
+    // The document card's editor DOM is a sibling of the viewport (`.doc-content`
+    // overlays it), so fullscreen the shared parent or the card disappears.
+    else await options.viewport.value?.parentElement?.requestFullscreen()
   }
 
   onBeforeUnmount(() => {
