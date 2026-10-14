@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft, ChevronDown, MoreHorizontal, Settings2, Trash2 } from '@lucide/vue'
+import { ArrowLeft, ChevronDown, MoreHorizontal, Settings2, Trash2, X } from '@lucide/vue'
 import type { KanbanBoard, KanbanCard, KanbanCardField, KanbanCardPriority } from '../../../types/kanban'
 import { useKanbanStore } from '../../../stores/kanban'
 import { useWorkspaceStore } from '../../../stores/workspace'
@@ -208,6 +208,7 @@ defineExpose({ flush })
           <template #trigger><button type="button" class="kb-editor-more tw:grid tw:size-8 tw:place-items-center tw:rounded-md tw:border-0 tw:bg-transparent tw:text-content-muted tw:cursor-pointer tw:hover:bg-surface-subtle" :aria-label="t('kanban.common.moreActions')"><MoreHorizontal :size="17" /></button></template>
           <button type="button" class="kb-editor-delete-menu tw:flex tw:w-full tw:items-center tw:gap-2 tw:rounded-md tw:border-0 tw:bg-transparent tw:px-2.5 tw:py-2 tw:text-left tw:text-sm tw:text-content-danger tw:cursor-pointer tw:hover:bg-surface-subtle" @click="deleteCard"><Trash2 :size="14" />{{ t('kanban.common.delete') }}</button>
         </NvPopupMenu>
+        <button type="button" class="kb-editor-close tw:grid tw:size-8 tw:shrink-0 tw:place-items-center tw:rounded-md tw:border-0 tw:bg-transparent tw:text-content-muted tw:cursor-pointer tw:hover:bg-surface-subtle" :aria-label="t('kanban.common.close')" :title="t('kanban.common.close')" @click="goBack"><X :size="17" /></button>
       </div>
       <input ref="titleInput" v-model="title" class="kb-editor-title tw:box-border tw:w-full tw:min-w-0 tw:border-0 tw:bg-transparent tw:px-0 tw:text-[28px] tw:font-[650] tw:text-content-primary tw:outline-none" :placeholder="t('kanban.card.titlePlaceholder')" @input="changed">
       <div class="kb-editor-meta tw:flex tw:flex-wrap tw:items-center tw:gap-2">
@@ -260,7 +261,10 @@ defineExpose({ flush })
 }
 @media (max-width: 1300px) {
   .kb-editor-back { display: inline-flex; min-width: 44px; min-height: 44px; }
+  /* The back button already closes the pane at this width. */
+  .kb-editor-close { display: none; }
 }
+.kb-editor-close:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 @media (max-width: 760px) {
   /* On phones the pane replaces the board full screen, so it owns the safe
      areas the board header and lanes would otherwise pad (see KanbanView). */
