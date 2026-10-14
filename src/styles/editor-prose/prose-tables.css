@@ -129,6 +129,6 @@
 
 .doc-editor .nv-prosemirror .nv-block-selection-range::selection,
 .doc-editor .nv-prosemirror .nv-block-selection-range *::selection {
-  background: color-mix(in oklab, var(--accent) 25%, transparent);
-  color: var(--text-primary);
+  /* Multi-block selection is shown by the block highlight only, not the text range. */
+  background: transparent;
 }

@@ -1313,4 +1313,11 @@ describe('editor regression', () => {
     expect(editorProseCss).toContain('.doc-editor .nv-prosemirror hr[data-nevo-divider]')
     expect(editorProseCss).toContain('.doc-editor .nv-prosemirror hr[data-nevo-divider].ProseMirror-selectednode')
   })
+
+  it('hides the native text highlight inside a multi-block selection', () => {
+    const tablesCss = readFileSync('src/styles/editor-prose/prose-tables.css', 'utf8')
+    const rule = tablesCss.slice(tablesCss.indexOf('.nv-block-selection-range *::selection'))
+
+    expect(rule.slice(0, rule.indexOf('}'))).toContain('background: transparent')
+  })
 })
