@@ -7,7 +7,10 @@ import { useWorkspaceStore } from '../../../stores/workspace'
 import { buildTemplateFieldDefaults, createEmptyTemplateContent, validateTemplateFieldValues } from '../../../utils/templates'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvCheckbox from '../../../ui/primitives/NvCheckbox.vue'
+import NvDatePicker from '../../../ui/primitives/NvDatePicker.vue'
 import NvModal from '../../../ui/primitives/NvModal.vue'
+import NvSelect from '../../../ui/primitives/NvSelect.vue'
+import NvTextInput from '../../../ui/primitives/NvTextInput.vue'
 import { useConfirmDialog } from '../../../ui/composables/useConfirmDialog'
 import TemplateEditor from './TemplateEditor.vue'
 
@@ -257,8 +260,8 @@ onBeforeUnmount(() => {
 
     <p v-if="error" class="template-error tw:text-danger tw:text-xs tw:m-0 tw:px-4 tw:pt-2">{{ error }}</p>
 
-    <div class="template-modal__body tw:flex-1 tw:min-h-[360px] tw:grid tw:grid-cols-[minmax(260px,0.92fr)_minmax(300px,1.08fr)] tw:overflow-hidden max-[760px]:tw:grid-cols-1">
-      <div class="template-list tw:overflow-auto tw:p-2.5 tw:border-y-0 tw:border-l-0 tw:border-r tw:border-solid tw:border-border-subtle max-[760px]:tw:max-h-[240px] max-[760px]:tw:border-r-0 max-[760px]:tw:border-b max-[760px]:tw:border-b-border-subtle" :aria-busy="loading">
+    <div class="template-modal__body tw:flex-1 tw:min-h-[360px] tw:grid tw:grid-cols-[minmax(260px,0.92fr)_minmax(300px,1.08fr)] tw:overflow-hidden tw:max-[760px]:grid-cols-1">
+      <div class="template-list tw:overflow-auto tw:p-2.5 tw:border-y-0 tw:border-l-0 tw:border-r tw:border-solid tw:border-border-subtle tw:max-[760px]:max-h-[240px] tw:max-[760px]:border-r-0 tw:max-[760px]:border-b tw:max-[760px]:border-b-border-subtle" :aria-busy="loading">
         <button
           v-for="template in filteredTemplates"
           :key="template.id"
@@ -278,7 +281,7 @@ onBeforeUnmount(() => {
       </div>
 
       <aside v-if="selectedTemplate" class="template-detail tw:overflow-auto tw:p-4">
-        <div class="template-detail__heading tw:flex tw:gap-3 tw:items-start tw:mb-4 [&_h3]:tw:m-0 [&_h3]:tw:text-[15px] [&_p]:tw:mt-[3px] [&_p]:tw:mb-0 [&_p]:tw:text-content-secondary [&_p]:tw:text-xs">
+        <div class="template-detail__heading tw:flex tw:gap-3 tw:items-start tw:mb-4 tw:[&_h3]:m-0 tw:[&_h3]:text-[15px] tw:[&_p]:mt-[3px] tw:[&_p]:mb-0 tw:[&_p]:text-content-secondary tw:[&_p]:text-xs">
           <div class="template-detail__icon tw:grid tw:place-items-center tw:size-8 tw:rounded-[calc(7px*var(--radius-scale,1))] tw:bg-(--accent-soft)">{{ selectedTemplate.icon }}</div>
           <div>
             <h3>{{ selectedTemplate.name }}</h3>
@@ -290,35 +293,41 @@ onBeforeUnmount(() => {
           <label
             v-for="field in selectedTemplate.fields"
             :key="field.id"
-            class="template-field tw:grid tw:gap-1.5 tw:text-xs tw:text-content-secondary [&_strong]:tw:text-danger [&_small]:tw:text-danger [&_input]:tw:w-full [&_input]:tw:border [&_input]:tw:border-solid [&_input]:tw:border-border-subtle [&_input]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_input]:tw:bg-surface-overlay [&_input]:tw:text-content-primary [&_input]:tw:py-[7px] [&_input]:tw:px-[9px] [&_input]:tw:font-inherit [&_textarea]:tw:w-full [&_textarea]:tw:border [&_textarea]:tw:border-solid [&_textarea]:tw:border-border-subtle [&_textarea]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_textarea]:tw:bg-surface-overlay [&_textarea]:tw:text-content-primary [&_textarea]:tw:py-[7px] [&_textarea]:tw:px-[9px] [&_textarea]:tw:font-inherit [&_select]:tw:w-full [&_select]:tw:border [&_select]:tw:border-solid [&_select]:tw:border-border-subtle [&_select]:tw:rounded-[calc(6px*var(--radius-scale,1))] [&_select]:tw:bg-surface-overlay [&_select]:tw:text-content-primary [&_select]:tw:py-[7px] [&_select]:tw:px-[9px] [&_select]:tw:font-inherit"
+            class="template-field tw:grid tw:gap-1.5 tw:text-xs tw:text-content-secondary tw:[&_strong]:text-danger tw:[&_small]:text-danger"
           >
             <span>{{ field.label }}<strong v-if="field.required">*</strong></span>
             <textarea
               v-if="field.type === 'multiline'"
+              class="tw:w-full tw:resize-y tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--input-bg) tw:px-2.5 tw:py-2 tw:font-nv-ui tw:text-[13px] tw:text-content-primary tw:caret-accent tw:outline-none tw:focus-visible:bg-surface-raised tw:focus-visible:shadow-[0_0_0_2px_var(--input-ring)]"
               :value="stringFieldValue(field.id)"
               rows="3"
               @input="setStringFieldValue(field.id, ($event.target as HTMLTextAreaElement).value)"
               @blur="touched = true"
             />
-            <select
+            <NvSelect
               v-else-if="field.type === 'select'"
-              :value="stringFieldValue(field.id)"
-              @change="setStringFieldValue(field.id, ($event.target as HTMLSelectElement).value)"
-              @blur="touched = true"
-            >
-              <option value=""></option>
-              <option v-for="option in field.options ?? []" :key="option" :value="option">{{ option }}</option>
-            </select>
+              :model-value="stringFieldValue(field.id)"
+              :options="(field.options ?? []).map(option => ({ value: option, label: option }))"
+              placeholder=""
+              @update:model-value="setStringFieldValue(field.id, $event); touched = true"
+            />
             <NvCheckbox
               v-else-if="field.type === 'checkbox'"
               :model-value="boolFieldValue(field.id)"
               @update:model-value="setBoolFieldValue(field.id, $event); touched = true"
             />
-            <input
+            <NvDatePicker
+              v-else-if="field.type === 'date'"
+              class="tw:w-full tw:[&_.ndp-trigger]:w-full tw:[&_.ndp-trigger]:h-[34px]"
+              :model-value="stringFieldValue(field.id) || null"
+              @update:model-value="setStringFieldValue(field.id, $event ?? ''); touched = true"
+            />
+            <NvTextInput
               v-else
-              :value="stringFieldValue(field.id)"
-              :type="field.type === 'date' ? 'date' : 'text'"
-              @input="setStringFieldValue(field.id, ($event.target as HTMLInputElement).value)"
+              class="tw:w-full"
+              size="md"
+              :model-value="stringFieldValue(field.id)"
+              @update:model-value="setStringFieldValue(field.id, $event)"
               @blur="touched = true"
             />
             <small v-if="touched && missingRequiredFields.includes(field.id)">{{ t('templates.required') }}</small>

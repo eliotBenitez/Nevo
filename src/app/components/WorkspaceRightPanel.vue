@@ -275,7 +275,7 @@ function onTagKeydown(event: KeyboardEvent) {
             </span>
             <input
               v-model="tagInput"
-              class="right-panel__tag-input tw:flex-[1_1_72px] tw:min-w-[72px] tw:h-6 tw:px-1 tw:border tw:border-solid tw:border-transparent tw:rounded-[calc(6px*var(--radius-scale,1))] tw:outline-none tw:bg-transparent tw:text-content-secondary tw:font-inherit tw:text-xs tw:hover:bg-(--hover) tw:focus:bg-input-bg tw:focus:shadow-[0_0_0_2px_var(--input-ring)] tw:placeholder:text-content-muted disabled:tw:cursor-not-allowed disabled:tw:opacity-55"
+              class="right-panel__tag-input tw:flex-[1_1_72px] tw:min-w-[72px] tw:h-6 tw:px-1 tw:border tw:border-solid tw:border-transparent tw:rounded-[calc(6px*var(--radius-scale,1))] tw:outline-none tw:bg-transparent tw:text-content-secondary tw:font-inherit tw:text-xs tw:hover:bg-(--hover) tw:focus:bg-input-bg tw:focus:shadow-[0_0_0_2px_var(--input-ring)] tw:placeholder:text-content-muted tw:disabled:cursor-not-allowed tw:disabled:opacity-55"
               type="text"
               :disabled="!note"
               :placeholder="properties.tags.length ? t('workspace.rightPanel.properties.addTag') : t('workspace.rightPanel.properties.tagsPlaceholder')"
@@ -288,9 +288,9 @@ function onTagKeydown(event: KeyboardEvent) {
 
       <div class="right-panel__section tw:flex-shrink-0 tw:pt-3 tw:px-4 tw:pb-3.5 tw:flex tw:flex-col tw:gap-1.5">
         <div class="right-panel__section-label tw:mb-1 tw:font-nv-mono tw:text-[10.5px] tw:font-medium tw:tracking-[0.06em] tw:uppercase tw:text-content-muted">{{ t('workspace.rightPanel.metadata') }}</div>
-        <div class="right-panel__meta-row tw:min-h-6 tw:flex tw:items-center tw:gap-1.25 tw:text-xs tw:text-content-secondary [&>svg]:tw:text-content-muted"><FileText :size="12" aria-hidden="true" /><span>{{ t('workspace.rightPanel.words', { n: wordCount }) }}</span><span class="right-panel__meta-sep tw:text-content-muted">·</span><span>{{ t('workspace.rightPanel.readTime', { n: readMinutes }) }}</span></div>
-        <div class="right-panel__meta-row tw:min-h-6 tw:flex tw:items-center tw:gap-1.25 tw:text-xs tw:text-content-secondary [&>svg]:tw:text-content-muted"><span class="right-panel__meta-key tw:text-content-muted tw:w-[76px] tw:flex-shrink-0 tw:mr-[3px]">{{ t('workspace.rightPanel.updated') }}</span><span class="right-panel__meta-value tw:[font-variant-numeric:tabular-nums]">{{ updatedAgo }}</span></div>
-        <div class="right-panel__meta-row tw:min-h-6 tw:flex tw:items-center tw:gap-1.25 tw:text-xs tw:text-content-secondary [&>svg]:tw:text-content-muted"><span class="right-panel__meta-key tw:text-content-muted tw:w-[76px] tw:flex-shrink-0 tw:mr-[3px]">{{ t('workspace.rightPanel.created') }}</span><span class="right-panel__meta-value tw:[font-variant-numeric:tabular-nums]">{{ createdFormatted }}</span></div>
+        <div class="right-panel__meta-row tw:min-h-6 tw:flex tw:items-center tw:gap-1.25 tw:text-xs tw:text-content-secondary tw:[&>svg]:text-content-muted"><FileText :size="12" aria-hidden="true" /><span>{{ t('workspace.rightPanel.words', { n: wordCount }) }}</span><span class="right-panel__meta-sep tw:text-content-muted">·</span><span>{{ t('workspace.rightPanel.readTime', { n: readMinutes }) }}</span></div>
+        <div class="right-panel__meta-row tw:min-h-6 tw:flex tw:items-center tw:gap-1.25 tw:text-xs tw:text-content-secondary tw:[&>svg]:text-content-muted"><span class="right-panel__meta-key tw:text-content-muted tw:w-[76px] tw:flex-shrink-0 tw:mr-[3px]">{{ t('workspace.rightPanel.updated') }}</span><span class="right-panel__meta-value tw:[font-variant-numeric:tabular-nums]">{{ updatedAgo }}</span></div>
+        <div class="right-panel__meta-row tw:min-h-6 tw:flex tw:items-center tw:gap-1.25 tw:text-xs tw:text-content-secondary tw:[&>svg]:text-content-muted"><span class="right-panel__meta-key tw:text-content-muted tw:w-[76px] tw:flex-shrink-0 tw:mr-[3px]">{{ t('workspace.rightPanel.created') }}</span><span class="right-panel__meta-value tw:[font-variant-numeric:tabular-nums]">{{ createdFormatted }}</span></div>
       </div>
     </div>
 

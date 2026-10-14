@@ -138,20 +138,20 @@ watch(() => props.open, (open) => {
 
 <template>
   <Teleport to="body">
-    <div v-if="open" class="search-overlay-backdrop tw:fixed tw:inset-0 tw:z-[240] tw:flex tw:justify-center tw:pt-[12vh] tw:px-6 tw:pb-6 tw:bg-scrim max-[719px]:tw:p-0 max-[719px]:tw:bg-surface-canvas" @click.self="emit('close')">
+    <div v-if="open" class="search-overlay-backdrop tw:fixed tw:inset-0 tw:z-[240] tw:flex tw:justify-center tw:pt-[12vh] tw:px-6 tw:pb-6 tw:bg-scrim tw:max-[719px]:p-0 tw:max-[719px]:bg-surface-canvas" @click.self="emit('close')">
       <section
         ref="dialogRef"
-        class="search-overlay tw:w-[min(640px,100%)] tw:h-fit tw:max-h-[min(64vh,560px)] tw:flex tw:flex-col tw:overflow-hidden tw:border tw:border-solid tw:border-transparent tw:rounded-[calc(16px*var(--radius-scale,1))] tw:bg-surface-overlay tw:shadow-[var(--shadow-overlay)] max-[719px]:tw:w-screen max-[719px]:tw:h-[100dvh] max-[719px]:tw:max-h-[100dvh] max-[719px]:tw:border-0 max-[719px]:tw:rounded-none max-[719px]:tw:bg-surface-canvas max-[719px]:tw:shadow-none"
+        class="search-overlay tw:w-[min(640px,100%)] tw:h-fit tw:max-h-[min(64vh,560px)] tw:flex tw:flex-col tw:overflow-hidden tw:border tw:border-solid tw:border-transparent tw:rounded-[calc(16px*var(--radius-scale,1))] tw:bg-surface-overlay tw:shadow-[var(--shadow-overlay)] tw:max-[719px]:w-screen tw:max-[719px]:h-[100dvh] tw:max-[719px]:max-h-[100dvh] tw:max-[719px]:border-0 tw:max-[719px]:rounded-none tw:max-[719px]:bg-surface-canvas tw:max-[719px]:shadow-none"
         role="dialog"
         aria-modal="true"
         :aria-label="t('workspace.searchOverlay.ariaLabel')"
       >
-        <div class="search-overlay__field tw:flex tw:items-center tw:flex-shrink-0 tw:gap-2.5 tw:mt-2 tw:mx-2 tw:mb-0 tw:px-3 tw:py-3.5 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:bg-surface-subtle max-[719px]:tw:min-h-[calc(64px+max(var(--safe-area-top),0px))] max-[719px]:tw:m-0 max-[719px]:tw:pt-[max(var(--safe-area-top),0px)] max-[719px]:tw:pr-[calc(8px+max(var(--safe-area-right),0px))] max-[719px]:tw:pb-0 max-[719px]:tw:pl-[calc(16px+max(var(--safe-area-left),0px))] max-[719px]:tw:gap-3 max-[719px]:tw:rounded-none max-[719px]:tw:bg-transparent">
+        <div class="search-overlay__field tw:flex tw:items-center tw:flex-shrink-0 tw:gap-2.5 tw:mt-2 tw:mx-2 tw:mb-0 tw:px-3 tw:py-3.5 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:bg-surface-subtle tw:max-[719px]:min-h-[calc(64px+max(var(--safe-area-top),0px))] tw:max-[719px]:m-0 tw:max-[719px]:pt-[max(var(--safe-area-top),0px)] tw:max-[719px]:pr-[calc(8px+max(var(--safe-area-right),0px))] tw:max-[719px]:pb-0 tw:max-[719px]:pl-[calc(16px+max(var(--safe-area-left),0px))] tw:max-[719px]:gap-3 tw:max-[719px]:rounded-none tw:max-[719px]:bg-transparent">
           <Search :size="16" class="search-overlay__icon tw:flex-shrink-0 tw:text-content-muted" />
           <input
             ref="inputRef"
             v-model="query"
-            class="search-overlay__input tw:w-full tw:min-w-0 tw:border-0 tw:outline-none tw:bg-transparent tw:text-content-primary tw:text-[15px] tw:placeholder:text-content-muted max-[719px]:tw:min-h-11 max-[719px]:tw:text-base"
+            class="search-overlay__input tw:w-full tw:min-w-0 tw:border-0 tw:outline-none tw:bg-transparent tw:text-content-primary tw:text-[15px] tw:placeholder:text-content-muted tw:max-[719px]:min-h-11 tw:max-[719px]:text-base"
             type="search"
             role="combobox"
             autocomplete="off"
@@ -163,7 +163,7 @@ watch(() => props.open, (open) => {
           />
           <button
             type="button"
-            class="search-overlay__close tw:grid tw:flex-shrink-0 tw:place-items-center tw:size-[26px] tw:border-0 tw:rounded-full tw:bg-transparent tw:text-content-muted tw:cursor-pointer tw:hover:bg-(--hover) tw:hover:text-content-secondary tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-1 max-[719px]:tw:size-11 max-[719px]:tw:text-content-secondary"
+            class="search-overlay__close tw:grid tw:flex-shrink-0 tw:place-items-center tw:size-[26px] tw:border-0 tw:rounded-full tw:bg-transparent tw:text-content-muted tw:cursor-pointer tw:hover:bg-(--hover) tw:hover:text-content-secondary tw:focus-visible:outline-2 tw:focus-visible:outline-accent tw:focus-visible:outline-offset-1 tw:max-[719px]:size-11 tw:max-[719px]:text-content-secondary"
             :aria-label="t('workspace.searchOverlay.close')"
             @click="emit('close')"
           >
@@ -171,9 +171,9 @@ watch(() => props.open, (open) => {
           </button>
         </div>
 
-        <div :id="listboxId" class="search-overlay__results tw:overflow-auto tw:p-2.5 max-[719px]:tw:flex-1 max-[719px]:tw:pt-3 max-[719px]:tw:pr-[calc(12px+max(var(--safe-area-right),0px))] max-[719px]:tw:pb-[calc(16px+max(var(--safe-area-bottom),0px))] max-[719px]:tw:pl-[calc(12px+max(var(--safe-area-left),0px))]" role="listbox">
+        <div :id="listboxId" class="search-overlay__results tw:overflow-auto tw:p-2.5 tw:max-[719px]:flex-1 tw:max-[719px]:pt-3 tw:max-[719px]:pr-[calc(12px+max(var(--safe-area-right),0px))] tw:max-[719px]:pb-[calc(16px+max(var(--safe-area-bottom),0px))] tw:max-[719px]:pl-[calc(12px+max(var(--safe-area-left),0px))]" role="listbox">
           <template v-if="visibleGroups.length">
-            <section v-for="group in visibleGroups" :key="group.id" class="search-overlay__group [&:not(:first-child)]:tw:mt-2.5">
+            <section v-for="group in visibleGroups" :key="group.id" class="search-overlay__group tw:[&:not(:first-child)]:mt-2.5">
               <div class="search-overlay__group-title tw:mb-1.5 tw:text-content-muted tw:text-[10px] tw:font-bold tw:tracking-[0.08em] tw:uppercase">{{ groupTitle(group.id) }}</div>
               <button
                 v-for="result in group.items"
@@ -181,7 +181,7 @@ watch(() => props.open, (open) => {
                 :key="`${result.type}:${result.id}`"
                 type="button"
                 role="option"
-                class="search-overlay__result tw:w-full tw:flex tw:flex-col tw:gap-1 tw:px-3 tw:py-2.5 tw:border-0 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:text-inherit tw:text-left tw:cursor-pointer tw:hover:bg-surface-subtle tw:focus-visible:bg-surface-subtle tw:focus-visible:outline-none tw:focus-visible:shadow-[inset_0_0_0_2px_var(--accent)] max-[719px]:tw:min-h-14 max-[719px]:tw:p-3"
+                class="search-overlay__result tw:w-full tw:flex tw:flex-col tw:gap-1 tw:px-3 tw:py-2.5 tw:border-0 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:text-inherit tw:text-left tw:cursor-pointer tw:hover:bg-surface-subtle tw:focus-visible:bg-surface-subtle tw:focus-visible:outline-none tw:focus-visible:shadow-[inset_0_0_0_2px_var(--accent)] tw:max-[719px]:min-h-14 tw:max-[719px]:p-3"
                 :class="activeResultKey === `${result.type}:${result.id}` ? 'is-active tw:bg-surface-subtle' : 'tw:bg-transparent'"
                 :aria-selected="activeResultKey === `${result.type}:${result.id}`"
                 @mousedown.prevent

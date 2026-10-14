@@ -71,7 +71,7 @@ function selectHeading(level: number) {
 
 <template>
   <div
-    class="mobile-editor-tab-bar tw:absolute tw:z-[42] tw:right-[calc(12px+max(var(--safe-area-right),0px))] tw:bottom-[calc(20px+max(var(--safe-area-bottom),0px)+var(--mobile-keyboard-inset,0px))] tw:left-[calc(12px+max(var(--safe-area-left),0px))] tw:flex tw:min-h-14 tw:items-center tw:justify-between tw:gap-0 tw:p-1.5 tw:overflow-x-auto tw:overflow-y-visible tw:border tw:border-solid tw:border-transparent tw:rounded-[calc(18px*var(--radius-scale,1))] tw:bg-(--menu-bg) tw:shadow-[0_18px_44px_-16px_var(--shadow)] tw:scrollbar-none [&::-webkit-scrollbar]:tw:hidden max-[719px]:tw:flex min-[720px]:tw:hidden"
+    class="mobile-editor-tab-bar tw:absolute tw:z-[42] tw:right-[calc(12px+max(var(--safe-area-right),0px))] tw:bottom-[calc(20px+max(var(--safe-area-bottom),0px)+var(--mobile-keyboard-inset,0px))] tw:left-[calc(12px+max(var(--safe-area-left),0px))] tw:flex tw:min-h-14 tw:items-center tw:justify-between tw:gap-0 tw:p-1.5 tw:overflow-x-auto tw:overflow-y-visible tw:border tw:border-solid tw:border-transparent tw:rounded-[calc(18px*var(--radius-scale,1))] tw:bg-(--menu-bg) tw:shadow-[0_18px_44px_-16px_var(--shadow)] tw:scrollbar-none tw:[&::-webkit-scrollbar]:hidden tw:max-[719px]:flex tw:min-[720px]:hidden"
     role="toolbar"
     :aria-label="t('editor.toolbar.mobile')"
     @pointerdown.prevent

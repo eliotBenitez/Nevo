@@ -19,7 +19,7 @@ const headingLevels = [1, 2, 3, 4, 5, 6] as const
     <div
       v-if="open"
       id="mobile-editor-heading-menu"
-      class="mobile-editor-heading-menu tw:fixed tw:z-[43] tw:right-[calc(12px+max(var(--safe-area-right),0px))] tw:bottom-[calc(88px+max(var(--safe-area-bottom),0px)+var(--mobile-keyboard-inset,0px))] tw:left-[calc(12px+max(var(--safe-area-left),0px))] tw:grid tw:grid-cols-[repeat(6,44px)] tw:justify-between tw:gap-0 tw:p-2 tw:overflow-x-auto tw:border tw:border-solid tw:border-transparent tw:rounded-[calc(18px*var(--radius-scale,1))] tw:bg-(--menu-bg) tw:shadow-[var(--shadow-overlay)] tw:scrollbar-none [&::-webkit-scrollbar]:tw:hidden"
+      class="mobile-editor-heading-menu tw:fixed tw:z-[43] tw:right-[calc(12px+max(var(--safe-area-right),0px))] tw:bottom-[calc(88px+max(var(--safe-area-bottom),0px)+var(--mobile-keyboard-inset,0px))] tw:left-[calc(12px+max(var(--safe-area-left),0px))] tw:grid tw:grid-cols-[repeat(6,44px)] tw:justify-between tw:gap-0 tw:p-2 tw:overflow-x-auto tw:border tw:border-solid tw:border-transparent tw:rounded-[calc(18px*var(--radius-scale,1))] tw:bg-(--menu-bg) tw:shadow-[var(--shadow-overlay)] tw:scrollbar-none tw:[&::-webkit-scrollbar]:hidden"
       role="menu"
       @pointerdown.prevent
       @keydown.esc.stop="emit('close')"

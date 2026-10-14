@@ -280,7 +280,7 @@ const btnDanger =
             @click="emit('cellBackground', 'oklch(0.95 0.04 90)')"
           >
             <span
-              class="tw:relative tw:inline-flex tw:size-3.5 tw:items-center tw:justify-center tw:rounded-full tw:border tw:border-black/15 dark:tw:border-white/25 tw:shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]"
+              class="tw:relative tw:inline-flex tw:size-3.5 tw:items-center tw:justify-center tw:rounded-full tw:border tw:border-black/15 tw:dark:border-white/25 tw:shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]"
               style="background: oklch(0.95 0.04 90);"
             >
               <span
@@ -298,7 +298,7 @@ const btnDanger =
             @click="emit('cellBackground', 'oklch(0.9 0.03 250)')"
           >
             <span
-              class="tw:relative tw:inline-flex tw:size-3.5 tw:items-center tw:justify-center tw:rounded-full tw:border tw:border-black/15 dark:tw:border-white/25 tw:shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]"
+              class="tw:relative tw:inline-flex tw:size-3.5 tw:items-center tw:justify-center tw:rounded-full tw:border tw:border-black/15 tw:dark:border-white/25 tw:shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]"
               style="background: oklch(0.9 0.03 250);"
             >
               <span

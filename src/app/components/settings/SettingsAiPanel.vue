@@ -143,7 +143,7 @@ function stateClass(state: RowState): string {
           :disabled="!settings.ai.enabled"
         >
           <input
-            class="ai-endpoint-input tw:h-7 tw:min-w-[220px] tw:max-w-[300px] tw:px-2 tw:rounded-[calc(7px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-input-bg tw:text-content-primary tw:font-medium tw:text-xs tw:font-nv-ui tw:outline-none tw:transition-[background-color,box-shadow] tw:duration-[120ms] tw:focus:bg-surface-raised tw:focus:shadow-[0_0_0_2px_var(--input-ring)] disabled:tw:opacity-48 disabled:tw:pointer-events-none tw:placeholder:text-content-muted tw:placeholder:font-normal"
+            class="ai-endpoint-input tw:h-7 tw:min-w-[220px] tw:max-w-[300px] tw:px-2 tw:rounded-[calc(7px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-input-bg tw:text-content-primary tw:font-medium tw:text-xs tw:font-nv-ui tw:outline-none tw:transition-[background-color,box-shadow] tw:duration-[120ms] tw:focus:bg-surface-raised tw:focus:shadow-[0_0_0_2px_var(--input-ring)] tw:disabled:opacity-48 tw:disabled:pointer-events-none tw:placeholder:text-content-muted tw:placeholder:font-normal"
             type="text"
             :disabled="!settings.ai.enabled"
             :value="endpointInput"

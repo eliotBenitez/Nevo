@@ -100,7 +100,7 @@ function requestClose() {
           aria-valuemax="100"
           :aria-valuenow="progressPercent"
         >
-          <div class="obsidian-import__progress-fill tw:h-full tw:bg-accent tw:transition-[width] tw:duration-200 tw:ease-[ease] motion-reduce:tw:transition-none" :style="{ width: `${progressPercent}%` }" />
+          <div class="obsidian-import__progress-fill tw:h-full tw:bg-accent tw:transition-[width] tw:duration-200 tw:ease-[ease] tw:motion-reduce:transition-none" :style="{ width: `${progressPercent}%` }" />
         </div>
         <p class="obsidian-import__count tw:m-0 tw:text-[13px] tw:text-content-secondary tw:leading-[1.45]">
           {{ t('workspace.obsidianImport.progressCount', { processed: progress.processedNotes, total: progress.totalNotes }) }}
@@ -110,35 +110,35 @@ function requestClose() {
       <template v-else-if="stage === 'done'">
         <p class="obsidian-import__vault tw:m-0 tw:text-[13px] tw:text-content-secondary tw:leading-[1.45]">{{ t('workspace.obsidianImport.vaultName') }}: {{ result?.rootName }}</p>
         <dl class="obsidian-import__stats tw:m-0 tw:flex tw:flex-col tw:gap-1">
-          <div class="obsidian-import__stat tw:flex tw:justify-between tw:gap-3 tw:text-[13px] tw:text-content-secondary [&>dt]:tw:text-content-muted [&>dd]:tw:m-0 [&>dd]:tw:text-content-primary [&>dd]:tw:font-semibold">
+          <div class="obsidian-import__stat tw:flex tw:justify-between tw:gap-3 tw:text-[13px] tw:text-content-secondary tw:[&>dt]:text-content-muted tw:[&>dd]:m-0 tw:[&>dd]:text-content-primary tw:[&>dd]:font-semibold">
             <dt>{{ t('workspace.obsidianImport.notesCreated') }}</dt>
             <dd>{{ result?.notesCreated }}</dd>
           </div>
-          <div class="obsidian-import__stat tw:flex tw:justify-between tw:gap-3 tw:text-[13px] tw:text-content-secondary [&>dt]:tw:text-content-muted [&>dd]:tw:m-0 [&>dd]:tw:text-content-primary [&>dd]:tw:font-semibold">
+          <div class="obsidian-import__stat tw:flex tw:justify-between tw:gap-3 tw:text-[13px] tw:text-content-secondary tw:[&>dt]:text-content-muted tw:[&>dd]:m-0 tw:[&>dd]:text-content-primary tw:[&>dd]:font-semibold">
             <dt>{{ t('workspace.obsidianImport.foldersCreated') }}</dt>
             <dd>{{ result?.foldersCreated }}</dd>
           </div>
-          <div class="obsidian-import__stat tw:flex tw:justify-between tw:gap-3 tw:text-[13px] tw:text-content-secondary [&>dt]:tw:text-content-muted [&>dd]:tw:m-0 [&>dd]:tw:text-content-primary [&>dd]:tw:font-semibold">
+          <div class="obsidian-import__stat tw:flex tw:justify-between tw:gap-3 tw:text-[13px] tw:text-content-secondary tw:[&>dt]:text-content-muted tw:[&>dd]:m-0 tw:[&>dd]:text-content-primary tw:[&>dd]:font-semibold">
             <dt>{{ t('workspace.obsidianImport.attachmentsImported') }}</dt>
             <dd>{{ result?.attachmentsImported }}</dd>
           </div>
-          <div class="obsidian-import__stat tw:flex tw:justify-between tw:gap-3 tw:text-[13px] tw:text-content-secondary [&>dt]:tw:text-content-muted [&>dd]:tw:m-0 [&>dd]:tw:text-content-primary [&>dd]:tw:font-semibold">
+          <div class="obsidian-import__stat tw:flex tw:justify-between tw:gap-3 tw:text-[13px] tw:text-content-secondary tw:[&>dt]:text-content-muted tw:[&>dd]:m-0 tw:[&>dd]:text-content-primary tw:[&>dd]:font-semibold">
             <dt>{{ t('workspace.obsidianImport.tagsCollected') }}</dt>
             <dd>{{ result?.tagsCollected }}</dd>
           </div>
-          <div class="obsidian-import__stat tw:flex tw:justify-between tw:gap-3 tw:text-[13px] tw:text-content-secondary [&>dt]:tw:text-content-muted [&>dd]:tw:m-0 [&>dd]:tw:text-content-primary [&>dd]:tw:font-semibold">
+          <div class="obsidian-import__stat tw:flex tw:justify-between tw:gap-3 tw:text-[13px] tw:text-content-secondary tw:[&>dt]:text-content-muted tw:[&>dd]:m-0 tw:[&>dd]:text-content-primary tw:[&>dd]:font-semibold">
             <dt>{{ t('workspace.obsidianImport.notesWithFrontmatter') }}</dt>
             <dd>{{ result?.notesWithFrontmatter }}</dd>
           </div>
-          <div v-if="(result?.unresolvedLinks ?? 0) > 0" class="obsidian-import__stat obsidian-import__stat--warning tw:flex tw:justify-between tw:gap-3 tw:text-[13px] tw:text-danger [&>dt]:tw:text-danger [&>dd]:tw:m-0 [&>dd]:tw:text-danger [&>dd]:tw:font-semibold">
+          <div v-if="(result?.unresolvedLinks ?? 0) > 0" class="obsidian-import__stat obsidian-import__stat--warning tw:flex tw:justify-between tw:gap-3 tw:text-[13px] tw:text-danger tw:[&>dt]:text-danger tw:[&>dd]:m-0 tw:[&>dd]:text-danger tw:[&>dd]:font-semibold">
             <dt>{{ t('workspace.obsidianImport.unresolvedLinks') }}</dt>
             <dd>{{ result?.unresolvedLinks }}</dd>
           </div>
-          <div v-if="(result?.unresolvedEmbeds ?? 0) > 0" class="obsidian-import__stat obsidian-import__stat--warning tw:flex tw:justify-between tw:gap-3 tw:text-[13px] tw:text-danger [&>dt]:tw:text-danger [&>dd]:tw:m-0 [&>dd]:tw:text-danger [&>dd]:tw:font-semibold">
+          <div v-if="(result?.unresolvedEmbeds ?? 0) > 0" class="obsidian-import__stat obsidian-import__stat--warning tw:flex tw:justify-between tw:gap-3 tw:text-[13px] tw:text-danger tw:[&>dt]:text-danger tw:[&>dd]:m-0 tw:[&>dd]:text-danger tw:[&>dd]:font-semibold">
             <dt>{{ t('workspace.obsidianImport.unresolvedEmbeds') }}</dt>
             <dd>{{ result?.unresolvedEmbeds }}</dd>
           </div>
-          <div v-if="(result?.skippedFiles ?? 0) > 0" class="obsidian-import__stat obsidian-import__stat--warning tw:flex tw:justify-between tw:gap-3 tw:text-[13px] tw:text-danger [&>dt]:tw:text-danger [&>dd]:tw:m-0 [&>dd]:tw:text-danger [&>dd]:tw:font-semibold">
+          <div v-if="(result?.skippedFiles ?? 0) > 0" class="obsidian-import__stat obsidian-import__stat--warning tw:flex tw:justify-between tw:gap-3 tw:text-[13px] tw:text-danger tw:[&>dt]:text-danger tw:[&>dd]:m-0 tw:[&>dd]:text-danger tw:[&>dd]:font-semibold">
             <dt>{{ t('workspace.obsidianImport.skippedFiles') }}</dt>
             <dd>{{ result?.skippedFiles }}</dd>
           </div>

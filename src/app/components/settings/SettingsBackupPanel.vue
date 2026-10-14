@@ -85,7 +85,7 @@ async function runMerge() {
             </div>
             <div class="backup-progress__track tw:h-1.5 tw:rounded-full tw:bg-surface-subtle tw:overflow-hidden">
               <div
-                class="backup-progress__fill tw:h-full tw:rounded-full tw:bg-accent tw:transition-[width] tw:duration-[160ms] tw:ease-[ease] motion-reduce:tw:transition-none"
+                class="backup-progress__fill tw:h-full tw:rounded-full tw:bg-accent tw:transition-[width] tw:duration-[160ms] tw:ease-[ease] tw:motion-reduce:transition-none"
                 :class="{ 'backup-progress__fill--indeterminate': progress === null }"
                 :style="progress !== null ? { width: `${progress}%` } : undefined"
               />
@@ -118,7 +118,7 @@ async function runMerge() {
             </div>
             <div class="backup-progress__track tw:h-1.5 tw:rounded-full tw:bg-surface-subtle tw:overflow-hidden">
               <div
-                class="backup-progress__fill tw:h-full tw:rounded-full tw:bg-accent tw:transition-[width] tw:duration-[160ms] tw:ease-[ease] motion-reduce:tw:transition-none"
+                class="backup-progress__fill tw:h-full tw:rounded-full tw:bg-accent tw:transition-[width] tw:duration-[160ms] tw:ease-[ease] tw:motion-reduce:transition-none"
                 :class="{ 'backup-progress__fill--indeterminate': progress === null }"
                 :style="progress !== null ? { width: `${progress}%` } : undefined"
               />

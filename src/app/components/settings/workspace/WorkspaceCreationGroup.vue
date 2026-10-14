@@ -97,7 +97,7 @@ watch([() => workspaceStore.backend, locale], loadTemplateOptions)
     >
       <NvPopupMenu v-model:open="noteIconPickerOpen" placement="bottom-end">
         <template #trigger>
-          <NvButton class="icon-trigger-btn tw:size-10 tw:rounded-[calc(10px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-input-bg tw:flex tw:items-center tw:justify-center tw:cursor-pointer tw:transition-[background-color,box-shadow,transform] tw:duration-[160ms] tw:text-content-primary tw:hover:bg-surface-raised tw:hover:shadow-[0_0_0_2px_var(--accent)] active:tw:translate-y-0">
+          <NvButton class="icon-trigger-btn tw:size-10 tw:rounded-[calc(10px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-input-bg tw:flex tw:items-center tw:justify-center tw:cursor-pointer tw:transition-[background-color,box-shadow,transform] tw:duration-[160ms] tw:text-content-primary tw:hover:bg-surface-raised tw:hover:shadow-[0_0_0_2px_var(--accent)] tw:active:translate-y-0">
             <NvNoteIcon :value="settings.workspace.defaultNoteIcon" :size="18" />
           </NvButton>
         </template>
@@ -117,7 +117,7 @@ watch([() => workspaceStore.backend, locale], loadTemplateOptions)
     >
       <NvPopupMenu v-model:open="folderIconPickerOpen" placement="bottom-end">
         <template #trigger>
-          <NvButton class="icon-trigger-btn tw:size-10 tw:rounded-[calc(10px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-input-bg tw:flex tw:items-center tw:justify-center tw:cursor-pointer tw:transition-[background-color,box-shadow,transform] tw:duration-[160ms] tw:text-content-primary tw:hover:bg-surface-raised tw:hover:shadow-[0_0_0_2px_var(--accent)] active:tw:translate-y-0">
+          <NvButton class="icon-trigger-btn tw:size-10 tw:rounded-[calc(10px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-input-bg tw:flex tw:items-center tw:justify-center tw:cursor-pointer tw:transition-[background-color,box-shadow,transform] tw:duration-[160ms] tw:text-content-primary tw:hover:bg-surface-raised tw:hover:shadow-[0_0_0_2px_var(--accent)] tw:active:translate-y-0">
             <NvNoteIcon :value="settings.workspace.defaultFolderIcon" :size="18" />
           </NvButton>
         </template>

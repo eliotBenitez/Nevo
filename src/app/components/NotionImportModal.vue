@@ -75,7 +75,7 @@ function requestClose() {
       <template v-else-if="stage === 'running'">
         <p class="notion-import__phase tw:m-0 tw:text-[13px] tw:text-content-secondary tw:leading-normal" role="status">{{ phaseLabel }}</p>
         <div class="notion-import__progress tw:h-2 tw:overflow-hidden tw:rounded-full tw:bg-surface-overlay" role="progressbar" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="progressPercent">
-          <div class="notion-import__progress-fill tw:h-full tw:bg-accent tw:transition-[width] tw:duration-[160ms] tw:ease-[ease] motion-reduce:tw:transition-none" :style="{ width: `${progressPercent}%` }" />
+          <div class="notion-import__progress-fill tw:h-full tw:bg-accent tw:transition-[width] tw:duration-[160ms] tw:ease-[ease] tw:motion-reduce:transition-none" :style="{ width: `${progressPercent}%` }" />
         </div>
         <p class="notion-import__count tw:m-0 tw:text-[13px] tw:text-content-secondary tw:leading-normal">
           {{ t('workspace.notionImport.progressCount', { processed: progress.processedItems, total: progress.totalItems }) }}
@@ -84,13 +84,13 @@ function requestClose() {
 
       <template v-else-if="stage === 'done'">
         <p class="notion-import__description tw:m-0 tw:text-[13px] tw:text-content-secondary tw:leading-normal">{{ result?.rootName }}</p>
-        <dl class="notion-import__stats tw:grid tw:gap-1.5 tw:m-0 [&>div]:tw:flex [&>div]:tw:justify-between [&>div]:tw:gap-4 [&>div]:tw:text-[13px] [&>div]:tw:text-content-secondary [&_dd]:tw:m-0 [&_dd]:tw:text-content-primary [&_dd]:tw:[font-variant-numeric:tabular-nums]">
+        <dl class="notion-import__stats tw:grid tw:gap-1.5 tw:m-0 tw:[&>div]:flex tw:[&>div]:justify-between tw:[&>div]:gap-4 tw:[&>div]:text-[13px] tw:[&>div]:text-content-secondary tw:[&_dd]:m-0 tw:[&_dd]:text-content-primary tw:[&_dd]:[font-variant-numeric:tabular-nums]">
           <div><dt>{{ t('workspace.notionImport.notesCreated') }}</dt><dd>{{ result?.notesCreated }}</dd></div>
           <div><dt>{{ t('workspace.notionImport.foldersCreated') }}</dt><dd>{{ result?.foldersCreated }}</dd></div>
           <div><dt>{{ t('workspace.notionImport.databasesCreated') }}</dt><dd>{{ result?.databasesCreated }}</dd></div>
           <div><dt>{{ t('workspace.notionImport.assetsImported') }}</dt><dd>{{ result?.assetsImported }}</dd></div>
-          <div v-if="result?.warnings" class="is-warning [&>dt]:tw:text-danger [&>dd]:tw:text-danger"><dt>{{ t('workspace.notionImport.warnings') }}</dt><dd>{{ result.warnings }}</dd></div>
-          <div v-if="result?.errors" class="is-warning [&>dt]:tw:text-danger [&>dd]:tw:text-danger"><dt>{{ t('workspace.notionImport.errors') }}</dt><dd>{{ result.errors }}</dd></div>
+          <div v-if="result?.warnings" class="is-warning tw:[&>dt]:text-danger tw:[&>dd]:text-danger"><dt>{{ t('workspace.notionImport.warnings') }}</dt><dd>{{ result.warnings }}</dd></div>
+          <div v-if="result?.errors" class="is-warning tw:[&>dt]:text-danger tw:[&>dd]:text-danger"><dt>{{ t('workspace.notionImport.errors') }}</dt><dd>{{ result.errors }}</dd></div>
         </dl>
         <details v-if="result?.issues.length" class="notion-import__issues tw:text-xs tw:text-content-secondary">
           <summary>{{ t('workspace.notionImport.issueDetails') }}</summary>
