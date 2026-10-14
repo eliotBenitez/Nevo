@@ -67,28 +67,28 @@ function toggleMultiOption(optionId: string) {
 </script>
 
 <template>
-  <div class="nv-db-cell" :class="`nv-db-cell--${field.type}`">
+  <div class="nv-db-cell tw:w-full tw:min-w-0" :class="`nv-db-cell--${field.type}`">
     <input
       v-if="field.type === 'text'"
-      class="nv-db-cell__input"
+      class="nv-db-cell__input tw:w-full tw:rounded-[calc(4px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:px-0.5 tw:py-[3px] tw:font-nv-ui tw:text-[12.5px] tw:text-content-primary tw:outline-none tw:focus:bg-[color-mix(in_oklab,var(--accent)_8%,var(--hover-strong,var(--surface-overlay)))] tw:focus:shadow-[0_0_0_2px_color-mix(in_oklab,var(--accent)_16%,transparent)]"
       type="text"
       :value="textValue"
       @input="onTextInput"
     />
 
-    <div v-else-if="field.type === 'url'" class="nv-db-cell__url">
+    <div v-else-if="field.type === 'url'" class="nv-db-cell__url tw:flex tw:w-full tw:min-w-0 tw:items-center tw:gap-1">
       <a
         v-if="!isEditingUrl && textValue"
         href="#"
         class="nv-db-cell__link"
         @click="openUrl"
       >
-        <span class="nv-db-cell__link-text">{{ textValue }}</span>
+        <span class="nv-db-cell__link-text tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap">{{ textValue }}</span>
         <ExternalLink :size="11" />
       </a>
       <input
         v-if="isEditingUrl || !textValue"
-        class="nv-db-cell__input"
+        class="nv-db-cell__input tw:w-full tw:rounded-[calc(4px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:px-0.5 tw:py-[3px] tw:font-nv-ui tw:text-[12.5px] tw:text-content-primary tw:outline-none tw:focus:bg-[color-mix(in_oklab,var(--accent)_8%,var(--hover-strong,var(--surface-overlay)))] tw:focus:shadow-[0_0_0_2px_color-mix(in_oklab,var(--accent)_16%,transparent)]"
         type="text"
         :placeholder="t('database.cell.urlPlaceholder')"
         :value="textValue"
@@ -98,7 +98,7 @@ function toggleMultiOption(optionId: string) {
       <button
         v-if="textValue && !isEditingUrl"
         type="button"
-        class="nv-db-cell__url-edit"
+        class="nv-db-cell__url-edit tw:shrink-0 tw:cursor-pointer tw:border-0 tw:bg-transparent tw:text-[10.5px] tw:text-content-muted"
         @click="isEditingUrl = true"
       >
         {{ t('database.cell.edit') }}
@@ -116,7 +116,7 @@ function toggleMultiOption(optionId: string) {
 
     <input
       v-else-if="field.type === 'date'"
-      class="nv-db-cell__input"
+      class="nv-db-cell__input tw:w-full tw:rounded-[calc(4px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:px-0.5 tw:py-[3px] tw:font-nv-ui tw:text-[12.5px] tw:text-content-primary tw:outline-none tw:focus:bg-[color-mix(in_oklab,var(--accent)_8%,var(--hover-strong,var(--surface-overlay)))] tw:focus:shadow-[0_0_0_2px_color-mix(in_oklab,var(--accent)_16%,transparent)]"
       type="date"
       :value="dateValue"
       @input="onDateInput"
@@ -126,51 +126,51 @@ function toggleMultiOption(optionId: string) {
 
     <NvPopupMenu v-else-if="field.type === 'select'" placement="bottom-start">
       <template #trigger>
-        <button type="button" class="nv-db-cell__select-trigger">
+        <button type="button" class="nv-db-cell__select-trigger tw:flex tw:min-h-6 tw:w-full tw:cursor-pointer tw:flex-wrap tw:items-center tw:gap-1 tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:p-0.5 tw:text-content-muted tw:hover:bg-(--hover)">
           <span
             v-if="selectedOption"
-            class="nv-db-chip"
+            class="nv-db-chip tw:inline-flex tw:items-center tw:rounded-full tw:border tw:border-solid tw:border-[color-mix(in_oklab,var(--chip-color)_30%,transparent)] tw:bg-[color-mix(in_oklab,var(--chip-color)_16%,transparent)] tw:px-[7px] tw:py-0.5 tw:text-[11px] tw:leading-[1.5] tw:font-medium tw:whitespace-nowrap tw:text-(--chip-color) tw:[--chip-color:var(--text-muted)]"
             :style="{ '--chip-color': optionChipColor(selectedOption.color) }"
           >{{ selectedOption.name }}</span>
-          <span v-else class="nv-db-cell__placeholder">{{ t('database.cell.selectPlaceholder') }}</span>
+          <span v-else class="nv-db-cell__placeholder tw:text-[12px] tw:text-content-muted">{{ t('database.cell.selectPlaceholder') }}</span>
         </button>
       </template>
-      <div class="nv-db-cell__option-list">
-        <div v-if="!options.length" class="nv-db-cell__option-empty">{{ t('database.cell.noOptions') }}</div>
+      <div class="nv-db-cell__option-list tw:flex tw:min-w-40 tw:flex-col tw:gap-0.5 tw:p-1">
+        <div v-if="!options.length" class="nv-db-cell__option-empty tw:p-2 tw:text-center tw:text-[11.5px] tw:text-content-muted">{{ t('database.cell.noOptions') }}</div>
         <button
           v-for="option in options"
           :key="option.id"
           type="button"
-          class="nv-db-cell__option-row"
+          class="nv-db-cell__option-row tw:flex tw:h-[30px] tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:px-1.5 tw:py-0 tw:hover:bg-(--hover) tw:justify-between"
           @click="pickSelectOption(option.id)"
         >
-          <span class="nv-db-chip" :style="{ '--chip-color': optionChipColor(option.color) }">{{ option.name }}</span>
-          <X v-if="option.id === textValue" :size="12" class="nv-db-cell__option-clear" />
+          <span class="nv-db-chip tw:inline-flex tw:items-center tw:rounded-full tw:border tw:border-solid tw:border-[color-mix(in_oklab,var(--chip-color)_30%,transparent)] tw:bg-[color-mix(in_oklab,var(--chip-color)_16%,transparent)] tw:px-[7px] tw:py-0.5 tw:text-[11px] tw:leading-[1.5] tw:font-medium tw:whitespace-nowrap tw:text-(--chip-color) tw:[--chip-color:var(--text-muted)]" :style="{ '--chip-color': optionChipColor(option.color) }">{{ option.name }}</span>
+          <X v-if="option.id === textValue" :size="12" class="nv-db-cell__option-clear tw:text-content-muted" />
         </button>
       </div>
     </NvPopupMenu>
 
     <NvPopupMenu v-else-if="field.type === 'multi_select'" placement="bottom-start">
       <template #trigger>
-        <button type="button" class="nv-db-cell__multi-trigger">
+        <button type="button" class="nv-db-cell__multi-trigger tw:flex tw:min-h-6 tw:w-full tw:cursor-pointer tw:flex-wrap tw:items-center tw:gap-1 tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:p-0.5 tw:text-content-muted tw:hover:bg-(--hover)">
           <span
             v-for="option in selectedOptions"
             :key="option.id"
-            class="nv-db-chip"
+            class="nv-db-chip tw:inline-flex tw:items-center tw:rounded-full tw:border tw:border-solid tw:border-[color-mix(in_oklab,var(--chip-color)_30%,transparent)] tw:bg-[color-mix(in_oklab,var(--chip-color)_16%,transparent)] tw:px-[7px] tw:py-0.5 tw:text-[11px] tw:leading-[1.5] tw:font-medium tw:whitespace-nowrap tw:text-(--chip-color) tw:[--chip-color:var(--text-muted)]"
             :style="{ '--chip-color': optionChipColor(option.color) }"
           >{{ option.name }}</span>
           <Plus v-if="!selectedOptions.length" :size="12" />
         </button>
       </template>
-      <div class="nv-db-cell__option-list">
-        <div v-if="!options.length" class="nv-db-cell__option-empty">{{ t('database.cell.noOptions') }}</div>
-        <label v-for="option in options" :key="option.id" class="nv-db-cell__option-row nv-db-cell__option-row--multi">
+      <div class="nv-db-cell__option-list tw:flex tw:min-w-40 tw:flex-col tw:gap-0.5 tw:p-1">
+        <div v-if="!options.length" class="nv-db-cell__option-empty tw:p-2 tw:text-center tw:text-[11.5px] tw:text-content-muted">{{ t('database.cell.noOptions') }}</div>
+        <label v-for="option in options" :key="option.id" class="nv-db-cell__option-row nv-db-cell__option-row--multi tw:flex tw:h-[30px] tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:px-1.5 tw:py-0 tw:hover:bg-(--hover) tw:justify-start">
           <input
-            type="checkbox"
+            type="checkbox" class="tw:accent-accent"
             :checked="arrayValue.includes(option.id)"
             @change="toggleMultiOption(option.id)"
           />
-          <span class="nv-db-chip" :style="{ '--chip-color': optionChipColor(option.color) }">{{ option.name }}</span>
+          <span class="nv-db-chip tw:inline-flex tw:items-center tw:rounded-full tw:border tw:border-solid tw:border-[color-mix(in_oklab,var(--chip-color)_30%,transparent)] tw:bg-[color-mix(in_oklab,var(--chip-color)_16%,transparent)] tw:px-[7px] tw:py-0.5 tw:text-[11px] tw:leading-[1.5] tw:font-medium tw:whitespace-nowrap tw:text-(--chip-color) tw:[--chip-color:var(--text-muted)]" :style="{ '--chip-color': optionChipColor(option.color) }">{{ option.name }}</span>
         </label>
       </div>
     </NvPopupMenu>

@@ -45,13 +45,13 @@ function metaFor(record: DbRecord): string {
 </script>
 
 <template>
-  <div class="nv-db-list" @scroll="onScroll">
-    <div v-if="!totalRecords" class="nv-db-list__empty">{{ t('database.table.empty') }}</div>
-    <div v-if="recordOffset" class="nv-db-list__spacer" :style="{ height: `${recordOffset * ROW_HEIGHT}px` }" />
-    <div v-for="record in records" :key="record.id" class="nv-db-list__row">
-      <div class="nv-db-list__title">{{ titleFor(record) }}</div>
-      <div v-if="metaFor(record)" class="nv-db-list__meta">{{ metaFor(record) }}</div>
+  <div class="nv-db-list tw:flex tw:max-h-[460px] tw:flex-col tw:overflow-auto tw:overscroll-contain tw:rounded-[7px] tw:border tw:border-solid tw:border-transparent tw:bg-surface-panel" @scroll="onScroll">
+    <div v-if="!totalRecords" class="nv-db-list__empty tw:p-4 tw:text-center tw:text-[12.5px] tw:text-content-muted">{{ t('database.table.empty') }}</div>
+    <div v-if="recordOffset" class="nv-db-list__spacer tw:flex-none" :style="{ height: `${recordOffset * ROW_HEIGHT}px` }" />
+    <div v-for="record in records" :key="record.id" class="nv-db-list__row tw:flex tw:flex-col tw:gap-[3px] tw:border-0 tw:border-b tw:border-solid tw:border-b-(--db-border) tw:px-3 tw:py-2.5 tw:transition-[background-color] tw:duration-[110ms] tw:ease-[ease] tw:hover:bg-[color-mix(in_oklab,var(--accent)_5%,var(--hover,var(--surface-overlay)))] tw:last:border-b-0 tw:motion-reduce:transition-none">
+      <div class="nv-db-list__title tw:font-nv-ui tw:text-[13px] tw:leading-[normal] tw:font-[550] tw:text-content-primary">{{ titleFor(record) }}</div>
+      <div v-if="metaFor(record)" class="nv-db-list__meta tw:text-[11.5px] tw:text-content-muted">{{ metaFor(record) }}</div>
     </div>
-    <div v-if="totalRecords > recordOffset + records.length" class="nv-db-list__spacer" :style="{ height: `${(totalRecords - recordOffset - records.length) * ROW_HEIGHT}px` }" />
+    <div v-if="totalRecords > recordOffset + records.length" class="nv-db-list__spacer tw:flex-none" :style="{ height: `${(totalRecords - recordOffset - records.length) * ROW_HEIGHT}px` }" />
   </div>
 </template>

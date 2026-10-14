@@ -198,8 +198,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="nv-db-chart">
-    <div class="nv-db-chart__controls">
+  <div class="nv-db-chart tw:flex tw:flex-col tw:gap-2.5">
+    <div class="nv-db-chart__controls tw:flex tw:flex-wrap tw:gap-[5px] tw:rounded-[7px] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle tw:p-2">
       <NvSelect
         class="nv-db-chart__select"
         :model-value="effectiveChart.kind"
@@ -209,35 +209,35 @@ onBeforeUnmount(() => {
       />
       <NvPopupMenu placement="bottom-start" width="290px">
         <template #trigger>
-          <button type="button" class="nv-db-chart__series-trigger" :aria-label="t('database.chart.yFields')">
+          <button type="button" class="nv-db-chart__series-trigger tw:flex tw:h-[30px] tw:min-w-[164px] tw:cursor-pointer tw:items-center tw:justify-between tw:gap-3 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--input-bg) tw:px-[9px] tw:py-0 tw:font-nv-ui tw:text-[11px] tw:leading-[normal] tw:font-semibold tw:text-content-secondary tw:hover:border-accent tw:hover:text-content-primary" :aria-label="t('database.chart.yFields')">
             <span>{{ t('database.chart.yFields') }}</span>
-            <span class="nv-db-chart__series-summary">{{ seriesSummary }}</span>
+            <span class="nv-db-chart__series-summary tw:font-medium tw:text-content-muted">{{ seriesSummary }}</span>
           </button>
         </template>
-        <div class="nv-db-chart__series-menu">
-          <div class="nv-db-chart__series-header">
+        <div class="nv-db-chart__series-menu tw:flex tw:flex-col tw:gap-1.5 tw:p-[7px]">
+          <div class="nv-db-chart__series-header tw:flex tw:items-center tw:justify-between tw:gap-2 tw:pl-0.5 tw:font-nv-ui tw:text-[10px] tw:leading-[normal] tw:font-semibold tw:tracking-[0.03em] tw:text-content-muted tw:uppercase">
             <span>{{ t('database.chart.yFields') }}</span>
-            <button type="button" class="nv-db-chart__add-series" :disabled="chartSeries.length === numericFields.length" @click="addSeries">
+            <button type="button" class="nv-db-chart__add-series tw:inline-flex tw:h-6 tw:cursor-pointer tw:items-center tw:justify-center tw:gap-1 tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-0 tw:bg-[color-mix(in_oklab,var(--accent)_10%,transparent)] tw:px-1.5 tw:py-0 tw:font-nv-ui tw:text-[11px] tw:leading-[normal] tw:font-semibold tw:text-accent tw:hover:enabled:bg-[color-mix(in_oklab,var(--accent)_18%,transparent)] tw:disabled:cursor-default tw:disabled:text-content-muted tw:disabled:opacity-65" :disabled="chartSeries.length === numericFields.length" @click="addSeries">
               <Plus :size="13" />
               {{ t('database.chart.addSeries') }}
             </button>
           </div>
-          <div v-if="chartSeries.length" class="nv-db-chart__series-list">
-            <div v-for="(series, index) in chartSeries" :key="series.id" class="nv-db-chart__series-row">
-              <span class="nv-db-chart__series-index">{{ index + 1 }}</span>
+          <div v-if="chartSeries.length" class="nv-db-chart__series-list tw:flex tw:flex-col tw:gap-1">
+            <div v-for="(series, index) in chartSeries" :key="series.id" class="nv-db-chart__series-row tw:flex tw:min-w-0 tw:items-center tw:gap-[5px]">
+              <span class="nv-db-chart__series-index tw:grid tw:h-[18px] tw:w-[18px] tw:flex-[0_0_18px] tw:place-items-center tw:rounded-[50%] tw:bg-[color-mix(in_oklab,var(--accent)_12%,transparent)] tw:font-nv-ui tw:text-[10px] tw:leading-[normal] tw:font-bold tw:text-accent">{{ index + 1 }}</span>
               <NvSelect
-                class="nv-db-chart__series-select"
+                class="nv-db-chart__series-select tw:flex-1"
                 :model-value="series.fieldId"
                 :options="numericFieldOptions"
                 :min-width="180"
                 @update:model-value="changeSeries(series.id, $event)"
               />
-              <button type="button" class="nv-db-chart__remove-series" :aria-label="t('database.chart.removeSeries')" @click="removeSeries(series.id)">
+              <button type="button" class="nv-db-chart__remove-series tw:inline-flex tw:h-[25px] tw:w-[25px] tw:flex-[0_0_25px] tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:text-content-muted tw:hover:bg-[color-mix(in_oklab,var(--danger)_12%,transparent)] tw:hover:text-danger" :aria-label="t('database.chart.removeSeries')" @click="removeSeries(series.id)">
                 <Trash2 :size="13" />
               </button>
             </div>
           </div>
-          <p v-else class="nv-db-chart__series-hint">{{ t('database.chart.countHint') }}</p>
+          <p v-else class="nv-db-chart__series-hint tw:m-0 tw:text-[11px] tw:leading-[1.3] tw:text-content-muted">{{ t('database.chart.countHint') }}</p>
         </div>
       </NvPopupMenu>
       <NvSelect
@@ -250,14 +250,14 @@ onBeforeUnmount(() => {
       />
     </div>
 
-    <div v-if="!fields.length" class="nv-db-chart__empty">{{ t('database.chart.noFields') }}</div>
-    <div v-else-if="!records.length" class="nv-db-chart__empty">
+    <div v-if="!fields.length" class="nv-db-chart__empty tw:flex tw:flex-col tw:items-center tw:gap-2 tw:px-2.5 tw:py-[30px] tw:text-center tw:text-[12.5px] tw:text-content-muted">{{ t('database.chart.noFields') }}</div>
+    <div v-else-if="!records.length" class="nv-db-chart__empty tw:flex tw:flex-col tw:items-center tw:gap-2 tw:px-2.5 tw:py-[30px] tw:text-center tw:text-[12.5px] tw:text-content-muted">
       <span>{{ t('database.chart.empty') }}</span>
-      <button type="button" class="nv-db-chart__import-btn" @click="onOpenCsvImport">
+      <button type="button" class="nv-db-chart__import-btn tw:inline-flex tw:h-7 tw:cursor-pointer tw:items-center tw:gap-1.5 tw:rounded-[calc(7px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle tw:px-3 tw:py-0 tw:text-[12px] tw:text-content-secondary tw:hover:border-accent tw:hover:text-content-primary" @click="onOpenCsvImport">
         <Upload :size="13" />
         {{ t('database.chart.importPrompt') }}
       </button>
     </div>
-    <div v-else ref="containerRef" class="nv-db-chart__render" />
+    <div v-else ref="containerRef" class="nv-db-chart__render tw:min-h-[260px] tw:w-full tw:overflow-x-auto" />
   </div>
 </template>

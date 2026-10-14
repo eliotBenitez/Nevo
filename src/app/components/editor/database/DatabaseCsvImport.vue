@@ -145,26 +145,26 @@ function confirmImport() {
 
 <template>
   <NvModal :open="true" size="md" :title="t('database.csv.title')" @close="emit('close')">
-    <div class="nv-db-csv-modal__body">
+    <div class="nv-db-csv-modal__body tw:flex tw:flex-col tw:gap-3">
       <template v-if="!hasFile">
-        <button type="button" class="nv-db-csv-modal__pick" @click="triggerFilePick">
+        <button type="button" class="nv-db-csv-modal__pick tw:inline-flex tw:h-9 tw:cursor-pointer tw:items-center tw:gap-2 tw:self-start tw:rounded-[calc(9px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--accent-soft) tw:px-3.5 tw:py-0 tw:text-[13px] tw:font-[550] tw:text-accent tw:hover:bg-[color-mix(in_oklab,var(--accent)_24%,transparent)]" @click="triggerFilePick">
           <Upload :size="16" />
           {{ t('database.csv.chooseFile') }}
         </button>
-        <p class="nv-db-csv-modal__hint">{{ t('database.csv.dropHint') }}</p>
-        <p v-if="parseError" class="nv-db-csv-modal__error">{{ t('database.csv.parseError') }}</p>
+        <p class="nv-db-csv-modal__hint tw:m-0 tw:text-[12px] tw:text-content-muted">{{ t('database.csv.dropHint') }}</p>
+        <p v-if="parseError" class="nv-db-csv-modal__error tw:m-0 tw:text-[12px] tw:text-danger">{{ t('database.csv.parseError') }}</p>
       </template>
 
       <template v-else>
-        <div class="nv-db-csv-modal__file-row">
-          <span class="nv-db-csv-modal__filename">{{ fileName }}</span>
-          <button type="button" class="nv-db-csv-modal__change" @click="triggerFilePick">
+        <div class="nv-db-csv-modal__file-row tw:flex tw:items-center tw:justify-between tw:gap-2">
+          <span class="nv-db-csv-modal__filename tw:overflow-hidden tw:text-[12.5px] tw:text-ellipsis tw:whitespace-nowrap tw:text-content-secondary">{{ fileName }}</span>
+          <button type="button" class="nv-db-csv-modal__change tw:h-[26px] tw:shrink-0 tw:cursor-pointer tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle tw:px-2.5 tw:py-0 tw:text-[11.5px] tw:text-content-secondary tw:hover:bg-(--hover)" @click="triggerFilePick">
             {{ t('database.csv.chooseFile') }}
           </button>
         </div>
 
-        <div class="nv-db-csv-modal__delimiter-row">
-          <span class="nv-db-csv-modal__delimiter-label">{{ t('database.csv.delimiter') }}</span>
+        <div class="nv-db-csv-modal__delimiter-row tw:flex tw:items-center tw:justify-between tw:gap-2.5 tw:text-[12.5px] tw:text-content-secondary">
+          <span class="nv-db-csv-modal__delimiter-label tw:flex-1">{{ t('database.csv.delimiter') }}</span>
           <NvSelect
             class="nv-db-csv-modal__delimiter-select"
             :model-value="delimiter"
@@ -174,15 +174,15 @@ function confirmImport() {
           />
         </div>
 
-        <label class="nv-db-csv-modal__toggle-row">
+        <label class="nv-db-csv-modal__toggle-row tw:flex tw:cursor-pointer tw:items-center tw:gap-2 tw:text-[12.5px] tw:text-content-secondary">
           <input type="checkbox" v-model="firstRowIsHeader" />
           <span>{{ t('database.csv.firstRowHeader') }}</span>
         </label>
 
-        <div class="nv-db-csv-modal__section-label">{{ t('database.csv.columnMapping') }}</div>
-        <div class="nv-db-csv-modal__columns">
-          <div v-for="(name, i) in columns" :key="i" class="nv-db-csv-modal__column-row">
-            <span class="nv-db-csv-modal__column-name">{{ name }}</span>
+        <div class="nv-db-csv-modal__section-label tw:mt-1 tw:text-[11px] tw:font-semibold tw:tracking-[0.02em] tw:text-content-muted tw:uppercase">{{ t('database.csv.columnMapping') }}</div>
+        <div class="nv-db-csv-modal__columns tw:flex tw:max-h-40 tw:flex-col tw:gap-[5px] tw:overflow-y-auto">
+          <div v-for="(name, i) in columns" :key="i" class="nv-db-csv-modal__column-row tw:flex tw:items-center tw:justify-between tw:gap-2">
+            <span class="nv-db-csv-modal__column-name tw:overflow-hidden tw:text-[12.5px] tw:text-ellipsis tw:whitespace-nowrap tw:text-content-primary">{{ name }}</span>
             <NvSelect
               class="nv-db-csv-modal__column-type"
               :model-value="columnTypes[i]"
@@ -193,31 +193,31 @@ function confirmImport() {
           </div>
         </div>
 
-        <div class="nv-db-csv-modal__section-label">{{ t('database.csv.preview') }}</div>
-        <div class="nv-db-csv-modal__preview-wrap">
-          <table class="nv-db-csv-modal__preview">
+        <div class="nv-db-csv-modal__section-label tw:mt-1 tw:text-[11px] tw:font-semibold tw:tracking-[0.02em] tw:text-content-muted tw:uppercase">{{ t('database.csv.preview') }}</div>
+        <div class="nv-db-csv-modal__preview-wrap tw:max-h-[200px] tw:overflow-auto tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-border-subtle">
+          <table class="nv-db-csv-modal__preview tw:w-full tw:border-collapse tw:text-[11.5px]">
             <thead>
               <tr>
-                <th v-for="(name, i) in columns" :key="i">{{ name }}</th>
+                <th v-for="(name, i) in columns" :key="i" class="tw:border-0 tw:border-b tw:border-solid tw:border-border-subtle tw:px-2 tw:py-[5px] tw:text-left tw:whitespace-nowrap tw:sticky tw:top-0 tw:bg-surface-subtle tw:text-content-muted">{{ name }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="(row, r) in previewRows" :key="r">
-                <td v-for="c in columns.length" :key="c">{{ row[c - 1] ?? '' }}</td>
+                <td v-for="c in columns.length" :key="c" class="tw:border-0 tw:border-b tw:border-solid tw:border-border-subtle tw:px-2 tw:py-[5px] tw:text-left tw:whitespace-nowrap tw:text-content-secondary">{{ row[c - 1] ?? '' }}</td>
               </tr>
             </tbody>
           </table>
-          <div class="nv-db-csv-modal__rows-count">{{ dataRows.length }} {{ t('database.csv.rowsCount') }}</div>
+          <div class="nv-db-csv-modal__rows-count tw:px-2 tw:py-1 tw:text-[11px] tw:text-content-muted">{{ dataRows.length }} {{ t('database.csv.rowsCount') }}</div>
         </div>
 
-        <div class="nv-db-csv-modal__section-label">{{ t('database.csv.mode') }}</div>
-        <div class="nv-db-csv-modal__mode">
-          <label class="nv-db-csv-modal__mode-opt">
-            <input type="radio" value="replace" v-model="mode" />
+        <div class="nv-db-csv-modal__section-label tw:mt-1 tw:text-[11px] tw:font-semibold tw:tracking-[0.02em] tw:text-content-muted tw:uppercase">{{ t('database.csv.mode') }}</div>
+        <div class="nv-db-csv-modal__mode tw:flex tw:gap-4">
+          <label class="nv-db-csv-modal__mode-opt tw:flex tw:cursor-pointer tw:items-center tw:gap-1.5 tw:text-[12.5px] tw:text-content-secondary">
+            <input type="radio" value="replace" v-model="mode" class="tw:accent-(--accent)" />
             <span>{{ t('database.csv.modeReplace') }}</span>
           </label>
-          <label class="nv-db-csv-modal__mode-opt">
-            <input type="radio" value="append" v-model="mode" />
+          <label class="nv-db-csv-modal__mode-opt tw:flex tw:cursor-pointer tw:items-center tw:gap-1.5 tw:text-[12.5px] tw:text-content-secondary">
+            <input type="radio" value="append" v-model="mode" class="tw:accent-(--accent)" />
             <span>{{ t('database.csv.modeAppend') }}</span>
           </label>
         </div>
@@ -228,15 +228,15 @@ function confirmImport() {
       ref="fileInputRef"
       type="file"
       accept=".csv,text/csv"
-      class="nv-db-csv-modal__file-input"
+      class="nv-db-csv-modal__file-input tw:hidden"
       @change="onFileChange"
     />
 
     <template #footer>
-      <button type="button" class="nv-db-csv-modal__cancel" @click="emit('close')">
+      <button type="button" class="nv-db-csv-modal__cancel tw:h-8 tw:cursor-pointer tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle tw:px-3.5 tw:py-0 tw:text-[12.5px] tw:text-content-secondary tw:hover:bg-(--hover)" @click="emit('close')">
         {{ t('database.csv.cancel') }}
       </button>
-      <button type="button" class="nv-db-csv-modal__confirm" :disabled="!hasFile" @click="confirmImport">
+      <button type="button" class="nv-db-csv-modal__confirm tw:h-8 tw:cursor-pointer tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border-0 tw:bg-(--accent-fill) tw:px-4 tw:py-0 tw:text-[12.5px] tw:font-semibold tw:text-(--accent-on) tw:hover:enabled:bg-accent-hover tw:disabled:cursor-not-allowed tw:disabled:bg-(--hover-strong) tw:disabled:text-content-muted" :disabled="!hasFile" @click="confirmImport">
         {{ t('database.csv.import') }}
       </button>
     </template>

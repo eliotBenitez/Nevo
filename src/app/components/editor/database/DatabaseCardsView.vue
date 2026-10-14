@@ -63,20 +63,20 @@ function badgesFor(record: DbRecord): Badge[] {
 </script>
 
 <template>
-  <div class="nv-db-cards" @scroll="onScroll">
-    <div v-if="!totalRecords" class="nv-db-cards__empty">{{ t('database.table.empty') }}</div>
-    <div v-if="recordOffset" class="nv-db-cards__spacer" :style="{ height: `${Math.ceil(recordOffset / 3) * ROW_HEIGHT}px` }" />
-    <div v-for="record in records" :key="record.id" class="nv-db-cards__card">
-      <div class="nv-db-cards__title">{{ titleFor(record) }}</div>
-      <div v-if="badgesFor(record).length" class="nv-db-cards__badges">
+  <div class="nv-db-cards tw:grid tw:max-h-[460px] tw:grid-cols-[repeat(auto-fill,minmax(160px,1fr))] tw:gap-2 tw:overflow-auto tw:overscroll-contain tw:max-[640px]:grid-cols-[repeat(auto-fill,minmax(144px,1fr))]" @scroll="onScroll">
+    <div v-if="!totalRecords" class="nv-db-cards__empty tw:col-[1/-1] tw:p-4 tw:text-center tw:text-[12.5px] tw:text-content-muted">{{ t('database.table.empty') }}</div>
+    <div v-if="recordOffset" class="nv-db-cards__spacer tw:pointer-events-none tw:col-[1/-1]" :style="{ height: `${Math.ceil(recordOffset / 3) * ROW_HEIGHT}px` }" />
+    <div v-for="record in records" :key="record.id" class="nv-db-cards__card tw:flex tw:min-h-[92px] tw:flex-col tw:gap-[7px] tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-raised tw:p-3 tw:shadow-[0_1px_1px_rgb(15_23_42_/_2%)] tw:transition-[transform,border-color,box-shadow] tw:duration-150 tw:ease-[ease] tw:hover:border-[color-mix(in_oklab,var(--accent)_26%,var(--db-border))] tw:hover:shadow-[0_7px_16px_rgb(15_23_42_/_7%)] tw:motion-safe:hover:-translate-y-px tw:motion-reduce:transition-none">
+      <div class="nv-db-cards__title tw:font-nv-ui tw:text-[13px] tw:leading-[normal] tw:font-[550] tw:text-content-primary">{{ titleFor(record) }}</div>
+      <div v-if="badgesFor(record).length" class="nv-db-cards__badges tw:flex tw:flex-wrap tw:gap-1">
         <span
           v-for="badge in badgesFor(record)"
           :key="badge.key"
-          class="nv-db-chip"
+          class="nv-db-chip tw:inline-flex tw:items-center tw:rounded-full tw:border tw:border-solid tw:border-[color-mix(in_oklab,var(--chip-color)_30%,transparent)] tw:bg-[color-mix(in_oklab,var(--chip-color)_16%,transparent)] tw:px-[7px] tw:py-0.5 tw:text-[11px] tw:leading-[1.5] tw:font-medium tw:whitespace-nowrap tw:text-(--chip-color) tw:[--chip-color:var(--text-muted)]"
           :style="badge.color ? { '--chip-color': optionChipColor(badge.color) } : undefined"
         >{{ badge.text }}</span>
       </div>
     </div>
-    <div v-if="totalRecords > recordOffset + records.length" class="nv-db-cards__spacer" :style="{ height: `${Math.ceil((totalRecords - recordOffset - records.length) / 3) * ROW_HEIGHT}px` }" />
+    <div v-if="totalRecords > recordOffset + records.length" class="nv-db-cards__spacer tw:pointer-events-none tw:col-[1/-1]" :style="{ height: `${Math.ceil((totalRecords - recordOffset - records.length) / 3) * ROW_HEIGHT}px` }" />
   </div>
 </template>

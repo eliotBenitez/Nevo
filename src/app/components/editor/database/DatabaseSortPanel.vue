@@ -49,15 +49,15 @@ function clearAll() {
 </script>
 
 <template>
-  <div class="nv-db-sort">
-    <div v-if="!modelValue.length" class="nv-db-sort__empty">
+  <div class="nv-db-sort tw:flex tw:flex-col">
+    <div v-if="!modelValue.length" class="nv-db-sort__empty tw:flex tw:items-center tw:gap-2 tw:px-3 tw:py-3.5 tw:text-[12px] tw:text-content-muted">
       <ArrowUpDown :size="14" />
       <span>{{ t('database.sort.empty') }}</span>
     </div>
 
-    <div v-else class="nv-db-sort__rules">
+    <div v-else class="nv-db-sort__rules tw:flex tw:max-h-70 tw:flex-col tw:gap-1.5 tw:overflow-y-auto tw:p-2">
       <div v-for="(rule, index) in modelValue" :key="rule.id" class="nv-db-sort__rule">
-        <span class="nv-db-sort__conj">{{ index === 0 ? t('database.sort.sortBy') : t('database.sort.then') }}</span>
+        <span class="nv-db-sort__conj tw:min-w-[46px] tw:text-[11px] tw:text-content-muted">{{ index === 0 ? t('database.sort.sortBy') : t('database.sort.then') }}</span>
 
         <NvSelect
           class="nv-db-sort__select"
@@ -69,7 +69,7 @@ function clearAll() {
 
         <button
           type="button"
-          class="nv-db-sort__dir"
+          class="nv-db-sort__dir tw:inline-flex tw:h-[26px] tw:cursor-pointer tw:items-center tw:gap-1 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle tw:px-2 tw:py-0 tw:text-[11px] tw:whitespace-nowrap tw:text-content-secondary tw:hover:text-content-primary"
           :title="rule.direction === 'asc' ? t('database.sort.asc') : t('database.sort.desc')"
           @click="toggleDirection(index)"
         >
@@ -84,12 +84,12 @@ function clearAll() {
       </div>
     </div>
 
-    <div class="nv-db-sort__footer">
-      <button type="button" class="nv-db-sort__add" :disabled="!availableFields.length" @click="addRule">
+    <div class="nv-db-sort__footer tw:flex tw:items-center tw:justify-between tw:gap-2 tw:px-2 tw:py-[7px]">
+      <button type="button" class="nv-db-sort__add tw:inline-flex tw:h-[26px] tw:cursor-pointer tw:items-center tw:gap-[5px] tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:px-[9px] tw:py-0 tw:text-[11.5px] tw:font-[550] tw:text-accent tw:hover:enabled:bg-(--accent-soft) tw:disabled:cursor-not-allowed tw:disabled:text-content-muted" :disabled="!availableFields.length" @click="addRule">
         <Plus :size="13" />
         {{ t('database.sort.addRule') }}
       </button>
-      <button v-if="modelValue.length" type="button" class="nv-db-sort__clear" @click="clearAll">
+      <button v-if="modelValue.length" type="button" class="nv-db-sort__clear tw:h-[26px] tw:cursor-pointer tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:px-[9px] tw:py-0 tw:text-[11.5px] tw:text-content-muted tw:hover:bg-(--hover) tw:hover:text-content-primary" @click="clearAll">
         {{ t('database.sort.clearAll') }}
       </button>
     </div>

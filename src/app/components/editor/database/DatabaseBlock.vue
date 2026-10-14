@@ -248,13 +248,13 @@ function applyCsvImport(payload: { fields: DbField[]; records: DbRecord[]; mode:
 </script>
 
 <template>
-  <div class="nv-db-block">
+  <div class="nv-db-block tw:flex tw:flex-col tw:gap-0 tw:overflow-hidden tw:border tw:border-solid tw:border-transparent tw:rounded-(--db-radius) tw:bg-(--db-surface) tw:shadow-[0_1px_1px_rgb(15_23_42/2%),0_10px_28px_rgb(15_23_42/3%)] tw:transition-[border-color,box-shadow,transform] tw:duration-[160ms] tw:hover:border-[color-mix(in_oklab,var(--border-default)_88%,var(--accent)_12%)] tw:hover:shadow-[0_1px_1px_rgb(15_23_42/3%),0_12px_32px_rgb(15_23_42/5%)] tw:focus-within:shadow-[0_0_0_1px_color-mix(in_oklab,var(--accent)_40%,transparent)] tw:focus-within:hover:shadow-[0_0_0_1px_color-mix(in_oklab,var(--accent)_40%,transparent)]">
     <div v-if="migrationError" class="nv-db-table__empty">{{ t('database.table.empty') }}</div>
     <div v-else-if="!model" class="nv-db-table__empty">Loading…</div>
     <template v-else-if="activeView">
-      <div class="nv-db-block__title-row"><input class="nv-db-block__title" type="text" :value="model.title" :placeholder="t('database.titlePlaceholder')" @input="onTitleInput" /></div>
+      <div class="nv-db-block__title-row tw:flex tw:items-center tw:min-h-12 tw:px-3.5 tw:pt-2 tw:pb-0.5"><input class="nv-db-block__title tw:flex-1 tw:border-0 tw:bg-transparent tw:outline-none tw:font-nv-ui tw:text-[16px]/[1.3] tw:font-[640] tw:tracking-[-.012em] tw:text-content-primary tw:px-0 tw:py-1 tw:rounded-[5px] tw:placeholder:text-content-muted tw:placeholder:font-medium" type="text" :value="model.title" :placeholder="t('database.titlePlaceholder')" @input="onTitleInput" /></div>
       <DatabaseToolbar :t="t" :views="model.views" :active-view-id="model.activeView" :active-view="activeView" :fields="model.fields" :on-request-delete="onRequestDelete" :on-open-csv-import="() => { showCsvImport = true }" @update:active-view-id="switchView" @add-view="addView" @delete-view="deleteView" @update:filters="updateFilters" @update:sorts="updateSorts" @update:style="updateStyle" @update:view-name="updateViewName" />
-      <div class="nv-db-block__body">
+      <div class="nv-db-block__body tw:min-w-0 tw:px-3 tw:pt-2.5 tw:pb-3">
         <DatabaseTableView v-if="activeView.type === 'table'" :t="t" :fields="model.fields" :records="records" :record-offset="recordsOffset" :total-records="rowCount" :style="activeView.style ?? defaultViewStyle()" @request-range="requestRange" @update-cell="updateCell" @update-field="updateField" @delete-field="deleteField" @add-field="addField" @resize-field="resizeField" @add-record="addRecord" @delete-record="deleteRecord" />
         <DatabaseListView v-else-if="activeView.type === 'list'" :t="t" :fields="model.fields" :records="records" :record-offset="recordsOffset" :total-records="rowCount" @request-range="requestRange" />
         <DatabaseCardsView v-else-if="activeView.type === 'cards'" :t="t" :fields="model.fields" :records="records" :record-offset="recordsOffset" :total-records="rowCount" @request-range="requestRange" />

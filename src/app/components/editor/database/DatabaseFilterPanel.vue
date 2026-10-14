@@ -105,18 +105,18 @@ function updateNumberValue(index: number, value: number) {
 </script>
 
 <template>
-  <div class="nv-db-filter">
-    <div v-if="!modelValue.length" class="nv-db-filter__empty">
+  <div class="nv-db-filter tw:flex tw:max-w-[460px] tw:flex-col">
+    <div v-if="!modelValue.length" class="nv-db-filter__empty tw:flex tw:items-center tw:gap-2 tw:px-3 tw:py-3.5 tw:text-[12px] tw:text-content-muted">
       <Filter :size="14" />
       <span>{{ t('database.filter.empty') }}</span>
     </div>
 
-    <div v-else class="nv-db-filter__rules">
-      <div v-for="(rule, index) in modelValue" :key="rule.id" class="nv-db-filter__rule">
-        <span class="nv-db-filter__conj">{{ index === 0 ? t('database.filter.where') : t('database.filter.and') }}</span>
+    <div v-else class="nv-db-filter__rules tw:flex tw:max-h-80 tw:flex-col tw:gap-1.5 tw:overflow-y-auto tw:p-2">
+      <div v-for="(rule, index) in modelValue" :key="rule.id" class="nv-db-filter__rule tw:flex tw:flex-wrap tw:items-center tw:gap-[5px]">
+        <span class="nv-db-filter__conj tw:min-w-[38px] tw:text-[11px] tw:lowercase tw:text-content-muted">{{ index === 0 ? t('database.filter.where') : t('database.filter.and') }}</span>
 
         <NvSelect
-          class="nv-db-filter__field"
+          class="nv-db-filter__field tw:shrink-0"
           :model-value="rule.fieldId"
           :options="fieldOptions"
           :min-width="120"
@@ -124,7 +124,7 @@ function updateNumberValue(index: number, value: number) {
         />
 
         <NvSelect
-          class="nv-db-filter__op"
+          class="nv-db-filter__op tw:shrink-0"
           :model-value="rule.operator"
           :options="operatorOptions(rule)"
           :min-width="110"
@@ -134,7 +134,7 @@ function updateNumberValue(index: number, value: number) {
         <template v-if="operatorNeedsValue(rule.operator)">
           <NvSelect
             v-if="fieldFor(rule)?.type === 'select'"
-            class="nv-db-filter__value"
+            class="nv-db-filter__value tw:flex-1"
             :model-value="valueString(rule)"
             :options="selectValueOptions(rule)"
             :min-width="120"
@@ -144,30 +144,31 @@ function updateNumberValue(index: number, value: number) {
 
           <NvSelect
             v-else-if="fieldFor(rule)?.type === 'checkbox'"
-            class="nv-db-filter__value"
+            class="nv-db-filter__value tw:flex-1"
             :model-value="valueString(rule)"
             :options="checkboxOptions"
             :min-width="120"
             @update:model-value="patch(index, { value: $event })"
           />
 
-          <div v-else-if="fieldFor(rule)?.type === 'multi_select'" class="nv-db-filter__multi">
-            <label v-for="opt in fieldFor(rule)?.options ?? []" :key="opt.id" class="nv-db-filter__multi-opt">
+          <div v-else-if="fieldFor(rule)?.type === 'multi_select'" class="nv-db-filter__multi tw:flex tw:min-w-[120px] tw:flex-1 tw:flex-wrap tw:gap-x-2.5 tw:gap-y-1 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--input-bg) tw:px-1.5 tw:py-1">
+            <label v-for="opt in fieldFor(rule)?.options ?? []" :key="opt.id" class="nv-db-filter__multi-opt tw:inline-flex tw:cursor-pointer tw:items-center tw:gap-[5px] tw:text-[11.5px] tw:text-content-secondary">
               <input
                 type="checkbox"
+                class="tw:h-3 tw:w-3 tw:accent-(--accent)"
                 :checked="valueArray(rule).includes(opt.id)"
                 @change="toggleMultiValue(index, opt.id, ($event.target as HTMLInputElement).checked)"
               />
               <span>{{ opt.name }}</span>
             </label>
-            <span v-if="!(fieldFor(rule)?.options?.length)" class="nv-db-filter__multi-empty">
+            <span v-if="!(fieldFor(rule)?.options?.length)" class="nv-db-filter__multi-empty tw:text-[11px] tw:text-content-muted">
               {{ t('database.filter.noOptions') }}
             </span>
           </div>
 
           <NvNumberInput
             v-else-if="fieldFor(rule)?.type === 'number'"
-            class="nv-db-filter__number-input"
+            class="nv-db-filter__number-input tw:min-w-[112px] tw:flex-1"
             :model-value="numberValue(rule)"
             allow-empty
             :placeholder="t('database.filter.valuePlaceholder')"
@@ -177,7 +178,7 @@ function updateNumberValue(index: number, value: number) {
           <input
             v-else-if="fieldFor(rule)?.type === 'date'"
             type="date"
-            class="nv-db-filter__input"
+            class="nv-db-filter__input tw:h-[30px] tw:min-w-[90px] tw:flex-1 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--input-bg) tw:px-2 tw:py-0 tw:text-[12.5px] tw:text-content-primary tw:outline-none tw:focus:bg-(--surface-raised) tw:focus:shadow-[0_0_0_2px_var(--input-ring)]"
             :value="valueString(rule)"
             @input="patch(index, { value: ($event.target as HTMLInputElement).value })"
           />
@@ -185,25 +186,25 @@ function updateNumberValue(index: number, value: number) {
           <input
             v-else
             type="text"
-            class="nv-db-filter__input"
+            class="nv-db-filter__input tw:h-[30px] tw:min-w-[90px] tw:flex-1 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--input-bg) tw:px-2 tw:py-0 tw:text-[12.5px] tw:text-content-primary tw:outline-none tw:focus:bg-(--surface-raised) tw:focus:shadow-[0_0_0_2px_var(--input-ring)]"
             :placeholder="t('database.filter.valuePlaceholder')"
             :value="valueString(rule)"
             @input="patch(index, { value: ($event.target as HTMLInputElement).value })"
           />
         </template>
 
-        <button type="button" class="nv-db-filter__remove" :aria-label="t('database.filter.removeRule')" @click="removeRule(index)">
+        <button type="button" class="nv-db-filter__remove tw:inline-flex tw:h-[26px] tw:w-[26px] tw:shrink-0 tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:text-content-muted tw:hover:bg-(--hover) tw:hover:text-danger" :aria-label="t('database.filter.removeRule')" @click="removeRule(index)">
           <Trash2 :size="13" />
         </button>
       </div>
     </div>
 
-    <div class="nv-db-filter__footer">
-      <button type="button" class="nv-db-filter__add" :disabled="!fields.length" @click="addRule">
+    <div class="nv-db-filter__footer tw:flex tw:items-center tw:justify-between tw:gap-2 tw:px-2 tw:py-[7px]">
+      <button type="button" class="nv-db-filter__add tw:inline-flex tw:h-[26px] tw:cursor-pointer tw:items-center tw:gap-[5px] tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:px-[9px] tw:py-0 tw:text-[11.5px] tw:font-[550] tw:text-accent tw:hover:enabled:bg-(--accent-soft) tw:disabled:cursor-not-allowed tw:disabled:text-content-muted" :disabled="!fields.length" @click="addRule">
         <Plus :size="13" />
         {{ t('database.filter.addRule') }}
       </button>
-      <button v-if="modelValue.length" type="button" class="nv-db-filter__clear" @click="clearAll">
+      <button v-if="modelValue.length" type="button" class="nv-db-filter__clear tw:h-[26px] tw:cursor-pointer tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:px-[9px] tw:py-0 tw:text-[11.5px] tw:text-content-muted tw:hover:bg-(--hover) tw:hover:text-content-primary" @click="clearAll">
         {{ t('database.filter.clearAll') }}
       </button>
     </div>
