@@ -507,7 +507,7 @@ export const noteCommands = {
     invokeCommand<string[]>('render_note_pdf_preview_pages', { token, start, count }),
 
   pickAndReadTextFile: () =>
-    invokeCommand<{ content: string; fileName: string } | null>('pick_and_read_text_file'),
+    invokeCommand<{ content: string; fileName: string; dirPath: string | null } | null>('pick_and_read_text_file'),
 
   openWorkspaceAsset: (workspacePath: string, assetSrc: string) =>
     invokeCommand<void>('open_workspace_asset', { workspacePath, assetSrc }),

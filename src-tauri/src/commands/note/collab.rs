@@ -203,6 +203,8 @@ fn read_text_file_path(p: &Path) -> Result<String, String> {
 pub struct PickedTextFile {
     content: String,
     file_name: String,
+    /// Directory of the picked file, so relative image links can be imported.
+    dir_path: Option<String>,
 }
 
 #[tauri::command]
@@ -237,7 +239,12 @@ pub async fn pick_and_read_text_file(
             .and_then(|name| name.to_str())
             .unwrap_or("Untitled.md")
             .to_string();
-        Ok(Some(PickedTextFile { content, file_name }))
+        let dir_path = path.parent().map(|dir| dir.to_string_lossy().into_owned());
+        Ok(Some(PickedTextFile {
+            content,
+            file_name,
+            dir_path,
+        }))
     })
     .await
     .map_err(|error| error.to_string())?

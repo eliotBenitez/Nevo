@@ -4,6 +4,7 @@ import { useWorkspaceStore } from '../stores/workspace'
 import { useNoteStore } from '../stores/note'
 import { noteCommands } from '../tauri/commands'
 import { parseMarkdownToBlockNodeAsync, type ParsedMarkdown } from '../utils/noteImport/markdownParser'
+import { resolveMarkdownFileAssets } from '../utils/noteImport/markdownFileAssets'
 import type { BlockNode } from '../types/note'
 
 interface ImportMarkdownIntoNoteOptions {
@@ -16,18 +17,21 @@ export function useMarkdownImport() {
   const noteStore = useNoteStore()
   const importing = ref(false)
 
-  async function pickAndParseMarkdown(): Promise<{ basename: string; parsed: ParsedMarkdown } | null> {
+  async function pickAndParseMarkdown(workspacePath: string): Promise<{ basename: string; parsed: ParsedMarkdown } | null> {
     const selected = await noteCommands.pickAndReadTextFile()
     if (!selected) return null
     const basename = selected.fileName.replace(/\.(?:md|markdown|mdown|mkd|txt|text)$/i, '') || 'Untitled'
-    return {
+    const parsed = await parseMarkdownToBlockNodeAsync(
+      selected.content,
       basename,
-      parsed: await parseMarkdownToBlockNodeAsync(
-        selected.content,
-        basename,
-        title => treeStore.resolveNoteIdByTitle(title),
-      ),
+      title => treeStore.resolveNoteIdByTitle(title),
+    )
+    const { dirPath } = selected
+    if (dirPath) {
+      parsed.content = await resolveMarkdownFileAssets(parsed.content, relativePath =>
+        noteCommands.importVaultAsset(workspacePath, dirPath, relativePath).catch(() => null))
     }
+    return { basename, parsed }
   }
 
   async function importMarkdownFile(folderId: string | null = null): Promise<string | null> {
@@ -36,7 +40,7 @@ export function useMarkdownImport() {
       const workspacePath = workspaceStore.activePath
       if (!workspacePath) return null
 
-      const picked = await pickAndParseMarkdown()
+      const picked = await pickAndParseMarkdown(workspacePath)
       if (!picked) return null
       const { basename, parsed } = picked
       const { title, content } = parsed
@@ -61,7 +65,7 @@ export function useMarkdownImport() {
       const workspacePath = workspaceStore.activePath
       if (!workspacePath) return false
 
-      const picked = await pickAndParseMarkdown()
+      const picked = await pickAndParseMarkdown(workspacePath)
       if (!picked) return false
       const { parsed } = picked
 
