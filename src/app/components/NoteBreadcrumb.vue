@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import { ChevronRight, PanelRight } from '@lucide/vue'
+import { ChevronRight, PanelRight } from '../../ui/icons'
 import { useI18n } from 'vue-i18n'
 import NvNoteIcon from '../../ui/primitives/NvNoteIcon.vue'
 import { useWorkspaceStore } from '../../stores/workspace'

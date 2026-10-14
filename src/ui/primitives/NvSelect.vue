@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, ChevronDown } from '@lucide/vue'
+import { Check, ChevronDown } from '../icons'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 interface SelectOption {

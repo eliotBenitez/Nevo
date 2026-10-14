@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Circle, Diamond, Square } from '@lucide/vue'
+import { Circle, Diamond, Square } from '../../../ui/icons'
 import type { CanvasTool } from '../composables/useCanvasToolState'
 
 defineProps<{

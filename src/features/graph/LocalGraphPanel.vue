@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { X, GitFork } from '@lucide/vue'
+import { X, GitFork } from '../../ui/icons'
 import { useI18n } from 'vue-i18n'
 // Loaded here (not main.ts) so the graph feature's CSS ships only when it's opened.
 // (Duplicated with GraphView.vue's import: this panel can open without the

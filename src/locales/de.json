@@ -1368,6 +1368,10 @@
       "interfaceRoundness": {
         "title": "Eckabrundung",
         "description": "Abrundung von Panels, Schaltflächen und Feldern"
+      },
+      "iconSet": {
+        "title": "Symbolsatz",
+        "description": "Wählen Sie den Stil der Symbole in der Oberfläche"
       }
     },
     "editor": {

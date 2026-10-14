@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { CircleAlert, Inbox, ListFilter, RefreshCw, SearchX, Settings2 } from '@lucide/vue'
+import { CircleAlert, Inbox, ListFilter, RefreshCw, SearchX, Settings2 } from '../../../../ui/icons'
 import DatabaseTableView from '../database/DatabaseTableView.vue'
 import DatabaseListView from '../database/DatabaseListView.vue'
 import DatabaseCardsView from '../database/DatabaseCardsView.vue'

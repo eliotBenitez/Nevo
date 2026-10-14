@@ -34,7 +34,7 @@ import {
   Link2,
   Plus,
   BarChart3,
-} from '@lucide/vue'
+} from '../../../ui/icons'
 
 defineProps<{
   visible: boolean

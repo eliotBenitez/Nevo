@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ArrowLeft, Search, SlidersHorizontal } from '@lucide/vue'
+import { ArrowLeft, Search, SlidersHorizontal } from '../../../ui/icons'
 import { useI18n } from 'vue-i18n'
 import { pluralChoice } from '../../../utils/plural-index'
 

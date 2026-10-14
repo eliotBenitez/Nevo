@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BookOpen, FolderPen, Plus } from '@lucide/vue'
+import { BookOpen, FolderPen, Plus } from '../../../ui/icons'
 import { useI18n } from 'vue-i18n'
 import type { TreeNode } from '../../../types/note'
 import WorkspaceTreeNode from '../WorkspaceTreeNode.vue'

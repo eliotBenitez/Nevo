@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { Table, List, BarChart3, LayoutGrid, Plus, Filter, ArrowUpDown, Settings, Trash2 } from '@lucide/vue'
+import { Table, List, BarChart3, LayoutGrid, Plus, Filter, ArrowUpDown, Settings, Trash2 } from '../../../../ui/icons'
 import NvPopupMenu from '../../../../ui/primitives/NvPopupMenu.vue'
 import DatabaseFilterPanel from './DatabaseFilterPanel.vue'
 import DatabaseSortPanel from './DatabaseSortPanel.vue'

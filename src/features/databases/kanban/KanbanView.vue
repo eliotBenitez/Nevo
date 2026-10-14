@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
-import { ArrowLeft, Kanban, Plus, Zap, X } from '@lucide/vue'
+import { ArrowLeft, Kanban, Plus, Zap, X } from '../../../ui/icons'
 import { storeToRefs } from 'pinia'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import { useKanbanStore } from '../../../stores/kanban'

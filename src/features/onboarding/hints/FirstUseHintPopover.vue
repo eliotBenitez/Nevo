@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { X } from '@lucide/vue'
+import { X } from '../../../ui/icons'
 import { useOnboardingStore } from '../../../stores/onboarding'
 import { FIRST_USE_HINTS } from './firstUseHints'
 import { placeCoachmark, type Rect } from '../tour/tourPlacement'

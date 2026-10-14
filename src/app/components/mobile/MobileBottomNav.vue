@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Columns3, Home, Menu, Search, StickyNote } from '@lucide/vue'
+import { Columns3, Home, Menu, Search, StickyNote } from '../../../ui/icons'
 import { computed, markRaw } from 'vue'
 import { useI18n } from 'vue-i18n'
 

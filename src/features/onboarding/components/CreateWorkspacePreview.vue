@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { House, Folder, FileText } from '@lucide/vue'
+import { House, Folder, FileText } from '../../../ui/icons'
 import { WORKSPACE_TEMPLATE_STARTERS, type WorkspaceTemplateId } from '../workspaceTemplates'
 
 const props = defineProps<{

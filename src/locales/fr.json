@@ -1368,6 +1368,10 @@
       "interfaceRoundness": {
         "title": "Arrondi des angles",
         "description": "Arrondi des panneaux, boutons et champs"
+      },
+      "iconSet": {
+        "title": "Jeu d'icônes",
+        "description": "Choisissez le style des icônes de l'interface"
       }
     },
     "editor": {

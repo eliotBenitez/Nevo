@@ -13,7 +13,7 @@ import {
   Plus,
   Strikethrough,
   Underline,
-} from '@lucide/vue'
+} from '../../../ui/icons'
 import { useMobileKeyboardInset } from '../../composables/editor/useMobileKeyboardInset'
 import MobileEditorHeadingMenu from './MobileEditorHeadingMenu.vue'
 

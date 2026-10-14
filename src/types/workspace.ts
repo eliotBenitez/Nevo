@@ -1,4 +1,5 @@
 import type { FolderMeta, NoteMeta } from './note'
+import type { IconSet } from '../ui/icons/iconSet'
 import type {
   NevoEditorCapability,
   NevoPluginCapability,
@@ -404,6 +405,7 @@ export interface AppConfig {
    *  explicit boolean is a manual user override. */
   reduceTransparency?: boolean
   interfaceRoundness: InterfaceRoundness
+  iconSet: IconSet
   themeSchedule: ThemeSchedule
   onboarding: OnboardingState
   /** Notebook color palette shared across workspaces: own presets and recently used ink colors (`#rrggbb`). */

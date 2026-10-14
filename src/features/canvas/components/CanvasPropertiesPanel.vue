@@ -21,7 +21,7 @@ import {
   ExternalLink,
   GitBranchPlus,
   LayoutDashboard,
-} from '@lucide/vue'
+} from '../../../ui/icons'
 import { CANVAS_FONT_FAMILIES, type CanvasFontFamily } from '../../../core/canvas'
 import type {
   CanvasAlignment,

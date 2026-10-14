@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, type CSSProperties } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { GripVertical } from '@lucide/vue'
+import { GripVertical } from '../../../ui/icons'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import type { KanbanBoard, KanbanBoardCardViewSettings, KanbanCard, KanbanCardField, KanbanCardPriority, KanbanPropertyOption } from '../../../types/kanban'
 import { getBoardStatusProperty, getCardStatusValue, computeTaskProgress, localizeDefaultKanbanLabel } from './kanbanFields'

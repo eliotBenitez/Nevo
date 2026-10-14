@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { FileDown } from '@lucide/vue'
+import { FileDown } from '../../ui/icons'
 import type { NoteDocument } from '../../types/note'
 import NvModal from '../../ui/primitives/NvModal.vue'
 import { configCommands } from '../../tauri/commands'

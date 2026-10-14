@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Kanban, Plus } from '@lucide/vue'
+import { Kanban, Plus } from '../../../ui/icons'
 import { useI18n } from 'vue-i18n'
 import type { KanbanBoardMeta } from '../../../types/kanban'
 

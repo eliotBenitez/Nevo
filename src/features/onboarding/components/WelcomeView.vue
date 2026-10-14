@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
-import { Check, ChevronRight, Folder, HardDrive, Languages, Plus } from '@lucide/vue'
+import { Check, ChevronRight, Folder, HardDrive, Languages, Plus } from '../../../ui/icons'
 import NvPopupMenu from '../../../ui/primitives/NvPopupMenu.vue'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import type { NvMenuItemDef } from '../../../ui/primitives/menu-types'

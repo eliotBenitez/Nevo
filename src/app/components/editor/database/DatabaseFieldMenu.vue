@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Plus, Trash2 } from '@lucide/vue'
+import { Plus, Trash2 } from '../../../../ui/icons'
 import NvSelect from '../../../../ui/primitives/NvSelect.vue'
 import {
   createDbId,

@@ -15,7 +15,7 @@ import {
   Subscript,
   Superscript,
   Underline as UnderlineIcon,
-} from '@lucide/vue'
+} from '../../../ui/icons'
 import type { NevoToolbarAction } from '../../../types/editor-plugin'
 
 defineProps<{

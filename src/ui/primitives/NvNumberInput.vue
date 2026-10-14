@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Minus, Plus } from '@lucide/vue'
+import { Minus, Plus } from '../icons'
 import { i18n } from '../../i18n'
 
 interface Props {

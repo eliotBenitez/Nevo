@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, markRaw, ref, watch, type CSSProperties } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { MoreHorizontal, Pencil, Plus, Trash2 } from '@lucide/vue'
+import { MoreHorizontal, Pencil, Plus, Trash2 } from '../../../ui/icons'
 import type { KanbanBoard, KanbanBoardCardViewSettings, KanbanCard, KanbanPropertyOption } from '../../../types/kanban'
 import KanbanCardVue from './KanbanCard.vue'
 import { localizeDefaultKanbanLabel } from './kanbanFields'

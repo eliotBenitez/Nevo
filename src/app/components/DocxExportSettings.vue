@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { RectangleHorizontal, RectangleVertical } from '@lucide/vue'
+import { RectangleHorizontal, RectangleVertical } from '../../ui/icons'
 import DocxStepper from './DocxStepper.vue'
 import type { DocxOrientation, DocxPaperFormat } from '../../utils/noteExport/docxOptions'
 

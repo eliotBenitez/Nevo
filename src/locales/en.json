@@ -1368,6 +1368,10 @@
       "interfaceRoundness": {
         "title": "Corner roundness",
         "description": "How rounded panels, buttons, and inputs appear"
+      },
+      "iconSet": {
+        "title": "Icon set",
+        "description": "Choose the style of icons used across the interface"
       }
     },
     "editor": {

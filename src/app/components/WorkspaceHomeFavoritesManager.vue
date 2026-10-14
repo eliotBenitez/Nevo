@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch, type CSSProperties } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowDown, ArrowUp, GripVertical, Search, Trash2 } from '@lucide/vue'
+import { ArrowDown, ArrowUp, GripVertical, Search, Trash2 } from '../../ui/icons'
 import NvModal from '../../ui/primitives/NvModal.vue'
 import FavoritesManagerRow from './home/FavoritesManagerRow.vue'
 import FavoritesManagerCandidate from './home/FavoritesManagerCandidate.vue'

@@ -13,6 +13,7 @@ import type {
 } from '../types/workspace'
 import { useWorkspaceStore } from './workspace'
 import { applyWebviewZoom } from '../tauri/webview'
+import { iconSet, type IconSet } from '../ui/icons/iconSet'
 import { syncAndroidSystemBars } from '../utils/androidSystemBars'
 
 type Theme = ThemeMode
@@ -116,6 +117,7 @@ export const useThemeStore = defineStore('theme', () => {
     applyRootAttr('focus-ring', config.focusRingStyle ?? 'accent')
     applyRootAttr('chrome', config.windowChromeStyle ?? 'default')
     applyRootAttr('roundness', config.interfaceRoundness ?? 'default')
+    iconSet.value = config.iconSet ?? 'lucide'
     applyRootAttr('reduce-transparency', String(resolveReduceTransparency(config.reduceTransparency)))
     void applyInterfaceZoom(config.interfaceZoom ?? 100)
     startScheduleTimer()
@@ -174,6 +176,11 @@ export const useThemeStore = defineStore('theme', () => {
     await useWorkspaceStore().saveAppConfig({ interfaceRoundness: value })
   }
 
+  async function setIconSet(value: IconSet) {
+    iconSet.value = value
+    await useWorkspaceStore().saveAppConfig({ iconSet: value })
+  }
+
   async function setThemeSchedule(patch: Partial<ThemeSchedule>) {
     schedule.value = { ...schedule.value, ...patch }
     applyTheme(theme.value)
@@ -210,6 +217,7 @@ export const useThemeStore = defineStore('theme', () => {
     setReduceTransparency,
     reduceTransparencyEnabled,
     setInterfaceRoundness,
+    setIconSet,
     setThemeSchedule,
     applyAppearance,
     init,

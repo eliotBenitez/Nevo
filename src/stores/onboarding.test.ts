@@ -16,7 +16,7 @@ function defaultAppConfig(): AppConfig {
     windowChromeStyle: 'default',
     interfaceZoom: 100,
     reduceTransparency: false,
-    interfaceRoundness: 'default',
+    interfaceRoundness: 'default', iconSet: 'lucide',
     themeSchedule: { enabled: false, lightTime: '07:00', darkTime: '20:00' },
     onboarding: { tourStatus: 'pending', firstSteps: [], firstStepsHidden: false, seenHints: [], hintsEnabled: true },
   }

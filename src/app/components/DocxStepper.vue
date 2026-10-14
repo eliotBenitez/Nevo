@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Minus, Plus } from '@lucide/vue'
+import { Minus, Plus } from '../../ui/icons'
 
 defineProps<{
   label: string

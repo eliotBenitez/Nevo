@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { LayoutGrid, Table2, Calendar, Layers, Filter, ArrowUpDown, Search, Plus, Settings2, Eye, Rows3 } from '@lucide/vue'
+import { LayoutGrid, Table2, Calendar, Layers, Filter, ArrowUpDown, Search, Plus, Settings2, Eye, Rows3 } from '../../../ui/icons'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import NvPopupMenu from '../../../ui/primitives/NvPopupMenu.vue'
 import KanbanFilterPanel from './KanbanFilterPanel.vue'

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, useId, watch } from 'vue'
-import { X } from '@lucide/vue'
+import { X } from '../icons'
 import { useI18n } from 'vue-i18n'
 import { useFocusTrap } from '../composables/useFocusTrap'
 

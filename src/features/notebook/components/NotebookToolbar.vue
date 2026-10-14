@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Download, Eraser, Hand, Highlighter, ImagePlus, LassoSelect, Minus, Move, MoveUpRight, PanelLeft, PenLine, Plus, Redo2, Ruler, Spline, Spotlight, Undo2 } from '@lucide/vue'
+import { Download, Eraser, Hand, Highlighter, ImagePlus, LassoSelect, Minus, Move, MoveUpRight, PanelLeft, PenLine, Plus, Redo2, Ruler, Spline, Spotlight, Undo2 } from '../../../ui/icons'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import NvButton from '../../../ui/primitives/NvButton.vue'

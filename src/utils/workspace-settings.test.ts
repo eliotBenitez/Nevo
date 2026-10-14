@@ -231,6 +231,12 @@ describe('normalizeAppConfig', () => {
     expect(normalizeAppConfig({ locale: 'ru' }).locale).toBe('ru')
   })
 
+  it('keeps a valid icon set and falls back to lucide otherwise', () => {
+    expect(normalizeAppConfig({ iconSet: 'tabler' }).iconSet).toBe('tabler')
+    expect(normalizeAppConfig({ iconSet: 'nope' } as never).iconSet).toBe('lucide')
+    expect(normalizeAppConfig({}).iconSet).toBe('lucide')
+  })
+
   it('normalizes the notebook palette and leaves it undefined when absent', () => {
     expect(normalizeAppConfig({}).notebookPalette).toBeUndefined()
     expect(normalizeAppConfig({ notebookPalette: 'nope' }).notebookPalette).toBeUndefined()

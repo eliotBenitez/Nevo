@@ -27,6 +27,9 @@ importers:
       '@mathjax/src':
         specifier: ^4.1.3
         version: 4.1.3
+      '@tabler/icons-vue':
+        specifier: ^3.49.0
+        version: 3.49.0(vue@3.5.34(typescript@5.6.3))
       '@tauri-apps/api':
         specifier: ^2
         version: 2.11.0
@@ -951,6 +954,14 @@ packages:
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
+
+  '@tabler/icons-vue@3.49.0':
+    resolution: {integrity: sha512-p/g2/aVsUTdGaLwgV+X/E3vc+j8XkXWV2NgXAVT31/6sMf/CFAI3uvJ1r6YCi/UT8U2ctaF5fXUWr18bNVVr7g==}
+    peerDependencies:
+      vue: '>=3.0.1'
+
+  '@tabler/icons@3.49.0':
+    resolution: {integrity: sha512-l+GnSkFETx0U26icxv1VUFnxxiTqXfCcVRiRAnyMwibupM2S2L/hSaZ9gmSgz01rkrsH/93NvLsxykqdanc6lw==}
 
   '@tailwindcss/node@4.3.3':
     resolution: {integrity: sha512-/T8IKEsf9VTU6tLjgC7+sv2mOPtQxzE2jMw7u4Tt40Tx+QSZxpzh95/H6cMKoja9XuW7iMdLJYBB0o9G1CaAgg==}
@@ -4508,6 +4519,13 @@ snapshots:
     optional: true
 
   '@standard-schema/spec@1.1.0': {}
+
+  '@tabler/icons-vue@3.49.0(vue@3.5.34(typescript@5.6.3))':
+    dependencies:
+      '@tabler/icons': 3.49.0
+      vue: 3.5.34(typescript@5.6.3)
+
+  '@tabler/icons@3.49.0': {}
 
   '@tailwindcss/node@4.3.3':
     dependencies:

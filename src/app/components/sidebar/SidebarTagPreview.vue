@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MoreHorizontal, Tag } from '@lucide/vue'
+import { MoreHorizontal, Tag } from '../../../ui/icons'
 import { useI18n } from 'vue-i18n'
 import type { SidebarNotePreview } from '../../../types/note'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'

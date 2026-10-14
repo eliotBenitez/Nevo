@@ -6,6 +6,7 @@ import { useWorkspaceStore } from '../../../stores/workspace'
 import { useThemeStore } from '../../../stores/theme'
 import { useOnboardingStore } from '../../../stores/onboarding'
 import type { ContrastMode, InterfaceDensity, InterfaceRoundness, ThemeMode } from '../../../types/workspace'
+import type { IconSet } from '../../../ui/icons/iconSet'
 import { ACCENT_PRESETS, createDefaultAppConfig } from '../../../utils/workspace-settings'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
@@ -43,6 +44,11 @@ const densityModes = computed<Array<{ id: InterfaceDensity; label: string }>>(()
   { id: 'comfortable', label: t('settings.options.density.comfortable') },
   { id: 'compact', label: t('settings.options.density.compact') },
 ])
+
+const iconSets: Array<{ id: IconSet; label: string }> = [
+  { id: 'lucide', label: 'Lucide' },
+  { id: 'tabler', label: 'Tabler' },
+]
 
 const accentLabelKeys: Record<string, string> = {
   mineral: 'settings.options.accent.mineral',
@@ -93,6 +99,7 @@ function resetAppGlobal() {
   themeStore.setWindowChromeStyle(d.windowChromeStyle)
   themeStore.setInterfaceZoom(d.interfaceZoom)
   themeStore.setInterfaceRoundness(d.interfaceRoundness)
+  themeStore.setIconSet(d.iconSet)
   themeStore.setThemeSchedule(d.themeSchedule)
 }
 
@@ -246,6 +253,26 @@ const roundnessIndex = computed({
               @click="themeStore.setDensity(density.id)"
             >
               {{ density.label }}
+            </button>
+          </div>
+        </SettingsRow>
+
+        <!-- Icon set -->
+        <SettingsRow
+          :title="t('settings.appearance.iconSet.title')"
+          :description="t('settings.appearance.iconSet.description')"
+        >
+          <div class="segmented" role="group" :aria-label="t('settings.appearance.iconSet.title')">
+            <button
+              v-for="set in iconSets"
+              :key="set.id"
+              type="button"
+              class="segmented__item"
+              :class="{ 'is-active': appConfig.iconSet === set.id }"
+              :aria-pressed="appConfig.iconSet === set.id"
+              @click="themeStore.setIconSet(set.id)"
+            >
+              {{ set.label }}
             </button>
           </div>
         </SettingsRow>

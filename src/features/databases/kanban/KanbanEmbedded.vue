@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Maximize2, RefreshCw, LayoutGrid } from '@lucide/vue'
+import { Maximize2, RefreshCw, LayoutGrid } from '../../../ui/icons'
 import type { KanbanBoard, KanbanCard } from '../../../types/kanban'
 import KanbanColumn from './KanbanColumn.vue'
 import { getBoardColumns, getCardStatusValue } from './kanbanFields'

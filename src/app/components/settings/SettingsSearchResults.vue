@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { ArrowRight, SearchX } from '@lucide/vue'
+import { ArrowRight, SearchX } from '../../../ui/icons'
 import type { WorkspaceSettingSearchItem } from '../../../types/search'
 
 interface Props {

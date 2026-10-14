@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { RotateCcw } from '@lucide/vue'
+import { RotateCcw } from '../../../ui/icons'
 import { useI18n } from 'vue-i18n'
 import { pluralChoice } from '../../../utils/plural-index'
 import type { EdgeKind } from '../../../types/graph'

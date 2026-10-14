@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, markRaw } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArchiveRestore, FilePlus2, FileUp, FolderInput, FolderPlus, Import, Kanban } from '@lucide/vue'
+import { ArchiveRestore, FilePlus2, FileUp, FolderInput, FolderPlus, Import, Kanban } from '../../../ui/icons'
 import NvPopupMenu from '../../../ui/primitives/NvPopupMenu.vue'
 import type { NvMenuItemDef } from '../../../ui/primitives/menu-types'
 

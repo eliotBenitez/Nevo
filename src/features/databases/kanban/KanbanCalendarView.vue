@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronLeft, ChevronRight } from '@lucide/vue'
+import { ChevronLeft, ChevronRight } from '../../../ui/icons'
 import type { KanbanBoard, KanbanCard } from '../../../types/kanban'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import { findCardField, getBoardStatusProperty, getCardFieldDescriptors, getCardStatusValue } from './kanbanFields'

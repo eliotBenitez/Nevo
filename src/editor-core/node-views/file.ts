@@ -1,7 +1,7 @@
 import { h, markRaw, render } from 'vue'
 import type { Node as PMNode } from 'prosemirror-model'
 import type { EditorView, NodeView } from 'prosemirror-view'
-import { Eye, EyeOff, FolderOpen, Trash2 } from '@lucide/vue'
+import { Eye, EyeOff, FolderOpen, Trash2 } from '../../ui/icons'
 import NvPopupMenu from '../../ui/primitives/NvPopupMenu.vue'
 import { resolveNodePosition, getStringAttr, type CoreNodeViewOptions, type NodeViewPosition } from './utils'
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Archive, History, House, Network, Settings } from '@lucide/vue'
+import { Archive, History, House, Network, Settings } from '../../../ui/icons'
 import { useI18n } from 'vue-i18n'
 
 interface Props {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { ExternalLink, Plus, X } from '@lucide/vue'
+import { ExternalLink, Plus, X } from '../../../../ui/icons'
 import NvPopupMenu from '../../../../ui/primitives/NvPopupMenu.vue'
 import NvNumberInput from '../../../../ui/primitives/NvNumberInput.vue'
 import NvCheckbox from '../../../../ui/primitives/NvCheckbox.vue'

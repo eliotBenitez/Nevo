@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Lock } from '@lucide/vue'
+import { Lock } from '../../ui/icons'
 import type { ResizeHandle } from './useDrawEditor'
 
 defineProps<{

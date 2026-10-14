@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, toRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft, X } from '@lucide/vue'
+import { ArrowLeft, X } from '../../ui/icons'
 import { useFocusTrap } from '../../ui/composables/useFocusTrap'
 
 const props = defineProps<{ open: boolean }>()

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft, Inbox, Search, SearchX } from '@lucide/vue'
+import { ArrowLeft, Inbox, Search, SearchX } from '../../../ui/icons'
 import { useDeviceLayout } from '../../../composables/useDeviceLayout'
 import { useMobileBackButton } from '../../../composables/useMobileBackButton'
 import { useConfirmDialog } from '../../../ui/composables/useConfirmDialog'

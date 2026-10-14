@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft } from '@lucide/vue'
+import { ArrowLeft } from '../../../ui/icons'
 // Loaded here so these styles ship only when the settings view is loaded.
 import '../../../styles/settings.css'
 import '../../../styles/mobile-settings.css'

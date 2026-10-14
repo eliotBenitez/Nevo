@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Bold, CheckSquare, Code2, Italic, List, ListOrdered, Quote, Strikethrough, Underline } from '@lucide/vue'
+import { Bold, CheckSquare, Code2, Italic, List, ListOrdered, Quote, Strikethrough, Underline } from '../../../ui/icons'
 import {
   normalizeCanvasRichText,
   type CanvasRichTextBlock,

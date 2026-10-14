@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
-import { ChevronRight, Search, SearchX } from '@lucide/vue'
+import { ChevronRight, Search, SearchX } from '../../../ui/icons'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import type { SettingsSectionId } from '../../../types/workspace'
 import type { WorkspaceSettingSearchItem } from '../../../types/search'

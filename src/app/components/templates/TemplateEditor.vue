@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { ChevronDown, ChevronUp, Plus, Trash2, X } from '@lucide/vue'
+import { ChevronDown, ChevronUp, Plus, Trash2, X } from '../../../ui/icons'
 import { useI18n } from 'vue-i18n'
 import type { BlockNode } from '../../../types/note'
 import type { TemplateDocument, TemplateField, TemplateFieldType } from '../../../types/template'

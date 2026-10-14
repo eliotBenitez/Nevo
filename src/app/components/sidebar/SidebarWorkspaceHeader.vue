@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeft } from '@lucide/vue'
+import { ArrowLeft } from '../../../ui/icons'
 import { useI18n } from 'vue-i18n'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 

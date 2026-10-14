@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft, Search, SearchX } from '@lucide/vue'
+import { ArrowLeft, Search, SearchX } from '../../../ui/icons'
 import type { ArchiveGroup, ArchiveItemViewModel } from '../../composables/useArchiveItems'
 import ArchiveListItem from './ArchiveListItem.vue'
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronsUp, ChevronUp, ChevronDown, ChevronsDown, Copy, Trash2 } from '@lucide/vue'
+import { ChevronsUp, ChevronUp, ChevronDown, ChevronsDown, Copy, Trash2 } from '../../ui/icons'
 
 defineProps<{
   left: number

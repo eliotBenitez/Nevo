@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Trash2, Upload } from '@lucide/vue'
+import { Trash2, Upload } from '../../../../ui/icons'
 import NvToggle from '../../../../ui/primitives/NvToggle.vue'
 import type { DbTableColorScheme, DbViewStyle, DbViewType } from '../../../../types/database-block'
 

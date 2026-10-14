@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { FolderOpen, HardDrive } from '@lucide/vue'
+import { FolderOpen, HardDrive } from '../../../ui/icons'
 
 defineProps<{
   path: string

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { Check, Plus } from '@lucide/vue'
+import { Check, Plus } from '../../../ui/icons'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import type { WorkspaceHomeItem } from '../../composables/useWorkspaceHome'
 

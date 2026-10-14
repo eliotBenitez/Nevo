@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { LockKeyhole, RotateCw } from '@lucide/vue'
+import { LockKeyhole, RotateCw } from '../../../ui/icons'
 import type { CSSProperties } from 'vue'
 
 defineProps<{

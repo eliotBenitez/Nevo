@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Search, Sparkles } from '@lucide/vue'
+import { Search, Sparkles } from '../../../ui/icons'
 import { formatBytes } from '../../../utils/format-bytes'
 import { pluralChoice } from '../../../utils/plural-index'
 

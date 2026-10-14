@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft, Search } from '@lucide/vue'
+import { ArrowLeft, Search } from '../../../ui/icons'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { resolveBindingChord } from '../../../utils/workspace-settings'
 import type { SettingsSectionId } from '../../../types/workspace'

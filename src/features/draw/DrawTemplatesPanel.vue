@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { X } from '@lucide/vue'
+import { X } from '../../ui/icons'
 import { DRAW_TEMPLATES, type DrawTemplate, type DrawTemplateCategory } from '../../utils/draw/drawTemplates'
 import { renderDrawToSvgString, DEFAULT_DRAW_DATA, type DrawStroke } from '../../utils/draw/drawEngine'
 import { sanitizeSvg } from '../../utils/sanitizeSvg'

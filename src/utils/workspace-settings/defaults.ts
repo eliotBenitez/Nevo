@@ -82,6 +82,7 @@ export function createDefaultAppConfig(): AppConfig {
     // `undefined` = off by default; set explicitly only when the user toggles it.
     reduceTransparency: undefined,
     interfaceRoundness: 'default',
+    iconSet: 'lucide',
     themeSchedule: { enabled: false, lightTime: '07:00', darkTime: '20:00' },
     onboarding: { tourStatus: 'pending', firstSteps: [], firstStepsHidden: false, seenHints: [], hintsEnabled: true },
   }

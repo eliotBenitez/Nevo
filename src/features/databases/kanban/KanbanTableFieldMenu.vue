@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Columns3 } from '@lucide/vue'
+import { Columns3 } from '../../../ui/icons'
 import { useI18n } from 'vue-i18n'
 import NvPopupMenu from '../../../ui/primitives/NvPopupMenu.vue'
 import type { KanbanFieldDescriptor } from './kanbanFields'

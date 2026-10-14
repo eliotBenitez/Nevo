@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Image as ImageIcon } from '@lucide/vue'
+import { Image as ImageIcon } from '../../../ui/icons'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvIconPicker from '../../../ui/primitives/NvIconPicker.vue'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'

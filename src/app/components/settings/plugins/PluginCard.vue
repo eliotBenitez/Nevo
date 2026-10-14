@@ -2,7 +2,7 @@
 import { computed, markRaw } from 'vue'
 import type { Component } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { FolderOpen, GitBranch, Kanban, LayoutTemplate, Network, BarChart3, Settings, Trash2 } from '@lucide/vue'
+import { FolderOpen, GitBranch, Kanban, LayoutTemplate, Network, BarChart3, Settings, Trash2 } from '../../../../ui/icons'
 import type { PluginManifest } from '../../../../types/workspace'
 import { isSystemPluginId, SYSTEM_PLUGIN_SHORT_IDS } from '../../../../utils/system-plugins'
 import NvButton from '../../../../ui/primitives/NvButton.vue'

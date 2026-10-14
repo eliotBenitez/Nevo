@@ -1368,6 +1368,10 @@
       "interfaceRoundness": {
         "title": "Redondez de esquinas",
         "description": "Redondez de paneles, botones y campos"
+      },
+      "iconSet": {
+        "title": "Conjunto de iconos",
+        "description": "Elige el estilo de los iconos de la interfaz"
       }
     },
     "editor": {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronLeft, ChevronRight, X } from '@lucide/vue'
+import { ChevronLeft, ChevronRight, X } from '../../../ui/icons'
 
 defineProps<{
   active: boolean

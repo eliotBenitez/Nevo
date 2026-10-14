@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Minus, Square, X } from '@lucide/vue'
+import { Minus, Square, X } from '../icons'
 import { computed } from 'vue'
 import { useDeviceLayout } from '../../composables/useDeviceLayout'
 

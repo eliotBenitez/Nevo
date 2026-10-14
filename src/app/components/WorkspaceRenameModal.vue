@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { FolderPlus, PencilLine } from '@lucide/vue'
+import { FolderPlus, PencilLine } from '../../ui/icons'
 import { useI18n } from 'vue-i18n'
 import NvModal from '../../ui/primitives/NvModal.vue'
 

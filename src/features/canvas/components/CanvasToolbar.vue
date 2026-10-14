@@ -20,7 +20,7 @@ import {
   Type,
   Undo2,
   Workflow,
-} from '@lucide/vue'
+} from '../../../ui/icons'
 import CanvasShapeMenu from './CanvasShapeMenu.vue'
 import type { CanvasTool } from '../composables/useCanvasToolState'
 

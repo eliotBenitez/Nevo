@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowLeft, ChevronDown, MoreHorizontal, Settings2, Trash2, X } from '@lucide/vue'
+import { ArrowLeft, ChevronDown, MoreHorizontal, Settings2, Trash2, X } from '../../../ui/icons'
 import type { KanbanBoard, KanbanCard, KanbanCardField, KanbanCardPriority } from '../../../types/kanban'
 import { useKanbanStore } from '../../../stores/kanban'
 import { useWorkspaceStore } from '../../../stores/workspace'

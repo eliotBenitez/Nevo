@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowDown, ArrowUp, GripVertical, Trash2 } from '@lucide/vue'
+import { ArrowDown, ArrowUp, GripVertical, Trash2 } from '../../../ui/icons'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import type { WorkspaceHomeItem } from '../../composables/useWorkspaceHome'
 

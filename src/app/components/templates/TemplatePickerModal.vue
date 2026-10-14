@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { Copy, Pencil, Plus, Search, Trash2 } from '@lucide/vue'
+import { Copy, Pencil, Plus, Search, Trash2 } from '../../../ui/icons'
 import { useI18n } from 'vue-i18n'
 import type { TemplateDocument, TemplateFieldValues } from '../../../types/template'
 import { useWorkspaceStore } from '../../../stores/workspace'

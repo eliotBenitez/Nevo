@@ -383,6 +383,7 @@ export function normalizeAppConfig(input: unknown): AppConfig {
     interfaceZoom: clampZoom(raw.interfaceZoom ?? defaults.interfaceZoom),
     reduceTransparency: typeof raw.reduceTransparency === 'boolean' ? raw.reduceTransparency : undefined,
     interfaceRoundness: raw.interfaceRoundness === 'sharp' || raw.interfaceRoundness === 'soft' ? raw.interfaceRoundness : defaults.interfaceRoundness,
+    iconSet: raw.iconSet === 'tabler' ? 'tabler' : defaults.iconSet,
     themeSchedule: normalizeThemeSchedule(raw.themeSchedule, defaults.themeSchedule),
     onboarding: normalizeOnboardingState(raw.onboarding, recents.length > 0),
     notebookPalette: normalizeNotebookPalette(raw.notebookPalette),

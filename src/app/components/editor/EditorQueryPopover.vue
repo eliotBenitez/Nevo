@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Plus, Trash2 } from '@lucide/vue'
+import { Plus, Trash2 } from '../../../ui/icons'
 import { useI18n } from 'vue-i18n'
 import EditorPopupPanel from './EditorPopupPanel.vue'
 import NvCheckbox from '../../../ui/primitives/NvCheckbox.vue'

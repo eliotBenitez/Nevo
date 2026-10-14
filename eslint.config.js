@@ -50,6 +50,28 @@ export default tseslint.config(
     },
   },
   {
+    // UI icons go through the user-selectable icon set (src/ui/icons).
+    files: ['src/**/*.{ts,vue}'],
+    ignores: [
+      'src/ui/icons/**',
+      'src/ui/primitives/iconPickerIcons.ts',
+      'src/ui/primitives/NvNoteIcon.vue',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@lucide/vue',
+              message: "Import icons from the 'ui/icons' module (src/ui/icons) so the selected icon set applies.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Test files use inline stub components and type casts that are fine in
     // tests but would otherwise trip component/any rules.
     files: ['**/*.test.ts', '**/__tests__/**'],

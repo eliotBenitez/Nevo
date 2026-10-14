@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { mobileWorkspaceViewClass, mobileViewHeaderClass, mobileViewEyebrowClass, mobileViewTitleClass, mobileIconButtonClass, mobileIconButtonStrongClass, mobileIconButtonDefaultClass, mobileLibraryTabClass, mobileLibraryTabBadgeClass, mobileEmptyStateClass } from './mobileChromeClasses'
-import { ChevronRight, FilePlus2, Filter, Folder, Search, Tag } from '@lucide/vue'
+import { ChevronRight, FilePlus2, Filter, Folder, Search, Tag } from '../../../ui/icons'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'

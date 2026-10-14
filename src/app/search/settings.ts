@@ -80,6 +80,13 @@ export function buildWorkspaceSettingsSearchItems(options: BuildWorkspaceSetting
       value: densityLabel(t, appConfig.interfaceDensity),
     },
     {
+      type: 'setting', id: 'appearance.iconSet', section: 'appearance',
+      sectionLabel: sectionLabel(t, 'appearance'),
+      title: t('settings.appearance.iconSet.title'),
+      description: t('settings.appearance.iconSet.description'),
+      value: appConfig.iconSet === 'tabler' ? 'Tabler' : 'Lucide',
+    },
+    {
       type: 'setting', id: 'appearance.reducedMotion', section: 'appearance',
       sectionLabel: sectionLabel(t, 'appearance'),
       title: t('settings.appearance.reducedMotion.title'),

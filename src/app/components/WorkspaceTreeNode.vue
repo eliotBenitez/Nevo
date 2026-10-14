@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ChevronRight, Plus } from '@lucide/vue'
+import { ChevronRight, Plus } from '../../ui/icons'
 import { useI18n } from 'vue-i18n'
 import type { TreeNode } from '../../types/note'
 import NvNoteIcon from '../../ui/primitives/NvNoteIcon.vue'

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
-import { ChevronLeft, ChevronRight, X, Calendar } from '@lucide/vue'
+import { ChevronLeft, ChevronRight, X, Calendar } from '../icons'
 import { formatDateOnly, parseDateOnly } from '../../utils/dateOnly'
 import { i18n } from '../../i18n'
 

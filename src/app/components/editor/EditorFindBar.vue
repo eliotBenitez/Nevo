@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronDown, ChevronRight, ChevronUp, Replace, ReplaceAll, X } from '@lucide/vue'
+import { ChevronDown, ChevronRight, ChevronUp, Replace, ReplaceAll, X } from '../../../ui/icons'
 
 interface Props {
   open: boolean

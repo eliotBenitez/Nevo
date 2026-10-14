@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Copy, FlipHorizontal2, FlipVertical2, X } from '@lucide/vue'
+import { Copy, FlipHorizontal2, FlipVertical2, X } from '../../../ui/icons'
 import { useI18n } from 'vue-i18n'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NotebookAlignMenu from './NotebookAlignMenu.vue'

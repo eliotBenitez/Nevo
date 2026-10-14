@@ -14,7 +14,7 @@ import {
   Settings,
   Sparkles,
   SlidersHorizontal,
-} from '@lucide/vue'
+} from '../../ui/icons'
 import { useWorkspaceStore } from '../../stores/workspace'
 import { useThemeStore } from '../../stores/theme'
 import type { SettingsSectionId } from '../../types/workspace'
