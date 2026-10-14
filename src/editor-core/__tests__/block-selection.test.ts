@@ -126,4 +126,39 @@ describe('block selection', () => {
       destroy()
     }
   })
+
+  it('copies and cuts whole top-level blocks for a multi-block selection', () => {
+    const content: BlockNode = {
+      type: 'doc',
+      content: [
+        { type: 'paragraph', content: [{ type: 'text', text: 'first block' }] },
+        { type: 'paragraph', content: [{ type: 'text', text: 'second block' }] },
+        { type: 'paragraph', content: [{ type: 'text', text: 'third block' }] },
+      ],
+    }
+
+    const { view, destroy } = mountEditor(content)
+
+    try {
+      const first = findTextBlockPosition(view, 'first block')
+      const second = findTextBlockPosition(view, 'second block')
+      setTextSelection(view, first.contentFrom + 2, second.contentFrom + 4)
+
+      const store = new Map<string, string>()
+      const clipboardData = {
+        clearData: () => store.clear(),
+        setData: (type: string, value: string) => store.set(type, value),
+      }
+      const cut = new Event('cut', { bubbles: true, cancelable: true })
+      Object.defineProperty(cut, 'clipboardData', { value: clipboardData })
+      view.dom.dispatchEvent(cut)
+
+      expect(cut.defaultPrevented).toBe(true)
+      expect(store.get('text/plain')).toBe('first block\n\nsecond block')
+      expect(view.state.doc.childCount).toBe(1)
+      expect(view.state.doc.textContent).toBe('third block')
+    } finally {
+      destroy()
+    }
+  })
 })
