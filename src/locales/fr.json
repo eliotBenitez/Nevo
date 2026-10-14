@@ -2371,6 +2371,7 @@
     "marginRight": "Droite",
     "marginBottom": "Bas",
     "marginLeft": "Gauche",
+    "marginValue": "{value} mm",
     "paragraphSpacing": "Espacement des paragraphes",
     "exportNoteTitle": "Titre de la note",
     "marginPresets": {
@@ -2400,8 +2401,7 @@
     "docxPreviewTitle": "Aperçu Word",
     "docxGenerating": "Préparation du document Word…",
     "docxSaveError": "Échec de l'enregistrement du DOCX.",
-    "pageBreak": "Saut de page",
-    "formatDocxModalTitle": "Format Word"
+    "pageBreak": "Saut de page"
   },
   "media": {
     "attachVideo": "Joindre une vidéo",

@@ -149,7 +149,7 @@ onBeforeUnmount(() => {
     @close="emit('close')"
   >
     <template #header>
-      <h2 id="docx-modal-title" class="docx-modal__heading tw:m-0 tw:text-xs tw:font-semibold tw:text-content-muted">{{ t('export.formatDocxModalTitle') }}</h2>
+      <h2 id="docx-modal-title" class="docx-modal__heading tw:m-0 tw:text-xs tw:font-semibold tw:text-content-muted">{{ t('export.formatDocx') }}</h2>
     </template>
 
     <div class="docx-modal__shell tw:grid tw:min-h-0 tw:flex-1 tw:grid-cols-[260px_minmax(0,1fr)] tw:bg-modal tw:max-[719px]:grid-cols-1 tw:max-[719px]:grid-rows-[auto_minmax(0,1fr)]">

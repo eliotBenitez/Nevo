@@ -2371,6 +2371,7 @@
     "marginRight": "Справа",
     "marginBottom": "Снизу",
     "marginLeft": "Слева",
+    "marginValue": "{value} мм",
     "paragraphSpacing": "Интервал абзацев",
     "exportNoteTitle": "Название заметки",
     "marginPresets": {
@@ -2400,8 +2401,7 @@
     "docxPreviewTitle": "Предпросмотр Word",
     "docxGenerating": "Подготовка Word документа…",
     "docxSaveError": "Не удалось сохранить DOCX.",
-    "pageBreak": "Разрыв страницы",
-    "formatDocxModalTitle": "Настройка Word"
+    "pageBreak": "Разрыв страницы"
   },
   "media": {
     "attachVideo": "Прикрепить видео",

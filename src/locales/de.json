@@ -2371,6 +2371,7 @@
     "marginRight": "Rechts",
     "marginBottom": "Unten",
     "marginLeft": "Links",
+    "marginValue": "{value} mm",
     "paragraphSpacing": "Absatzabstand",
     "exportNoteTitle": "Notiztitel",
     "marginPresets": {
@@ -2400,8 +2401,7 @@
     "docxPreviewTitle": "Word-Vorschau",
     "docxGenerating": "Word-Dokument wird vorbereitet…",
     "docxSaveError": "DOCX konnte nicht gespeichert werden.",
-    "pageBreak": "Seitenumbruch",
-    "formatDocxModalTitle": "Word-Format"
+    "pageBreak": "Seitenumbruch"
   },
   "media": {
     "attachVideo": "Video anhängen",

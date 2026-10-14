@@ -2371,6 +2371,7 @@
     "marginRight": "Right",
     "marginBottom": "Bottom",
     "marginLeft": "Left",
+    "marginValue": "{value} mm",
     "paragraphSpacing": "Paragraph spacing",
     "exportNoteTitle": "Note title",
     "marginPresets": {
@@ -2400,8 +2401,7 @@
     "docxPreviewTitle": "Word preview",
     "docxGenerating": "Preparing Word document…",
     "docxSaveError": "Failed to save DOCX.",
-    "pageBreak": "Page break",
-    "formatDocxModalTitle": "Format Word"
+    "pageBreak": "Page break"
   },
   "media": {
     "attachVideo": "Attach video",
