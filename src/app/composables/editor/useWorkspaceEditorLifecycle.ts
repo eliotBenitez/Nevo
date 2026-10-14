@@ -1,5 +1,6 @@
 import { nextTick, onBeforeUnmount, onMounted, toRaw, watch, type Ref } from 'vue'
 import type { EditorCore } from './useEditorCore'
+import { applyCaretAnimation } from './caretAnimation'
 import type { SaveStatus } from '../../../stores/note'
 import type { NoteDocument } from '../../../types/note'
 import type { WorkspaceSettings } from '../../../types/workspace'
@@ -110,13 +111,7 @@ export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOpt
 
   watch(
     () => options.getSettings().editor.caretAnimation,
-    (mode) => {
-      const dom = options.core.editorView?.dom as HTMLElement | undefined
-      if (!dom) return
-      dom.classList.remove('caret--steady', 'caret--blink')
-      if (mode === 'steady') dom.classList.add('caret--steady')
-      else if (mode === 'blink') dom.classList.add('caret--blink')
-    },
+    mode => applyCaretAnimation(options.core.editorView, mode),
   )
 
   watch(

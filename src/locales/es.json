@@ -1165,7 +1165,13 @@
       "caretAnimation": {
         "system": "Sistema",
         "steady": "Fijo",
-        "blink": "Parpadeo"
+        "blink": "Parpadeo",
+        "fade": "Parpadeo suave",
+        "smooth": "Fluido",
+        "sparkle": "Magia: chispas",
+        "glow": "Magia: brillo",
+        "comet": "Magia: cometa",
+        "jelly": "Magia: gelatina"
       },
       "tabKeyBehavior": {
         "indent": "Sangrar",
@@ -1427,7 +1433,7 @@
       },
       "caretAnimation": {
         "title": "Animación del cursor",
-        "description": "Controla el parpadeo del cursor en el editor"
+        "description": "Controla cómo parpadea y se mueve el cursor en el editor"
       },
       "tabKeyBehavior": {
         "title": "Tecla Tab",

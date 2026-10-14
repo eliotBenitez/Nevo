@@ -1165,7 +1165,13 @@
       "caretAnimation": {
         "system": "System",
         "steady": "Steady",
-        "blink": "Blink"
+        "blink": "Blink",
+        "fade": "Soft blink",
+        "smooth": "Smooth",
+        "sparkle": "Magic: sparkles",
+        "glow": "Magic: glow",
+        "comet": "Magic: comet",
+        "jelly": "Magic: jelly"
       },
       "tabKeyBehavior": {
         "indent": "Indent",
@@ -1427,7 +1433,7 @@
       },
       "caretAnimation": {
         "title": "Caret animation",
-        "description": "Controls cursor blinking behaviour inside the editor"
+        "description": "Controls how the cursor blinks and moves inside the editor"
       },
       "tabKeyBehavior": {
         "title": "Tab key",

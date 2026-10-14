@@ -11,6 +11,7 @@ import type {
   NevoToolbarAction,
 } from '../../../types/editor-plugin'
 import type { NoteDocument } from '../../../types/note'
+import { applyCaretAnimation, detachCaretAnimation } from './caretAnimation'
 import {
   EditorPluginHost,
   createNevoEditorState,
@@ -259,12 +260,6 @@ function sortToolbarActions(actions: NevoToolbarAction[]): NevoToolbarAction[] {
     if (byOrder !== 0) return byOrder
     return a.title.localeCompare(b.title)
   })
-}
-
-function applyCaretAnimation(dom: HTMLElement, mode: string): void {
-  dom.classList.remove('caret--steady', 'caret--blink')
-  if (mode === 'steady') dom.classList.add('caret--steady')
-  else if (mode === 'blink') dom.classList.add('caret--blink')
 }
 
 const CONTENT_SERIALIZE_DELAY_MS = 250
@@ -558,6 +553,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     flushPendingContentUpdate()
     unregisterPersistenceSession()
     if (core.editorView) clearActiveEditor(core.editorView)
+    detachCaretAnimation(core.editorView)
     core.editorView?.destroy()
     core.editorView = null
     core.commandRegistry = new Map()
@@ -847,7 +843,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
           resolveWikiLink: callbacks.resolveWikiLink,
         }),
       })
-      applyCaretAnimation(core.editorView.dom as HTMLElement, settings.editor.caretAnimation)
+      applyCaretAnimation(core.editorView, settings.editor.caretAnimation)
       registerActiveEditor(core.editorView, documentId)
       callbacks.onOverlaysUpdate()
       return
@@ -866,7 +862,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
       })
     }
     core.isApplyingExternalState = false
-    applyCaretAnimation(core.editorView.dom as HTMLElement, settings.editor.caretAnimation)
+    applyCaretAnimation(core.editorView, settings.editor.caretAnimation)
     // Re-register on note switch: the view is reused, but it now holds a
     // different document, and the revision counter must restart.
     registerActiveEditor(core.editorView, documentId)

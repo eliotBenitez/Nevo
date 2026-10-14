@@ -16,6 +16,7 @@ import type { PluginManifest, WorkspaceSettings } from '../../../types/workspace
 import type { NevoToolbarAction } from '../../../types/editor-plugin'
 import { getLinkPickerState, parseWikiQuery } from '../../../editor-core'
 import { createEditorCore, useEditorCore } from '../../composables/editor/useEditorCore'
+import { applyCaretAnimation } from '../../composables/editor/caretAnimation'
 import { useEditorOverlays } from '../../composables/editor/useEditorOverlays'
 import { useMathEditor } from '../../composables/editor/useMathEditor'
 import { useFormulaEditor } from '../../composables/editor/useFormulaEditor'
@@ -744,13 +745,7 @@ watch(
 
 watch(
   () => props.settings.editor.caretAnimation,
-  (mode) => {
-    const dom = core.editorView?.dom as HTMLElement | undefined
-    if (!dom) return
-    dom.classList.remove('caret--steady', 'caret--blink')
-    if (mode === 'steady') dom.classList.add('caret--steady')
-    else if (mode === 'blink') dom.classList.add('caret--blink')
-  },
+  mode => applyCaretAnimation(core.editorView, mode),
 )
 
 watch(isTouch, () => {

@@ -1165,7 +1165,13 @@
       "caretAnimation": {
         "system": "Système",
         "steady": "Fixe",
-        "blink": "Clignotant"
+        "blink": "Clignotant",
+        "fade": "Clignotement doux",
+        "smooth": "Fluide",
+        "sparkle": "Magie : étincelles",
+        "glow": "Magie : halo",
+        "comet": "Magie : comète",
+        "jelly": "Magie : gelée"
       },
       "tabKeyBehavior": {
         "indent": "Indenter",
@@ -1427,7 +1433,7 @@
       },
       "caretAnimation": {
         "title": "Animation du curseur",
-        "description": "Contrôle le clignotement du curseur dans l'éditeur"
+        "description": "Contrôle le clignotement et le mouvement du curseur dans l'éditeur"
       },
       "tabKeyBehavior": {
         "title": "Touche Tab",

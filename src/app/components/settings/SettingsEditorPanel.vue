@@ -35,7 +35,7 @@ const slashMenuLayoutOptions = [
 
 const focusModeOptions = ['off', 'soft'].map(v => ({ value: v, label: opt('focusMode', v) }))
 const typewriterPositionOptions = ['upper', 'center', 'lower'].map(v => ({ value: v, label: opt('typewriterPosition', v) }))
-const caretAnimationOptions = ['system', 'steady', 'blink'].map(v => ({ value: v, label: opt('caretAnimation', v) }))
+const caretAnimationOptions = ['system', 'steady', 'blink', 'fade', 'smooth', 'sparkle', 'glow', 'comet', 'jelly'].map(v => ({ value: v, label: opt('caretAnimation', v) }))
 const tabKeyBehaviorOptions = ['indent', 'focus'].map(v => ({ value: v, label: opt('tabKeyBehavior', v) }))
 const autosavePolicyOptions = ['immediate', 'window-idle'].map(v => ({ value: v, label: opt('autosavePolicy', v) }))
 const pasteBehaviorOptions = ['smart', 'plain-text'].map(v => ({ value: v, label: opt('pasteBehavior', v) }))

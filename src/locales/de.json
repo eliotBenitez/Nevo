@@ -1165,7 +1165,13 @@
       "caretAnimation": {
         "system": "System",
         "steady": "Ruhig",
-        "blink": "Blinkend"
+        "blink": "Blinkend",
+        "fade": "Sanftes Blinken",
+        "smooth": "Fließend",
+        "sparkle": "Magie: Funken",
+        "glow": "Magie: Leuchten",
+        "comet": "Magie: Komet",
+        "jelly": "Magie: Wackelpudding"
       },
       "tabKeyBehavior": {
         "indent": "Einrücken",
@@ -1427,7 +1433,7 @@
       },
       "caretAnimation": {
         "title": "Cursor-Animation",
-        "description": "Steuert das Blinken des Cursors im Editor"
+        "description": "Steuert, wie der Cursor im Editor blinkt und sich bewegt"
       },
       "tabKeyBehavior": {
         "title": "Tabulatortaste",

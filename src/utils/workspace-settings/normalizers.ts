@@ -1,8 +1,10 @@
-import type { AppConfig, FirstStepId, FirstUseHintId, HotkeyBinding, HotkeyScope, OnboardingState, ProductTourStatus, RecentWorkspace, ThemeSchedule, WorkspaceHomeFavorite, WorkspaceSettings, WorkspaceView } from '../../types/workspace'
+import type { AppConfig, CaretAnimationMode, FirstStepId, FirstUseHintId, HotkeyBinding, HotkeyScope, OnboardingState, ProductTourStatus, RecentWorkspace, ThemeSchedule, WorkspaceHomeFavorite, WorkspaceSettings, WorkspaceView } from '../../types/workspace'
 import { normalizeNotebookPalette } from '../../core/notebook/palette'
 import { normalizeNotebookToolPreferences } from '../../core/notebook/toolPreferences'
 import { normalizeHotkeyChord } from '../hotkey-chords'
 import { DEFAULT_HOTKEY_BINDINGS, createDefaultAppConfig, createDefaultWorkspaceSettings } from './defaults'
+
+const CARET_ANIMATION_MODES: CaretAnimationMode[] = ['system', 'steady', 'blink', 'fade', 'smooth', 'sparkle', 'glow', 'comet', 'jelly']
 
 function normalizeHotkeyScope(scope: unknown): HotkeyScope {
   return scope === 'app' ? 'app' : 'workspace'
@@ -194,8 +196,8 @@ export function normalizeWorkspaceSettings(input: unknown): WorkspaceSettings {
   normalized.editor.markdownShortcuts = typeof editor.markdownShortcuts === 'boolean' ? editor.markdownShortcuts : defaults.editor.markdownShortcuts
   normalized.editor.slashCommands = typeof editor.slashCommands === 'boolean' ? editor.slashCommands : defaults.editor.slashCommands
   normalized.editor.smoothScrolling = typeof editor.smoothScrolling === 'boolean' ? editor.smoothScrolling : defaults.editor.smoothScrolling
-  normalized.editor.caretAnimation = editor.caretAnimation === 'steady' || editor.caretAnimation === 'blink'
-    ? editor.caretAnimation : defaults.editor.caretAnimation
+  normalized.editor.caretAnimation = CARET_ANIMATION_MODES.includes(editor.caretAnimation as CaretAnimationMode)
+    ? editor.caretAnimation as CaretAnimationMode : defaults.editor.caretAnimation
   normalized.editor.tabKeyBehavior = editor.tabKeyBehavior === 'focus' ? 'focus' : defaults.editor.tabKeyBehavior
   normalized.editor.autosavePolicy = editor.autosavePolicy === 'window-idle' ? 'window-idle' : defaults.editor.autosavePolicy
   normalized.editor.focusMode = editor.focusMode === 'soft' ? 'soft' : defaults.editor.focusMode

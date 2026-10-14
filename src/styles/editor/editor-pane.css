@@ -76,6 +76,90 @@
   50% { caret-color: transparent }
 }
 
+.caret--fade {
+  caret-color: var(--text-primary);
+  animation: fade-caret 1.1s ease-in-out infinite;
+}
+
+@keyframes fade-caret {
+  0%, 20% { caret-color: var(--text-primary) }
+  50%, 70% { caret-color: transparent }
+  100% { caret-color: var(--text-primary) }
+}
+
+/* Drawn caret modes (caretOverlay.ts): hide the native caret, but keep it for
+   nested editing hosts (code blocks, inline inputs) the overlay doesn't track. */
+.caret--overlay {
+  caret-color: transparent;
+}
+
+.caret--overlay :is(input, textarea, [contenteditable='true'], [contenteditable='plaintext-only']) {
+  caret-color: auto;
+}
+
+.nv-caret-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.nv-caret {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  will-change: transform;
+  transition: transform 90ms cubic-bezier(.2, .7, .3, 1), height 90ms ease-out;
+}
+
+.nv-caret--instant {
+  transition: none;
+}
+
+.nv-caret__bar {
+  width: 100%;
+  height: 100%;
+  border-radius: 1px;
+  background: var(--text-primary);
+}
+
+.nv-caret:is([data-effect='sparkle'], [data-effect='glow'], [data-effect='comet'], [data-effect='jelly']) .nv-caret__bar {
+  background: var(--accent);
+}
+
+.nv-caret[data-effect='glow'] .nv-caret__bar {
+  box-shadow:
+    0 0 6px 1px color-mix(in oklab, var(--accent) 70%, transparent),
+    0 0 16px 3px color-mix(in oklab, var(--accent) 35%, transparent);
+}
+
+.nv-caret[data-effect='jelly'] {
+  transition-duration: 160ms;
+  transition-timing-function: cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.nv-caret-spark {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px 1px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+
+.nv-caret-trail {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 50%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--accent) 70%, transparent));
+}
+
 .editor-scrollbar--visible,
 .editor-scrollbar--dragging {
   opacity: 1;
