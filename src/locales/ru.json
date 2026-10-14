@@ -1874,6 +1874,7 @@
         "orderedList": "Нумерованный список",
         "bulletList": "Маркированный список",
         "blockquote": "Цитата",
+        "appendBlockAtEnd": "Новый блок в конце",
         "inlineMath": "Формула в строке",
         "findInNote": "Поиск в заметке",
         "replaceInNote": "Поиск и замена",

@@ -63,6 +63,30 @@ function createInsertParagraphAfterSelectedBlockCommand(schema: Schema): Command
   }
 }
 
+function createAppendParagraphAtEndCommand(schema: Schema): Command {
+  const paragraph = schema.nodes.paragraph
+
+  return (state, dispatch) => {
+    if (!paragraph) return false
+    if (!dispatch) return true
+
+    const { doc } = state
+    const last = doc.lastChild
+    // Reuse a trailing empty paragraph instead of stacking blank blocks on repeated presses.
+    if (last && last.type === paragraph && last.content.size === 0) {
+      const pos = doc.content.size - last.nodeSize + 1
+      dispatch(state.tr.setSelection(TextSelection.create(doc, pos)).scrollIntoView())
+      return true
+    }
+
+    const paragraphNode = paragraph.createAndFill()
+    if (!paragraphNode) return false
+    const tr = state.tr.insert(doc.content.size, paragraphNode)
+    dispatch(tr.setSelection(TextSelection.create(tr.doc, tr.doc.content.size - 1)).scrollIntoView())
+    return true
+  }
+}
+
 function createExitContainerOnDoubleEnterCommand(schema: Schema): Command {
   const containerTypes = getContainerBlockTypes(schema)
   const paragraphType = schema.nodes.paragraph
@@ -249,6 +273,7 @@ export function createCoreKeymap(schema: Schema, commands: Map<string, Command>,
   const splitChecklistItem = createSplitChecklistItemCommand(schema)
   const insertListItemHardBreak = createInsertListItemHardBreakCommand(schema)
   const insertHardBreak = createInsertHardBreakCommand(schema)
+  const appendParagraphAtEnd = createAppendParagraphAtEndCommand(schema)
 
   const bindings: Record<string, Command> = {
     'Mod-z': undo,
@@ -274,6 +299,7 @@ export function createCoreKeymap(schema: Schema, commands: Map<string, Command>,
     'Shift-Enter': chainCommands(newlineInCode, insertHardBreak),
     'Mod-Enter': chainCommands(insertParagraphAfterSelectedBlock, exitContainer, exitToggle, insertListItemHardBreak),
     'Ctrl-Enter': chainCommands(insertParagraphAfterSelectedBlock, exitContainer, exitToggle, insertListItemHardBreak),
+    'Mod-Shift-Enter': appendParagraphAtEnd,
   }
 
   if (tabBehavior !== 'focus') {

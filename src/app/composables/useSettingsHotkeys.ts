@@ -25,6 +25,7 @@ const HOTKEY_LABEL_KEYS: Record<string, string> = {
   'core.orderedList': 'settings.hotkeys.commands.orderedList',
   'core.bulletList': 'settings.hotkeys.commands.bulletList',
   'core.blockquote': 'settings.hotkeys.commands.blockquote',
+  'core.block.appendEnd': 'settings.hotkeys.commands.appendBlockAtEnd',
   'core.math.inline.insert': 'settings.hotkeys.commands.inlineMath',
   'editor.find-in-note': 'settings.hotkeys.commands.findInNote',
   'editor.replace-in-note': 'settings.hotkeys.commands.replaceInNote',

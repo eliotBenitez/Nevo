@@ -1874,6 +1874,7 @@
         "orderedList": "Liste ordonnée",
         "bulletList": "Liste à puces",
         "blockquote": "Citation",
+        "appendBlockAtEnd": "Nouveau bloc à la fin",
         "inlineMath": "Math en ligne",
         "findInNote": "Rechercher dans la note",
         "replaceInNote": "Rechercher et remplacer",

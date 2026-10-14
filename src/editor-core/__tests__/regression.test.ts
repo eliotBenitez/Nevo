@@ -420,6 +420,33 @@ describe('editor regression', () => {
     }
   })
 
+  it('appends a paragraph at the end of the note and moves the cursor there through Mod-Shift-Enter', () => {
+    const content: BlockNode = {
+      type: 'doc',
+      content: [
+        { type: 'paragraph', content: [{ type: 'text', text: 'first' }] },
+        { type: 'divider' },
+      ],
+    }
+    const { view, commands, destroy } = createRegressionEditorView(content)
+
+    try {
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 2)))
+      const bindings = createCoreKeymap(nevoBaseSchema, commands)
+
+      expect(bindings['Mod-Shift-Enter']?.(view.state, view.dispatch, view)).toBe(true)
+      expect(view.state.doc.childCount).toBe(3)
+      expect(view.state.doc.lastChild?.type.name).toBe('paragraph')
+      expect(view.state.selection.$from.pos).toBe(view.state.doc.content.size - 1)
+
+      // A second press reuses the trailing empty paragraph.
+      expect(bindings['Mod-Shift-Enter']?.(view.state, view.dispatch, view)).toBe(true)
+      expect(view.state.doc.childCount).toBe(3)
+    } finally {
+      destroy()
+    }
+  })
+
   it('keeps regular Enter inside a paragraph splitting the paragraph', () => {
     const content: BlockNode = {
       type: 'doc',

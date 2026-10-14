@@ -18,6 +18,7 @@ export const DEFAULT_HOTKEY_BINDINGS: HotkeyBinding[] = [
   { commandId: 'core.orderedList', label: 'core.orderedList', defaultChord: 'Ctrl+Shift+7', customChord: null, scope: 'workspace' },
   { commandId: 'core.bulletList', label: 'core.bulletList', defaultChord: 'Ctrl+Shift+8', customChord: null, scope: 'workspace' },
   { commandId: 'core.blockquote', label: 'core.blockquote', defaultChord: 'Ctrl+Shift+9', customChord: null, scope: 'workspace' },
+  { commandId: 'core.block.appendEnd', label: 'core.block.appendEnd', defaultChord: 'Ctrl+Shift+Enter', customChord: null, scope: 'workspace' },
   { commandId: 'core.math.inline.insert', label: 'core.math.inline.insert', defaultChord: 'Ctrl+M', customChord: null, scope: 'workspace' },
   { commandId: 'editor.find-in-note', label: 'editor.find-in-note', defaultChord: 'Ctrl+F', customChord: null, scope: 'workspace' },
   { commandId: 'editor.replace-in-note', label: 'editor.replace-in-note', defaultChord: 'Ctrl+H', customChord: null, scope: 'workspace' },
