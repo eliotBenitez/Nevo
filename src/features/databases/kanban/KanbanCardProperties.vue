@@ -403,7 +403,7 @@ defineExpose({ collect })
     <span v-else class="km-task-progress__empty tw:text-[11px] tw:text-[var(--text-muted,var(--text-muted))]">{{ t('kanban.card.progressNoTasks') }}</span>
   </div>
 
-  <div v-for="field in localFields.filter(f => f.name.toLowerCase().trim() !== 'tags' && f.name.toLowerCase().trim() !== 'теги')" :key="field.id" class="km-field-card tw:flex tw:flex-col tw:gap-2 tw:rounded-[calc(10px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--surface-raised) tw:p-2.5 tw:shadow-(--shadow-raised)">
+  <div v-for="field in localFields.filter(f => f.name.toLowerCase().trim() !== 'tags' && f.name.toLowerCase().trim() !== 'теги')" :key="field.id" class="km-field-card tw:flex tw:flex-col tw:gap-2 tw:rounded-[calc(10px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--surface-raised) tw:p-2.5">
     <div class="km-field-card__header tw:grid tw:grid-cols-[minmax(0,1fr)_112px_22px] tw:items-center tw:gap-2 tw:max-[720px]:grid-cols-1">
       <input
         class="km-prop-input km-field-card__name tw:box-border tw:w-full tw:min-w-0 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--input-bg) tw:text-content-primary tw:outline-none tw:h-[34px] tw:px-2.5 tw:text-[13px]"
