@@ -737,7 +737,8 @@ pluginRuntime = useEditorPluginRuntime({
   unmountNotePreload: notePreload.unmount,
   unmountBlockHandle: blockHandleComposable.unmount,
   closeEditorUi,
-  reinitializeEditor: () => editorLifecycle.reinitializeEditor(),
+  // rebuild() replaces the EditorView, so the block handle must rebind to the new DOM.
+  reinitializeEditor: () => editorLifecycle.reinitializeEditor(true),
   emitContributions: (snapshot) => emit('plugin-contributions', snapshot),
 })
 const { dispatchPluginUiEvent } = pluginRuntime

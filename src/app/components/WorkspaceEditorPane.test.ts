@@ -584,6 +584,19 @@ describe('WorkspaceEditorPane scrollbar overlay', () => {
     expect(thumb.attributes('tabindex')).toBeUndefined()
   })
 
+  it('binds the block handle to the editor created when the note first opens', async () => {
+    const viewDom = document.createElement('div')
+    const addListener = vi.spyOn(viewDom, 'addEventListener')
+    editorCoreMocks.editorSetup.setupEditorForNote.mockImplementationOnce(async () => {
+      editorCoreMocks.getLatestCore()!.editorView = { dom: viewDom, isDestroyed: false, hasFocus: () => false }
+    })
+
+    mountPane()
+    await flushPane()
+
+    expect(addListener).toHaveBeenCalledWith('focusin', expect.any(Function))
+  })
+
   it('renders the overflow trigger in the breadcrumb row and removes the old header controls', () => {
     const wrapper = mountPane()
 
