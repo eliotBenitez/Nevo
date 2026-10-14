@@ -53,6 +53,7 @@ fn content_type_for(path: &str) -> &'static str {
         "ogg" => "audio/ogg",
         "flac" => "audio/flac",
         "aac" => "audio/aac",
+        "pdf" => "application/pdf",
         _ => "application/octet-stream",
     }
 }

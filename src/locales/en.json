@@ -2404,6 +2404,8 @@
     "pageBreak": "Page break"
   },
   "media": {
+    "showPreview": "Show preview",
+    "hidePreview": "Hide preview",
     "attachVideo": "Attach video",
     "attachAudio": "Attach audio",
     "video": "Video",

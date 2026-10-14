@@ -2404,6 +2404,8 @@
     "pageBreak": "Seitenumbruch"
   },
   "media": {
+    "showPreview": "Vorschau anzeigen",
+    "hidePreview": "Vorschau ausblenden",
     "attachVideo": "Video anhängen",
     "attachAudio": "Audio anhängen",
     "video": "Video",

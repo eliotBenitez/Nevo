@@ -136,6 +136,7 @@ export const fileBlockNodeSpec: NodeSpec = {
     filename: { default: '' },
     mime: { default: '' },
     size: { default: 0 },
+    preview: { default: false },
   },
   parseDOM: [
     {
@@ -147,6 +148,7 @@ export const fileBlockNodeSpec: NodeSpec = {
           filename: dom.dataset.filename ?? '',
           mime: dom.dataset.mime ?? '',
           size: Number(dom.dataset.size ?? 0),
+          preview: dom.dataset.preview === 'true',
         }
       },
     },
@@ -164,6 +166,7 @@ export const fileBlockNodeSpec: NodeSpec = {
         'data-filename': filename,
         'data-mime': mime,
         'data-size': size,
+        ...(node.attrs.preview === true ? { 'data-preview': 'true' } : {}),
       },
       filename || 'File attachment',
     ]

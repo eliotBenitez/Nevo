@@ -2404,6 +2404,8 @@
     "pageBreak": "Salto de página"
   },
   "media": {
+    "showPreview": "Mostrar vista previa",
+    "hidePreview": "Ocultar vista previa",
     "attachVideo": "Adjuntar vídeo",
     "attachAudio": "Adjuntar audio",
     "video": "Vídeo",

@@ -2404,6 +2404,8 @@
     "pageBreak": "Разрыв страницы"
   },
   "media": {
+    "showPreview": "Показать превью",
+    "hidePreview": "Скрыть превью",
     "attachVideo": "Прикрепить видео",
     "attachAudio": "Прикрепить аудио",
     "video": "Видео",

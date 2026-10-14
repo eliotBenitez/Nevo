@@ -1,7 +1,7 @@
 import { h, markRaw, render } from 'vue'
 import type { Node as PMNode } from 'prosemirror-model'
 import type { EditorView, NodeView } from 'prosemirror-view'
-import { FolderOpen, Trash2 } from '@lucide/vue'
+import { Eye, EyeOff, FolderOpen, Trash2 } from '@lucide/vue'
 import NvPopupMenu from '../../ui/primitives/NvPopupMenu.vue'
 import { resolveNodePosition, getStringAttr, type CoreNodeViewOptions, type NodeViewPosition } from './utils'
 
@@ -66,6 +66,36 @@ export function createFileNodeView(
   dom.append(card)
 
   let currentNode = node
+  let previewEl: HTMLIFrameElement | null = null
+  let previewRetry: ReturnType<typeof setTimeout> | null = null
+
+  const clearPreviewRetry = () => {
+    if (previewRetry) { clearTimeout(previewRetry); previewRetry = null }
+  }
+
+  // Served over the localhost media server: the webview PDF viewer needs real HTTP, and CSP frame-src allows it.
+  const syncPreview = (src: string, show: boolean, attempt = 0) => {
+    clearPreviewRetry()
+    if (!show) {
+      previewEl?.remove()
+      previewEl = null
+      return
+    }
+    const url = options?.resolveMediaSrc?.(src) ?? null
+    if (!url) {
+      // Media server not ready yet; give up after ~6s like the media node view.
+      if (attempt < 40 && options?.resolveMediaSrc) previewRetry = setTimeout(() => syncPreview(src, show, attempt + 1), 150)
+      return
+    }
+    if (!previewEl) {
+      previewEl = document.createElement('iframe')
+      previewEl.className = 'nv-file-preview'
+      previewEl.loading = 'lazy'
+      dom.append(previewEl)
+    }
+    previewEl.title = getStringAttr(currentNode, 'filename') || 'PDF'
+    if (previewEl.getAttribute('src') !== url) previewEl.src = url
+  }
 
   const sync = () => {
     const src = getStringAttr(currentNode, 'src')
@@ -82,10 +112,21 @@ export function createFileNodeView(
 
     moreBtnContainer.style.display = src ? '' : 'none'
 
+    const canPreview = Boolean(src) && category === 'pdf'
+    const showPreview = canPreview && currentNode.attrs.preview === true
+    syncPreview(src, showPreview)
+
     if (src) {
       // Render Popup Menu
       const menuVNode = h(NvPopupMenu, {
         items: [
+          ...(canPreview
+            ? [{
+                label: t(showPreview ? 'media.hidePreview' : 'media.showPreview'),
+                icon: markRaw(showPreview ? EyeOff : Eye),
+                action: onTogglePreview,
+              }]
+            : []),
           {
             label: t('media.replace'),
             icon: markRaw(FolderOpen),
@@ -147,6 +188,15 @@ export function createFileNodeView(
     options?.onOpenFileAsset?.({ view, position, attrs: currentNode.attrs, src })
   }
 
+  const onTogglePreview = () => {
+    const position = resolveNodePosition(getPos)
+    if (typeof position !== 'number') return
+    view.dispatch(view.state.tr.setNodeMarkup(position, undefined, {
+      ...currentNode.attrs,
+      preview: currentNode.attrs.preview !== true,
+    }))
+  }
+
   const onRemove = () => {
     const position = resolveNodePosition(getPos)
     if (typeof position !== 'number') return
@@ -187,6 +237,7 @@ export function createFileNodeView(
     destroy() {
       card.removeEventListener('mousedown', onCardMouseDown)
       card.removeEventListener('click', onCardClick)
+      clearPreviewRetry()
       render(null, moreBtnContainer)
     },
   }

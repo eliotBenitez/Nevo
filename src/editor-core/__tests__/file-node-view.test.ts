@@ -7,6 +7,7 @@ import type { BlockNode } from '../../types/note'
 function createFileEditor(attrs: Record<string, unknown>) {
   const onRequestFileAsset = vi.fn()
   const onOpenFileAsset = vi.fn()
+  const resolveMediaSrc = vi.fn((src: string) => `http://127.0.0.1:1/media?path=${src}`)
   const content: BlockNode = {
     type: 'doc',
     content: [
@@ -20,7 +21,7 @@ function createFileEditor(attrs: Record<string, unknown>) {
   const setup = createNevoEditorState({
     schema: nevoBaseSchema,
     content,
-    nodeViewOptions: { onRequestFileAsset, onOpenFileAsset },
+    nodeViewOptions: { onRequestFileAsset, onOpenFileAsset, resolveMediaSrc },
   })
 
   const mount = document.createElement('div')
@@ -94,6 +95,42 @@ describe('file node view', () => {
         position: 0,
       }))
       expect(editor.onOpenFileAsset).not.toHaveBeenCalled()
+    } finally {
+      editor.destroy()
+    }
+  })
+
+  it('renders an inline preview for a PDF with preview enabled and hides it when disabled', () => {
+    const editor = createFileEditor({
+      src: '.nevo/assets/file.pdf',
+      filename: 'file.pdf',
+      mime: 'application/pdf',
+      size: 1000,
+      preview: true,
+    })
+
+    try {
+      const iframe = editor.mount.querySelector<HTMLIFrameElement>('iframe.nv-file-preview')
+      expect(iframe?.getAttribute('src')).toBe('http://127.0.0.1:1/media?path=.nevo/assets/file.pdf')
+
+      editor.view.dispatch(editor.view.state.tr.setNodeAttribute(0, 'preview', false))
+      expect(editor.mount.querySelector('iframe.nv-file-preview')).toBeNull()
+    } finally {
+      editor.destroy()
+    }
+  })
+
+  it('does not render a preview for non-PDF files', () => {
+    const editor = createFileEditor({
+      src: '.nevo/assets/file.zip',
+      filename: 'file.zip',
+      mime: 'application/zip',
+      size: 1000,
+      preview: true,
+    })
+
+    try {
+      expect(editor.mount.querySelector('iframe.nv-file-preview')).toBeNull()
     } finally {
       editor.destroy()
     }
