@@ -19,8 +19,16 @@ export function looksLikeMarkdown(text: string): boolean {
   )
 }
 
+/** True when clipboard HTML carries real formatting. Code editors (VS Code,
+ *  terminals) wrap raw Markdown source in bare div/span/br/p markup, which
+ *  must not win over converting the plain-text Markdown. */
+export function hasSemanticHtml(html: string): boolean {
+  return /<(h[1-6]|ul|ol|li|table|strong|b|em|i|u|s|del|a|pre|code|blockquote|img|hr)\b/i.test(html)
+}
+
 export function parseMarkdownToSlice(text: string, schema: Schema, resolver?: WikiLinkResolver): Slice | null {
-  const parsed = parseMarkdownToBlockNode(text, '', resolver)
+  // A pasted H1 is content, not the note title.
+  const parsed = parseMarkdownToBlockNode(text, '', resolver, { extractTitle: false })
   const blocks = parsed.content.content ?? []
   const nodes = blocks.flatMap(block => {
     try {

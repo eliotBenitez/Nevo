@@ -1,6 +1,6 @@
 import type { EditorView } from 'prosemirror-view'
 import type { WorkspaceSettings } from '../../../types/workspace'
-import { looksLikeMarkdown, parseMarkdownToSlice } from './markdownPaste'
+import { hasSemanticHtml, looksLikeMarkdown, parseMarkdownToSlice } from './markdownPaste'
 import { decodeBlockRef } from '../../../core/blockRef/resolveBlockRef'
 import { createInsertBlockEmbedCommand } from '../../../editor-core/commands/blockEmbed'
 
@@ -43,7 +43,7 @@ export function createPasteHandler(options: PasteHandlerOptions) {
 
     if (options.getPasteBehavior() !== 'plain-text') {
       const html = event.clipboardData?.getData('text/html')
-      if (html) return false
+      if (html && hasSemanticHtml(html)) return false
       const mdText = event.clipboardData?.getData('text/plain')
       if (mdText && looksLikeMarkdown(mdText)) {
         const slice = parseMarkdownToSlice(mdText, view.state.schema, options.resolveWikiLink)

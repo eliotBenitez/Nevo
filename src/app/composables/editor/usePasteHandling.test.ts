@@ -6,7 +6,8 @@ import { nevoBaseSchema } from '../../../editor-core/schema'
 import { createPasteHandler } from './usePasteHandling'
 import { looksLikeMarkdown, parseMarkdownToSlice } from './markdownPaste'
 
-vi.mock('./markdownPaste', () => ({
+vi.mock('./markdownPaste', async (importActual) => ({
+  hasSemanticHtml: (await importActual<typeof import('./markdownPaste')>()).hasSemanticHtml,
   looksLikeMarkdown: vi.fn((text: string) => text.startsWith('#')),
   parseMarkdownToSlice: vi.fn(() => null),
 }))
@@ -86,6 +87,20 @@ describe('createPasteHandler', () => {
     expect(mockedParse).toHaveBeenCalledWith('# Heading', view.state.schema, resolveWikiLink)
     expect(dispatch).toHaveBeenCalled()
     expect(event.preventDefault).toHaveBeenCalled()
+  })
+
+  it('converts Markdown source wrapped in bare editor HTML (VS Code style)', () => {
+    mockedLooks.mockReturnValueOnce(true)
+    mockedParse.mockReturnValueOnce(Slice.empty)
+    const handle = createPasteHandler({ getPasteBehavior: () => 'smart' })
+    const { view, dispatch } = makeView()
+    const event = clipboardEvent({
+      'text/html': '<div style="color: #ccc;"><div><span># Heading</span></div><br></div>',
+      'text/plain': '# Heading',
+    })
+
+    expect(handle(view, event)).toBe(true)
+    expect(dispatch).toHaveBeenCalled()
   })
 
   it('falls through to no-op when Markdown parsing yields no slice', () => {
