@@ -152,8 +152,39 @@ function inlineToContent(
   return result
 }
 
+// `inlineToContent` emits `image_block` for images, but image_block is a block
+// node. Where only inline content is allowed, fall back to the alt text.
+function inlineOnly(content: BlockNode[]): BlockNode[] {
+  return content.flatMap((node) => {
+    if (node.type !== 'image_block') return [node]
+    const alt = (node.attrs as { alt?: string | null } | undefined)?.alt
+    return alt ? [{ type: 'text', text: alt }] : []
+  })
+}
+
+// Lift images out of a paragraph: the inline runs around them stay paragraphs
+// and each image becomes its own image_block between them.
+function paragraphsWithImages(content: BlockNode[]): BlockNode[] {
+  const blocks: BlockNode[] = []
+  let run: BlockNode[] = []
+  const flush = () => {
+    if (run.some((node) => node.type !== 'text' || node.text?.trim())) blocks.push({ type: 'paragraph', content: run })
+    run = []
+  }
+  for (const node of content) {
+    if (node.type === 'image_block') {
+      flush()
+      blocks.push(node)
+    } else {
+      run.push(node)
+    }
+  }
+  flush()
+  return blocks.length ? blocks : [{ type: 'paragraph', content: [] }]
+}
+
 function cellParagraph(cells: PhrasingContent[], resolver?: WikiLinkResolver, markdownLinkResolver?: MarkdownLinkResolver): BlockNode {
-  const content = inlineToContent(cells, [], resolver, markdownLinkResolver)
+  const content = inlineOnly(inlineToContent(cells, [], resolver, markdownLinkResolver))
   return content.length ? { type: 'paragraph', content } : { type: 'paragraph' }
 }
 
@@ -167,7 +198,7 @@ function listItemToNode(
   if (typeof item.checked === 'boolean') {
     const content: BlockNode[] = []
     for (const child of item.children) {
-      if (child.type === 'paragraph') content.push(...inlineToContent(child.children as PhrasingContent[], [], resolver, markdownLinkResolver))
+      if (child.type === 'paragraph') content.push(...inlineOnly(inlineToContent(child.children as PhrasingContent[], [], resolver, markdownLinkResolver)))
     }
     return { type: 'checklist_item', attrs: { checked: item.checked }, content }
   }
@@ -184,16 +215,10 @@ function blockToNodes(
 ): BlockNode[] {
   switch (node.type) {
     case 'paragraph': {
-      // Standalone image → image_block
-      if (node.children.length === 1 && node.children[0].type === 'image') {
-        const img = node.children[0]
-        return [{ type: 'image_block', attrs: { src: img.url, alt: img.alt || null, caption: null, sizePreset: 'full', width: null } }]
-      }
-      const content = inlineToContent(node.children as PhrasingContent[], [], resolver, markdownLinkResolver)
-      return [{ type: 'paragraph', content }]
+      return paragraphsWithImages(inlineToContent(node.children as PhrasingContent[], [], resolver, markdownLinkResolver))
     }
     case 'heading': {
-      const content = inlineToContent(node.children as PhrasingContent[], [], resolver, markdownLinkResolver)
+      const content = inlineOnly(inlineToContent(node.children as PhrasingContent[], [], resolver, markdownLinkResolver))
       return [{ type: 'heading', attrs: { level: node.depth }, content }]
     }
     case 'code': {

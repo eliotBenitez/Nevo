@@ -16,6 +16,7 @@ export function looksLikeMarkdown(text: string): boolean {
     /\*\*[^*]+\*\*/.test(text) ||
     /~~[^~]+~~/.test(text) ||
     /<u>[^<]+<\/u>/i.test(text) ||
+    /!\[[^\]]*\]\([^)\s]+[^)]*\)/.test(text) ||
     /`[^`]+`/.test(text)
   )
 }
