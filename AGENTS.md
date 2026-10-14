@@ -8,7 +8,7 @@ Answers to the user must be written in Russian. Code, identifiers, commit subjec
 - Inspect the current implementation, tests, and `git diff` before editing. Treat existing dirty-worktree changes as user-owned and do not rewrite or remove them.
 - Keep changes inside the requested scope. Report unrelated defects separately instead of fixing them opportunistically.
 - Prefer the smallest coherent change. Preserve public APIs, stored workspace data, serialized note content, and platform behavior unless the task explicitly requires a breaking change.
-- For codebase questions, use the existing graphify knowledge graph first, then verify conclusions against the current source when necessary.
+- For codebase questions, follow the source-navigation workflow below: use the documentation map to orient, then verify relationships and behavior against current source and tests.
 
 ## Project Documentation Map
 
@@ -44,7 +44,7 @@ For implementation tasks:
 5. Review `git diff --check` and the final scoped diff.
 6. Update `changes.md` only after the implementation is successfully verified.
 7. Update the affected document from the map above when the change alters startup, layering, state ownership, a persisted schema, or a load-bearing test suite. A stale `ARCHITECTURE.md` or `docs/data-model.md` misleads every later agent.
-8. Run `graphify update .` after source or project documentation changes.
+8. Recheck callers, registration points, and affected tests against the final diff; update navigation guidance below when entry points or module responsibilities move.
 9. Commit each completed task to the `dev` branch.
 10. In the final response, list completed work, checks actually run, and any known failures or skipped checks.
 
@@ -195,22 +195,67 @@ For Android, `.codex/skills/nevo-android-qa` uses `tools/visual-qa/android-qa.mj
 to install a debug APK on the `nevo-phone` and `nevo-tablet` emulators and drive
 the real Android WebView over adb-forwarded DevTools.
 
-**Machine-local, not in git:** everything under `.claude/` and `.agents/` (ignored in `.gitignore`), and `graphify-out/`. On a machine that has them, `.claude/skills/` carries per-domain checklists for the high-fan-out changes — editor blocks, i18n keys, plugin capabilities, Tauri commands, releases, verification — plus the `nevo-executor` subagent and the `/delegate` and `/verify` commands.
+**Machine-local, not in git:** everything under `.claude/` and `.agents/` (ignored in `.gitignore`). On a machine that has them, `.claude/skills/` carries per-domain checklists for the high-fan-out changes — editor blocks, i18n keys, plugin capabilities, Tauri commands, releases, verification — plus the `nevo-executor` subagent and the `/delegate` and `/verify` commands.
 
 Rules:
 
 - Prefer an available skill over improvising a checklist; the fan-out it encodes (registration points, serializers, locales) is exactly what gets silently half-done otherwise.
 - If a skill is not present on this machine, do not skip the work it covers. Fall back to this file's verification matrix and the relevant nested `AGENTS.md`, and say in the final report which checklist was unavailable.
 - Never assume another agent's local configuration exists. Anything a task depends on must live in the repository or be stated in the task.
-- Do not edit `.claude/settings.local.json`, generated capability schemas, or `graphify-out/` by hand.
+- Do not edit `.claude/settings.local.json` or generated capability schemas by hand.
 
-## graphify
+## Source Navigation and Impact Analysis
 
-This project has a knowledge graph under `graphify-out/`.
+Use checked-in documentation, direct source search, and tests. No generated knowledge graph, external indexing service, or graph refresh is required. Current source is authoritative when documentation disagrees; report or correct the relevant documentation within the task's scope.
 
-- For codebase questions, first run `graphify query "<question>"` when `graphify-out/graph.json` exists. Use `graphify path` for relationships, `graphify explain` for focused concepts, and `graphify affected "<symbol>"` for reverse impact analysis before a refactor or a signature change.
-- `graphify-out/` is generated and git-ignored, so a fresh clone has no graph. If `graphify-out/graph.json` is missing, either build it once (`graphify extract .`, or the `/graphify` skill) or fall back to `ARCHITECTURE.md` plus ordinary search — do not block on it.
-- Dirty graphify output is expected and is not a reason to skip it. Skip only when investigating stale/incorrect graph output or when the user explicitly opts out.
-- Read `graphify-out/GRAPH_REPORT.md` only for broad architecture review or when scoped queries are insufficient; it is ~125 KB, so prefer `ARCHITECTURE.md` for orientation.
-- The graph records the commit it was built from (see its "Graph Freshness" section). Compare it against `git rev-parse HEAD` before trusting a scoped result on recently changed code.
-- After modifying source or project documentation, run `graphify update .`.
+### Investigation workflow
+
+1. **Establish the baseline.** Run `git status --short`, inspect the current `git diff` and staged diff, and read the nearest `AGENTS.md` for the area. Separate user-owned changes from the task before planning edits.
+2. **Choose the domain.** Read the relevant document from the Project Documentation Map. Use `ARCHITECTURE.md` for runtime ownership and lifecycle, `docs/data-model.md` for persistence, and `docs/testing.md` for test strategy. Read the sections needed for the question rather than dumping the whole repository.
+3. **Find the entry point.** Search filenames with `rg --files <directory>` and symbols or user-visible text with `rg -n`. Start in the likely domain from the table below, then widen to `src`, `src-tauri`, `packages`, and `tools` as needed. For translated labels, find the locale key, then search its consumers.
+4. **Trace the actual flow.** Read the implementation and its direct callers, imports/re-exports, callbacks, events, commands, and side effects. Record who owns state, who mutates it, and where disk or network IO occurs. Follow the flow across frontend/backend and serialization boundaries; a matching filename is not proof of ownership.
+5. **Check reverse impact.** Before moving code or changing a signature, search the symbol, import path, command/event name, and serialized key throughout the relevant source, tests, and packages. Inspect every affected caller, including alternative UI entry points and platform-specific implementations. Check dynamic registration explicitly; a symbol search alone can miss string-based dispatch.
+6. **Find behavioral evidence.** Read nearby tests and the load-bearing suites in `docs/testing.md`. Reproduce a bug through the real entry point where practical. Distinguish static source checks, unit tests, frontend builds, and real Tauri/device verification; report only what each actually proves.
+7. **Bound the change.** Name the files and responsibilities, affected contracts, and required checks before implementation. For read-only answers, cite concrete source paths and explain any unverified runtime assumptions. After edits, repeat the relevant caller/registration searches and review the final scoped diff.
+
+### Starting points by concern
+
+These are navigation hints, not a substitute for reading the current implementation. Follow imports and registrations when an entry point delegates to a smaller module.
+
+| Concern | Start here | Follow through |
+| --- | --- | --- |
+| Boot, routing, app lifecycle | `src/main.ts`, `src/App.vue`, `src/router/index.ts` | `src/stores/workspace.ts`, shell components in `src/app/`, `ARCHITECTURE.md` |
+| Workspace and note state | `src/stores/`, `src/core/` | Backend adapters, typed wrappers in `src/tauri/`, Rust workspace/note commands, `docs/data-model.md` |
+| Mounted editor, autosave, navigation flush | `src/app/composables/editor/` | `useEditorCore` modules, live `EditorView` transactions, note-store save paths, `useEditorCore.persistence.test.ts` |
+| Editor schema, commands, node views | `src/editor-core/AGENTS.md`, `src/editor-core/schema/`, `src/editor-core/commands/` | `keymap.ts`, plugins, node views, `serialization.ts`, serialization and regression tests |
+| Shared UI and visual styling | `src/ui/AGENTS.md`, `src/ui/primitives/`, `src/styles/tokens.css` | Consumers in `src/app/` and `src/features/`, design reference, style tests, platform QA |
+| Translated UI text | `src/i18n.ts`, `src/locales/AGENTS.md`, `src/locales/en.json` | All registered locale catalogs, key consumers, locale parity and locale-switch tests |
+| Tauri IPC and native behavior | `src/tauri/commands.ts`, `src-tauri/AGENTS.md` | Domain handlers in `src-tauri/src/commands/`, registration in `src-tauri/src/lib.rs`, capabilities, payload types, platform gates |
+| Plugin SDK and sandbox | `docs/plugins.md`, `docs/plugin-capabilities.md`, `docs/plugin-security.md` | `src/editor-core/plugin-host/`, `src-tauri/src/commands/workspace/plugin_sdk.rs`, Rust marketplace commands, manifest/capability registration, conformance tests |
+| MCP bridge and external agents | `docs/mcp-bridge.md`, `src/tauri/mcp.ts` | `packages/mcp-server/`, frontend bridge consumers, Rust MCP handlers and registration, permission checks |
+| Feature-specific behavior | `src/features/`, related shell components in `src/app/` | Feature composables, shared stores/services, nearby tests, route and menu entry points |
+| Build, verification, automation | `package.json`, `docs/testing.md`, `.codex/skills/nevo-verify-change/` | `vite.config.ts`, `build-tools/`, `tools/visual-qa/`, CI workflows, Rust build configuration |
+
+### Practical search commands
+
+Run from the repository root. Replace example symbols with the actual identifiers; use literal search (`-F`) for import paths and names that contain regex characters.
+
+```powershell
+git status --short
+git diff --stat
+git diff --cached --stat
+rg --files src/app src/features src/composables src/stores
+rg -n -F 'useEditorCore' src
+rg -n -F 'save_note' src src-tauri packages
+rg -n -F 'generate_handler!' src-tauri/src/lib.rs
+rg --files src src-tauri packages -g '*test*' -g '*spec*'
+rg -n -F 'symbolName' src src-tauri packages tools
+git log -5 -- path/to/file
+git blame -L 20,60 -- path/to/file
+git diff --check
+```
+
+- `rg` respects ignore rules by default. Use `rg --files --hidden` for hidden tracked configuration. For a known ignored local document or skill, inspect its explicit path or use `--no-ignore` only on that narrow directory; do not scan build output, dependencies, or user workspace data.
+- A zero-result search is a lead, not proof of absence. Try the translated key, alternate casing, import alias, event/command string, re-export, and the opposite side of IPC before concluding a path is unused.
+- Use Git history to explain intent or locate a regression, then verify against current code. Do not treat an old commit, test fixture, mock, or design document as proof of present runtime behavior.
+- Keep exploration proportional: follow the relevant dependency chain and reverse callers. Broaden the search when the evidence crosses a boundary or a scoped search cannot explain the behavior.

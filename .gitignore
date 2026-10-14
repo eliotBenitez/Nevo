@@ -59,7 +59,6 @@ scripts
 !.codex/skills/nevo-verify-change/
 !.codex/skills/nevo-verify-change/**
 
-graphify-out
 Nevo.html
 
 dist-android

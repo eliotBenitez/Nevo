@@ -89,7 +89,7 @@ final result: passed
 
 ## Verification and limitations
 
-- Passed: all seven graph test files (22 tests), ESLint on the four scoped TS/Vue files, frontend type check/build/bundle budgets, x86_64 debug APK build/install/launch, scoped and full `git diff --check`, and `graphify update .`.
+- Passed: all seven graph test files (22 tests), ESLint on the four scoped TS/Vue files, frontend type check/build/bundle budgets, x86_64 debug APK build/install/launch, scoped and full `git diff --check`.
 - Separate baseline failure: `src/styles/tailwind-cascade.test.ts` expects a high-contrast focus selector absent even in HEAD's `src/styles/base.css`. The other four style-contract tests passed; shared styles were not changed for this task.
 - Test-tool limitation: CDP `Input.insertText` did not enter text despite focusing the input. OS touch plus `adb shell input text` confirmed actual Android search input and graph response. Hardware focus navigation does not prove a physical external keyboard or vendor-specific IME behavior.
 - No remaining P0/P1/P2 finding in the scoped Android header. Full frontend/Rust suites and desktop native QA were not run; no Rust implementation changed in this task.
@@ -121,7 +121,7 @@ final result: passed
 
 ## Checks and separate finding
 
-- Passed: all 13 canvas test files (48 tests), changed-file ESLint, frontend type/build/bundle checks, x86_64 and ARM64 debug APK builds, x86_64 install/Android runtime launch, scoped diff review/check, and `graphify update .`. The jsdom canvas warning did not fail any test; actual rendering was checked in Android.
+- Passed: all 13 canvas test files (48 tests), changed-file ESLint, frontend type/build/bundle checks, x86_64 and ARM64 debug APK builds, x86_64 install/Android runtime launch, scoped diff review/check. The jsdom canvas warning did not fail any test; actual rendering was checked in Android.
 - No implementation-mirroring CSS class test was added. Native computed-style assertions checked border widths, backgrounds, sizing, and selection directly.
 - Separate existing P1 interaction defect: toolbar pointer-down events can reach `useCanvasInteractionRouting` / `useCanvasCreationGestures`, causing an object under the toolbar when changing from an active shape tool. Existing `CanvasToolbar`/`CanvasControls` did not stop that event before this CSS change. The defect was reported separately because the user limited this task to borders. The two shapes created by the QA button switches were undone; `canvas-shapes-final-clean.png` confirmed their removal. No remaining P2 border mismatch.
 - Broad frontend/Rust suites were not run for this one-component style change; physical ARM64 runtime was not verified.

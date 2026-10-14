@@ -26,12 +26,6 @@ Use different Claude models for different tasks to combine high-quality planning
 - Trivial one-line fixes and quick answers to questions — handled directly by Opus.
 - Steps where the cost of setting up the task for the subagent is higher than the fix itself.
 
-## graphify
+## Codebase Navigation
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
-
-Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+Follow the Source Navigation and Impact Analysis workflow in `AGENTS.md`: orient with the documentation map, locate entry points with `rg`, trace callers and registration boundaries, and verify conclusions against current source and tests.
