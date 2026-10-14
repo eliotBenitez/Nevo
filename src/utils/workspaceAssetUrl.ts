@@ -14,3 +14,12 @@ export function workspaceAssetUrl(src: string): string {
   }
   return convertFileSrc(normalized, 'nevoasset')
 }
+
+// Note content is untrusted: an unsafe src must render as a broken image, not crash the view.
+export function safeWorkspaceAssetUrl(src: string): string | null {
+  try {
+    return workspaceAssetUrl(src)
+  } catch {
+    return null
+  }
+}

@@ -2,7 +2,7 @@ import { noteCommands, workspaceCommands } from '../../../tauri/commands'
 import { mediaHttpUrl } from '../../../tauri/mediaServer'
 import type { WorkspaceBackend } from '../../../core/workspace-backend'
 import { appLogger } from '../../../utils/logger'
-import { workspaceAssetUrl } from '../../../utils/workspaceAssetUrl'
+import { safeWorkspaceAssetUrl } from '../../../utils/workspaceAssetUrl'
 import { MAX_ASSET_MB, isWithinAssetLimit } from '../../../core/assets/assetLimits'
 import { useToast } from '../../../ui/composables/useToast'
 import { i18n } from '../../../i18n'
@@ -21,13 +21,13 @@ export function useEditorAssetActions(options: EditorAssetActionsOptions) {
 
   function resolveWorkspaceAssetSrc(src: string): string | null {
     if (!options.getWorkspacePath()) return null
-    return workspaceAssetUrl(src)
+    return safeWorkspaceAssetUrl(src)
   }
 
   function resolveEditorAssetSrc(src: string): string {
     if (/^(https?|data|blob):/.test(src)) return src
     if (!options.getWorkspacePath()) return src
-    return workspaceAssetUrl(src)
+    return safeWorkspaceAssetUrl(src) ?? ''
   }
 
   function resolveMediaAssetSrc(src: string): string | null {

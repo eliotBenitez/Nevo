@@ -22,4 +22,10 @@ describe('workspaceAssetUrl', () => {
     expect(() => workspaceAssetUrl('.nevo/assets/../../secret')).toThrow('Unsafe workspace asset path')
     expect(() => workspaceAssetUrl('.nevo\\assets\\image.png')).toThrow('Unsafe workspace asset path')
   })
+  it('returns null instead of throwing for unsafe note content', async () => {
+    const { safeWorkspaceAssetUrl } = await import('./workspaceAssetUrl')
+    expect(safeWorkspaceAssetUrl('C:\\Users\\image.png')).toBeNull()
+    expect(safeWorkspaceAssetUrl('image.png')).toBeNull()
+    expect(safeWorkspaceAssetUrl('.nevo/assets/image.png')).toBe('nevoasset://.nevo/assets/image.png')
+  })
 })

@@ -6,7 +6,7 @@ import { useI18n } from 'vue-i18n'
 import { noteCommands } from '../../../tauri/commands'
 import { mediaHttpUrl } from '../../../tauri/mediaServer'
 import { appLogger } from '../../../utils/logger'
-import { workspaceAssetUrl } from '../../../utils/workspaceAssetUrl'
+import { safeWorkspaceAssetUrl } from '../../../utils/workspaceAssetUrl'
 import { blockNode } from '../../../utils/noteExport/htmlSerializer'
 import { createDefaultWorkspaceSettings, EDITOR_LINE_WIDTHS, resolveEditorFontFamilyCss } from '../../../utils/workspace-settings'
 import { useWorkspaceStore } from '../../../stores/workspace'
@@ -275,7 +275,7 @@ function refreshIsEmpty() {
 function resolveAssetSrc(src: string): string {
   if (/^(https?|data|blob):/.test(src)) return src
   if (!props.workspacePath) return src
-  return workspaceAssetUrl(src)
+  return safeWorkspaceAssetUrl(src) ?? ''
 }
 
 function resolveMediaSrc(src: string): string | null {
