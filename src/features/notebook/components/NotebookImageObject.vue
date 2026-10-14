@@ -22,8 +22,8 @@ const showPlaceholder = computed(() => !href.value || failed.value)
 </script>
 
 <template>
-  <g class="notebook-image" aria-hidden="true">
-    <polygon v-if="showPlaceholder" class="notebook-image__placeholder" :points="outline" :opacity="image.opacity" />
+  <g class="notebook-image tw:pointer-events-none" aria-hidden="true">
+    <polygon v-if="showPlaceholder" class="notebook-image__placeholder tw:fill-[#eee] tw:stroke-[#b5b5b5] tw:stroke-1 tw:[vector-effect:non-scaling-stroke]" :points="outline" :opacity="image.opacity" />
     <image
       v-else
       :href="href ?? undefined"
@@ -34,24 +34,6 @@ const showPlaceholder = computed(() => !href.value || failed.value)
       :opacity="image.opacity"
       @error="failed = true"
     />
-    <polygon v-if="selected" class="notebook-image__outline" :points="outline" />
+    <polygon v-if="selected" class="notebook-image__outline tw:fill-none tw:stroke-accent tw:stroke-[1.4] tw:[vector-effect:non-scaling-stroke]" :points="outline" />
   </g>
 </template>
-
-<style scoped>
-.notebook-image { pointer-events: none; }
-
-.notebook-image__placeholder {
-  fill: #eee;
-  stroke: #b5b5b5;
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-}
-
-.notebook-image__outline {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 1.4;
-  vector-effect: non-scaling-stroke;
-}
-</style>

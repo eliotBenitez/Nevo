@@ -54,14 +54,14 @@ watch(() => props.selectedPageId, async (pageId) => {
 <template>
   <aside
     v-show="open"
-    class="notebook-pages"
+    class="notebook-pages tw:flex tw:min-h-0 tw:w-[206px] tw:flex-none tw:flex-col tw:border-r tw:border-border-subtle tw:bg-surface-panel"
     :class="{ 'notebook-pages--open': open, 'notebook-pages--drawer': narrow }"
     :aria-label="t('notebook.pages.label')"
     :aria-hidden="!open"
     :inert="!open"
   >
-    <header class="notebook-pages__header">
-      <h2>{{ t('notebook.pages.label') }}</h2>
+    <header class="notebook-pages__header tw:flex tw:min-h-[54px] tw:items-center tw:justify-between tw:border-b tw:border-border-subtle tw:py-[5px] tw:pr-2 tw:pl-3.5">
+      <h2 class="tw:m-0 tw:text-[12px] tw:font-semibold tw:text-content-secondary">{{ t('notebook.pages.label') }}</h2>
       <NvButton variant="ghost" icon :aria-label="t('notebook.pages.close')" @click="emit('close')">
         <X :size="18" aria-hidden="true" />
       </NvButton>
@@ -69,23 +69,23 @@ watch(() => props.selectedPageId, async (pageId) => {
         <Plus :size="18" aria-hidden="true" />
       </NvButton>
     </header>
-    <ol ref="listEl" class="notebook-pages__list" :aria-label="t('notebook.pages.order')" @scroll="onListScroll">
-      <li v-if="topSpacerHeight" class="notebook-pages__spacer" :style="{ height: `${topSpacerHeight}px` }" aria-hidden="true" />
-      <li v-for="(page, visibleIndex) in visiblePages" :key="page.id">
+    <ol ref="listEl" class="notebook-pages__list tw:m-0 tw:grid tw:list-none tw:content-start tw:gap-2 tw:overflow-auto tw:px-2.5 tw:py-3" :aria-label="t('notebook.pages.order')" @scroll="onListScroll">
+      <li v-if="topSpacerHeight" class="notebook-pages__spacer tw:pointer-events-none" :style="{ height: `${topSpacerHeight}px` }" aria-hidden="true" />
+      <li v-for="(page, visibleIndex) in visiblePages" :key="page.id" class="tw:grid tw:gap-[3px]">
         <button
-          class="notebook-pages__item"
+          class="notebook-pages__item tw:grid tw:min-h-11 tw:w-full tw:cursor-pointer tw:gap-[5px] tw:rounded-lg tw:border tw:p-[5px] tw:focus-visible:outline-2 tw:focus-visible:outline-offset-1 tw:focus-visible:outline-focus-ring"
           :data-page-thumbnail="page.id"
-          :class="{ 'notebook-pages__item--active': page.id === selectedPageId }"
+          :class="page.id === selectedPageId ? 'notebook-pages__item--active tw:border-accent tw:bg-(--accent-soft) tw:text-content-primary' : 'tw:border-transparent tw:bg-transparent tw:text-content-secondary tw:hover:bg-(--hover)'"
           :aria-current="page.id === selectedPageId ? 'page' : undefined"
           :aria-label="t('notebook.pages.pageSummary', { page: startIndex + visibleIndex + 1, marks: page.objects.length })"
           :aria-posinset="startIndex + visibleIndex + 1"
           :aria-setsize="pages.length"
           @click="emit('select', page.id)"
         >
-          <span class="notebook-pages__thumbnail"><NotebookPageThumbnail :page="page" /></span>
-          <span class="notebook-pages__number">{{ startIndex + visibleIndex + 1 }}</span>
+          <span class="notebook-pages__thumbnail tw:pointer-events-none tw:block tw:aspect-[595.28/841.89] tw:w-full tw:overflow-hidden tw:bg-[#fff] tw:[box-shadow:0_1px_4px_rgb(16_22_28/12%)]"><NotebookPageThumbnail :page="page" /></span>
+          <span class="notebook-pages__number tw:text-center tw:text-[11px] tw:tabular-nums">{{ startIndex + visibleIndex + 1 }}</span>
         </button>
-        <div class="notebook-pages__row-actions" :aria-label="t('notebook.pages.actions', { page: startIndex + visibleIndex + 1 })">
+        <div class="notebook-pages__row-actions tw:flex tw:justify-center tw:gap-px tw:opacity-[0.84]" :aria-label="t('notebook.pages.actions', { page: startIndex + visibleIndex + 1 })">
           <NvButton variant="ghost" icon :disabled="startIndex + visibleIndex === 0" :aria-label="t('notebook.pages.moveUp')" @click="emit('move', page.id, -1)">
             <ChevronUp :size="15" aria-hidden="true" />
           </NvButton>
@@ -100,43 +100,13 @@ watch(() => props.selectedPageId, async (pageId) => {
           </NvButton>
         </div>
       </li>
-      <li v-if="bottomSpacerHeight" class="notebook-pages__spacer" :style="{ height: `${bottomSpacerHeight}px` }" aria-hidden="true" />
+      <li v-if="bottomSpacerHeight" class="notebook-pages__spacer tw:pointer-events-none" :style="{ height: `${bottomSpacerHeight}px` }" aria-hidden="true" />
     </ol>
   </aside>
 </template>
 
 <style scoped>
-.notebook-pages {
-  display: flex;
-  width: 206px;
-  flex: none;
-  flex-direction: column;
-  min-height: 0;
-  border-right: 1px solid var(--border-subtle);
-  background: var(--surface-panel);
-}
-
-.notebook-pages__header {
-  display: flex;
-  min-height: 54px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 5px 8px 5px 14px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.notebook-pages__header h2 { margin: 0; color: var(--text-secondary); font-size: 12px; font-weight: 600; }
-.notebook-pages__list { display: grid; align-content: start; gap: 8px; overflow: auto; margin: 0; padding: 12px 10px; list-style: none; }
-.notebook-pages__spacer { pointer-events: none; }
-.notebook-pages__list li { display: grid; gap: 3px; }
-.notebook-pages__item { display: grid; width: 100%; min-height: 44px; gap: 5px; padding: 5px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text-secondary); cursor: pointer; }
-.notebook-pages__item:hover { background: var(--hover); }
-.notebook-pages__item:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
-.notebook-pages__item--active { border-color: var(--accent); background: var(--accent-soft); color: var(--text-primary); }
-.notebook-pages__thumbnail { display: block; width: 100%; aspect-ratio: 595.28 / 841.89; overflow: hidden; background: #fff; box-shadow: 0 1px 4px rgb(16 22 28 / 12%); pointer-events: none; }
-.notebook-pages__thumbnail :deep(svg) { display: block; width: 100%; height: 100%; }
-.notebook-pages__number { text-align: center; font-size: 11px; font-variant-numeric: tabular-nums; }
-.notebook-pages__row-actions { display: flex; justify-content: center; gap: 1px; opacity: 0.84; }
+/* Remaining CSS: :deep() override into NvButton and the narrow-width drawer (parent-class state cascade, transition and reduced-motion). */
 .notebook-pages__row-actions :deep(.nv-btn) { min-width: 44px; min-height: 44px; padding: 0; }
 
 @media (max-width: 900px) {

@@ -366,10 +366,10 @@ onBeforeUnmount(() => { input.finish(); stopNotebookWatch(); if (updateNarrow) w
 </script>
 
 <template>
-  <section ref="stage" class="notebook-view" :class="{ 'notebook-view--panning': interaction?.isPanning.value }" :aria-label="t('notebook.toolbar')" @keydown="interaction?.onKeyDown" @keyup="interaction?.onKeyUp" @pointerdown.capture="interaction?.onPointerDown" @pointermove.capture="interaction?.onPointerMove" @pointerup.capture="interaction?.onPointerUp" @pointercancel.capture="interaction?.onPointerCancel" @wheel="interaction?.onWheel" @paste="onPaste">
+  <section ref="stage" class="notebook-view tw:@container/notebook-editor tw:flex tw:size-full tw:min-h-0 tw:min-w-0 tw:flex-col tw:overflow-hidden tw:bg-(--surface-0) tw:text-content-primary" :class="{ 'notebook-view--panning': interaction?.isPanning.value }" :aria-label="t('notebook.toolbar')" @keydown="interaction?.onKeyDown" @keyup="interaction?.onKeyUp" @pointerdown.capture="interaction?.onPointerDown" @pointermove.capture="interaction?.onPointerMove" @pointerup.capture="interaction?.onPointerUp" @pointercancel.capture="interaction?.onPointerCancel" @wheel="interaction?.onWheel" @paste="onPaste">
     <template v-if="editable && notebook && doc">
-      <div class="notebook-view__title-row">
-        <input ref="titleInput" class="notebook-view__title" :value="note.title" :aria-label="t('notebook.title')" @change="saveTitle" @keydown.enter="($event.target as HTMLInputElement).blur()">
+      <div class="notebook-view__title-row tw:flex tw:min-h-10 tw:flex-none tw:items-center tw:px-3.5 tw:max-[760px]:min-h-[42px] tw:max-[760px]:px-3">
+        <input ref="titleInput" class="notebook-view__title tw:h-8 tw:w-[min(100%,720px)] tw:border-0 tw:bg-transparent tw:text-[16px] tw:leading-[1.3] tw:font-semibold tw:text-content-primary tw:outline-0 tw:font-nv-ui tw:focus-visible:rounded-md tw:focus-visible:ring-2 tw:focus-visible:ring-focus-ring" :value="note.title" :aria-label="t('notebook.title')" @change="saveTitle" @keydown.enter="($event.target as HTMLInputElement).blur()">
       </div>
       <NotebookToolbar
         :class="{ 'notebook-toolbar--selection': selectionVisible }"
@@ -391,14 +391,14 @@ onBeforeUnmount(() => { input.finish(); stopNotebookWatch(); if (updateNarrow) w
         @flip="doc.flipSelection" @align="doc.alignSelection" @distribute="doc.distributeSelection" @copy="doc.copySelection" @color="recolorSelection" @transform="doc.transformSelection" @clear="doc.clearSelection(); scroller?.focus({ preventScroll: true })"
       />
       <input ref="imageInput" class="notebook-view__file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden tabindex="-1" aria-hidden="true" @change="onImageFileChosen">
-      <div class="notebook-view__body">
+      <div class="notebook-view__body tw:relative tw:flex tw:min-h-0 tw:flex-1">
         <NotebookPagesPanel
           :pages="notebook.pages" :selected-page-id="selectedPageId" :open="pagesOpen" :narrow="narrow"
           @select="selectPage" @add="addPage" @duplicate="duplicatePage" @move="movePage"
           @remove="removePage" @close="closePages"
         />
-        <main ref="scroller" class="notebook-view__scroller" tabindex="0" :aria-label="t('notebook.pages.label')" @scroll="interaction?.onScroll">
-          <div class="notebook-view__pages" :style="{ minHeight: `${viewport.totalHeight.value}px` }">
+        <main ref="scroller" class="notebook-view__scroller tw:relative tw:min-w-0 tw:flex-1 tw:touch-none tw:overflow-auto tw:overscroll-contain tw:bg-(--surface-0) tw:outline-none tw:focus-visible:not-data-[pointer-focus]:[box-shadow:inset_0_0_0_2px_var(--focus-ring)]" tabindex="0" :aria-label="t('notebook.pages.label')" @scroll="interaction?.onScroll">
+          <div class="notebook-view__pages tw:flex tw:min-w-max tw:flex-col tw:items-center" :style="{ minHeight: `${viewport.totalHeight.value}px` }">
             <div v-if="topSpacer" aria-hidden="true" :style="{ height: `${topSpacer}px` }" />
             <NotebookPage
               v-for="(page, visibleIndex) in visiblePages" :key="page.id" :data-page-id="page.id" :page="page" :page-number="viewport.visibleRange.value.start + visibleIndex + 1"
@@ -413,33 +413,21 @@ onBeforeUnmount(() => { input.finish(); stopNotebookWatch(); if (updateNarrow) w
           </div>
         </main>
       </div>
-      <p class="notebook-view__sr-only" aria-live="polite">{{ summaryPage ? (summaryPage.id === ghostPage?.id ? t('notebook.pages.ghost') : t('notebook.pages.accessibleSummary', { page: viewport.selectedIndex.value + 1, marks: summaryPage.objects.length, paper: t(`notebook.paper.${summaryPage.paper.kind}`) })) : '' }}</p>
+      <p class="notebook-view__sr-only tw:sr-only" aria-live="polite">{{ summaryPage ? (summaryPage.id === ghostPage?.id ? t('notebook.pages.ghost') : t('notebook.pages.accessibleSummary', { page: viewport.selectedIndex.value + 1, marks: summaryPage.objects.length, paper: t(`notebook.paper.${summaryPage.paper.kind}`) })) : '' }}</p>
     </template>
-    <div v-else class="notebook-view__unsupported" role="status">
+    <div v-else class="notebook-view__unsupported tw:mx-auto tw:my-12 tw:max-w-[640px] tw:p-6 tw:text-content-primary" role="status">
       <h2>{{ t('notebook.readOnlyTitle') }}</h2>
       <p>{{ t('notebook.readOnlyDescription') }}</p>
       <ul><li v-for="diagnostic in ('diagnostics' in format ? format.diagnostics : [])" :key="`${diagnostic.code}:${diagnostic.path}`">{{ diagnostic.code }} — {{ diagnostic.path }}</li></ul>
       <p v-if="saveError" role="alert">{{ saveError }}</p>
-      <button class="notebook-view__source-export" type="button" :disabled="sourceExporting" @click="exportSource">{{ sourceExporting ? t('notebook.saveStatus.saving') : t('notebook.exportSource') }}</button>
+      <button class="notebook-view__source-export tw:min-h-11 tw:cursor-pointer tw:rounded-lg tw:border tw:border-border-subtle tw:bg-surface-panel tw:px-3.5 tw:py-0 tw:text-[13px] tw:font-medium tw:text-content-primary tw:font-nv-ui tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-focus-ring" type="button" :disabled="sourceExporting" @click="exportSource">{{ sourceExporting ? t('notebook.saveStatus.saving') : t('notebook.exportSource') }}</button>
     </div>
   </section>
 </template>
 
 <style scoped>
-.notebook-view { display:flex; width:100%; height:100%; min-width:0; min-height:0; flex-direction:column; overflow:hidden; color:var(--text-primary); background:var(--surface-0); container:notebook-editor / inline-size; }
-.notebook-view__title-row { display:flex; flex:none; align-items:center; min-height:40px; padding:0 14px; }
-.notebook-view__title { width:min(100%,720px); height:32px; border:0; outline:0; background:transparent; color:var(--text-primary); font:600 16px/1.3 var(--font-ui); }
-.notebook-view__title:focus-visible { border-radius:6px; box-shadow:0 0 0 2px var(--focus-ring); }
-.notebook-view__body { position:relative; display:flex; flex:1; min-height:0; }
+/* Remaining CSS: :deep() overrides into child toolbars/panels and the panning cursor cascade over every descendant. */
 .notebook-view :deep(.notebook-toolbar--selection .notebook-toolbar__save) { position:static; grid-column:1 / -1; justify-self:end; }
 .notebook-view :deep(.notebook-pages .nv-btn) { min-width:44px; min-height:44px; }
-.notebook-view__scroller { position:relative; flex:1; min-width:0; overflow:auto; overscroll-behavior:contain; background:var(--surface-0); outline:none; touch-action:none; }
-.notebook-view__scroller:focus-visible:not([data-pointer-focus]) { box-shadow:inset 0 0 0 2px var(--focus-ring); }
-.notebook-view__pages { display:flex; min-width:max-content; flex-direction:column; align-items:center; }
 .notebook-view--panning, .notebook-view--panning * { cursor:grabbing!important; }
-.notebook-view__unsupported { max-width:640px; margin:48px auto; padding:24px; color:var(--text-primary); }
-.notebook-view__source-export { min-height:44px; padding:0 14px; border:1px solid var(--border-subtle); border-radius:8px; background:var(--surface-panel); color:var(--text-primary); font:500 13px var(--font-ui); cursor:pointer; }
-.notebook-view__source-export:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }
-.notebook-view__sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
-@media(max-width:760px) { .notebook-view__title-row { min-height:42px; padding-inline:12px; } .notebook-view__title { font-size:16px; } }
 </style>

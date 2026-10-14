@@ -50,13 +50,20 @@ function colorLabel(color: string): string {
   return name ? t(`notebook.palette.colors.${name}`) : color
 }
 
+const SWATCH_SELECTED = 'is-selected tw:border-[color-mix(in_oklab,var(--accent)_70%,white)] tw:[box-shadow:0_0_0_2px_var(--accent-soft)]'
+const SWATCH_IDLE = 'tw:border-line-default/70 tw:[box-shadow:inset_0_0_0_1px_color-mix(in_oklab,var(--shadow)_10%,transparent)]'
+
+function swatchStateClass(color: string): string {
+  return colorsMatch(color, props.modelValue) ? SWATCH_SELECTED : SWATCH_IDLE
+}
+
 function update(color: string | null): void {
   if (color) emit('update:modelValue', color)
 }
 </script>
 
 <template>
-  <div class="notebook-color-control">
+  <div class="notebook-color-control tw:flex tw:flex-none tw:items-center tw:gap-1.5">
     <NvColorPicker
       :model-value="modelValue"
       :colors="builtinOptions"
@@ -66,13 +73,13 @@ function update(color: string | null): void {
       @update:model-value="update"
     >
       <template #sections="{ select }">
-        <section class="notebook-color-control__section">
-          <div class="notebook-color-control__heading">
+        <section class="notebook-color-control__section tw:mt-2.5 tw:grid tw:gap-1.5">
+          <div class="notebook-color-control__heading tw:flex tw:min-h-[26px] tw:items-center tw:justify-between tw:gap-2 tw:whitespace-nowrap tw:text-[11.5px] tw:leading-[normal] tw:font-semibold tw:text-content-secondary tw:font-nv-ui">
             <span>{{ t('notebook.palette.custom') }}</span>
-            <span class="notebook-color-control__actions">
+            <span class="notebook-color-control__actions tw:inline-flex tw:gap-1">
               <button
                 type="button"
-                class="notebook-color-control__action notebook-color-control__add"
+                class="notebook-color-control__action notebook-color-control__add tw:inline-grid tw:size-[26px] tw:cursor-pointer tw:place-items-center tw:rounded-[7px] tw:border tw:border-transparent tw:bg-transparent tw:p-0 tw:text-[11px] tw:leading-[normal] tw:font-semibold tw:text-content-secondary tw:font-nv-ui tw:enabled:hover:border-line-default tw:enabled:hover:bg-(--hover) tw:enabled:hover:text-content-primary tw:aria-pressed:border-line-default tw:aria-pressed:bg-(--hover) tw:aria-pressed:text-content-primary tw:disabled:cursor-not-allowed tw:disabled:opacity-45 tw:coarse:size-9 tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-focus-ring"
                 :disabled="!canAddCurrent"
                 :aria-label="t('notebook.palette.addCurrent')"
                 :title="t('notebook.palette.addCurrent')"
@@ -83,7 +90,7 @@ function update(color: string | null): void {
               <button
                 v-if="presets.length"
                 type="button"
-                class="notebook-color-control__action notebook-color-control__edit"
+                class="notebook-color-control__action notebook-color-control__edit tw:inline-grid tw:size-[26px] tw:cursor-pointer tw:place-items-center tw:rounded-[7px] tw:border tw:border-transparent tw:bg-transparent tw:p-0 tw:text-[11px] tw:leading-[normal] tw:font-semibold tw:text-content-secondary tw:font-nv-ui tw:enabled:hover:border-line-default tw:enabled:hover:bg-(--hover) tw:enabled:hover:text-content-primary tw:aria-pressed:border-line-default tw:aria-pressed:bg-(--hover) tw:aria-pressed:text-content-primary tw:disabled:cursor-not-allowed tw:disabled:opacity-45 tw:coarse:size-9 tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-focus-ring"
                 :aria-pressed="editing"
                 :aria-label="editing ? t('notebook.palette.done') : t('notebook.palette.edit')"
                 :title="editing ? t('notebook.palette.done') : t('notebook.palette.edit')"
@@ -93,12 +100,12 @@ function update(color: string | null): void {
               </button>
             </span>
           </div>
-          <div v-if="presets.length" class="notebook-color-control__grid" role="group" :aria-label="t('notebook.palette.custom')">
-            <span v-for="color in presets" :key="color" class="notebook-color-control__cell">
+          <div v-if="presets.length" class="notebook-color-control__grid tw:grid tw:grid-cols-[repeat(6,minmax(0,1fr))] tw:gap-2" role="group" :aria-label="t('notebook.palette.custom')">
+            <span v-for="color in presets" :key="color" class="notebook-color-control__cell tw:relative tw:block">
               <button
                 type="button"
-                class="notebook-color-control__swatch"
-                :class="{ 'is-selected': colorsMatch(color, modelValue) }"
+                class="notebook-color-control__swatch tw:box-border tw:block tw:aspect-square tw:w-full tw:cursor-pointer tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:p-0 tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-focus-ring"
+                :class="swatchStateClass(color)"
                 :style="{ background: color }"
                 :aria-label="color"
                 :title="color"
@@ -107,7 +114,7 @@ function update(color: string | null): void {
               <button
                 v-if="editing"
                 type="button"
-                class="notebook-color-control__remove"
+                class="notebook-color-control__remove tw:absolute tw:-top-[5px] tw:-right-[5px] tw:grid tw:size-4 tw:cursor-pointer tw:place-items-center tw:rounded-full tw:border tw:border-line-default tw:bg-surface-panel tw:p-0 tw:text-content-primary tw:coarse:-top-2 tw:coarse:-right-2 tw:coarse:size-6 tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-focus-ring"
                 :aria-label="t('notebook.palette.remove', { color })"
                 :title="t('notebook.palette.remove', { color })"
                 @click="emit('remove-preset', color)"
@@ -117,14 +124,14 @@ function update(color: string | null): void {
             </span>
           </div>
         </section>
-        <section v-if="recents.length" class="notebook-color-control__section">
-          <div class="notebook-color-control__heading"><span>{{ t('notebook.palette.recent') }}</span></div>
-          <div class="notebook-color-control__grid" role="group" :aria-label="t('notebook.palette.recent')">
-            <span v-for="color in recents" :key="color" class="notebook-color-control__cell">
+        <section v-if="recents.length" class="notebook-color-control__section tw:mt-2.5 tw:grid tw:gap-1.5">
+          <div class="notebook-color-control__heading tw:flex tw:min-h-[26px] tw:items-center tw:justify-between tw:gap-2 tw:whitespace-nowrap tw:text-[11.5px] tw:leading-[normal] tw:font-semibold tw:text-content-secondary tw:font-nv-ui"><span>{{ t('notebook.palette.recent') }}</span></div>
+          <div class="notebook-color-control__grid tw:grid tw:grid-cols-[repeat(6,minmax(0,1fr))] tw:gap-2" role="group" :aria-label="t('notebook.palette.recent')">
+            <span v-for="color in recents" :key="color" class="notebook-color-control__cell tw:relative tw:block">
               <button
                 type="button"
-                class="notebook-color-control__swatch"
-                :class="{ 'is-selected': colorsMatch(color, modelValue) }"
+                class="notebook-color-control__swatch tw:box-border tw:block tw:aspect-square tw:w-full tw:cursor-pointer tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:p-0 tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-focus-ring"
+                :class="swatchStateClass(color)"
                 :style="{ background: color }"
                 :aria-label="colorLabel(color)"
                 :title="colorLabel(color)"
@@ -135,12 +142,12 @@ function update(color: string | null): void {
         </section>
       </template>
     </NvColorPicker>
-    <div v-if="showQuick && quickColors.length" class="notebook-color-control__quick" role="group" :aria-label="t('notebook.palette.quick')">
+    <div v-if="showQuick && quickColors.length" class="notebook-color-control__quick tw:flex tw:items-center tw:gap-1" role="group" :aria-label="t('notebook.palette.quick')">
       <button
         v-for="color in quickColors"
         :key="color"
         type="button"
-        class="notebook-color-control__quick-swatch"
+        class="notebook-color-control__quick-swatch tw:box-border tw:size-5 tw:cursor-pointer tw:rounded-md tw:border tw:border-line-default tw:p-0 tw:[box-shadow:inset_0_0_0_1px_color-mix(in_oklab,var(--shadow)_10%,transparent)] tw:aria-pressed:border-[color-mix(in_oklab,var(--accent)_70%,white)] tw:aria-pressed:[box-shadow:0_0_0_2px_var(--accent-soft)] tw:disabled:cursor-not-allowed tw:disabled:opacity-45 tw:coarse:size-8 tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-focus-ring"
         :style="{ background: color }"
         :aria-label="colorLabel(color)"
         :title="colorLabel(color)"
@@ -151,29 +158,3 @@ function update(color: string | null): void {
     </div>
   </div>
 </template>
-
-<style scoped>
-.notebook-color-control { display: flex; flex: none; align-items: center; gap: 6px; }
-.notebook-color-control__quick { display: flex; align-items: center; gap: 4px; }
-.notebook-color-control__quick-swatch { box-sizing: border-box; width: 20px; height: 20px; padding: 0; border: 1px solid var(--border-default); border-radius: 6px; box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--shadow) 10%, transparent); cursor: pointer; }
-.notebook-color-control__quick-swatch[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--accent-soft); border-color: color-mix(in oklab, var(--accent) 70%, white); }
-.notebook-color-control__quick-swatch:focus-visible, .notebook-color-control__swatch:focus-visible, .notebook-color-control__action:focus-visible, .notebook-color-control__remove:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-.notebook-color-control__quick-swatch:disabled { cursor: not-allowed; opacity: 0.45; }
-.notebook-color-control__section { display: grid; gap: 6px; margin-top: 10px; }
-.notebook-color-control__heading { display: flex; min-height: 26px; align-items: center; justify-content: space-between; gap: 8px; white-space: nowrap; color: var(--text-secondary); font: 600 11.5px var(--font-ui); }
-.notebook-color-control__actions { display: inline-flex; gap: 4px; }
-.notebook-color-control__action { display: inline-grid; width: 26px; height: 26px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--text-secondary); font: 600 11px var(--font-ui); cursor: pointer; }
-.notebook-color-control__action:hover:not(:disabled), .notebook-color-control__action[aria-pressed='true'] { border-color: var(--border-default); background: var(--hover); color: var(--text-primary); }
-.notebook-color-control__action:disabled { cursor: not-allowed; opacity: 0.45; }
-.notebook-color-control__grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
-.notebook-color-control__cell { position: relative; display: block; }
-.notebook-color-control__swatch { box-sizing: border-box; display: block; width: 100%; aspect-ratio: 1; padding: 0; border: 1px solid color-mix(in oklab, var(--border-default) 70%, transparent); border-radius: calc(8px * var(--radius-scale, 1)); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--shadow) 10%, transparent); cursor: pointer; }
-.notebook-color-control__swatch.is-selected { border-color: color-mix(in oklab, var(--accent) 70%, white); box-shadow: 0 0 0 2px var(--accent-soft); }
-.notebook-color-control__remove { position: absolute; top: -5px; right: -5px; display: grid; width: 16px; height: 16px; place-items: center; padding: 0; border: 1px solid var(--border-default); border-radius: 50%; background: var(--surface-panel); color: var(--text-primary); cursor: pointer; }
-
-@media (pointer: coarse) {
-  .notebook-color-control__quick-swatch { width: 32px; height: 32px; }
-  .notebook-color-control__action { width: 36px; height: 36px; }
-  .notebook-color-control__remove { width: 24px; height: 24px; top: -8px; right: -8px; }
-}
-</style>

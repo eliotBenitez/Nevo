@@ -39,20 +39,13 @@ function select(shape: NotebookShapeKind): void {
       </NvButton>
     </template>
     <NvButton
-      v-for="shape in shapes" :key="shape.id" class="nv-menu-item notebook-shape-option"
+      v-for="shape in shapes" :key="shape.id" class="nv-menu-item notebook-shape-option tw:h-8 tw:w-full tw:justify-start tw:gap-2 tw:px-2 tw:py-0 tw:text-[12px] tw:coarse:h-11 tw:aria-checked:bg-(--surface-subtle) tw:aria-checked:text-accent"
       variant="ghost" :aria-label="shape.label" role="menuitemradio"
       :aria-checked="tool === shape.id" @click.stop="select(shape.id)"
     >
       <component :is="shape.icon" :size="14" aria-hidden="true" />
-      <span class="notebook-shape-option__label">{{ shape.label }}</span>
+      <span class="notebook-shape-option__label tw:flex-1 tw:text-left">{{ shape.label }}</span>
       <Check v-if="tool === shape.id" :size="14" aria-hidden="true" />
     </NvButton>
   </NvPopupMenu>
 </template>
-
-<style scoped>
-.notebook-shape-option { width: 100%; height: 32px; justify-content: flex-start; gap: 8px; padding: 0 8px; font-size: 12px; }
-.notebook-shape-option__label { flex: 1; text-align: left; }
-.notebook-shape-option[aria-checked="true"] { background: var(--surface-subtle); color: var(--accent); }
-@media (pointer: coarse) { .notebook-shape-option { height: 44px; } }
-</style>

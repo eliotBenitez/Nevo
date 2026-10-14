@@ -18,19 +18,19 @@ function transform(event: Event, mode: 'scale' | 'angle'): void {
 </script>
 
 <template>
-  <div class="notebook-selection-toolbar" role="group" :aria-label="t('notebook.selection.label')">
-    <span class="notebook-selection-toolbar__count">{{ t('notebook.selection.count', { count }) }}</span>
-    <label class="notebook-selection-toolbar__field">
+  <div class="notebook-selection-toolbar tw:flex tw:flex-none tw:flex-wrap tw:items-center tw:justify-center tw:gap-x-3 tw:gap-y-1.5 tw:px-3 tw:pt-1 tw:pb-2 tw:text-[12px] tw:text-content-secondary tw:font-nv-ui" role="group" :aria-label="t('notebook.selection.label')">
+    <span class="notebook-selection-toolbar__count tw:tabular-nums">{{ t('notebook.selection.count', { count }) }}</span>
+    <label class="notebook-selection-toolbar__field tw:flex tw:items-center tw:gap-1.5 tw:whitespace-nowrap">
       <span>{{ t('notebook.selection.scale') }}</span>
-      <input type="number" value="100" min="5" max="2000" step="5" :disabled="disabled" :aria-label="t('notebook.selection.scale')" @change="transform($event, 'scale')" @keydown.enter="($event.target as HTMLInputElement).blur()">
+      <input class="tw:box-border tw:h-[30px] tw:w-[62px] tw:rounded-md tw:border-0 tw:bg-input-bg tw:px-1.5 tw:py-0 tw:text-[12px] tw:text-content-primary tw:font-nv-ui tw:tabular-nums tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-focus-ring tw:disabled:opacity-45 tw:coarse:min-h-11 tw:coarse:min-w-11" type="number" value="100" min="5" max="2000" step="5" :disabled="disabled" :aria-label="t('notebook.selection.scale')" @change="transform($event, 'scale')" @keydown.enter="($event.target as HTMLInputElement).blur()">
       <span aria-hidden="true">%</span>
     </label>
-    <label class="notebook-selection-toolbar__field">
+    <label class="notebook-selection-toolbar__field tw:flex tw:items-center tw:gap-1.5 tw:whitespace-nowrap">
       <span>{{ t('notebook.selection.rotate') }}</span>
-      <input type="number" value="0" min="-360" max="360" step="1" :disabled="disabled" :aria-label="t('notebook.selection.rotate')" @change="transform($event, 'angle')" @keydown.enter="($event.target as HTMLInputElement).blur()">
+      <input class="tw:box-border tw:h-[30px] tw:w-[62px] tw:rounded-md tw:border-0 tw:bg-input-bg tw:px-1.5 tw:py-0 tw:text-[12px] tw:text-content-primary tw:font-nv-ui tw:tabular-nums tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-focus-ring tw:disabled:opacity-45 tw:coarse:min-h-11 tw:coarse:min-w-11" type="number" value="0" min="-360" max="360" step="1" :disabled="disabled" :aria-label="t('notebook.selection.rotate')" @change="transform($event, 'angle')" @keydown.enter="($event.target as HTMLInputElement).blur()">
       <span aria-hidden="true">°</span>
     </label>
-    <div class="notebook-selection-toolbar__actions">
+    <div class="notebook-selection-toolbar__actions tw:flex tw:flex-none tw:items-center tw:gap-1.5">
       <NvButton variant="ghost" size="sm" icon :disabled="disabled" :aria-label="t('notebook.selection.flipHorizontal')" :title="`${t('notebook.selection.flipHorizontal')} (Shift+H)`" aria-keyshortcuts="Shift+H" @click="emit('flip', 'horizontal')"><FlipHorizontal2 :size="16" aria-hidden="true" /></NvButton>
       <NvButton variant="ghost" size="sm" icon :disabled="disabled" :aria-label="t('notebook.selection.flipVertical')" :title="`${t('notebook.selection.flipVertical')} (Shift+V)`" aria-keyshortcuts="Shift+V" @click="emit('flip', 'vertical')"><FlipVertical2 :size="16" aria-hidden="true" /></NvButton>
       <NotebookAlignMenu :unit-count="unitCount" :disabled="disabled" @align="emit('align', $event)" @distribute="emit('distribute', $event)" />
@@ -53,15 +53,9 @@ function transform(event: Event, mode: 'scale' | 'angle'): void {
 </template>
 
 <style scoped>
-.notebook-selection-toolbar { display:flex; flex:none; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px 12px; padding:4px 12px 8px; color:var(--text-secondary); font:12px var(--font-ui); }
-.notebook-selection-toolbar__count { font-variant-numeric:tabular-nums; }
-.notebook-selection-toolbar__actions { display:flex; flex:none; align-items:center; gap:6px; }
-.notebook-selection-toolbar__field { display:flex; align-items:center; gap:6px; white-space:nowrap; }
-.notebook-selection-toolbar__field input { box-sizing:border-box; width:62px; height:30px; border:0; border-radius:6px; padding:0 6px; background:var(--input-bg); color:var(--text-primary); font:12px var(--font-ui); font-variant-numeric:tabular-nums; }
-.notebook-selection-toolbar input:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }
-.notebook-selection-toolbar input:disabled { opacity:.45; }
+/* Remaining CSS: :deep() override into NvButton and the container-query reflow that must beat the base utilities. */
 .notebook-selection-toolbar :deep(.nv-btn) { width:30px; height:30px; min-height:30px; }
-@media(pointer:coarse) { .notebook-selection-toolbar__field input, .notebook-selection-toolbar :deep(.nv-btn) { min-width:44px; min-height:44px; } }
+@media(pointer:coarse) { .notebook-selection-toolbar :deep(.nv-btn) { min-width:44px; min-height:44px; } }
 @container notebook-editor (max-width:600px) {
   .notebook-selection-toolbar__count { flex:1 0 calc(100% - 170px); }
   .notebook-selection-toolbar__field { order:1; }

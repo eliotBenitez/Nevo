@@ -113,10 +113,10 @@ const accessibleLabel = computed(() => props.ghost ? t('notebook.pages.ghost') :
 </script>
 
 <template>
-  <section class="notebook-page-shell" :aria-label="accessibleLabel" role="group">
-    <div class="notebook-page-gutter" :class="{ 'notebook-page-gutter--ghost': ghost }" aria-hidden="true">{{ pageNumber }}</div>
+  <section class="notebook-page-shell tw:relative tw:mb-2 tw:grid tw:justify-items-center tw:px-[30px] tw:pt-2 tw:pb-7" :aria-label="accessibleLabel" role="group">
+    <div class="notebook-page-gutter tw:absolute tw:top-[18px] tw:left-2 tw:text-[11px] tw:text-content-muted tw:tabular-nums" :class="{ 'notebook-page-gutter--ghost tw:opacity-50': ghost }" aria-hidden="true">{{ pageNumber }}</div>
     <svg
-      class="notebook-page"
+      class="notebook-page tw:block tw:flex-none tw:touch-none tw:overflow-hidden tw:border tw:border-[rgb(20_24_29/8%)] tw:bg-[#fff] tw:select-none tw:[box-shadow:0_2px_10px_rgb(16_22_28/9%)] tw:motion-reduce:[scroll-behavior:auto] tw:focus-visible:outline-2 tw:focus-visible:outline-offset-[3px] tw:focus-visible:outline-focus-ring"
       :class="{ 'notebook-page--pen-active': penActive }"
       :width="page.width * zoom"
       :height="page.height * zoom"
@@ -157,7 +157,7 @@ const accessibleLabel = computed(() => props.ghost ? t('notebook.pages.ghost') :
             :fill="item.color"
             :opacity="item.opacity"
             :transform="item.selected && movePreview ? `translate(${movePreview.x} ${movePreview.y})` : undefined"
-            :class="{ 'notebook-ink__path--selected': item.selected }"
+            :class="{ 'notebook-ink__path--selected tw:[filter:drop-shadow(0_0_1.5px_var(--accent))]': item.selected }"
           />
         </template>
         <path
@@ -169,14 +169,14 @@ const accessibleLabel = computed(() => props.ghost ? t('notebook.pages.ghost') :
         <path
           v-else-if="activePoints.length > 1 && tool === 'lasso'"
           :d="`M ${activePoints.map(point => `${point.x},${point.y}`).join(' L ')} Z`"
-          class="notebook-lasso-preview"
+          class="notebook-lasso-preview tw:fill-[color-mix(in_oklab,var(--accent)_8%,transparent)] tw:stroke-accent tw:stroke-[1.4] tw:[stroke-dasharray:5_4] tw:[vector-effect:non-scaling-stroke]"
         />
         <circle
           v-if="eraserPreview"
           :cx="eraserPreview.x"
           :cy="eraserPreview.y"
           :r="eraserDiameter / 2"
-          class="notebook-eraser-preview"
+          class="notebook-eraser-preview tw:pointer-events-none tw:fill-[rgb(90_97_105/14%)] tw:stroke-content-muted tw:stroke-1"
         />
       </g>
       <NotebookRuler v-if="ruler" :pose="ruler" :zoom="zoom" :width="page.width" :height="page.height" :disabled="!!inputActive" @update="emit('rulerUpdate', $event)" @active="emit('rulerActive', $event)" />
@@ -190,69 +190,9 @@ const accessibleLabel = computed(() => props.ghost ? t('notebook.pages.ghost') :
 </template>
 
 <style scoped>
-.notebook-page-shell {
-  position: relative;
-  display: grid;
-  justify-items: center;
-  padding: 8px 30px 28px;
-  margin-bottom: 8px;
-}
-
-.notebook-page-gutter {
-  position: absolute;
-  top: 18px;
-  left: 8px;
-  color: var(--text-muted);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
-
-.notebook-page-gutter--ghost {
-  opacity: 0.5;
-}
-
-.notebook-page {
-  display: block;
-  flex: none;
-  overflow: hidden;
-  background: #fff;
-  border: 1px solid rgb(20 24 29 / 8%);
-  box-shadow: 0 2px 10px rgb(16 22 28 / 9%);
-  touch-action: none;
-  user-select: none;
-}
-
-.notebook-page:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 3px;
-}
-
-
+/* Remaining CSS: v-bind() on SVG child selectors (the paper-line stroke is a JS constant). */
 .notebook-paper-lines line {
   stroke: v-bind('NOTEBOOK_PAPER_LINE_COLOR');
   stroke-width: v-bind('NOTEBOOK_PAPER_LINE_WIDTH');
-}
-
-.notebook-ink__path--selected {
-  filter: drop-shadow(0 0 1.5px var(--accent));
-}
-
-.notebook-lasso-preview {
-  fill: color-mix(in oklab, var(--accent) 8%, transparent);
-  stroke: var(--accent);
-  stroke-width: 1.4;
-  stroke-dasharray: 5 4;
-  vector-effect: non-scaling-stroke;
-}
-
-.notebook-eraser-preview {
-  fill: rgb(90 97 105 / 14%);
-  stroke: var(--text-muted);
-  stroke-width: 1;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .notebook-page { scroll-behavior: auto; }
 }
 </style>

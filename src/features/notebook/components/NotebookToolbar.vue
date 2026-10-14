@@ -106,8 +106,8 @@ function updateWidth(width: number): void {
 </script>
 
 <template>
-  <header ref="root" class="notebook-toolbar" :class="{ 'notebook-toolbar--compact': compact }" :aria-label="t('notebook.toolbar')">
-    <div class="notebook-toolbar__left">
+  <header ref="root" class="notebook-toolbar tw:relative tw:z-2 tw:grid tw:min-h-11 tw:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] tw:items-center tw:gap-2 tw:border-b tw:border-border-subtle tw:bg-surface-panel tw:px-2.5 tw:py-[5px] tw:text-content-primary" :class="{ 'notebook-toolbar--compact': compact }" :aria-label="t('notebook.toolbar')">
+    <div class="notebook-toolbar__left tw:col-1 tw:row-1 tw:flex tw:min-w-0 tw:items-center tw:gap-2 tw:justify-self-start">
       <NvButton
         class="notebook-toolbar__pages-toggle"
         variant="ghost"
@@ -119,7 +119,7 @@ function updateWidth(width: number): void {
         <PanelLeft :size="16" aria-hidden="true" />
       </NvButton>
 
-      <div class="notebook-toolbar__style">
+      <div class="notebook-toolbar__style tw:flex tw:min-w-0 tw:items-center tw:gap-1.5">
         <NotebookColorControl
           :model-value="color"
           :presets="presets"
@@ -131,12 +131,12 @@ function updateWidth(width: number): void {
           @add-preset="emit('addPreset', $event)"
           @remove-preset="emit('removePreset', $event)"
         />
-        <div class="notebook-width">
+        <div class="notebook-width tw:flex tw:items-center tw:gap-1">
           <NvNumberInput :model-value="activeWidth" :min="widthRange.min" :max="widthRange.max" :step="widthRange.step" :aria-label="t('notebook.tools.width')" @update:model-value="updateWidth" />
-          <span class="notebook-width__unit" aria-hidden="true">pt</span>
+          <span class="notebook-width__unit tw:text-[11px] tw:text-content-secondary" aria-hidden="true">pt</span>
         </div>
         <NvSelect class="notebook-toolbar__paper-select" :model-value="paper" :options="paperOptions" :aria-label="t('notebook.paper.label')" :min-width="96" @update:model-value="emit('update:paper', $event as NotebookPaperKind)" />
-        <div v-if="tool === 'line'" class="notebook-dash" role="group" :aria-label="t('notebook.tools.lineStyle')">
+        <div v-if="tool === 'line'" class="notebook-dash tw:flex tw:items-center tw:gap-0.5" role="group" :aria-label="t('notebook.tools.lineStyle')">
           <NvButton
             v-for="option in dashOptions"
             :key="option.id"
@@ -153,7 +153,7 @@ function updateWidth(width: number): void {
             </svg>
           </NvButton>
         </div>
-        <div v-if="tool === 'eraser'" class="notebook-eraser-mode" role="group" :aria-label="t('notebook.tools.eraserMode')">
+        <div v-if="tool === 'eraser'" class="notebook-eraser-mode tw:flex tw:items-center tw:gap-0.5" role="group" :aria-label="t('notebook.tools.eraserMode')">
           <NvButton
             v-for="option in eraserModes"
             :key="option.id"
@@ -171,7 +171,7 @@ function updateWidth(width: number): void {
       </div>
     </div>
 
-    <div class="notebook-toolbar__tools" role="toolbar" :aria-label="t('notebook.tools.label')">
+    <div class="notebook-toolbar__tools tw:col-2 tw:row-1 tw:flex tw:min-w-0 tw:flex-wrap tw:items-center tw:justify-center tw:gap-0.5 tw:justify-self-center" role="toolbar" :aria-label="t('notebook.tools.label')">
       <template v-for="item in tools" :key="item.id">
         <NotebookShapePicker v-if="item.id === 'move'" :tool="tool" @update:tool="emit('update:tool', $event)" />
         <NvButton
@@ -194,19 +194,19 @@ function updateWidth(width: number): void {
       </NvButton>
     </div>
 
-    <div class="notebook-toolbar__right">
-      <div class="notebook-toolbar__actions">
+    <div class="notebook-toolbar__right tw:col-3 tw:row-1 tw:flex tw:min-w-0 tw:items-center tw:gap-2 tw:justify-self-end">
+      <div class="notebook-toolbar__actions tw:flex tw:min-w-0 tw:items-center tw:gap-0.5">
         <NvButton variant="ghost" icon :disabled="!canUndo" :aria-label="t('notebook.undo')" @click="emit('undo')">
           <Undo2 :size="16" aria-hidden="true" />
         </NvButton>
         <NvButton variant="ghost" icon :disabled="!canRedo" :aria-label="t('notebook.redo')" @click="emit('redo')">
           <Redo2 :size="16" aria-hidden="true" />
         </NvButton>
-        <span class="notebook-toolbar__separator notebook-toolbar__zoom-control" aria-hidden="true" />
+        <span class="notebook-toolbar__separator notebook-toolbar__zoom-control tw:mx-1 tw:h-[18px] tw:w-px tw:bg-border-subtle" aria-hidden="true" />
         <NvButton class="notebook-toolbar__zoom-control" variant="ghost" icon :aria-label="t('notebook.zoomOut')" @click="emit('zoomOut')">
           <Minus :size="16" aria-hidden="true" />
         </NvButton>
-        <span class="notebook-toolbar__zoom notebook-toolbar__zoom-control" aria-live="polite">{{ Math.round(zoom * 100) }}%</span>
+        <span class="notebook-toolbar__zoom notebook-toolbar__zoom-control tw:min-w-[38px] tw:text-center tw:text-[11px] tw:text-content-secondary tw:tabular-nums" aria-live="polite">{{ Math.round(zoom * 100) }}%</span>
         <NvButton class="notebook-toolbar__zoom-control" variant="ghost" icon :aria-label="t('notebook.zoomIn')" @click="emit('zoomIn')">
           <Plus :size="16" aria-hidden="true" />
         </NvButton>
@@ -217,55 +217,19 @@ function updateWidth(width: number): void {
       </NvButton>
     </div>
 
-    <span class="notebook-toolbar__save" role="status" aria-live="polite">
+    <span class="notebook-toolbar__save tw:pointer-events-none tw:absolute tw:right-4 tw:-bottom-[23px] tw:text-[11px] tw:text-content-muted" role="status" aria-live="polite">
       {{ error || t(`notebook.saveStatus.${saveStatus}`) }}
     </span>
   </header>
 </template>
 
 <style scoped>
-.notebook-toolbar {
-  position: relative;
-  z-index: 2;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  min-height: 44px;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 10px;
-  border-bottom: 1px solid var(--border-subtle);
-  background: var(--surface-panel);
-  color: var(--text-primary);
-}
-
-.notebook-toolbar__tools,
-.notebook-toolbar__actions,
-.notebook-toolbar__style,
-.notebook-toolbar__left,
-.notebook-toolbar__right {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 2px;
-}
-
-.notebook-toolbar__left { grid-column: 1; grid-row: 1; justify-self: start; gap: 8px; }
-.notebook-toolbar__tools { grid-column: 2; grid-row: 1; justify-self: center; }
-.notebook-toolbar__right { grid-column: 3; grid-row: 1; justify-self: end; gap: 8px; }
-.notebook-toolbar__style { gap: 6px; }
-.notebook-toolbar__tools { flex-wrap: wrap; justify-content: center; }
-.notebook-dash, .notebook-eraser-mode { display: flex; align-items: center; gap: 2px; }
-.notebook-toolbar__actions { gap: 2px; }
+/* Remaining CSS: :deep() overrides into child components, container-query/coarse-pointer/compact layout overrides that must beat the base utilities, ::after hit areas and scroll-mask rules. */
 .notebook-toolbar :deep(.nv-btn) { min-width: 32px; min-height: 32px; height: 32px; font-size: 12px; }
 .notebook-toolbar :deep(.nv-btn--icon) { width: 32px; padding: 0; }
-.notebook-toolbar__separator { width: 1px; height: 18px; margin: 0 4px; background: var(--border-subtle); }
-.notebook-toolbar__zoom { min-width: 38px; color: var(--text-secondary); font-size: 11px; text-align: center; font-variant-numeric: tabular-nums; }
-.notebook-toolbar__save { position: absolute; right: 16px; bottom: -23px; color: var(--text-muted); font-size: 11px; pointer-events: none; }
-.notebook-width { display: flex; align-items: center; gap: 4px; }
 .notebook-width :deep(.nni-root) { height: 32px; }
 .notebook-width :deep(.nni-input) { width: 40px; }
 .notebook-width :deep(.nni-step) { width: 24px; }
-.notebook-width__unit { color: var(--text-secondary); font-size: 11px; }
 .notebook-toolbar__paper-select :deep(.nv-select__trigger) { min-height: 32px; height: 32px; padding-block: 0; padding-inline: 8px; font-size: 12px; }
 
 @container notebook-editor (max-width: 1000px) {

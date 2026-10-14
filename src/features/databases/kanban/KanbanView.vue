@@ -558,6 +558,9 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
 </template>
 
 <style scoped>
+/* XCOMP: the split layout grid/flex-collapse reaches into child component roots
+   (:deep(.kb-toolbar|.kb-column|.kb-card--selected|views)) and the editor pane root;
+   and the body-level rule cannot be a template class. */
 .kb-view--split {
   display: grid;
   grid-template-columns: clamp(620px, 45%, 760px) minmax(0, 1fr);
@@ -638,15 +641,7 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
   user-select: none;
 }
 
-@keyframes kb-view-spin {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes kb-view-skeleton {
-  0% { background-position: 120% 0; }
-  100% { background-position: -120% 0; }
-}
-
+/* ANIM: skeleton shimmer; the keyframes live in the unscoped block below. */
 .kb-view__loading-rail span {
   height: 8px;
   border-radius: 999px;
@@ -657,6 +652,19 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
 
 .kb-view__loading-rail span:nth-child(2) { width: 82%; }
 .kb-view__loading-rail span:nth-child(3) { width: 64%; }
+</style>
+
+<style>
+/* ANIM: unscoped so the tw: [animation:...] utilities in the template can name
+   them (scoped keyframes are renamed with the scope id and would not match). */
+@keyframes kb-view-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes kb-view-skeleton {
+  0% { background-position: 120% 0; }
+  100% { background-position: -120% 0; }
+}
 
 @keyframes kb-tooltip-in {
   from { opacity: 0; transform: translateX(-50%) translateY(8px); }

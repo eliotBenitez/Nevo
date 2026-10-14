@@ -65,17 +65,17 @@ function onNotesClick(event: MouseEvent) {
     @close="handleClose"
   >
     <template #header>
-      <div v-if="status === 'upToDate'" class="updater-modal__success-header">
-        <span class="updater-modal__success-icon" aria-hidden="true">
+      <div v-if="status === 'upToDate'" class="updater-modal__success-header tw:flex tw:min-w-0 tw:items-center tw:gap-3.5">
+        <span class="updater-modal__success-icon tw:grid tw:size-10 tw:flex-none tw:place-items-center tw:rounded-[calc(12px*var(--radius-scale,1))] tw:bg-(--surface-success) tw:text-success" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 6 9 17l-5-5" />
           </svg>
         </span>
-        <div class="updater-modal__success-copy">
+        <div class="updater-modal__success-copy tw:min-w-0">
           <h3 id="updater-modal-title" class="updater-modal__title tw:m-0 tw:text-[15px] tw:font-semibold tw:text-content-primary">
             {{ t('updater.upToDateTitle') }}
           </h3>
-          <p id="updater-modal-description" class="updater-modal__success-description">
+          <p id="updater-modal-description" class="updater-modal__success-description tw:mx-0 tw:mt-1.5 tw:mb-0 tw:text-[13px] tw:leading-normal tw:text-content-secondary tw:wrap-anywhere">
             {{ t('updater.upToDateBody') }}
           </p>
         </div>
@@ -178,36 +178,7 @@ function onNotesClick(event: MouseEvent) {
 </template>
 
 <style scoped>
-.updater-modal__success-header {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-}
-
-.updater-modal__success-icon {
-  display: grid;
-  flex: 0 0 40px;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: calc(12px * var(--radius-scale, 1));
-  color: var(--success);
-  background: var(--surface-success);
-}
-
-.updater-modal__success-copy {
-  min-width: 0;
-}
-
-.updater-modal__success-description {
-  margin: 6px 0 0;
-  color: var(--text-secondary);
-  font-size: 13px;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-
+/* Stays CSS: :global() overrides of NvModal internals and :deep() into rendered release-notes markup. */
 :global(.updater-modal--success) {
   width: 100%;
   max-width: 400px;

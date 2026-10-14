@@ -20,7 +20,7 @@ const lines = computed(() => paperLines(props.page.paper.kind, props.page.width,
 </script>
 
 <template>
-  <svg :viewBox="`0 0 ${page.width} ${page.height}`" aria-hidden="true" focusable="false">
+  <svg class="tw:block tw:size-full" :viewBox="`0 0 ${page.width} ${page.height}`" aria-hidden="true" focusable="false">
     <rect x="0" y="0" :width="page.width" :height="page.height" fill="#fff" />
     <g>
       <line v-for="(line, index) in lines" :key="index" v-bind="line" :stroke="NOTEBOOK_PAPER_LINE_COLOR" :stroke-width="NOTEBOOK_PAPER_LINE_WIDTH" />
@@ -31,7 +31,3 @@ const lines = computed(() => paperLines(props.page.paper.kind, props.page.width,
     </template>
   </svg>
 </template>
-
-<style scoped>
-svg { display:block; width:100%; height:100%; }
-</style>

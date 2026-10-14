@@ -195,33 +195,33 @@ defineExpose({ flush })
 
 <template>
   <section ref="paneRef" class="kb-editor-pane tw:box-border tw:flex tw:min-h-0 tw:min-w-0 tw:flex-1 tw:flex-col tw:overflow-hidden tw:border-0 tw:border-l tw:border-solid tw:border-[var(--border-subtle)] tw:bg-(--island-bg)" :aria-label="t('kanban.card.dialogLabel')" @keydown.capture="onKeydown">
-    <header class="kb-editor-header tw:relative tw:flex tw:shrink-0 tw:flex-col tw:gap-2.5 tw:border-0 tw:px-7 tw:pt-5 tw:pb-4">
+    <header class="kb-editor-header tw:relative tw:flex tw:shrink-0 tw:flex-col tw:gap-2.5 tw:border-0 tw:px-7 tw:pt-5 tw:pb-4 tw:max-[760px]:pt-[calc(8px+max(var(--safe-area-top),0px))] tw:max-[760px]:pr-[calc(14px+max(var(--safe-area-right),0px))] tw:max-[760px]:pb-3 tw:max-[760px]:pl-[calc(14px+max(var(--safe-area-left),0px))]">
       <div class="kb-editor-header__top tw:flex tw:min-h-7 tw:min-w-0 tw:items-center tw:gap-2">
-        <button type="button" class="kb-editor-back nv-btn tw:hidden tw:h-10 tw:shrink-0 tw:items-center tw:gap-1.5 tw:px-3" :aria-label="t('kanban.common.back')" @click="goBack"><ArrowLeft :size="15" /><span>{{ t('kanban.common.back') }}</span></button>
+        <button type="button" class="kb-editor-back nv-btn tw:hidden tw:h-10 tw:shrink-0 tw:items-center tw:gap-1.5 tw:px-3 tw:max-[1300px]:inline-flex tw:max-[1300px]:min-h-11 tw:max-[1300px]:min-w-11" :aria-label="t('kanban.common.back')" @click="goBack"><ArrowLeft :size="15" /><span>{{ t('kanban.common.back') }}</span></button>
         <NvNoteIcon :value="board.icon" :size="14" class="kb-editor-breadcrumb-icon tw:shrink-0 tw:text-content-muted" />
         <span class="kb-editor-breadcrumb tw:min-w-0 tw:flex-1 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-xs tw:text-content-muted">{{ board.title }}</span>
-        <details ref="propertiesDetails" class="kb-editor-properties kb-editor-properties--popover">
-          <summary class="kb-editor-properties-trigger tw:inline-flex tw:min-h-8 tw:cursor-pointer tw:list-none tw:items-center tw:gap-1.5 tw:rounded-md tw:bg-transparent tw:px-2.5 tw:text-xs tw:text-content-secondary tw:hover:bg-surface-subtle"><Settings2 :size="13" /><span>{{ t('kanban.card.properties') }}</span><ChevronDown :size="12" class="kb-editor-properties-chevron" /></summary>
-          <div class="kb-editor-properties-popover"><KanbanCardProperties ref="propertiesRef" v-model:status-value="status" :card="propertiesCard" :board="board" :task-progress="taskProgress" :mark-dirty="changed" /></div>
+        <details ref="propertiesDetails" class="kb-editor-properties kb-editor-properties--popover tw:group tw:relative">
+          <summary class="kb-editor-properties-trigger tw:box-border tw:inline-flex tw:min-h-8 tw:cursor-pointer tw:list-none tw:items-center tw:gap-1.5 tw:rounded-md tw:border tw:border-solid tw:border-[var(--border-subtle)] tw:bg-transparent tw:px-2.5 tw:text-xs tw:text-content-secondary tw:hover:bg-surface-subtle tw:focus-visible:rounded-[4px] tw:focus-visible:outline-2 tw:focus-visible:outline-offset-4 tw:focus-visible:outline-focus-ring tw:max-[760px]:min-h-11"><Settings2 :size="13" /><span>{{ t('kanban.card.properties') }}</span><ChevronDown :size="12" class="kb-editor-properties-chevron tw:group-open:rotate-180" /></summary>
+          <div class="kb-editor-properties-popover tw:absolute tw:top-[calc(100%+8px)] tw:right-0 tw:z-20 tw:hidden tw:w-[min(360px,calc(100vw-32px))] tw:max-h-[min(70vh,620px)] tw:flex-col tw:gap-4 tw:overflow-auto tw:rounded-[10px] tw:border tw:border-solid tw:border-[var(--border-subtle)] tw:bg-surface-raised tw:p-3.5 tw:shadow-(--shadow-overlay) tw:group-open:flex tw:max-[760px]:-right-10"><KanbanCardProperties ref="propertiesRef" v-model:status-value="status" :card="propertiesCard" :board="board" :task-progress="taskProgress" :mark-dirty="changed" /></div>
         </details>
         <NvPopupMenu placement="bottom-end" width="180px">
           <template #trigger><button type="button" class="kb-editor-more tw:grid tw:size-8 tw:place-items-center tw:rounded-md tw:border-0 tw:bg-transparent tw:text-content-muted tw:cursor-pointer tw:hover:bg-surface-subtle" :aria-label="t('kanban.common.moreActions')"><MoreHorizontal :size="17" /></button></template>
           <button type="button" class="kb-editor-delete-menu tw:flex tw:w-full tw:items-center tw:gap-2 tw:rounded-md tw:border-0 tw:bg-transparent tw:px-2.5 tw:py-2 tw:text-left tw:text-sm tw:text-content-danger tw:cursor-pointer tw:hover:bg-surface-subtle" @click="deleteCard"><Trash2 :size="14" />{{ t('kanban.common.delete') }}</button>
         </NvPopupMenu>
-        <button type="button" class="kb-editor-close tw:grid tw:size-8 tw:shrink-0 tw:place-items-center tw:rounded-md tw:border-0 tw:bg-transparent tw:text-content-muted tw:cursor-pointer tw:hover:bg-surface-subtle" :aria-label="t('kanban.common.close')" :title="t('kanban.common.close')" @click="goBack"><X :size="17" /></button>
+        <button type="button" class="kb-editor-close tw:grid tw:size-8 tw:shrink-0 tw:place-items-center tw:rounded-md tw:border-0 tw:bg-transparent tw:text-content-muted tw:cursor-pointer tw:hover:bg-surface-subtle tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-focus-ring tw:max-[1300px]:hidden" :aria-label="t('kanban.common.close')" :title="t('kanban.common.close')" @click="goBack"><X :size="17" /></button>
       </div>
-      <input ref="titleInput" v-model="title" class="kb-editor-title tw:box-border tw:w-full tw:min-w-0 tw:border-0 tw:bg-transparent tw:px-0 tw:text-[28px] tw:font-[650] tw:text-content-primary tw:outline-none" :placeholder="t('kanban.card.titlePlaceholder')" @input="changed">
-      <div class="kb-editor-meta tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+      <input ref="titleInput" v-model="title" class="kb-editor-title tw:box-border tw:w-full tw:min-w-0 tw:border-0 tw:bg-transparent tw:px-0 tw:text-[28px] tw:font-[650] tw:text-content-primary tw:outline-none tw:focus-visible:rounded-[4px] tw:focus-visible:outline-2 tw:focus-visible:outline-offset-4 tw:focus-visible:outline-focus-ring tw:max-[760px]:text-[25px] tw:max-[760px]:leading-[1.2]" :placeholder="t('kanban.card.titlePlaceholder')" @input="changed">
+      <div class="kb-editor-meta tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:min-[1301px]:mt-2.5">
         <span v-if="statusOption" class="kb-editor-chip tw:inline-flex tw:min-h-8 tw:items-center tw:rounded-full tw:bg-surface-subtle tw:px-3 tw:text-xs">{{ statusLabel }}</span>
-        <span class="kb-editor-chip kb-editor-chip--priority tw:inline-flex tw:min-h-8 tw:items-center tw:gap-1.5 tw:rounded-full tw:bg-surface-subtle tw:px-3 tw:text-xs"><span class="kb-editor-priority-dot" :data-priority="card.priority ?? 'none'" />{{ priorityLabel }}</span>
+        <span class="kb-editor-chip kb-editor-chip--priority tw:inline-flex tw:min-h-8 tw:items-center tw:gap-1.5 tw:rounded-full tw:bg-surface-subtle tw:px-3 tw:text-xs"><span class="kb-editor-priority-dot tw:size-[7px] tw:rounded-full tw:bg-content-muted tw:data-[priority=low]:bg-[#3b82f6] tw:data-[priority=medium]:bg-[#f59e0b] tw:data-[priority=high]:bg-[#f97316] tw:data-[priority=urgent]:bg-[#ef4444]" :data-priority="card.priority ?? 'none'" />{{ priorityLabel }}</span>
       </div>
-      <div class="kb-editor-header__separator" />
+      <div class="kb-editor-header__separator tw:-mx-2 tw:h-px tw:bg-[var(--border-subtle)] tw:min-[1301px]:mt-[22px]" />
     </header>
-    <div class="kb-editor-body tw:min-h-0 tw:flex-1 tw:overflow-auto tw:px-7 tw:py-5">
-      <NvMiniEditor :model-value="content" :placeholder="t('kanban.card.notesPlaceholder')" :workspace-path="workspace.activePath" :plugin-manifests="workspace.plugins" :settings="workspace.settings" :show-block-handle="false" class="kb-editor-content tw:min-h-[320px] tw:w-full" @update:model-value="value => { content = value; changed() }" />
+    <div class="kb-editor-body tw:min-h-0 tw:flex-1 tw:overflow-auto tw:px-7 tw:py-5 tw:max-[760px]:pt-3.5 tw:max-[760px]:pr-[calc(14px+max(var(--safe-area-right),0px))] tw:max-[760px]:pb-3.5 tw:max-[760px]:pl-[calc(14px+max(var(--safe-area-left),0px))]">
+      <NvMiniEditor :model-value="content" :placeholder="t('kanban.card.notesPlaceholder')" :workspace-path="workspace.activePath" :plugin-manifests="workspace.plugins" :settings="workspace.settings" :show-block-handle="false" class="kb-editor-content tw:w-full" @update:model-value="value => { content = value; changed() }" />
       <div class="kb-editor-links" @click.capture="guardLinkedCardAction"><KanbanCardLinks :card="card" :board="board" /></div>
     </div>
-    <footer class="tw:flex tw:shrink-0 tw:items-center tw:gap-3 tw:border-x-0 tw:border-b-0 tw:border-t tw:border-solid tw:border-[var(--border-subtle)] tw:px-6 tw:py-2.5 tw:text-xs tw:text-content-muted" aria-live="polite">
+    <footer class="tw:flex tw:shrink-0 tw:items-center tw:gap-3 tw:border-x-0 tw:border-b-0 tw:border-t tw:border-solid tw:border-[var(--border-subtle)] tw:px-6 tw:py-2.5 tw:text-xs tw:text-content-muted tw:max-[760px]:pt-2.5 tw:max-[760px]:pr-[calc(16px+max(var(--safe-area-right),0px))] tw:max-[760px]:pb-[calc(10px+max(var(--safe-area-bottom),0px))] tw:max-[760px]:pl-[calc(16px+max(var(--safe-area-left),0px))]" aria-live="polite">
       <span v-if="saveError" class="tw:text-content-danger">{{ t('kanban.card.saveFailed') }} <button class="tw:underline" @click="flush">{{ t('kanban.common.retry') }}</button></span>
       <span v-else-if="saving">{{ t('kanban.common.saving') }}</span>
       <span v-else-if="dirty">{{ t('kanban.card.saveHint') }}</span>
@@ -232,67 +232,13 @@ defineExpose({ flush })
 </template>
 
 <style scoped>
-.kb-editor-pane { border: 0; border-left: 1px solid var(--border-subtle); }
-.kb-editor-header { border: 0; }
-.kb-editor-pane footer { border: 0; border-top: 1px solid var(--border-subtle); }
+/* XCOMP: .kb-editor-content is NvMiniEditor's root (beats its own unlayered
+   styles); the :deep() rules reach into the editor surface; the marker
+   hider is a pseudo-element. */
 .kb-editor-content { display: block; min-height: 55vh; border: 0; border-radius: 0; background: transparent; padding: 0; }
 .kb-editor-content :deep(.editor-surface--compact) { min-height: 55vh; max-height: none; overflow: visible; }
 .kb-editor-content :deep(.editor-surface__editor),
 .kb-editor-content :deep(.nv-prosemirror) { min-height: 55vh; }
 .kb-editor-content :deep(.doc-editor .nv-prosemirror .nv-active-block::before) { display: none; }
-.kb-editor-header__separator { height: 1px; margin: 0 -8px; background: var(--border-subtle); }
-.kb-editor-properties { position: relative; }
-.kb-editor-properties summary { list-style: none; }
 .kb-editor-properties summary::-webkit-details-marker { display: none; }
-.kb-editor-properties-trigger { box-sizing: border-box; border: 1px solid var(--border-subtle); }
-.kb-editor-properties-popover { display: flex; flex-direction: column; gap: 16px; position: absolute; top: calc(100% + 8px); right: 0; z-index: 20; width: min(360px, calc(100vw - 32px)); max-height: min(70vh, 620px); overflow: auto; padding: 14px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-raised); box-shadow: var(--shadow-overlay); }
-.kb-editor-properties:not([open]) .kb-editor-properties-popover { display: none; }
-.kb-editor-title:focus-visible,
-.kb-editor-properties summary:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 4px; border-radius: 4px; }
-.kb-editor-properties[open] .kb-editor-properties-chevron { transform: rotate(180deg); }
-.kb-editor-priority-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
-.kb-editor-priority-dot[data-priority='low'] { background: #3b82f6; }
-.kb-editor-priority-dot[data-priority='medium'] { background: #f59e0b; }
-.kb-editor-priority-dot[data-priority='high'] { background: #f97316; }
-.kb-editor-priority-dot[data-priority='urgent'] { background: #ef4444; }
-@media (min-width: 1301px) {
-  .kb-editor-meta { margin-top: 10px; }
-  .kb-editor-header__separator { margin-top: 22px; }
-}
-@media (max-width: 1300px) {
-  .kb-editor-back { display: inline-flex; min-width: 44px; min-height: 44px; }
-  /* The back button already closes the pane at this width. */
-  .kb-editor-close { display: none; }
-}
-.kb-editor-close:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-@media (max-width: 760px) {
-  /* On phones the pane replaces the board full screen, so it owns the safe
-     areas the board header and lanes would otherwise pad (see KanbanView). */
-  .kb-editor-header {
-    gap: 10px;
-    padding:
-      calc(8px + max(var(--safe-area-top), 0px))
-      calc(14px + max(var(--safe-area-right), 0px))
-      12px
-      calc(14px + max(var(--safe-area-left), 0px));
-  }
-  .kb-editor-header__top { gap: 8px; }
-  .kb-editor-title { font-size: 25px; line-height: 1.2; }
-  .kb-editor-body {
-    padding:
-      14px
-      calc(14px + max(var(--safe-area-right), 0px))
-      14px
-      calc(14px + max(var(--safe-area-left), 0px));
-  }
-  .kb-editor-pane footer {
-    padding:
-      10px
-      calc(16px + max(var(--safe-area-right), 0px))
-      calc(10px + max(var(--safe-area-bottom), 0px))
-      calc(16px + max(var(--safe-area-left), 0px));
-  }
-  .kb-editor-properties-trigger { min-height: 44px; }
-  .kb-editor-properties-popover { right: -40px; }
-}
 </style>

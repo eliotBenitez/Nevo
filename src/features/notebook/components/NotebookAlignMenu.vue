@@ -56,29 +56,26 @@ function pickDistribute(axis: NotebookDistributeAxis): void {
       </NvButton>
     </template>
     <NvButton
-      v-for="item in aligns" :key="item.id" class="nv-menu-item notebook-align-option"
+      v-for="item in aligns" :key="item.id" class="nv-menu-item notebook-align-option tw:h-auto tw:min-h-8 tw:w-full tw:justify-start tw:gap-2 tw:px-2 tw:py-1.5 tw:text-[12px] tw:coarse:min-h-11"
       variant="ghost" :aria-label="item.label" role="menuitem" @click.stop="pickAlign(item.id)"
     >
       <component :is="item.icon" :size="14" aria-hidden="true" />
-      <span class="notebook-align-option__label">{{ item.label }}</span>
+      <span class="notebook-align-option__label tw:min-w-0 tw:flex-1 tw:whitespace-normal tw:text-left tw:leading-[1.3]">{{ item.label }}</span>
     </NvButton>
     <NvMenuSeparator />
     <NvButton
-      v-for="item in distributes" :key="item.id" class="nv-menu-item notebook-align-option"
+      v-for="item in distributes" :key="item.id" class="nv-menu-item notebook-align-option tw:h-auto tw:min-h-8 tw:w-full tw:justify-start tw:gap-2 tw:px-2 tw:py-1.5 tw:text-[12px] tw:coarse:min-h-11"
       variant="ghost" :aria-label="item.label" role="menuitem" :disabled="!canDistribute"
       :title="canDistribute ? undefined : t('notebook.selection.align.distributeHint')"
       @click.stop="pickDistribute(item.id)"
     >
       <component :is="item.icon" :size="14" aria-hidden="true" />
-      <span class="notebook-align-option__label">{{ item.label }}</span>
+      <span class="notebook-align-option__label tw:min-w-0 tw:flex-1 tw:whitespace-normal tw:text-left tw:leading-[1.3]">{{ item.label }}</span>
     </NvButton>
   </NvPopupMenu>
 </template>
 
 <style scoped>
-.notebook-align-option { width: 100%; height: auto; min-height: 32px; justify-content: flex-start; gap: 8px; padding: 6px 8px; font-size: 12px; }
 /* Long labels (e.g. "Распределить по горизонтали") must wrap rather than squeeze the icon. */
 .notebook-align-option :deep(svg) { flex: none; }
-.notebook-align-option__label { flex: 1; min-width: 0; text-align: left; white-space: normal; line-height: 1.3; }
-@media (pointer: coarse) { .notebook-align-option { min-height: 44px; } }
 </style>

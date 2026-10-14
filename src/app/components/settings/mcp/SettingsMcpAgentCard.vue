@@ -81,7 +81,7 @@ const statusDotClasses = computed(() => {
 
 <template>
   <SettingsObjectCard
-    class="mcp-agent-row"
+    class="mcp-agent-row tw:@container"
     :data-mcp-agent="agent"
     :tone="cardTone"
     align="center"
@@ -91,19 +91,19 @@ const statusDotClasses = computed(() => {
     </template>
 
     <div class="mcp-agent-identity tw:min-w-0">
-      <div class="mcp-agent-head tw:flex tw:items-center tw:gap-2.5 tw:flex-wrap">
+      <div class="mcp-agent-head tw:min-w-0 tw:flex tw:items-center tw:gap-2.5 tw:flex-wrap">
         <span class="row-title tw:text-content-primary tw:text-[14px] tw:font-[550] tw:tracking-[-0.01em]">
           {{ t(`settings.mcp.agents.${agent}`) }}
         </span>
       </div>
-      <div class="mcp-agent-meta tw:mt-0.5 tw:flex tw:items-center tw:gap-2 tw:text-xs tw:text-content-muted">
-        <span class="tw:font-nv-mono tw:text-[12px]">{{ configPath }}</span>
+      <div class="mcp-agent-meta tw:min-w-0 tw:mt-0.5 tw:flex tw:items-center tw:gap-2 tw:text-xs tw:text-content-muted">
+        <span class="tw:font-nv-mono tw:text-[12px] tw:wrap-anywhere">{{ configPath }}</span>
       </div>
     </div>
 
     <div
       v-if="restartHint"
-      class="mcp-agent-hint tw:mt-2 tw:flex tw:items-center tw:gap-2 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:bg-[var(--accent-soft)] tw:px-2.5 tw:py-1.5 tw:text-xs tw:text-content-primary"
+      class="mcp-agent-hint tw:mt-2 tw:min-w-0 tw:flex tw:items-center tw:gap-2 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:bg-[var(--accent-soft)] tw:px-2.5 tw:py-1.5 tw:text-xs tw:text-content-primary"
     >
       <Info :size="14" class="tw:text-accent tw:shrink-0" />
       <span class="row-sub">{{ t('settings.mcp.agents.restartHint') }}</span>
@@ -111,7 +111,7 @@ const statusDotClasses = computed(() => {
 
     <div
       v-if="error"
-      class="mcp-agent-error tw:mt-2 tw:flex tw:items-center tw:gap-2 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:bg-surface-danger tw:px-2.5 tw:py-1.5 tw:text-xs tw:text-danger"
+      class="mcp-agent-error tw:mt-2 tw:min-w-0 tw:flex tw:items-center tw:gap-2 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:bg-surface-danger tw:px-2.5 tw:py-1.5 tw:text-xs tw:text-danger"
       role="alert"
     >
       <AlertCircle :size="14" class="tw:shrink-0" />
@@ -119,16 +119,16 @@ const statusDotClasses = computed(() => {
     </div>
 
     <template #actions>
-      <div class="mcp-agent-summary tw:flex tw:min-w-0 tw:items-center tw:justify-end tw:gap-2 tw:flex-wrap">
+      <div class="mcp-agent-summary tw:flex tw:min-w-0 tw:items-center tw:justify-end tw:max-[720px]:justify-start tw:gap-2 tw:flex-wrap">
         <span
-          class="status-chip tw:inline-flex tw:max-w-full tw:items-center tw:gap-1.5 tw:rounded-full tw:px-2.5 tw:py-1 tw:text-[11.5px] tw:leading-[1.35] tw:font-medium"
+          class="status-chip tw:inline-flex tw:min-w-0 tw:max-w-full tw:items-center tw:gap-1.5 tw:rounded-full tw:px-2.5 tw:py-1 tw:text-[11.5px] tw:leading-[1.35] tw:font-medium"
           :class="statusBadgeClasses"
           role="status"
         >
           <span class="tw:size-1.5 tw:rounded-full tw:shrink-0" :class="statusDotClasses" aria-hidden="true" />
-          <span>{{ statusText }}</span>
+          <span class="tw:wrap-anywhere">{{ statusText }}</span>
         </span>
-        <div v-if="desktop && status && !isConfirming" class="mcp-agent-actions tw:flex tw:items-center tw:gap-2 tw:flex-wrap">
+        <div v-if="desktop && status && !isConfirming" class="mcp-agent-actions tw:flex tw:min-w-0 tw:items-center tw:gap-2 tw:flex-wrap">
           <NvButton
             v-if="status.kind === 'notConfigured' || status.kind === 'needsReconnect' || status.kind === 'conflict'"
             size="md"
@@ -154,12 +154,12 @@ const statusDotClasses = computed(() => {
 
     <template v-if="isConfirming" #footer>
       <Transition name="mcp-confirm" appear>
-        <div class="mcp-agent-confirm">
-          <div class="mcp-agent-confirm__prompt">
+        <div class="mcp-agent-confirm tw:grid tw:min-w-0 tw:grid-cols-[minmax(0,1fr)_auto] tw:items-center tw:gap-4 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:bg-(--surface-warning) tw:p-3 tw:text-content-primary tw:@max-[560px]:grid-cols-[minmax(0,1fr)]">
+          <div class="mcp-agent-confirm__prompt tw:flex tw:min-w-0 tw:items-center tw:gap-2 tw:text-[13px] tw:leading-normal">
             <AlertTriangle :size="16" class="tw:text-[var(--warning)] tw:shrink-0" />
-            <span>{{ t('settings.mcp.agents.confirmReplace') }}</span>
+            <span class="tw:wrap-anywhere">{{ t('settings.mcp.agents.confirmReplace') }}</span>
           </div>
-          <div class="mcp-agent-confirm__actions">
+          <div class="mcp-agent-confirm__actions tw:flex tw:flex-wrap tw:items-center tw:justify-end tw:gap-2 tw:max-[720px]:grid tw:max-[720px]:w-full tw:max-[720px]:grid-cols-[repeat(2,minmax(0,1fr))]">
             <NvButton variant="ghost" size="md" @click="emit('cancelReplace')">
               {{ t('settings.mcp.agents.cancel') }}
             </NvButton>
@@ -181,10 +181,11 @@ const statusDotClasses = computed(() => {
 </template>
 
 <style scoped>
+/* Stays CSS: overrides the unlayered global .settings-object-card--warning shadow and
+   the base card's own tw: padding/grid-cols (order-dependent), plus :deep() into
+   SettingsObjectCard/NvButton internals and Vue transition classes. */
 .mcp-agent-row {
-  gap: 12px;
   padding: 16px;
-  container-type: inline-size;
   grid-template-columns: auto minmax(0, 1fr) fit-content(55%);
 }
 
@@ -192,59 +193,9 @@ const statusDotClasses = computed(() => {
   box-shadow: var(--shadow-raised);
 }
 
-.mcp-agent-identity,
-.mcp-agent-head,
-.mcp-agent-meta,
-.status-chip,
-.mcp-agent-error,
-.mcp-agent-hint,
-.mcp-agent-actions {
-  min-width: 0;
-}
-
-.status-chip > span:last-child,
-.mcp-agent-meta > span,
-.mcp-agent-confirm__prompt > span {
-  overflow-wrap: anywhere;
-}
-
 .mcp-agent-row :deep(.settings-object-card__actions) {
   min-width: 0;
   flex-wrap: wrap;
-}
-
-.mcp-agent-summary {
-  min-width: 0;
-  justify-content: flex-end;
-}
-
-.mcp-agent-confirm {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 16px;
-  min-width: 0;
-  padding: 12px;
-  border-radius: calc(8px * var(--radius-scale, 1));
-  background: var(--surface-warning);
-  color: var(--text-primary);
-}
-
-.mcp-agent-confirm__prompt {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.mcp-agent-confirm__actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
 }
 
 .mcp-confirm-enter-active,
@@ -265,12 +216,6 @@ const statusDotClasses = computed(() => {
   }
 }
 
-@container (max-width: 560px) {
-  .mcp-agent-confirm {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 @media (max-width: 720px) {
   .mcp-agent-row {
     grid-template-columns: auto minmax(0, 1fr);
@@ -281,16 +226,6 @@ const statusDotClasses = computed(() => {
     justify-self: start;
     margin-left: 0;
     align-self: start;
-  }
-
-  .mcp-agent-summary {
-    justify-content: flex-start;
-  }
-
-  .mcp-agent-confirm__actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: 100%;
   }
 
   .mcp-agent-confirm__actions :deep(.nv-btn) {

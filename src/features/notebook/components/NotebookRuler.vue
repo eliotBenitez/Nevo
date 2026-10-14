@@ -24,10 +24,10 @@ const handles = [{ mode: 'move' as const, x: -24, icon: Move }, { mode: 'rotate'
 
 <template>
   <g
-    class="notebook-ruler" :transform="transform" role="group" :aria-label="t('notebook.ruler.label')"
+    class="notebook-ruler tw:pointer-events-none tw:text-[#234d43]" :transform="transform" role="group" :aria-label="t('notebook.ruler.label')"
     @pointerdown.stop @pointermove.stop @pointerup.stop @pointercancel.stop @lostpointercapture.stop @keydown.stop
   >
-    <rect :x="-NOTEBOOK_RULER_LENGTH / 2" :y="-NOTEBOOK_RULER_HEIGHT / 2" :width="NOTEBOOK_RULER_LENGTH" :height="NOTEBOOK_RULER_HEIGHT" rx="2" class="notebook-ruler__body" />
+    <rect :x="-NOTEBOOK_RULER_LENGTH / 2" :y="-NOTEBOOK_RULER_HEIGHT / 2" :width="NOTEBOOK_RULER_LENGTH" :height="NOTEBOOK_RULER_HEIGHT" rx="2" class="notebook-ruler__body tw:fill-[rgb(211_235_226/78%)] tw:stroke-[#538f7e] tw:stroke-1 tw:[vector-effect:non-scaling-stroke]" />
     <g aria-hidden="true" class="notebook-ruler__scale">
       <g v-for="(tick, index) in ticks" :key="index">
         <line :x1="tick.x" :x2="tick.x" :y1="-NOTEBOOK_RULER_HEIGHT / 2" :y2="-NOTEBOOK_RULER_HEIGHT / 2 + tick.length" />
@@ -37,7 +37,7 @@ const handles = [{ mode: 'move' as const, x: -24, icon: Move }, { mode: 'rotate'
       <text x="156" y="17" text-anchor="end">{{ Math.round(pose.angle) }}°</text>
     </g>
     <g
-      v-for="handle in handles" :key="handle.mode" :class="`notebook-ruler__${handle.mode}`" class="notebook-ruler__handle"
+      v-for="handle in handles" :key="handle.mode" :class="[`notebook-ruler__${handle.mode}`, handle.mode === 'move' ? 'tw:cursor-move' : 'tw:cursor-grab']" class="notebook-ruler__handle tw:group tw:touch-none tw:outline-none tw:[pointer-events:all] tw:aria-disabled:cursor-default tw:aria-disabled:opacity-45"
       :transform="`translate(${handle.x / zoom} 8) scale(${1 / zoom})`"
       role="button" tabindex="0" :aria-label="t(`notebook.ruler.${handle.mode}`)" :aria-disabled="disabled"
       :aria-description="t(`notebook.ruler.${handle.mode}Hint`)"
@@ -45,23 +45,15 @@ const handles = [{ mode: 'move' as const, x: -24, icon: Move }, { mode: 'rotate'
       @pointercancel="control.finish" @lostpointercapture="control.finish" @keydown="control.key($event, handle.mode)"
     >
       <title>{{ t(`notebook.ruler.${handle.mode}Hint`) }}</title>
-      <rect x="-23" y="-23" width="46" height="46" rx="7" class="notebook-ruler__hit" />
-      <circle r="15" class="notebook-ruler__control" />
+      <rect x="-23" y="-23" width="46" height="46" rx="7" class="notebook-ruler__hit tw:fill-transparent" />
+      <circle r="15" class="notebook-ruler__control tw:fill-[#f6faf8] tw:stroke-[#96b6ac] tw:group-focus-visible:stroke-focus-ring tw:group-focus-visible:stroke-[3]" />
       <component :is="handle.icon" x="-8" y="-8" :size="16" aria-hidden="true" />
     </g>
   </g>
 </template>
 
 <style scoped>
-.notebook-ruler { pointer-events: none; color: #234d43; }
-.notebook-ruler__body { fill: rgb(211 235 226 / 78%); stroke: #538f7e; stroke-width: 1; vector-effect: non-scaling-stroke; }
+/* Remaining CSS: child-element selectors (.notebook-ruler__scale line/text) inside the SVG scale group. */
 .notebook-ruler__scale line { stroke: #42685e; stroke-width: .6; }
 .notebook-ruler__scale text { fill: #234d43; font: 8px var(--font-ui); }
-.notebook-ruler__handle { pointer-events: all; touch-action: none; outline: none; }
-.notebook-ruler__move { cursor: move; }
-.notebook-ruler__rotate { cursor: grab; }
-.notebook-ruler__hit { fill: transparent; }
-.notebook-ruler__control { fill: #f6faf8; stroke: #96b6ac; }
-.notebook-ruler__handle:focus-visible .notebook-ruler__control { stroke: var(--focus-ring); stroke-width: 3; }
-.notebook-ruler__handle[aria-disabled="true"] { opacity: .45; cursor: default; }
 </style>
