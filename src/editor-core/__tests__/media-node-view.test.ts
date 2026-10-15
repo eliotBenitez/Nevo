@@ -136,6 +136,61 @@ describe('media node view source lifecycle', () => {
     }
   })
 
+  it('renders the playback speed through the shared select primitive', async () => {
+    const editor = createMediaEditor(
+      { kind: 'audio', src: 'audio-ready', name: 'Track', size: 0 },
+      () => 'http://127.0.0.1:1/audio-ready',
+    )
+    const trigger = editor.mount.querySelector<HTMLButtonElement>('.nv-audio-speed .nv-select__trigger')!
+
+    try {
+      await tick()
+      expect(trigger).not.toBeNull()
+      expect(trigger.getAttribute('aria-label')).toBe('media.playbackSpeed')
+      expect(trigger.textContent).toContain('1×')
+
+      trigger.click()
+      await tick()
+      const options = [...document.querySelectorAll<HTMLButtonElement>('.nv-select__option')]
+      options.find(option => option.textContent?.includes('1.5×'))!.click()
+      await tick()
+      expect(editor.mount.querySelector('.nv-audio-speed .nv-select__trigger')!.textContent).toContain('1.5×')
+    } finally {
+      editor.destroy()
+    }
+  })
+
+  it('cancels a native node drag that starts on an audio slider', async () => {
+    const editor = createMediaEditor(
+      { kind: 'audio', src: 'audio-ready', name: 'Track', size: 0 },
+      () => 'http://127.0.0.1:1/audio-ready',
+    )
+    const block = editor.mount.querySelector<HTMLElement>('.nv-media-block')!
+
+    try {
+      await tick()
+      // The block is draggable, so a drag beginning on a slider must be cancelled
+      // or the control loses pointer capture after its first move.
+      const seek = editor.mount.querySelector<HTMLInputElement>('.nv-audio-seek')!
+      // Metadata never loads in jsdom, which keeps the seek control disabled;
+      // enable it so it is focusable like a ready player.
+      seek.disabled = false
+      seek.focus()
+      expect(document.activeElement).toBe(seek)
+      const sliderDrag = new Event('dragstart', { bubbles: true, cancelable: true })
+      block.dispatchEvent(sliderDrag)
+      expect(sliderDrag.defaultPrevented).toBe(true)
+
+      // A drag from anywhere else still reaches the block handle.
+      seek.blur()
+      const blockDrag = new Event('dragstart', { bubbles: true, cancelable: true })
+      block.dispatchEvent(blockDrag)
+      expect(blockDrag.defaultPrevented).toBe(false)
+    } finally {
+      editor.destroy()
+    }
+  })
+
   it('cancels a pending video resolver when the node changes to audio', async () => {
     const resolveMediaSrc = vi.fn((src: string) => src === 'video-pending' ? null : `http://127.0.0.1:1/media?path=${src}`)
     const editor = createMediaEditor({ kind: 'video', src: 'video-pending', name: '', size: 0 }, resolveMediaSrc)

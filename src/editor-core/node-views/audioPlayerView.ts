@@ -1,5 +1,7 @@
+import { h, render } from 'vue'
 import type { Node as PMNode } from 'prosemirror-model'
 import { clearIcon, mountIcon, type UiIconName } from '../../ui/icons/dom'
+import NvSelect from '../../ui/primitives/NvSelect.vue'
 import { formatAudioTime } from '../../core/media/audioBookmarks'
 import { loadAudioPeaks } from './audioWaveform'
 
@@ -8,6 +10,8 @@ export interface AudioPlayerViewOptions {
   resolveMediaSrc: (src: string) => string | null
   resolveWaveformSrc: (src: string) => string
 }
+
+const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2] as const
 
 function iconButton(label: string, icon: UiIconName, className: string) {
   const button = document.createElement('button')
@@ -62,18 +66,27 @@ export function createAudioPlayerView(node: PMNode, options: AudioPlayerViewOpti
   forward.disabled = true
   const clock = document.createElement('output')
   clock.className = 'nv-audio-clock'
-  const speed = document.createElement('select')
-  speed.setAttribute('aria-label', t('media.playbackSpeed'))
-  for (const rate of [0.75, 1, 1.25, 1.5, 2]) {
-    const option = document.createElement('option')
-    option.value = String(rate)
-    option.textContent = `${rate}×`
-    speed.append(option)
+  // Playback speed uses the project's NvSelect primitive, matching the code block.
+  const speedContainer = document.createElement('div')
+  speedContainer.className = 'nv-audio-speed'
+  const speedOptions = PLAYBACK_RATES.map((rate) => ({ value: String(rate), label: `${rate}×` }))
+  let playbackRate = 1
+  const renderSpeed = () => {
+    render(h(NvSelect, {
+      modelValue: String(playbackRate),
+      options: speedOptions,
+      placeholder: '1×',
+      minWidth: 0,
+      ariaLabel: t('media.playbackSpeed'),
+      'onUpdate:modelValue': (value: string) => {
+        const rate = Number(value)
+        if (!Number.isFinite(rate) || rate <= 0) return
+        playbackRate = rate
+        audio.playbackRate = rate
+        renderSpeed()
+      },
+    }), speedContainer)
   }
-  speed.value = '1'
-  const speedLabel = document.createElement('label')
-  speedLabel.textContent = `${t('media.playbackSpeed')} `
-  speedLabel.append(speed)
   const volume = document.createElement('input')
   volume.type = 'range'
   volume.min = '0'
@@ -93,7 +106,7 @@ export function createAudioPlayerView(node: PMNode, options: AudioPlayerViewOpti
   retry.textContent = t('media.retryAudio')
   retry.hidden = true
   retry.className = 'nv-audio-retry'
-  controls.append(play, back, forward, clock, speedLabel, volumeLabel)
+  controls.append(play, back, forward, clock, speedContainer, volumeLabel)
   status.append(statusMessage, retry)
   root.append(title, subtitle, waveform, controls, status, audio)
 
@@ -225,7 +238,6 @@ export function createAudioPlayerView(node: PMNode, options: AudioPlayerViewOpti
   seek.addEventListener('pointerdown', () => { seeking = true })
   seek.addEventListener('input', () => { if (Number.isFinite(audio.duration) && audio.duration > 0) audio.currentTime = Number(seek.value) / 1000 * audio.duration })
   seek.addEventListener('change', () => { seeking = false; updateClock() })
-  speed.addEventListener('change', () => { audio.playbackRate = Number(speed.value) })
   volume.addEventListener('input', () => { audio.volume = Number(volume.value) })
   retry.addEventListener('click', () => { status.dataset.error = ''; setSource(source, true) })
   audio.addEventListener('timeupdate', updateClock)
@@ -264,6 +276,7 @@ export function createAudioPlayerView(node: PMNode, options: AudioPlayerViewOpti
     updateClock()
   }
   update(node, false)
+  renderSpeed()
   return {
     dom: root,
     update,
@@ -306,6 +319,7 @@ export function createAudioPlayerView(node: PMNode, options: AudioPlayerViewOpti
       if (play.querySelector('span')) clearIcon(play.querySelector('span')!)
       if (back.querySelector('span')) clearIcon(back.querySelector('span')!)
       if (forward.querySelector('span')) clearIcon(forward.querySelector('span')!)
+      render(null, speedContainer)
       timeListeners.clear()
     },
     stopEvent(target: Node) { return root.contains(target) },

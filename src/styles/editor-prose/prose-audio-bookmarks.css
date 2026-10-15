@@ -226,16 +226,15 @@
   align-items: center;
   font-size: 0;
 }
-.doc-editor .nv-prosemirror .nv-audio-controls select {
+/* Playback speed uses NvSelect; keep it compact inside the control row. */
+.doc-editor .nv-prosemirror .nv-audio-controls .nv-audio-speed { display: inline-flex; }
+.doc-editor .nv-prosemirror .nv-audio-controls .nv-audio-speed .nv-select__trigger {
   height: 28px;
-  padding: 0 4px;
-  border: 1px solid var(--border-subtle);
-  border-radius: calc(6px * var(--radius-scale, 1));
+  padding: 0 6px 0 8px;
+  gap: 4px;
   background: transparent;
-  color: var(--text-secondary);
-  font-size: 12px;
-  cursor: pointer;
 }
+.doc-editor .nv-prosemirror .nv-audio-controls .nv-audio-speed .nv-select__value { font-size: 12px; }
 .doc-editor .nv-prosemirror .nv-audio-controls input[type='range'] {
   width: 72px;
   margin: 0 0 0 10px;

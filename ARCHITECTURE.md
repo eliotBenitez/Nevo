@@ -331,7 +331,10 @@ change stored note icons.
   `auto` shows the panel only when valid bookmarks exist so legacy notes never need a write
   on open; `player` collapses the grid to a single column.
   Mutations use ProseMirror transactions; playback position remains transient UI state.
-  `audioPlayerView.ts` owns native playback and an accessible seek control. Its waveform
+  `audioPlayerView.ts` owns native playback, an accessible seek control, and the playback
+  speed rendered through the shared `NvSelect` primitive. Because the `media_block` node view
+  is `draggable: true`, `media.ts` cancels a native `dragstart` that begins on an audio range
+  input so the slider keeps pointer capture for the whole gesture. The waveform
   uses `audioWaveform.ts` to fetch the existing CORS-enabled workspace asset URL, while
   playback keeps the streaming media URL. Decoding starts only after native metadata,
   rejects durations over 30 minutes and input over 16 MiB, and falls back to the seek

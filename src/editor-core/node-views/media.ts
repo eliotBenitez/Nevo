@@ -69,6 +69,18 @@ export function createMediaNodeView(
   // menu) so it stays visible in both player and bookmarks layouts.
   header.insertBefore(audioUi.modeControl, menu)
 
+  function onDragStart(event: DragEvent) {
+    // The block is `draggable: true`, so pressing a slider thumb would start a
+    // native node drag that revokes pointer capture and freezes the slider after
+    // its first move. Cancel the drag when the gesture began on an audio slider.
+    const active = document.activeElement
+    if (active instanceof HTMLElement && active.matches('input[type="range"]') && audioUi.stopEvent(active)) {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+  }
+  dom.addEventListener('dragstart', onDragStart)
+
   function clearVideoSource() {
     if (videoRetry) { clearTimeout(videoRetry); videoRetry = null }
     if (videoSrc || video.hasAttribute('src')) {
@@ -186,6 +198,7 @@ export function createMediaNodeView(
       audioUi.destroy()
       clearVideoSource()
       cleanupPick()
+      dom.removeEventListener('dragstart', onDragStart)
       render(null, menu)
     },
   }
