@@ -35,6 +35,27 @@ async function docxFileXml(
 }
 
 describe('serializeNoteToDocx', () => {
+  it('includes audio bookmarks as readable escaped timestamp paragraphs and ignores invalid/video bookmarks', async () => {
+    const doc = await serializeNoteToDocx(note({
+      type: 'doc',
+      content: [
+        { type: 'media_block', attrs: { kind: 'audio', name: 'Track', bookmarks: [
+          { id: 'b2', time: 61, label: 'Chapter & ending' },
+          { id: 'b1', time: 3, label: '<Opening>\n#skip' },
+          { id: 'bad', time: -1, label: 'invalid' },
+        ] } },
+        { type: 'media_block', attrs: { kind: 'video', name: 'Clip', bookmarks: [{ id: 'v', time: 5, label: 'ignored' }] } },
+      ],
+    }), stubHelpers())
+    const xml = await documentXml(doc)
+
+    expect(xml).toContain('0:03 — &lt;Opening&gt;')
+    expect(xml).toContain('#skip')
+    expect(xml).toContain('1:01 — Chapter &amp; ending')
+    expect(xml).not.toContain('invalid')
+    expect(xml).not.toContain('ignored')
+  })
+
   it('writes the note title and a heading with styled runs', async () => {
     const doc = await serializeNoteToDocx(note({
       type: 'doc',

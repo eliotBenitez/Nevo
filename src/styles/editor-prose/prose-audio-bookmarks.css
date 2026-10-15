@@ -1,0 +1,106 @@
+.doc-editor .nv-prosemirror .nv-media-block[data-kind='audio'] {
+  container-type: inline-size;
+  border: 0;
+  border-radius: 10px;
+  background: var(--surface-panel);
+  box-shadow: none;
+  overflow: visible;
+}
+.doc-editor .nv-prosemirror .nv-media-block[data-kind='audio']:hover { border-color: transparent; box-shadow: none; }
+.doc-editor .nv-prosemirror .nv-media-block[data-kind='audio'] .nv-media-header {
+  min-height: 0;
+  justify-content: flex-end;
+  padding: 0;
+}
+.doc-editor .nv-prosemirror .nv-audio-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 1fr);
+  gap: 16px;
+  color: var(--text-primary);
+}
+.doc-editor .nv-prosemirror .nv-audio-player,
+.doc-editor .nv-prosemirror .nv-audio-bookmarks { min-width: 0; }
+.doc-editor .nv-prosemirror .nv-audio-title { font-weight: 650; font-size: 16px; }
+.doc-editor .nv-prosemirror .nv-audio-subtitle,
+.doc-editor .nv-prosemirror .nv-audio-empty,
+.doc-editor .nv-prosemirror .nv-audio-status { color: var(--text-secondary); font-size: 13px; }
+.doc-editor .nv-prosemirror .nv-audio-waveform { position: relative; width: 100%; height: 76px; margin: 12px 0; }
+.doc-editor .nv-prosemirror .nv-audio-waveform canvas { display: block; width: 100%; height: 100%; }
+.doc-editor .nv-prosemirror .nv-audio-seek {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  appearance: none;
+  accent-color: var(--accent);
+  background: transparent;
+}
+.doc-editor .nv-prosemirror .nv-audio-seek::-webkit-slider-runnable-track {
+  height: 2px;
+  border: 0;
+  background: color-mix(in oklab, var(--text-muted) 35%, transparent);
+}
+.doc-editor .nv-prosemirror .nv-audio-seek::-webkit-slider-thumb {
+  width: 8px;
+  height: 8px;
+  margin-top: -3px;
+  appearance: none;
+  border: 1px solid var(--surface-panel);
+  border-radius: 50%;
+  background: var(--accent);
+}
+.doc-editor .nv-prosemirror .nv-audio-seek::-moz-range-track {
+  height: 2px;
+  border: 0;
+  background: color-mix(in oklab, var(--text-muted) 35%, transparent);
+}
+.doc-editor .nv-prosemirror .nv-audio-seek::-moz-range-thumb {
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--surface-panel);
+  border-radius: 50%;
+  background: var(--accent);
+}
+.doc-editor .nv-prosemirror .nv-audio-controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.doc-editor .nv-prosemirror .nv-audio-controls button,
+.doc-editor .nv-prosemirror .nv-audio-controls select,
+.doc-editor .nv-prosemirror .nv-audio-add,
+.doc-editor .nv-prosemirror .nv-audio-bookmark-form button,
+.doc-editor .nv-prosemirror .nv-audio-icon-button {
+  border: 0; border-radius: 8px; color: var(--text-primary); background: var(--surface-subtle);
+  min-height: 36px; padding: 6px 10px; cursor: pointer; font: inherit;
+}
+.doc-editor .nv-prosemirror .nv-audio-controls .nv-audio-play { color: var(--text-on-accent); background: var(--accent); border-radius: 50%; width: 42px; height: 42px; }
+.doc-editor .nv-prosemirror .nv-audio-controls button { display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+.doc-editor .nv-prosemirror .nv-audio-retry { min-height: 32px; margin-top: 4px; border: 0; border-radius: 6px; background: var(--surface-subtle); color: var(--text-primary); cursor: pointer; }
+.doc-editor .nv-prosemirror .nv-audio-clock { font-variant-numeric: tabular-nums; color: var(--text-secondary); font-size: 12px; white-space: nowrap; }
+.doc-editor .nv-prosemirror .nv-audio-controls input[type='range'] { width: 58px; accent-color: var(--accent); }
+.doc-editor .nv-prosemirror .nv-audio-controls label { font-size: 0; }
+.doc-editor .nv-prosemirror .nv-audio-controls select { font-size: 12px; padding: 4px; }
+.doc-editor .nv-prosemirror .nv-audio-add { margin-top: 16px; color: var(--accent); background: var(--accent-soft); }
+.doc-editor .nv-prosemirror .nv-audio-bookmarks h3 { font: inherit; font-weight: 650; margin: 0 0 8px; }
+.doc-editor .nv-prosemirror .nv-audio-bookmark-list { display: grid; align-content: start; gap: 4px; }
+.doc-editor .nv-prosemirror .nv-audio-bookmark { display: grid; grid-template-columns: 40px minmax(0, 1fr) 28px 28px; align-items: center; gap: 4px; min-height: 40px; padding: 2px 4px; border-radius: 7px; }
+.doc-editor .nv-prosemirror .nv-audio-bookmark[data-active='true'] { color: var(--accent); background: var(--accent-soft); }
+.doc-editor .nv-prosemirror .nv-audio-bookmark[data-active='true'] .nv-audio-label { font-weight: 650; }
+.doc-editor .nv-prosemirror .nv-audio-time,
+.doc-editor .nv-prosemirror .nv-audio-icon-button { border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.doc-editor .nv-prosemirror .nv-audio-time { width: 40px; padding: 2px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.doc-editor .nv-prosemirror .nv-audio-label { overflow-wrap: break-word; word-break: normal; font-size: 13px; }
+.doc-editor .nv-prosemirror .nv-audio-icon-button { width: 28px; min-width: 28px; height: 28px; min-height: 28px; padding: 4px; }
+.doc-editor .nv-prosemirror .nv-audio-bookmark-form { display: grid; grid-template-columns: auto minmax(90px, 1fr) auto; align-items: center; gap: 6px; padding-top: 10px; }
+.doc-editor .nv-prosemirror .nv-audio-bookmark-form input { min-width: 0; height: 38px; border: 1px solid var(--border-default); border-radius: 8px; padding: 0 10px; background: var(--surface-panel); color: var(--text-primary); font: inherit; }
+.doc-editor .nv-prosemirror .nv-audio-bookmark-form .nv-audio-cancel { grid-column: 2 / -1; justify-self: start; background: transparent; color: var(--text-secondary); }
+.doc-editor .nv-prosemirror .nv-audio-layout :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.doc-editor .nv-prosemirror .nv-audio-seek:disabled { opacity: .45; }
+.doc-editor .nv-prosemirror .nv-audio-status[data-error='true'] { color: var(--danger); }
+@container (max-width: 620px) {
+  .doc-editor .nv-prosemirror .nv-audio-layout { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+}
+.doc-editor .nv-prosemirror .nv-audio-layout [hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .doc-editor .nv-prosemirror .nv-audio-layout *, .doc-editor .nv-prosemirror .nv-audio-layout *::before,
+  .doc-editor .nv-prosemirror .nv-audio-layout *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}

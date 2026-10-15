@@ -2,8 +2,45 @@ import { describe, expect, it } from 'vitest'
 import { nevoBaseSchema } from '../schema'
 import { parseNoteContentToDoc, parseNoteContentToDocSafe, serializeDocToNoteContent } from '../serialization'
 import type { BlockNode } from '../../types/note'
+import { DOMParser as ProseMirrorDOMParser, DOMSerializer } from 'prosemirror-model'
 
 describe('serialization compatibility', () => {
+  it('round-trips raw audio bookmarks through JSON and clipboard DOM', () => {
+    const bookmarks = [
+      { id: 'b2', time: 20, label: 'Later', privateField: { keep: true } },
+      { malformed: true },
+    ]
+    const content: BlockNode = {
+      type: 'doc',
+      content: [{ type: 'media_block', attrs: { kind: 'audio', src: 'lecture.mp3', bookmarks } }],
+    }
+    const doc = parseNoteContentToDoc(nevoBaseSchema, content)
+    expect(serializeDocToNoteContent(doc).content?.[0]).toMatchObject({
+      type: 'media_block',
+      attrs: { src: 'lecture.mp3', bookmarks },
+    })
+
+    const fragment = DOMSerializer.fromSchema(nevoBaseSchema).serializeFragment(doc.content)
+    const wrapper = document.createElement('div')
+    wrapper.append(fragment)
+    const reparsed = ProseMirrorDOMParser.fromSchema(nevoBaseSchema).parse(wrapper)
+    expect(serializeDocToNoteContent(reparsed).content?.[0]).toMatchObject({
+      type: 'media_block',
+      attrs: { src: 'lecture.mp3', bookmarks },
+    })
+  })
+
+  it('defaults legacy and malformed clipboard bookmark attributes safely', () => {
+    const legacy = ProseMirrorDOMParser.fromSchema(nevoBaseSchema).parse(
+      document.createElement('div'),
+    )
+    const malformed = document.createElement('div')
+    malformed.innerHTML = '<div data-nevo-media-block="true" data-bookmarks="{bad"></div>'
+    const parsed = ProseMirrorDOMParser.fromSchema(nevoBaseSchema).parse(malformed)
+    expect(legacy.firstChild?.type.name).toBe('paragraph')
+    expect(parsed.firstChild?.attrs.bookmarks).toEqual([])
+  })
+
   it('round-trips rich block content and links', () => {
     const content: BlockNode = {
       type: 'doc',

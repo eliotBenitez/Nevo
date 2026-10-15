@@ -319,6 +319,23 @@ change stored note icons.
   audio block on Stop or inserts beside a slot that gained text. The
   `src/core/voice-recording/activeRecording.ts` registry lets the router, active-note
   watcher, and app-close guard finish recording before the editor is unmounted or saved.
+- **Audio playback / bookmarks** — Bookmark records are stored additively on the existing
+  `media_block` attrs as `{ id: string, time: number, label: string, ...unknown }`, where
+  `time` is finite and non-negative seconds. The default is `[]`; schema and clipboard DOM
+  parsing/serialization are in `src/editor-core/schema/nodes-embeds.ts`. The media node view
+  in `src/editor-core/node-views/media.ts` mounts
+  `src/editor-core/node-views/audioBookmarksView.ts` for editing, and
+  `src/core/media/audioBookmarks.ts` validates/sorts records and formats timestamps.
+  Mutations use ProseMirror transactions; playback position remains transient UI state.
+  `audioPlayerView.ts` owns native playback and an accessible seek control. Its waveform
+  uses `audioWaveform.ts` to fetch the existing CORS-enabled workspace asset URL, while
+  playback keeps the streaming media URL. Decoding starts only after native metadata,
+  rejects durations over 30 minutes and input over 16 MiB, and falls back to the seek
+  control when unavailable. Native decoding itself is not interruptible; cancellation
+  prevents stale results from being displayed and the owned audio context is closed.
+  Markdown, HTML, DOCX, and Typst/PDF exports preserve bookmark labels as readable timestamp
+  text, with `#t=` links in HTML. Markdown import normalizes the asset link and list into
+  ordinary content instead of rebuilding an editable media node.
 - **Canvas / draw** — the data model and pure editing algorithms live in `src/core/canvas/`
   (entry `index.ts`: geometry, hit-testing, strokes, connectors, mind-map layout,
   migration of legacy canvas shapes). The interactive drawing feature UI is

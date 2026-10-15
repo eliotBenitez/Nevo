@@ -154,12 +154,18 @@ export const mediaBlockNodeSpec: NodeSpec = {
     size: { default: 0 },
     duration: { default: null },
     poster: { default: '' },
+    bookmarks: { default: [] },
   },
   parseDOM: [
     {
       tag: 'div[data-nevo-media-block]',
       getAttrs(dom) {
         if (!(dom instanceof HTMLElement)) return false
+        let bookmarks: unknown[] = []
+        try {
+          const parsed: unknown = JSON.parse(dom.dataset.bookmarks ?? '[]')
+          if (Array.isArray(parsed)) bookmarks = parsed
+        } catch { /* Malformed clipboard HTML has no recoverable bookmark list. */ }
         return {
           kind: dom.dataset.kind ?? 'audio',
           src: dom.dataset.src ?? '',
@@ -168,6 +174,7 @@ export const mediaBlockNodeSpec: NodeSpec = {
           size: Number(dom.dataset.size ?? 0),
           duration: dom.dataset.duration ? Number(dom.dataset.duration) : null,
           poster: dom.dataset.poster ?? '',
+          bookmarks,
         }
       },
     },
@@ -180,6 +187,7 @@ export const mediaBlockNodeSpec: NodeSpec = {
     const size = typeof node.attrs.size === 'number' ? String(node.attrs.size) : '0'
     const duration = typeof node.attrs.duration === 'number' ? String(node.attrs.duration) : ''
     const poster = typeof node.attrs.poster === 'string' ? node.attrs.poster : ''
+    const bookmarks = Array.isArray(node.attrs.bookmarks) ? JSON.stringify(node.attrs.bookmarks) : '[]'
     return [
       'div',
       {
@@ -189,6 +197,7 @@ export const mediaBlockNodeSpec: NodeSpec = {
         'data-name': name,
         'data-mime': mime,
         'data-size': size,
+        'data-bookmarks': bookmarks,
         ...(duration ? { 'data-duration': duration } : {}),
         ...(poster ? { 'data-poster': poster } : {}),
       },

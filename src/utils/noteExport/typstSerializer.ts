@@ -14,6 +14,7 @@ import { normalizeDatabaseData, type DatabaseBlockData, type DbCellValue, type D
 import { visibleRecords } from '../../editor-core/databaseFilterSort'
 import { normalizeQueryBlockData } from '../../features/query/queryBlockData'
 import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSummary'
+import { formatAudioTime, readAudioBookmarks } from '../../core/media/audioBookmarks'
 
 export interface TypstImageAsset {
   /** Filename referenced inside the Typst source via `image("name")`. */
@@ -287,8 +288,17 @@ function nodeToTypst(node: BlockNode, ctx: SerializeCtx): string {
       return `#block(fill: luma(244), inset: 10pt, radius: 6pt, width: 100%)[${body}]`
     }
     case 'media_block': {
-      const name = String(node.attrs?.name ?? (node.attrs?.kind === 'video' ? 'Video' : 'Audio'))
-      return `#emph[${node.attrs?.kind === 'video' ? '🎬' : '🔊'} ${escapeText(name)}]`
+      const kind = node.attrs?.kind === 'video' ? 'video' : 'audio'
+      const name = String(node.attrs?.name ?? (kind === 'video' ? 'Video' : 'Audio'))
+      const title = `#emph[${kind === 'video' ? '🎬' : '🔊'} ${escapeText(name)}]`
+      if (kind !== 'audio') return title
+      const bookmarks = readAudioBookmarks(node.attrs?.bookmarks)
+      if (!bookmarks.length) return title
+      const entries = bookmarks.map(bookmark => {
+        const label = bookmark.label.replace(/[\r\n]+/g, ' ')
+        return `#linebreak()${escapeText(formatAudioTime(bookmark.time))} — ${escapeText(label)}`
+      })
+      return [title, ...entries].join(' ')
     }
     case 'block_embed': {
       // Static placeholder only — the referenced block is never resolved

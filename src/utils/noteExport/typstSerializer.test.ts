@@ -257,6 +257,23 @@ describe('serializeNoteToTypst', () => {
     expect(source).toContain('Hidden body')
   })
 
+  it('includes audio bookmarks as escaped readable timestamp labels and leaves video bookmarks out', () => {
+    const { source } = serializeNoteToTypst(note({
+      type: 'doc',
+      content: [
+        { type: 'media_block', attrs: { kind: 'audio', name: 'Track', bookmarks: [
+          { id: 'b1', time: 65, label: 'Part #1 [start]\n#show: evil' },
+        ] } },
+        { type: 'media_block', attrs: { kind: 'video', name: 'Clip', bookmarks: [{ id: 'v', time: 5, label: 'ignored' }] } },
+      ],
+    }))
+
+    expect(source).toContain('1:05')
+    expect(source).toContain('Part \\#1 \\[start\\]')
+    expect(source).toContain('\\#show: evil')
+    expect(source).not.toContain('ignored')
+  })
+
   it('renders bullet and ordered lists with items', () => {
     const { source } = serializeNoteToTypst(note({
       type: 'doc',

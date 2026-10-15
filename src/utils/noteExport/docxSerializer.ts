@@ -53,6 +53,7 @@ import { normalizeDatabaseData, type DatabaseBlockData, type DbCellValue, type D
 import { visibleRecords } from '../../editor-core/databaseFilterSort'
 import { normalizeQueryBlockData } from '../../features/query/queryBlockData'
 import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSummary'
+import { formatAudioTime, readAudioBookmarks } from '../../core/media/audioBookmarks'
 
 /** Raster image type accepted by docx's ImageRun (excludes SVG; we rasterize). */
 export type DocxImageType = 'png' | 'jpg' | 'gif' | 'bmp'
@@ -572,7 +573,14 @@ async function blocksFor(node: BlockNode, ctx: Ctx): Promise<(Paragraph | Table)
     case 'media_block': {
       const kind = node.attrs?.kind === 'video' ? 'video' : 'audio'
       const name = String(node.attrs?.name ?? (kind === 'video' ? 'Video' : 'Audio'))
-      return [new Paragraph({ children: textRuns(`${kind === 'video' ? '🎬' : '🔊'} ${name}`, { italics: true }) })]
+      const paragraphs: Paragraph[] = [new Paragraph({ children: textRuns(`${kind === 'video' ? '🎬' : '🔊'} ${name}`, { italics: true }) })]
+      if (kind === 'audio') {
+        for (const bookmark of readAudioBookmarks(node.attrs?.bookmarks)) {
+          const label = bookmark.label.replace(/[\r\n]+/g, ' ')
+          paragraphs.push(new Paragraph({ children: textRuns(`${formatAudioTime(bookmark.time)} — ${label}`) }))
+        }
+      }
+      return paragraphs
     }
     case 'math_block': {
       const latex = String(node.attrs?.latex ?? (node.content ?? []).map(c => c.text ?? '').join(''))

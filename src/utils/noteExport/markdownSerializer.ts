@@ -6,6 +6,7 @@ import { normalizeDatabaseData, type DatabaseBlockData, type DbCellValue, type D
 import { visibleRecords } from '../../editor-core/databaseFilterSort'
 import { normalizeQueryBlockData } from '../../features/query/queryBlockData'
 import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSummary'
+import { formatAudioTime, readAudioBookmarks } from '../../core/media/audioBookmarks'
 
 export interface MarkdownSerializeResult {
   markdown: string
@@ -69,6 +70,10 @@ function inlineContent(node: BlockNode, ctx: SerializeCtx): string {
 
 function prefixLines(text: string, prefix: string): string {
   return text.split('\n').map(l => `${prefix}${l}`).join('\n')
+}
+
+function escapeMarkdownText(value: string): string {
+  return value.replace(/[\\`*_{}[\]()#+.!|<>$~]/g, '\\$&').replace(/[\r\n]+/g, ' ')
 }
 
 function tableRowToMd(
@@ -257,11 +262,17 @@ function nodeToMd(node: BlockNode, ctx: SerializeCtx): string {
     }
     case 'media_block': {
       const src = String(node.attrs?.src ?? '')
-      const name = String(node.attrs?.name ?? (node.attrs?.kind === 'video' ? 'Video' : 'Audio'))
+      const kind = node.attrs?.kind === 'video' ? 'video' : 'audio'
+      const name = String(node.attrs?.name ?? (kind === 'video' ? 'Video' : 'Audio'))
       if (!src) return ''
       if (!ctx.assetSrcs.includes(src)) ctx.assetSrcs.push(src)
       const basename = src.split('/').pop() ?? src
-      return `[${name}](${ctx.assetsSubfolderName}/${basename})`
+      const link = `[${name}](${ctx.assetsSubfolderName}/${basename})`
+      if (kind !== 'audio') return link
+      const bookmarks = readAudioBookmarks(node.attrs?.bookmarks)
+      if (!bookmarks.length) return link
+      const entries = bookmarks.map(bookmark => `- ${formatAudioTime(bookmark.time)} — ${escapeMarkdownText(bookmark.label)}`)
+      return [link, ...entries].join('\n')
     }
     case 'note_embed': {
       const title = String(node.attrs?.title ?? 'Note')

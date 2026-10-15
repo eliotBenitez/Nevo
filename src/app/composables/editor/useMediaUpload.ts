@@ -69,6 +69,7 @@ export function useMediaUpload(
       size: (imported as { bytes?: number }).bytes ?? 0,
       duration,
       poster: '',
+      bookmarks: [],
     }
 
     if (!core.editorView) return
