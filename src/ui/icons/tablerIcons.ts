@@ -36,6 +36,7 @@ export const tablerIcons: Record<string, Component> = {
   BarChart3: T.IconChartBar,
   Bold: T.IconBold,
   BookOpen: T.IconBook,
+  Bookmark: T.IconBookmark,
   Bot: T.IconRobot,
   BringToFront: T.IconLayersSelected,
   Calendar: T.IconCalendar,
