@@ -326,6 +326,10 @@ change stored note icons.
   in `src/editor-core/node-views/media.ts` mounts
   `src/editor-core/node-views/audioBookmarksView.ts` for editing, and
   `src/core/media/audioBookmarks.ts` validates/sorts records and formats timestamps.
+  A block-header switch persists the display preference in `audioLayout` (`auto` | `player`
+  | `bookmarks`; schema default `auto`), resolved in `src/core/media/audioLayout.ts`, where
+  `auto` shows the panel only when valid bookmarks exist so legacy notes never need a write
+  on open; `player` collapses the grid to a single column.
   Mutations use ProseMirror transactions; playback position remains transient UI state.
   `audioPlayerView.ts` owns native playback and an accessible seek control. Its waveform
   uses `audioWaveform.ts` to fetch the existing CORS-enabled workspace asset URL, while

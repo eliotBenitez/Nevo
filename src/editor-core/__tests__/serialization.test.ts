@@ -41,6 +41,38 @@ describe('serialization compatibility', () => {
     expect(parsed.firstChild?.attrs.bookmarks).toEqual([])
   })
 
+  it('round-trips an explicit audio layout and defaults legacy blocks to auto', () => {
+    const content: BlockNode = {
+      type: 'doc',
+      content: [{ type: 'media_block', attrs: { kind: 'audio', src: 'podcast.mp3', audioLayout: 'player' } }],
+    }
+    const doc = parseNoteContentToDoc(nevoBaseSchema, content)
+    expect(serializeDocToNoteContent(doc).content?.[0]).toMatchObject({
+      type: 'media_block',
+      attrs: { audioLayout: 'player' },
+    })
+
+    const fragment = DOMSerializer.fromSchema(nevoBaseSchema).serializeFragment(doc.content)
+    const wrapper = document.createElement('div')
+    wrapper.append(fragment)
+    expect(wrapper.querySelector('[data-audio-layout]')?.getAttribute('data-audio-layout')).toBe('player')
+    const reparsed = ProseMirrorDOMParser.fromSchema(nevoBaseSchema).parse(wrapper)
+    expect(serializeDocToNoteContent(reparsed).content?.[0]).toMatchObject({
+      type: 'media_block',
+      attrs: { audioLayout: 'player' },
+    })
+
+    // A legacy block without the attribute parses to the `auto` default.
+    const legacy = ProseMirrorDOMParser.fromSchema(nevoBaseSchema).parse(
+      (() => {
+        const div = document.createElement('div')
+        div.innerHTML = '<div data-nevo-media-block="true" data-kind="audio" data-src="a.mp3"></div>'
+        return div
+      })(),
+    )
+    expect(legacy.firstChild?.attrs.audioLayout).toBe('auto')
+  })
+
   it('round-trips rich block content and links', () => {
     const content: BlockNode = {
       type: 'doc',

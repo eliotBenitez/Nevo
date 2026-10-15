@@ -155,6 +155,10 @@ export const mediaBlockNodeSpec: NodeSpec = {
     duration: { default: null },
     poster: { default: '' },
     bookmarks: { default: [] },
+    // Audio-only display preference: 'auto' | 'player' | 'bookmarks'.
+    // Kept as a plain string so unknown/legacy values degrade to the resolved
+    // default instead of failing the schema (see core/media/audioLayout.ts).
+    audioLayout: { default: 'auto' },
   },
   parseDOM: [
     {
@@ -175,6 +179,7 @@ export const mediaBlockNodeSpec: NodeSpec = {
           duration: dom.dataset.duration ? Number(dom.dataset.duration) : null,
           poster: dom.dataset.poster ?? '',
           bookmarks,
+          audioLayout: dom.dataset.audioLayout ?? 'auto',
         }
       },
     },
@@ -188,6 +193,7 @@ export const mediaBlockNodeSpec: NodeSpec = {
     const duration = typeof node.attrs.duration === 'number' ? String(node.attrs.duration) : ''
     const poster = typeof node.attrs.poster === 'string' ? node.attrs.poster : ''
     const bookmarks = Array.isArray(node.attrs.bookmarks) ? JSON.stringify(node.attrs.bookmarks) : '[]'
+    const audioLayout = typeof node.attrs.audioLayout === 'string' ? node.attrs.audioLayout : 'auto'
     return [
       'div',
       {
@@ -198,6 +204,9 @@ export const mediaBlockNodeSpec: NodeSpec = {
         'data-mime': mime,
         'data-size': size,
         'data-bookmarks': bookmarks,
+        // Audio-only explicit layout choice; `auto` is the default and stays
+        // implicit, so untouched blocks keep their lightweight clipboard HTML.
+        ...(kind === 'audio' && audioLayout !== 'auto' ? { 'data-audio-layout': audioLayout } : {}),
         ...(duration ? { 'data-duration': duration } : {}),
         ...(poster ? { 'data-poster': poster } : {}),
       },

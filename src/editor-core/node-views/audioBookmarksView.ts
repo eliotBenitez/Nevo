@@ -2,6 +2,7 @@ import type { Node as PMNode } from 'prosemirror-model'
 import type { EditorView } from 'prosemirror-view'
 import { clearIcon, mountIcon, type UiIconName } from '../../ui/icons/dom'
 import { formatAudioTime, readAudioBookmarks, type AudioBookmark } from '../../core/media/audioBookmarks'
+import { resolveAudioLayout, type ResolvedAudioLayout } from '../../core/media/audioLayout'
 import type { NodeViewPosition } from './utils'
 import { createAudioPlayerView } from './audioPlayerView'
 
@@ -31,6 +32,19 @@ export function createAudioBookmarksView(node: PMNode, options: AudioBookmarksVi
   const root = document.createElement('div')
   root.className = 'nv-audio-layout'
   const player = createAudioPlayerView(node, options)
+  const modeControl = document.createElement('div')
+  modeControl.className = 'nv-audio-mode'
+  modeControl.setAttribute('role', 'group')
+  modeControl.setAttribute('aria-label', t('media.audioViewLabel'))
+  const modeButtons: Record<ResolvedAudioLayout, HTMLButtonElement> = {
+    player: iconButton(t('media.audioViewPlayer'), 'Music', 'nv-audio-mode-btn'),
+    bookmarks: iconButton(t('media.audioViewBookmarks'), 'Bookmark', 'nv-audio-mode-btn'),
+  }
+  for (const button of Object.values(modeButtons)) {
+    button.setAttribute('aria-pressed', 'false')
+    button.title = button.getAttribute('aria-label') ?? ''
+  }
+  modeControl.append(modeButtons.player, modeButtons.bookmarks)
   const list = document.createElement('section')
   list.className = 'nv-audio-bookmarks'
   list.setAttribute('aria-label', t('media.bookmarks'))
@@ -47,6 +61,7 @@ export function createAudioBookmarksView(node: PMNode, options: AudioBookmarksVi
 
   let currentNode = node
   let bookmarkSnapshot = JSON.stringify(node.attrs.bookmarks ?? [])
+  let currentLayout: ResolvedAudioLayout = resolveAudioLayout(node.attrs.audioLayout, node.attrs.bookmarks)
   let editableSnapshot = view.editable
   let draftTime = 0
   let draft: HTMLInputElement | null = null
@@ -54,14 +69,33 @@ export function createAudioBookmarksView(node: PMNode, options: AudioBookmarksVi
   let destroyed = false
   const canEdit = () => view.editable
 
-  function dispatchBookmarks(next: unknown[]) {
-    if (destroyed || view.isDestroyed || !canEdit()) return
+  /** Persists a partial attribute patch on the live node, guarding against stale state. */
+  function updateNodeAttrs(patch: Record<string, unknown>): boolean {
+    if (destroyed || view.isDestroyed || !canEdit()) return false
     let pos: number | undefined
-    try { pos = typeof getPos === 'function' ? getPos() : undefined } catch { return }
-    if (typeof pos !== 'number') return
+    try { pos = typeof getPos === 'function' ? getPos() : undefined } catch { return false }
+    if (typeof pos !== 'number') return false
     const live = view.state.doc.nodeAt(pos)
-    if (!live || live.type !== currentNode.type || live.attrs.src !== currentNode.attrs.src) return
-    view.dispatch(view.state.tr.setNodeMarkup(pos, undefined, { ...live.attrs, bookmarks: next }))
+    if (!live || live.type !== currentNode.type || live.attrs.src !== currentNode.attrs.src) return false
+    view.dispatch(view.state.tr.setNodeMarkup(pos, undefined, { ...live.attrs, ...patch }))
+    return true
+  }
+
+  function dispatchBookmarks(next: unknown[]) {
+    updateNodeAttrs({ bookmarks: next })
+  }
+
+  function applyLayout() {
+    root.dataset.layout = currentLayout
+    list.hidden = currentLayout !== 'bookmarks'
+    // Read-only hides the switch and shows the stored layout without any
+    // second writer of the `hidden` attribute (owned by the media node view).
+    modeControl.classList.toggle('is-readonly', !canEdit())
+    for (const [layout, button] of Object.entries(modeButtons)) {
+      const active = layout === currentLayout
+      button.setAttribute('aria-pressed', active ? 'true' : 'false')
+      button.classList.toggle('is-active', active)
+    }
   }
 
   function renderRows() {
@@ -111,6 +145,7 @@ export function createAudioBookmarksView(node: PMNode, options: AudioBookmarksVi
     }
     if (draftForm) rows.append(draftForm)
     add.hidden = !canEdit()
+    applyLayout()
   }
 
   function updateActiveRow() {
@@ -212,20 +247,33 @@ export function createAudioBookmarksView(node: PMNode, options: AudioBookmarksVi
   }
 
   add.addEventListener('click', showAddForm)
+  modeButtons.player.addEventListener('click', () => updateNodeAttrs({ audioLayout: 'player' }))
+  modeButtons.bookmarks.addEventListener('click', () => updateNodeAttrs({ audioLayout: 'bookmarks' }))
   const unsubscribeTime = player.onTimeUpdate(updateActiveRow)
   renderRows()
   function updateBookmarks(next: PMNode) {
     currentNode = next
     const nextSnapshot = JSON.stringify(next.attrs.bookmarks ?? [])
+    const nextLayout = resolveAudioLayout(next.attrs.audioLayout, next.attrs.bookmarks)
     const nextEditable = view.editable
-    if (nextSnapshot !== bookmarkSnapshot || nextEditable !== editableSnapshot) {
+    const layoutChanged = nextLayout !== currentLayout
+    currentLayout = nextLayout
+    if (nextSnapshot !== bookmarkSnapshot || nextEditable !== editableSnapshot || layoutChanged) {
       bookmarkSnapshot = nextSnapshot
       editableSnapshot = nextEditable
+      if (layoutChanged) {
+        draft = null
+        draftForm = null
+      }
       renderRows()
-    } else updateActiveRow()
+    } else {
+      applyLayout()
+      updateActiveRow()
+    }
   }
   return {
     dom: root,
+    modeControl,
     update(next: PMNode) { updateBookmarks(next); player.update(next) },
     updateBookmarks,
     isPaused: player.isPaused,
@@ -237,6 +285,10 @@ export function createAudioBookmarksView(node: PMNode, options: AudioBookmarksVi
       player.destroy()
       const addIcon = add.querySelector<HTMLElement>('span')
       if (addIcon) clearIcon(addIcon)
+      for (const button of Object.values(modeButtons)) {
+        const mount = button.querySelector<HTMLElement>('span')
+        if (mount) clearIcon(mount)
+      }
       for (const mount of root.querySelectorAll<HTMLElement>('.nv-audio-icon-button span')) clearIcon(mount)
     },
   }

@@ -11,7 +11,8 @@
   border-color: var(--border-subtle);
   box-shadow: none;
 }
-/* The kind label is hidden for audio, so the header only carries the menu: pin it to the corner. */
+/* The kind label is hidden for audio, so the header only carries the layout
+   switch and the menu: pin them to the corner, grouped to the right. */
 .doc-editor .nv-prosemirror .nv-media-block[data-kind='audio'] .nv-media-header {
   position: absolute;
   top: 10px;
@@ -19,7 +20,10 @@
   z-index: 1;
   min-height: 0;
   padding: 0;
+  justify-content: flex-end;
+  gap: 6px;
 }
+.doc-editor .nv-prosemirror .nv-media-block[data-kind='audio'] .nv-audio-title { padding-right: 92px; }
 
 .doc-editor .nv-prosemirror .nv-audio-layout {
   --nv-audio-wave-h: 56px;
@@ -38,6 +42,41 @@
   padding-left: 20px;
   border-left: 1px solid var(--border-subtle);
 }
+/* Player-only layout: the bookmarks panel is removed and the player spans the block. */
+.doc-editor .nv-prosemirror .nv-audio-layout[data-layout='player'] { grid-template-columns: minmax(0, 1fr); }
+
+/* ---- Layout switch ---- */
+.doc-editor .nv-prosemirror .nv-audio-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: calc(8px * var(--radius-scale, 1));
+  background: var(--surface-subtle);
+}
+.doc-editor .nv-prosemirror .nv-audio-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: calc(6px * var(--radius-scale, 1));
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.doc-editor .nv-prosemirror .nv-audio-mode-btn:hover { color: var(--text-primary); }
+.doc-editor .nv-prosemirror .nv-audio-mode-btn.is-active {
+  background: var(--surface-raised);
+  color: var(--accent);
+  box-shadow: var(--shadow-raised);
+}
+.doc-editor .nv-prosemirror .nv-audio-mode-btn > span { display: inline-flex; }
+.doc-editor .nv-prosemirror .nv-audio-mode[hidden] { display: none !important; }
+.doc-editor .nv-prosemirror .nv-audio-mode.is-readonly { display: none; }
 
 /* ---- Player ---- */
 .doc-editor .nv-prosemirror .nv-audio-title {
@@ -350,7 +389,6 @@
 
 @container (max-width: 620px) {
   .doc-editor .nv-prosemirror .nv-audio-layout { grid-template-columns: minmax(0, 1fr); row-gap: 14px; }
-  .doc-editor .nv-prosemirror .nv-audio-title { padding-right: 28px; }
   .doc-editor .nv-prosemirror .nv-audio-bookmarks {
     padding: 12px 0 0;
     border-left: 0;

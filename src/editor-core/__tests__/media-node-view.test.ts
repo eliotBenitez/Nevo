@@ -64,6 +64,78 @@ describe('media node view source lifecycle', () => {
     }
   })
 
+  it('defaults to the player layout and switches to bookmarks through the block header', async () => {
+    const editor = createMediaEditor(
+      { kind: 'audio', src: 'audio-ready', name: 'Track', size: 0 },
+      () => 'http://127.0.0.1:1/audio-ready',
+    )
+    const layout = editor.mount.querySelector<HTMLElement>('.nv-audio-layout')!
+    const mode = editor.mount.querySelector<HTMLElement>('.nv-audio-mode')!
+    const [playerBtn, bookmarksBtn] = [...mode.querySelectorAll<HTMLButtonElement>('button')]
+
+    try {
+      await tick()
+      // No bookmarks yet, so `auto` resolves to the plain player.
+      expect(layout.dataset.layout).toBe('player')
+      expect(editor.mount.querySelector('.nv-audio-bookmarks')?.hasAttribute('hidden')).toBe(true)
+      expect(playerBtn.getAttribute('aria-pressed')).toBe('true')
+
+      bookmarksBtn.click()
+      await tick()
+      const node = editor.view.state.doc.nodeAt(0)!
+      expect(node.attrs.audioLayout).toBe('bookmarks')
+      expect(layout.dataset.layout).toBe('bookmarks')
+      expect(editor.mount.querySelector('.nv-audio-bookmarks')?.hasAttribute('hidden')).toBe(false)
+      expect(bookmarksBtn.getAttribute('aria-pressed')).toBe('true')
+
+      playerBtn.click()
+      await tick()
+      expect(editor.view.state.doc.nodeAt(0)!.attrs.audioLayout).toBe('player')
+      expect(layout.dataset.layout).toBe('player')
+    } finally {
+      editor.destroy()
+    }
+  })
+
+  it('shows the stored layout without the switch when the editor is read-only', async () => {
+    const editor = createMediaEditor(
+      { kind: 'audio', src: 'audio-ready', name: 'Track', size: 0, audioLayout: 'bookmarks', bookmarks: [] },
+      () => 'http://127.0.0.1:1/audio-ready',
+    )
+    const mode = editor.mount.querySelector<HTMLElement>('.nv-audio-mode')!
+
+    try {
+      await tick()
+      // An explicit `bookmarks` choice stays visible even without records.
+      expect(editor.mount.querySelector<HTMLElement>('.nv-audio-layout')!.dataset.layout).toBe('bookmarks')
+
+      editor.view.setProps({ editable: () => false })
+      // Node views re-read `view.editable` on the next update, not on setProps.
+      const node = editor.view.state.doc.nodeAt(0)!
+      editor.view.dispatch(editor.view.state.tr.setNodeMarkup(0, undefined, { ...node.attrs, name: 'Locked' }))
+      await tick()
+      expect(mode.classList.contains('is-readonly')).toBe(true)
+      expect(mode.hidden).toBe(false)
+      expect([...editor.mount.querySelectorAll<HTMLButtonElement>('.nv-audio-mode-btn')].map(b => b.getAttribute('aria-pressed'))).toEqual(['false', 'true'])
+    } finally {
+      editor.destroy()
+    }
+  })
+
+  it('hides the layout switch when there is no audio source', async () => {
+    const editor = createMediaEditor(
+      { kind: 'audio', src: '', name: '', size: 0 },
+      () => 'http://127.0.0.1:1/audio-ready',
+    )
+
+    try {
+      await tick()
+      expect(editor.mount.querySelector<HTMLElement>('.nv-audio-mode')!.hidden).toBe(true)
+    } finally {
+      editor.destroy()
+    }
+  })
+
   it('cancels a pending video resolver when the node changes to audio', async () => {
     const resolveMediaSrc = vi.fn((src: string) => src === 'video-pending' ? null : `http://127.0.0.1:1/media?path=${src}`)
     const editor = createMediaEditor({ kind: 'video', src: 'video-pending', name: '', size: 0 }, resolveMediaSrc)

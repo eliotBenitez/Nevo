@@ -65,6 +65,9 @@ export function createMediaNodeView(
     resolveWaveformSrc: (src) => options?.resolveAssetSrc?.(src) ?? src,
   })
   audioHost.append(audioUi.dom)
+  // The layout switcher lives in the shared block header (next to the overflow
+  // menu) so it stays visible in both player and bookmarks layouts.
+  header.insertBefore(audioUi.modeControl, menu)
 
   function clearVideoSource() {
     if (videoRetry) { clearTimeout(videoRetry); videoRetry = null }
@@ -113,6 +116,9 @@ export function createMediaNodeView(
     empty.style.display = src ? 'none' : ''
     player.style.display = src ? '' : 'none'
     kindLabel.style.display = kind === 'audio' ? 'none' : ''
+    // Source/kind visibility is owned here (the sole writer of `hidden`);
+    // read-only visibility is owned by the audio view via `.is-readonly`.
+    audioUi.modeControl.hidden = kind !== 'audio' || !src
     if (kind === 'audio') {
       audioHost.style.display = ''
       video.style.display = 'none'
