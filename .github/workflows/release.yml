@@ -140,3 +140,79 @@ jobs:
           tag_name: ${{ github.ref_name }}
           draft: true
           files: Nevo_${{ github.ref_name }}_amd64.flatpak
+
+  android:
+    name: Android APK
+    needs: release
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;29.0.14206865'
+          echo "NDK_HOME=$ANDROID_HOME/ndk/29.0.14206865" >> "$GITHUB_ENV"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Initialize Android project
+        run: pnpm tauri android init --ci
+
+      - name: Build APK
+        run: pnpm tauri:android:build --apk --ci
+
+      - name: Align and sign APK
+        env:
+          ANDROID_KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          : "${ANDROID_KEY_BASE64:?Missing ANDROID_KEY_BASE64 secret}"
+          : "${ANDROID_KEY_ALIAS:?Missing ANDROID_KEY_ALIAS secret}"
+          : "${ANDROID_KEY_PASSWORD:?Missing ANDROID_KEY_PASSWORD secret}"
+          unsigned_apk=$(find src-tauri/gen/android/app/build/outputs/apk -type f -name 'app-universal-release-unsigned.apk' -print -quit)
+          test -n "$unsigned_apk"
+          mkdir -p release
+          aligned_apk="$RUNNER_TEMP/Nevo_${GITHUB_REF_NAME}_aligned.apk"
+          signed_apk=release/Nevo_${GITHUB_REF_NAME}_android.apk
+          key_file="$RUNNER_TEMP/android-release-key.jks"
+          printf '%s' "$ANDROID_KEY_BASE64" | base64 --decode > "$key_file"
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -P 16 -f 4 "$unsigned_apk" "$aligned_apk"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign --ks "$key_file" --ks-key-alias "$ANDROID_KEY_ALIAS" \
+            --ks-pass env:ANDROID_KEY_PASSWORD --key-pass env:ANDROID_KEY_PASSWORD \
+            --out "$signed_apk" "$aligned_apk"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$signed_apk"
+
+      - name: Upload Android APK to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          files: release/Nevo_${{ github.ref_name }}_android.apk
