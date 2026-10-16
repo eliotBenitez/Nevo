@@ -2077,12 +2077,16 @@
       "deleteRow": "Zeile löschen",
       "deleteCol": "Spalte löschen",
       "deleteTable": "Tabelle löschen",
+      "sortAsc": "Spalte sortieren A→Z",
+      "sortDesc": "Spalte sortieren Z→A",
+      "sortUnavailable": "Sortieren ist bei Tabellen mit verbundenen Zeilen oder Formeln nicht verfügbar",
       "categories": {
         "insert": "Einfügen",
         "cells": "Zellen",
         "alignment": "Ausrichtung",
         "styling": "Stil",
-        "actions": "Aktionen"
+        "actions": "Aktionen",
+        "sort": "Sortieren"
       }
     },
     "assets": {

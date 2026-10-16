@@ -2077,12 +2077,16 @@
       "deleteRow": "Eliminar fila",
       "deleteCol": "Eliminar columna",
       "deleteTable": "Eliminar tabla",
+      "sortAsc": "Ordenar columna A→Z",
+      "sortDesc": "Ordenar columna Z→A",
+      "sortUnavailable": "No se puede ordenar una tabla con filas combinadas o fórmulas",
       "categories": {
         "insert": "Insertar",
         "cells": "Celdas",
         "alignment": "Alineación",
         "styling": "Estilo",
-        "actions": "Acciones"
+        "actions": "Acciones",
+        "sort": "Ordenar"
       }
     },
     "assets": {

@@ -4,9 +4,12 @@ import {
   AlignLeft,
   AlignRight,
   ArrowDown,
+  ArrowDownAZ,
+  ArrowDownZA,
   ArrowLeft,
   ArrowRight,
   ArrowUp,
+  ArrowUpDown,
   Columns3,
   Combine,
   Heading1,
@@ -42,6 +45,10 @@ const { t } = useI18n()
 
 function getTableSelectionLabel(context: NevoTableContext): string {
   return t('editor.table.selection', { rows: context.selectedRows, cols: context.selectedCols })
+}
+
+function sortTitle(key: 'sortAsc' | 'sortDesc'): string {
+  return props.context?.canSort ? t(`editor.table.${key}`) : t('editor.table.sortUnavailable')
 }
 
 function toggleTextAccent() {
@@ -361,6 +368,37 @@ const btnDanger =
             @click="togglePadding"
           >
             <Rows3 :size="13" />
+          </button>
+        </div>
+      </div>
+
+      <!-- Row 3: Sort body rows by the active column -->
+      <div class="tw:grid tw:w-full tw:grid-cols-3 tw:gap-1.5">
+        <div class="tw:flex tw:items-center tw:justify-center tw:gap-0.5 tw:rounded-[calc(7px*var(--radius-scale,1))] tw:bg-(--hover-strong) tw:p-0.5">
+          <span class="tw:inline-flex tw:size-7 tw:items-center tw:justify-center tw:text-content-muted tw:select-none" :title="t('editor.table.categories.sort')">
+            <ArrowUpDown :size="12" />
+          </span>
+          <button
+            type="button"
+            :class="btnBase"
+            :title="sortTitle('sortAsc')"
+            :aria-label="t('editor.table.sortAsc')"
+            :disabled="!context?.canSort"
+            @mousedown.prevent
+            @click="emit('command', 'core.table.column.sort.asc')"
+          >
+            <ArrowDownAZ :size="13" />
+          </button>
+          <button
+            type="button"
+            :class="btnBase"
+            :title="sortTitle('sortDesc')"
+            :aria-label="t('editor.table.sortDesc')"
+            :disabled="!context?.canSort"
+            @mousedown.prevent
+            @click="emit('command', 'core.table.column.sort.desc')"
+          >
+            <ArrowDownZA :size="13" />
           </button>
         </div>
       </div>

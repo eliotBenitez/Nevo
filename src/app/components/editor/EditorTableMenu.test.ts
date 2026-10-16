@@ -15,6 +15,7 @@ function createTestContext(overrides?: Partial<NevoTableContext>): NevoTableCont
     selectedCols: 3,
     canMerge: true,
     canSplit: false,
+    canSort: true,
     isMergedCell: false,
     activeCell: {
       pos: 10,
@@ -157,5 +158,16 @@ describe('EditorTableMenu', () => {
     await text.trigger('click')
     expect(wrapper.emitted('cellAttr')?.[1]).toEqual(['textColor', 'oklch(0.34 0.08 250)'])
   })
-})
 
+  it('emits sort commands and disables sorting when the table cannot be sorted', async () => {
+    const wrapper = mountTableMenu()
+    await getButtonByTitle(wrapper, en.editor.table.sortAsc).trigger('click')
+    await getButtonByTitle(wrapper, en.editor.table.sortDesc).trigger('click')
+    expect(wrapper.emitted('command')).toEqual([['core.table.column.sort.asc'], ['core.table.column.sort.desc']])
+
+    const blocked = mountTableMenu(createTestContext({ canSort: false }))
+    const sortButtons = blocked.findAll('button').filter(b => b.attributes('title') === en.editor.table.sortUnavailable)
+    expect(sortButtons).toHaveLength(2)
+    expect(sortButtons.every(b => b.attributes('disabled') !== undefined)).toBe(true)
+  })
+})

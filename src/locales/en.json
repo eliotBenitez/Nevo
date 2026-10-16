@@ -2077,12 +2077,16 @@
       "deleteRow": "Delete Row",
       "deleteCol": "Delete Col",
       "deleteTable": "Delete Table",
+      "sortAsc": "Sort Column A→Z",
+      "sortDesc": "Sort Column Z→A",
+      "sortUnavailable": "Sorting is unavailable for tables with merged rows or formulas",
       "categories": {
         "insert": "Insert",
         "cells": "Cells",
         "alignment": "Alignment",
         "styling": "Styling",
-        "actions": "Actions"
+        "actions": "Actions",
+        "sort": "Sort"
       }
     },
     "assets": {

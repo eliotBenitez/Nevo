@@ -365,6 +365,7 @@ export interface NevoTableContext {
   selectedCols: number
   canMerge: boolean
   canSplit: boolean
+  canSort: boolean
   isMergedCell: boolean
   activeCell: {
     pos: number

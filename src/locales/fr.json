@@ -2077,12 +2077,16 @@
       "deleteRow": "Supprimer la ligne",
       "deleteCol": "Supprimer la colonne",
       "deleteTable": "Supprimer le tableau",
+      "sortAsc": "Trier la colonne A→Z",
+      "sortDesc": "Trier la colonne Z→A",
+      "sortUnavailable": "Le tri n’est pas disponible pour les tableaux avec des lignes fusionnées ou des formules",
       "categories": {
         "insert": "Insérer",
         "cells": "Cellules",
         "alignment": "Alignement",
         "styling": "Style",
-        "actions": "Actions"
+        "actions": "Actions",
+        "sort": "Trier"
       }
     },
     "assets": {
