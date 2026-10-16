@@ -63,7 +63,11 @@ export function createDictationPlugin(options: DictationPluginOptions): Plugin<D
       apply(tr, value, _oldState, newState): DictationState {
         const meta = tr.getMeta(dictationPluginKey) as Meta | undefined
         let next = value.active ? { ...value, anchor: tr.mapping.map(value.anchor) } : value
-        if (!meta && tr.selectionSet && next.active) next = { ...next, anchor: newState.selection.head }
+        // The session stays pinned to its block: the caret may reposition it only within that block.
+        if (!meta && tr.selectionSet && next.active) {
+          const $head = newState.selection.$head
+          if ($head.sameParent(newState.doc.resolve(next.anchor))) next = { ...next, anchor: $head.pos }
+        }
         if (!meta) return next
 
         switch (meta.type) {
@@ -161,8 +165,10 @@ export function commitDictatedText(view: EditorView, text: string): boolean {
     pos += chunk.length
   }
 
-  if (tr.docChanged) tr.setSelection(TextSelection.create(tr.doc, pos)).scrollIntoView()
-  else tr.setMeta('addToHistory', false)
+  // Follow the dictated text with the caret only when the caret is in the dictation block.
+  const caretInBlock = view.state.selection.$head.sameParent($anchor)
+  if (!tr.docChanged) tr.setMeta('addToHistory', false)
+  else if (caretInBlock) tr.setSelection(TextSelection.create(tr.doc, pos)).scrollIntoView()
   view.dispatch(tr.setMeta(dictationPluginKey, { type: 'commit', anchor: pos } satisfies Meta))
   return true
 }

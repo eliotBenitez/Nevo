@@ -61,13 +61,23 @@ describe('dictation plugin', () => {
     expect(view.state.doc.eq(paragraphs('Hello'))).toBe(true)
   })
 
-  it('moves the anchor with a user selection change', () => {
+  it('moves the anchor with a selection change inside the same block', () => {
+    const { view } = makeView(paragraphs('one two'), 8)
+    startDictationUi(view)
+    view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 4)))
+    expect(getDictationState(view.state).anchor).toBe(4)
+  })
+
+  it('keeps the anchor in its block when the selection moves to another block', () => {
     const { view } = makeView(paragraphs('one', 'two'), 4)
     startDictationUi(view)
     view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 9)))
-    expect(getDictationState(view.state).anchor).toBe(9)
+    expect(getDictationState(view.state).anchor).toBe(4)
+    expect(view.dom.querySelectorAll('p')[0].querySelector('.nv-dictation')).not.toBeNull()
     commitDictatedText(view, 'three')
-    expect(view.state.doc.child(1).textContent).toBe('two three')
+    expect(view.state.doc.child(0).textContent).toBe('one three')
+    expect(view.state.doc.child(1).textContent).toBe('two')
+    expect(view.state.selection.head).toBe(15)
   })
 
   it('maps the anchor through edits that do not set the selection', () => {
