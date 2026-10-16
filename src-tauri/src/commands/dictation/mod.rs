@@ -371,7 +371,7 @@ mod tests {
         segments.extend(segmenter.finish());
         let text = segments
             .iter()
-            .map(|pcm| crate::commands::transcription::recognize_text(ctx, pcm, None, None))
+            .map(|pcm| crate::commands::transcription::recognize_text(ctx, pcm, None, None, true))
             .collect::<Result<Vec<_>, _>>()
             .unwrap()
             .join(" ")

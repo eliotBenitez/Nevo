@@ -25,6 +25,7 @@ describe('joinDictatedText', () => {
   it('lowercases a phrase that continues a sentence', () => {
     expect(joinDictatedText('Алло, алло', 'Музыка')).toBe(' музыка')
     expect(joinDictatedText('Hello ', 'World')).toBe('world')
+    expect(joinDictatedText('Алло', 'Я сказал')).toBe(' я сказал')
   })
 
   it('keeps the capital after a sentence end, at the block start, and for I or acronyms', () => {

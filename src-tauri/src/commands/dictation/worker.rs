@@ -64,15 +64,21 @@ impl Worker<'_> {
         Some(&self.finalized[start..])
     }
 
-    fn recognize(&self, pcm: &[f32]) -> Result<String, String> {
-        recognize_text(self.ctx, pcm, self.language.as_deref(), self.prompt())
+    fn recognize(&self, pcm: &[f32], precise: bool) -> Result<String, String> {
+        recognize_text(
+            self.ctx,
+            pcm,
+            self.language.as_deref(),
+            self.prompt(),
+            precise,
+        )
     }
 
     fn finalize(&mut self, pcm: &[f32]) -> Result<(), String> {
         if !is_audible(pcm) {
             return Ok(());
         }
-        let text = self.recognize(pcm)?;
+        let text = self.recognize(pcm, true)?;
         if !text.is_empty() && !echoes_prompt(&self.finalized, &text) {
             if !self.finalized.is_empty() {
                 self.finalized.push(' ');
@@ -87,7 +93,7 @@ impl Worker<'_> {
         if !is_audible(pcm) {
             return Ok(());
         }
-        let text = self.recognize(pcm)?;
+        let text = self.recognize(pcm, false)?;
         if !text.is_empty() && !echoes_prompt(&self.finalized, &text) {
             let _ = self.events.send(DictationEvent::Partial { text });
         }

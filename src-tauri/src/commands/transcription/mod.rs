@@ -96,8 +96,10 @@ pub(crate) fn resolve_model_path(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(model)
 }
 
-fn base_params<'a>(language: Option<&'a str>) -> FullParams<'a, 'a> {
-    let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
+const GREEDY: SamplingStrategy = SamplingStrategy::Greedy { best_of: 1 };
+
+fn base_params<'a>(strategy: SamplingStrategy, language: Option<&'a str>) -> FullParams<'a, 'a> {
+    let mut params = FullParams::new(strategy);
     params.set_language(language);
     params.set_translate(false);
     // Without this, music is captioned as "[Music]"/"[Música]" instead of lyrics or nothing.
@@ -109,15 +111,30 @@ fn base_params<'a>(language: Option<&'a str>) -> FullParams<'a, 'a> {
     params
 }
 
-/// Recognizes one short utterance as a single segment of plain text.
+/// Encoder context for at most 15 s of audio (50 frames per second) instead of the
+/// full 30 s window; dictation segments are capped at 12 s, so this halves encoder time.
+const UTTERANCE_AUDIO_CTX: i32 = 768;
+
+/// Recognizes one short utterance (at most 15 s) as a single segment of plain text.
+/// `precise` trades CPU time for accuracy with beam search; meant for final text.
 pub(crate) fn recognize_text(
     ctx: &WhisperContext,
     pcm: &[f32],
     language: Option<&str>,
     prompt: Option<&str>,
+    precise: bool,
 ) -> Result<String, String> {
     let mut whisper = ctx.create_state().map_err(|_| "inference_failed")?;
-    let mut params = base_params(language);
+    let strategy = if precise {
+        SamplingStrategy::BeamSearch {
+            beam_size: 5,
+            patience: -1.0,
+        }
+    } else {
+        GREEDY
+    };
+    let mut params = base_params(strategy, language);
+    params.set_audio_ctx(UTTERANCE_AUDIO_CTX);
     params.set_single_segment(true);
     params.set_no_timestamps(true);
     if let Some(prompt) = prompt {
@@ -179,7 +196,7 @@ fn transcribe(
     let context = whisper_context(state, model)?;
     let mut whisper = context.create_state().map_err(|_| "inference_failed")?;
     whisper
-        .full(base_params(language), &pcm)
+        .full(base_params(GREEDY, language), &pcm)
         .map_err(|_| "inference_failed")?;
     Ok((0..whisper.full_n_segments())
         .filter_map(|index| whisper.get_segment(index))

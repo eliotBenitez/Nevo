@@ -3,8 +3,8 @@ export type DictationOp = { kind: 'text'; text: string } | { kind: 'paragraph' }
 const NO_SPACE_AFTER = /[\s([{«"']$/
 const LEADING_PUNCTUATION = /^[,.!?:;…]/
 const SENTENCE_END = /[.!?…]["'»)\]]*\s*$/
-// Whisper capitalizes every phrase; keep the capital only for "I" and acronyms like "NASA".
-const CAPITALIZED_WORD = /^(\p{Lu})(?=\p{Ll})(?!'|’)/u
+// Whisper capitalizes every phrase; keep the capital only for English "I" and acronyms like "NASA".
+const CAPITALIZED_WORD = /^(?!I(?![\p{L}\p{N}]))(\p{Lu})(?!\p{Lu})/u
 
 /** Returns `chunk` ready to insert after `textBefore` with exactly the spacing and case it needs. */
 export function joinDictatedText(textBefore: string, chunk: string): string {
