@@ -1,4 +1,6 @@
-export type EmbedProvider = 'youtube' | 'vimeo' | 'figma' | 'codepen' | 'twitter' | 'generic'
+import { mapEmbedUrl } from './mapEmbed'
+
+export type EmbedProvider = 'youtube' | 'vimeo' | 'figma' | 'codepen' | 'map' | 'twitter' | 'generic'
 
 export interface EmbedResult {
   provider: EmbedProvider
@@ -53,6 +55,7 @@ export function detectEmbedProvider(url: string): EmbedProvider | null {
     if (hostMatches(host, 'figma.com')) return 'figma'
     if (hostMatches(host, 'codepen.io')) return 'codepen'
     if (hostMatches(host, 'twitter.com') || hostMatches(host, 'x.com')) return 'twitter'
+    if (mapEmbedUrl(url)) return 'map'
   } catch { /* unparseable URL */ }
   return null
 }
@@ -79,6 +82,11 @@ export function generateEmbedHtml(url: string, provider: EmbedProvider): string 
       const id = match?.[2]
       if (!user || !id) return ''
       return `<iframe src="https://codepen.io/${user}/embed/${id}?default-tab=result" frameborder="0" allowfullscreen style="width:100%;height:100%;position:absolute;top:0;left:0;"></iframe>`
+    }
+    case 'map': {
+      const src = mapEmbedUrl(url)
+      if (!src) return ''
+      return `<iframe src="${src.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" title="Map" frameborder="0" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen" style="width:100%;height:100%;position:absolute;top:0;left:0;"></iframe>`
     }
     default:
       return ''
