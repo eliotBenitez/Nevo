@@ -21,6 +21,7 @@ describe('useMediaUpload audio source changes', () => {
       schema: nevoBaseSchema,
       doc: nevoBaseSchema.node('doc', null, [mediaType.create({
         kind: 'audio', src: 'old.mp3', name: 'Old', bookmarks: [{ id: 'keep', time: 8, label: 'Saved point' }],
+        transcript: [{ start: 1, end: 3, text: 'Old speech' }],
       })]),
     })
     const view = {
@@ -35,10 +36,11 @@ describe('useMediaUpload audio source changes', () => {
     requestMediaPicker(0, 'audio')
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(state.doc.firstChild?.attrs.bookmarks).toEqual([{ id: 'keep', time: 8, label: 'Saved point' }])
+    expect(state.doc.firstChild?.attrs.transcript).toEqual([{ start: 1, end: 3, text: 'Old speech' }])
 
     picker.mockResolvedValueOnce({ src: 'new.mp3', fileName: 'New.mp3', hash: 'new-hash', deduplicated: false, bytes: 100 })
     requestMediaPicker(0, 'audio')
     await new Promise((resolve) => setTimeout(resolve, 0))
-    expect(state.doc.firstChild?.attrs).toMatchObject({ src: 'new.mp3', name: 'New.mp3', bookmarks: [] })
+    expect(state.doc.firstChild?.attrs).toMatchObject({ src: 'new.mp3', name: 'New.mp3', bookmarks: [], transcript: [] })
   })
 })

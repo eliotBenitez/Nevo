@@ -11,6 +11,7 @@ import {
   type NodeViewPosition,
 } from './utils'
 import { createAudioBookmarksView } from './audioBookmarksView'
+import { createAudioTranscriptView } from './audioTranscriptView'
 import { createViewportRenderController, type ViewportRenderController } from './viewportRenderController'
 
 export function createMediaNodeView(
@@ -64,7 +65,12 @@ export function createMediaNodeView(
     resolveMediaSrc: (src) => options?.resolveMediaSrc?.(src) ?? null,
     resolveWaveformSrc: (src) => options?.resolveAssetSrc?.(src) ?? src,
   })
-  audioHost.append(audioUi.dom)
+  const transcriptUi = createAudioTranscriptView(node, {
+    view, getPos, t,
+    seekTo: audioUi.seekTo,
+    transcribe: options?.onTranscribeAudio,
+  })
+  audioHost.append(audioUi.dom, transcriptUi.dom)
   // The layout switcher lives in the shared block header (next to the overflow
   // menu) so it stays visible in both player and bookmarks layouts.
   header.insertBefore(audioUi.modeControl, menu)
@@ -137,6 +143,7 @@ export function createMediaNodeView(
       videoMeta.style.display = 'none'
       clearVideoSource()
       audioUi.update(currentNode)
+      transcriptUi.update(currentNode)
     } else {
       audioUi.suspend()
       audioHost.style.display = 'none'
@@ -182,13 +189,14 @@ export function createMediaNodeView(
     dom,
     stopEvent(event) {
       const target = event.target as Node
-      return audioUi.stopEvent(target) || video.contains(target) || menu.contains(target)
+      return audioUi.stopEvent(target) || transcriptUi.stopEvent(target) || video.contains(target) || menu.contains(target)
     },
     ignoreMutation: () => true,
     update(nextNode) {
       if (nextNode.type !== currentNode.type) return false
       currentNode = nextNode
       audioUi.updateBookmarks(nextNode)
+      transcriptUi.update(nextNode)
       controller?.requestRender()
       return true
     },
@@ -196,6 +204,7 @@ export function createMediaNodeView(
       destroyed = true
       controller?.destroy()
       audioUi.destroy()
+      transcriptUi.destroy()
       clearVideoSource()
       cleanupPick()
       dom.removeEventListener('dragstart', onDragStart)

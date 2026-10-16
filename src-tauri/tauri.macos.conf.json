@@ -1,0 +1,12 @@
+{
+  "build": {
+    "beforeDevCommand": "pnpm model:prepare && pnpm dev",
+    "beforeBuildCommand": "pnpm model:prepare && pnpm build"
+  },
+  "bundle": {
+    "resources": {
+      "resources/models/ggml-base.bin": "models/ggml-base.bin",
+      "resources/licenses/WHISPER-MIT.txt": "licenses/WHISPER-MIT.txt"
+    }
+  }
+}

@@ -5,6 +5,20 @@ import type { BlockNode } from '../../types/note'
 import { DOMParser as ProseMirrorDOMParser, DOMSerializer } from 'prosemirror-model'
 
 describe('serialization compatibility', () => {
+  it('round-trips timestamped audio transcripts in JSON and clipboard HTML', () => {
+    const transcript = [{ start: 1.2, end: 3.4, text: 'Hello <world>' }]
+    const content: BlockNode = {
+      type: 'doc',
+      content: [{ type: 'media_block', attrs: { kind: 'audio', src: '.nevo/assets/speech.wav', transcript } }],
+    }
+    const doc = parseNoteContentToDoc(nevoBaseSchema, content)
+    expect(serializeDocToNoteContent(doc).content?.[0].attrs?.transcript).toEqual(transcript)
+    const wrapper = document.createElement('div')
+    wrapper.append(DOMSerializer.fromSchema(nevoBaseSchema).serializeFragment(doc.content))
+    const parsed = ProseMirrorDOMParser.fromSchema(nevoBaseSchema).parse(wrapper)
+    expect(serializeDocToNoteContent(parsed).content?.[0].attrs?.transcript).toEqual(transcript)
+  })
+
   it('round-trips raw audio bookmarks through JSON and clipboard DOM', () => {
     const bookmarks = [
       { id: 'b2', time: 20, label: 'Later', privateField: { keep: true } },

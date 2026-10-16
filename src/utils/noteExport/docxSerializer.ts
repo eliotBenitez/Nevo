@@ -54,6 +54,7 @@ import { visibleRecords } from '../../editor-core/databaseFilterSort'
 import { normalizeQueryBlockData } from '../../features/query/queryBlockData'
 import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSummary'
 import { formatAudioTime, readAudioBookmarks } from '../../core/media/audioBookmarks'
+import { readAudioTranscript } from '../../core/media/audioTranscript'
 
 /** Raster image type accepted by docx's ImageRun (excludes SVG; we rasterize). */
 export type DocxImageType = 'png' | 'jpg' | 'gif' | 'bmp'
@@ -576,8 +577,13 @@ async function blocksFor(node: BlockNode, ctx: Ctx): Promise<(Paragraph | Table)
       const paragraphs: Paragraph[] = [new Paragraph({ children: textRuns(`${kind === 'video' ? '🎬' : '🔊'} ${name}`, { italics: true }) })]
       if (kind === 'audio') {
         for (const bookmark of readAudioBookmarks(node.attrs?.bookmarks)) {
-          const label = bookmark.label.replace(/[\r\n]+/g, ' ')
+          const label = bookmark.label.replace(/\s+/g, ' ')
           paragraphs.push(new Paragraph({ children: textRuns(`${formatAudioTime(bookmark.time)} — ${label}`) }))
+        }
+        const transcript = readAudioTranscript(node.attrs?.transcript)
+        if (transcript.length) paragraphs.push(new Paragraph({ children: textRuns('Transcript', { bold: true }) }))
+        for (const segment of transcript) {
+          paragraphs.push(new Paragraph({ children: textRuns(`${formatAudioTime(segment.start)} — ${segment.text.replace(/\s+/g, ' ')}`) }))
         }
       }
       return paragraphs

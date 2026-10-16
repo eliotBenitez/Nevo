@@ -92,6 +92,16 @@ describe('serializeNoteToMarkdown — block types', () => {
     expect(assetSrcs).toEqual(['.nevo/assets/a.mp3'])
   })
 
+  it('exports audio transcripts with timestamps and escaped text', () => {
+    const note = noteWith([{ type: 'media_block', attrs: {
+      kind: 'audio', src: '.nevo/assets/a.mp3', name: 'Track',
+      transcript: [{ start: 1, end: 3, text: 'Hello **world**\n<bad>' }],
+    } }])
+    const { markdown } = serializeNoteToMarkdown(note, 'assets')
+    expect(markdown).toContain('Transcript:')
+    expect(markdown).toContain('0:01 — Hello \\*\\*world\\*\\* \\<bad\\>')
+  })
+
   it('renders valid audio bookmarks as escaped readable Markdown without changing asset collection', () => {
     const note = noteWith([{
       type: 'media_block',

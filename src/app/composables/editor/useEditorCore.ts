@@ -43,6 +43,7 @@ import { createDatabaseRepository } from '../../../features/database/databaseRep
 import { createDatabaseCleanup, collectRemovedAssetSrcs } from './documentCleanup'
 import { createIdleTaskScheduler } from './idleTaskScheduler'
 import { resolveBlockRef } from '../../../core/blockRef/resolveBlockRef'
+import { isTranscriptionSupported, transcribeAudio } from '../../../tauri/transcription'
 import { slashGridColumns } from '../../../utils/slashMenuLayout'
 import {
   clearActiveEditor,
@@ -708,6 +709,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
         onRequestVegaEdit: ({ position, anchorRect }) => callbacks.onVegaEditRequest(position, anchorRect),
         onRequestDrawOpen: ({ node }) => callbacks.onDrawOpen?.(node.attrs.drawId),
         onRequestMediaAsset: ({ position, kind }) => callbacks.onMediaPickerRequest(position, kind),
+        onTranscribeAudio: isTranscriptionSupported() ? transcribeAudio : undefined,
         onRequestNoteEmbedPick: ({ position, anchorRect }) => callbacks.onNoteEmbedPickRequest(position, anchorRect),
         onRequestEmbedUrl: ({ position, anchorRect }) => callbacks.onEmbedUrlRequest(position, anchorRect),
         onNoteEmbedContentLoad: (ctx) => callbacks.onNoteEmbedContentLoad?.(ctx),

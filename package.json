@@ -6,6 +6,7 @@
   "license": "AGPL-3.0-only",
   "scripts": {
     "dev": "vite",
+    "model:prepare": "node build-tools/prepare-whisper-model.mjs",
     "build": "vue-tsc --noEmit && vite build && node build-tools/check-bundle-size.mjs",
     "bundle:check": "node build-tools/check-bundle-size.mjs",
     "test": "vitest",

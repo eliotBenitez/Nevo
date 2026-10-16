@@ -2446,6 +2446,22 @@
     "loadingAudio": "Loading audio…",
     "audioError": "Audio could not be loaded. Check the file and try again.",
     "retryAudio": "Retry",
+    "transcript": "Transcript",
+    "transcribe": "Transcribe offline",
+    "retranscribe": "Transcribe again",
+    "transcriptLanguage": "Speech language",
+    "transcriptLanguages": {
+      "auto": "Detect automatically",
+      "ru": "Russian",
+      "en": "English",
+      "de": "German",
+      "fr": "French",
+      "es": "Spanish"
+    },
+    "transcribing": "Transcribing on this device…",
+    "transcriptEmpty": "No speech was recognized.",
+    "transcriptBusy": "Another recording is being transcribed. Try again shortly.",
+    "transcriptFailed": "Could not transcribe this audio. Check the file and try again.",
     "cancel": "Cancel"
   },
   "voiceRecording": {

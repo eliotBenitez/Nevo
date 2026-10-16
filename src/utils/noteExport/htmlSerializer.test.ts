@@ -81,6 +81,16 @@ describe('serializeNoteToHtml', () => {
     expect(html).toContain('<audio controls><source src="https://cdn.test/audio.mp3"></audio>')
   })
 
+  it('exports audio transcripts as escaped timestamped text', async () => {
+    const { html } = await serializeNoteToHtml(note({ type: 'doc', content: [
+      { type: 'media_block', attrs: { kind: 'audio', src: '.nevo/assets/a.mp3',
+        transcript: [{ start: 1, end: 2, text: '<script>alert(1)</script>' }] } },
+    ] }, 'Doc'), 'assets')
+    expect(html).toContain('class="audio-transcript"')
+    expect(html).toContain('0:01 — &lt;script&gt;alert(1)&lt;/script&gt;')
+    expect(html).not.toContain('<script>alert(1)</script>')
+  })
+
   it('renders audio bookmarks as escaped readable timestamp links and preserves audio asset registration', async () => {
     const { html, assetSrcs } = await serializeNoteToHtml(note({
       type: 'doc',

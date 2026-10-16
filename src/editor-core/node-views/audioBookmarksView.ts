@@ -277,6 +277,7 @@ export function createAudioBookmarksView(node: PMNode, options: AudioBookmarksVi
     update(next: PMNode) { updateBookmarks(next); player.update(next) },
     updateBookmarks,
     isPaused: player.isPaused,
+    seekTo: player.seekTo,
     suspend: player.suspend,
     stopEvent: (target: Node) => player.stopEvent(target) || root.contains(target),
     destroy() {

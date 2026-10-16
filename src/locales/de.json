@@ -2446,6 +2446,22 @@
     "loadingAudio": "Audio wird geladen…",
     "audioError": "Audio konnte nicht geladen werden. Prüfe die Datei und versuche es erneut.",
     "retryAudio": "Erneut versuchen",
+    "transcript": "Transkript",
+    "transcribe": "Offline transkribieren",
+    "retranscribe": "Erneut transkribieren",
+    "transcriptLanguage": "Sprache der Aufnahme",
+    "transcriptLanguages": {
+      "auto": "Automatisch erkennen",
+      "ru": "Russisch",
+      "en": "Englisch",
+      "de": "Deutsch",
+      "fr": "Französisch",
+      "es": "Spanisch"
+    },
+    "transcribing": "Wird auf diesem Gerät transkribiert…",
+    "transcriptEmpty": "Keine Sprache erkannt.",
+    "transcriptBusy": "Eine andere Aufnahme wird bereits transkribiert. Bitte später erneut versuchen.",
+    "transcriptFailed": "Audio konnte nicht transkribiert werden. Datei prüfen und erneut versuchen.",
     "cancel": "Abbrechen"
   },
   "voiceRecording": {

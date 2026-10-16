@@ -3,12 +3,18 @@ import { EditorView } from 'prosemirror-view'
 import { createNevoEditorState } from '../state'
 import { nevoBaseSchema } from '../schema'
 import type { BlockNode } from '../../types/note'
+import type { AudioTranscriptSegment } from '../../core/media/audioTranscript'
+import type { TranscriptionLanguage } from '../../core/media/transcriptionLanguage'
 
-function createMediaEditor(attrs: Record<string, unknown>, resolveMediaSrc: (src: string) => string | null) {
+function createMediaEditor(
+  attrs: Record<string, unknown>,
+  resolveMediaSrc: (src: string) => string | null,
+  onTranscribeAudio?: (src: string, language: TranscriptionLanguage) => Promise<AudioTranscriptSegment[]>,
+) {
   const setup = createNevoEditorState({
     schema: nevoBaseSchema,
     content: { type: 'doc', content: [{ type: 'media_block', attrs }] } as BlockNode,
-    nodeViewOptions: { resolveMediaSrc },
+    nodeViewOptions: { resolveMediaSrc, onTranscribeAudio },
   })
   const mount = document.createElement('div')
   document.body.appendChild(mount)
@@ -32,6 +38,55 @@ async function tick() {
 
 describe('media node view source lifecycle', () => {
   afterEach(() => vi.restoreAllMocks())
+
+  it('transcribes a local audio asset and persists timestamped text in the live editor', async () => {
+    const transcribe = vi.fn(async () => [{ start: 1, end: 3, text: 'Recognized speech' }])
+    const editor = createMediaEditor({ kind: 'audio', src: '.nevo/assets/audio.wav' }, () => null, transcribe)
+    try {
+      await tick()
+      const button = editor.mount.querySelector<HTMLButtonElement>('.nv-audio-transcribe')!
+      expect(button).toBeTruthy()
+      button.click()
+      await tick()
+      expect(transcribe).toHaveBeenCalledWith('.nevo/assets/audio.wav', 'auto')
+      expect(editor.view.state.doc.firstChild?.attrs.transcript).toEqual([{ start: 1, end: 3, text: 'Recognized speech' }])
+      expect(editor.mount.querySelector('.nv-audio-transcript')?.textContent).toContain('Recognized speech')
+    } finally { editor.destroy() }
+  })
+
+  it('uses the selected spoken language when retranscribing a song', async () => {
+    const transcribe = vi.fn(async () => [{ start: 3, end: 5, text: 'Я танцую' }])
+    const editor = createMediaEditor({ kind: 'audio', src: '.nevo/assets/song.mp3', transcript: [
+      { start: 0, end: 2, text: '[Música]' },
+    ] }, () => null, transcribe)
+    try {
+      await tick()
+      const select = editor.mount.querySelector<HTMLSelectElement>('.nv-audio-transcript-language')!
+      expect(select).toBeTruthy()
+      expect(select.value).toBe('auto')
+      select.value = 'ru'
+      editor.mount.querySelector<HTMLButtonElement>('.nv-audio-transcribe')!.click()
+      await tick()
+      expect(transcribe).toHaveBeenCalledWith('.nevo/assets/song.mp3', 'ru')
+      expect(editor.view.state.doc.firstChild?.attrs.transcript).toEqual([{ start: 3, end: 5, text: 'Я танцую' }])
+    } finally { editor.destroy() }
+  })
+
+  it('does not attach a stale transcript after the audio source changes', async () => {
+    let resolve!: (segments: AudioTranscriptSegment[]) => void
+    const transcribe = vi.fn(() => new Promise<AudioTranscriptSegment[]>(done => { resolve = done }))
+    const editor = createMediaEditor({ kind: 'audio', src: '.nevo/assets/old.wav' }, () => null, transcribe)
+    try {
+      await tick()
+      editor.mount.querySelector<HTMLButtonElement>('.nv-audio-transcribe')!.click()
+      const node = editor.view.state.doc.firstChild!
+      editor.view.dispatch(editor.view.state.tr.setNodeMarkup(0, undefined, { ...node.attrs, src: '.nevo/assets/new.wav' }))
+      expect(editor.mount.querySelector<HTMLButtonElement>('.nv-audio-transcribe')?.disabled).toBe(false)
+      resolve([{ start: 0, end: 1, text: 'Old speech' }])
+      await tick()
+      expect(editor.view.state.doc.firstChild?.attrs.transcript).toEqual([])
+    } finally { editor.destroy() }
+  })
 
   it('resolves and loads an existing audio source during real editor construction', async () => {
     const mediaUrl = 'http://127.0.0.1:1/audio-ready'

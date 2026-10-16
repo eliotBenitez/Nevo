@@ -2446,6 +2446,22 @@
     "loadingAudio": "Cargando audio…",
     "audioError": "No se pudo cargar el audio. Comprueba el archivo e inténtalo de nuevo.",
     "retryAudio": "Reintentar",
+    "transcript": "Transcripción",
+    "transcribe": "Transcribir sin conexión",
+    "retranscribe": "Transcribir de nuevo",
+    "transcriptLanguage": "Idioma de la grabación",
+    "transcriptLanguages": {
+      "auto": "Detectar automáticamente",
+      "ru": "Ruso",
+      "en": "Inglés",
+      "de": "Alemán",
+      "fr": "Francés",
+      "es": "Español"
+    },
+    "transcribing": "Transcribiendo en este dispositivo…",
+    "transcriptEmpty": "No se reconoció voz.",
+    "transcriptBusy": "Ya se está transcribiendo otra grabación. Inténtalo más tarde.",
+    "transcriptFailed": "No se pudo transcribir este audio. Comprueba el archivo e inténtalo de nuevo.",
     "cancel": "Cancelar"
   },
   "voiceRecording": {

@@ -7,6 +7,7 @@ import { visibleRecords } from '../../editor-core/databaseFilterSort'
 import { normalizeQueryBlockData } from '../../features/query/queryBlockData'
 import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSummary'
 import { formatAudioTime, readAudioBookmarks } from '../../core/media/audioBookmarks'
+import { readAudioTranscript } from '../../core/media/audioTranscript'
 
 export interface MarkdownSerializeResult {
   markdown: string
@@ -270,8 +271,12 @@ function nodeToMd(node: BlockNode, ctx: SerializeCtx): string {
       const link = `[${name}](${ctx.assetsSubfolderName}/${basename})`
       if (kind !== 'audio') return link
       const bookmarks = readAudioBookmarks(node.attrs?.bookmarks)
-      if (!bookmarks.length) return link
       const entries = bookmarks.map(bookmark => `- ${formatAudioTime(bookmark.time)} — ${escapeMarkdownText(bookmark.label)}`)
+      const transcript = readAudioTranscript(node.attrs?.transcript)
+      if (transcript.length) {
+        entries.push('', 'Transcript:', ...transcript.map(segment =>
+          `- ${formatAudioTime(segment.start)} — ${escapeMarkdownText(segment.text)}`))
+      }
       return [link, ...entries].join('\n')
     }
     case 'note_embed': {

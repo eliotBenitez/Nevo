@@ -256,6 +256,43 @@ fn workspace_file_in_root(root: &Path, request_path: &str) -> Result<PathBuf, St
     Ok(target)
 }
 
+/// Resolves only an audio asset from the currently open workspace for offline transcription.
+/// The source is supplied by note JSON, so never accept arbitrary paths or plugin assets.
+#[cfg(desktop)]
+pub(crate) fn active_workspace_audio_asset(src: &str) -> Result<PathBuf, String> {
+    let root = ACTIVE_WORKSPACE_ROOT
+        .read()
+        .map_err(|_| "Active workspace lock is poisoned".to_string())?
+        .clone()
+        .ok_or_else(|| "No active workspace".to_string())?;
+    workspace_audio_asset(&root, src)
+}
+
+#[cfg_attr(mobile, allow(dead_code))]
+fn workspace_audio_asset(root: &Path, src: &str) -> Result<PathBuf, String> {
+    let name = match src.split('/').collect::<Vec<_>>().as_slice() {
+        [".nevo", "assets", name] if !name.is_empty() => *name,
+        _ => return Err("Transcription requires a workspace audio asset".to_string()),
+    };
+    let supported = Path::new(name)
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| {
+            matches!(
+                extension.to_ascii_lowercase().as_str(),
+                "wav" | "mp3" | "m4a" | "mp4" | "aac" | "flac" | "ogg" | "webm"
+            )
+        });
+    if !supported {
+        return Err("Unsupported audio format".to_string());
+    }
+    let file = workspace_file_in_root(root, src)?;
+    if file.parent() != Some(root.join(".nevo/assets").as_path()) {
+        return Err("Transcription requires a workspace audio asset".to_string());
+    }
+    Ok(file)
+}
+
 /// Resolves a notebook image `src` (`.nevo/assets/<name>`) to a canonical file
 /// inside `workspace_root`, which must itself be canonical. Rejects the plugins
 /// directory and any non-raster extension (SVG is untrusted active content).
@@ -278,7 +315,7 @@ pub(crate) fn notebook_image_asset(workspace_root: &Path, src: &str) -> Result<P
         return Err("Notebook image format is not supported".to_string());
     }
     let target = workspace_file_in_root(workspace_root, src)?;
-    if !target.starts_with(workspace_root.join(".nevo").join("assets")) {
+    if target.parent() != Some(workspace_root.join(".nevo/assets").as_path()) {
         return Err("Notebook image must be a workspace asset".to_string());
     }
     Ok(target)
@@ -352,7 +389,10 @@ pub fn workspace_asset_response(request_path: &str) -> tauri::http::Response<Vec
 
 #[cfg(test)]
 mod tests {
-    use super::{notebook_image_asset, validate_id, workspace_file_in_root, write_atomic};
+    use super::{
+        notebook_image_asset, validate_id, workspace_audio_asset, workspace_file_in_root,
+        write_atomic,
+    };
 
     #[test]
     fn validate_id_accepts_uuids_and_rejects_traversal() {
@@ -437,11 +477,39 @@ mod tests {
     }
 
     #[test]
+    fn transcription_accepts_only_audio_files_in_workspace_assets() {
+        let dir = std::env::temp_dir().join(format!("nevo_transcript_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(dir.join(".nevo/assets")).unwrap();
+        std::fs::create_dir_all(dir.join(".nevo/assets/sub")).unwrap();
+        std::fs::create_dir_all(dir.join(".nevo/plugins")).unwrap();
+        std::fs::write(dir.join(".nevo/assets/speech.MP3"), b"audio").unwrap();
+        std::fs::write(dir.join(".nevo/assets/sub/speech.mp3"), b"nested").unwrap();
+        std::fs::write(dir.join(".nevo/assets/script.txt"), b"secret").unwrap();
+        std::fs::write(dir.join(".nevo/plugins/speech.mp3"), b"plugin").unwrap();
+        let root = dir.canonicalize().unwrap();
+        assert!(workspace_audio_asset(&root, ".nevo/assets/speech.MP3").is_ok());
+        for src in [
+            ".nevo/assets/script.txt",
+            ".nevo/plugins/speech.mp3",
+            "secret.mp3",
+            ".nevo/assets/../plugins/speech.mp3",
+            ".nevo/assets/missing.wav",
+            ".nevo/assets/sub/speech.mp3",
+            ".nevo/assets/sub%2Fspeech.mp3",
+        ] {
+            assert!(workspace_audio_asset(&root, src).is_err(), "accepted {src}");
+        }
+        std::fs::remove_dir_all(dir).ok();
+    }
+
+    #[test]
     fn notebook_image_asset_resolves_only_raster_workspace_assets() {
         let dir = std::env::temp_dir().join(format!("nevo_nbimg_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(dir.join(".nevo/assets")).unwrap();
+        std::fs::create_dir_all(dir.join(".nevo/assets/sub")).unwrap();
         std::fs::create_dir_all(dir.join(".nevo/plugins")).unwrap();
         std::fs::write(dir.join(".nevo/assets/a.PNG"), b"png").unwrap();
+        std::fs::write(dir.join(".nevo/assets/sub/a.png"), b"nested").unwrap();
         std::fs::write(dir.join(".nevo/assets/a.svg"), b"<svg/>").unwrap();
         std::fs::write(dir.join(".nevo/plugins/p.png"), b"png").unwrap();
         std::fs::write(dir.join("secret.png"), b"png").unwrap();
@@ -455,6 +523,7 @@ mod tests {
         assert!(notebook_image_asset(&root, ".nevo/assets/../../secret.png").is_err());
         assert!(notebook_image_asset(&root, "secret.png").is_err());
         assert!(notebook_image_asset(&root, ".nevo/assets/sub/a.png").is_err());
+        assert!(notebook_image_asset(&root, ".nevo/assets/sub%2Fa.png").is_err());
 
         std::fs::remove_dir_all(dir).ok();
     }

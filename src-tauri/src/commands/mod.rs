@@ -18,6 +18,8 @@ pub mod notion_import;
 pub mod path_utils;
 pub mod system;
 pub mod templates;
+#[cfg(desktop)]
+pub mod transcription;
 pub mod typst_export;
 pub mod voice_recording;
 pub mod workspace;

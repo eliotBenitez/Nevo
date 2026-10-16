@@ -2446,6 +2446,22 @@
     "loadingAudio": "Chargement audio…",
     "audioError": "Impossible de charger l’audio. Vérifiez le fichier puis réessayez.",
     "retryAudio": "Réessayer",
+    "transcript": "Transcription",
+    "transcribe": "Transcrire hors ligne",
+    "retranscribe": "Transcrire à nouveau",
+    "transcriptLanguage": "Langue de l'enregistrement",
+    "transcriptLanguages": {
+      "auto": "Détecter automatiquement",
+      "ru": "Russe",
+      "en": "Anglais",
+      "de": "Allemand",
+      "fr": "Français",
+      "es": "Espagnol"
+    },
+    "transcribing": "Transcription sur cet appareil…",
+    "transcriptEmpty": "Aucune parole reconnue.",
+    "transcriptBusy": "Un autre enregistrement est en cours de transcription. Réessayez plus tard.",
+    "transcriptFailed": "Impossible de transcrire cet audio. Vérifiez le fichier et réessayez.",
     "cancel": "Annuler"
   },
   "voiceRecording": {

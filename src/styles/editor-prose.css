@@ -8,6 +8,7 @@
 @import './editor-prose/prose-code.css';
 @import './editor-prose/prose-links-embeds.css';
 @import './editor-prose/prose-audio-bookmarks.css';
+@import './editor-prose/prose-audio-transcript.css';
 @import './editor-prose/prose-block-embed.css';
 @import './editor-prose/prose-blocks.css';
 @import './editor-prose/prose-ai.css';

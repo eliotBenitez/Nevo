@@ -6,6 +6,8 @@ pub mod mcp_stdio;
 mod media_server;
 mod mobile_lifecycle;
 
+#[cfg(desktop)]
+use commands::transcription;
 use commands::{
     ai, auth, config, database, folder, fonts, github_sync, graph, kanban, kanban_ops, mcp, note,
     note_index, notebook_export, notion_import, system, templates, typst_export, voice_recording,
@@ -185,6 +187,10 @@ pub fn run() {
             }
         })
         .setup(|app| {
+            #[cfg(desktop)]
+            app.manage(std::sync::Arc::new(
+                transcription::TranscriptionState::default(),
+            ));
             let logger = logging::AppLogger::new(logging::resolve_logs_dir(app.handle())?)?;
             logging::install_global_logger(logger)?;
             let logger = logging::logger();
@@ -361,6 +367,8 @@ pub fn run() {
             voice_recording::voice_recording_start,
             voice_recording::voice_recording_stop,
             voice_recording::voice_recording_cancel,
+            #[cfg(desktop)]
+            transcription::transcribe_audio,
             mcp::apply_mcp_mode,
             mcp::get_mcp_bridge_info,
             mcp::stop_mcp_bridge,

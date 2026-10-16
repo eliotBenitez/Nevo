@@ -155,6 +155,7 @@ export const mediaBlockNodeSpec: NodeSpec = {
     duration: { default: null },
     poster: { default: '' },
     bookmarks: { default: [] },
+    transcript: { default: [] },
     // Audio-only display preference: 'auto' | 'player' | 'bookmarks'.
     // Kept as a plain string so unknown/legacy values degrade to the resolved
     // default instead of failing the schema (see core/media/audioLayout.ts).
@@ -166,10 +167,15 @@ export const mediaBlockNodeSpec: NodeSpec = {
       getAttrs(dom) {
         if (!(dom instanceof HTMLElement)) return false
         let bookmarks: unknown[] = []
+        let transcript: unknown[] = []
         try {
           const parsed: unknown = JSON.parse(dom.dataset.bookmarks ?? '[]')
           if (Array.isArray(parsed)) bookmarks = parsed
         } catch { /* Malformed clipboard HTML has no recoverable bookmark list. */ }
+        try {
+          const parsed: unknown = JSON.parse(dom.dataset.transcript ?? '[]')
+          if (Array.isArray(parsed)) transcript = parsed
+        } catch { /* Malformed clipboard HTML has no recoverable transcript. */ }
         return {
           kind: dom.dataset.kind ?? 'audio',
           src: dom.dataset.src ?? '',
@@ -179,6 +185,7 @@ export const mediaBlockNodeSpec: NodeSpec = {
           duration: dom.dataset.duration ? Number(dom.dataset.duration) : null,
           poster: dom.dataset.poster ?? '',
           bookmarks,
+          transcript,
           audioLayout: dom.dataset.audioLayout ?? 'auto',
         }
       },
@@ -193,6 +200,7 @@ export const mediaBlockNodeSpec: NodeSpec = {
     const duration = typeof node.attrs.duration === 'number' ? String(node.attrs.duration) : ''
     const poster = typeof node.attrs.poster === 'string' ? node.attrs.poster : ''
     const bookmarks = Array.isArray(node.attrs.bookmarks) ? JSON.stringify(node.attrs.bookmarks) : '[]'
+    const transcript = Array.isArray(node.attrs.transcript) ? JSON.stringify(node.attrs.transcript) : '[]'
     const audioLayout = typeof node.attrs.audioLayout === 'string' ? node.attrs.audioLayout : 'auto'
     return [
       'div',
@@ -204,6 +212,7 @@ export const mediaBlockNodeSpec: NodeSpec = {
         'data-mime': mime,
         'data-size': size,
         'data-bookmarks': bookmarks,
+        ...(kind === 'audio' && transcript !== '[]' ? { 'data-transcript': transcript } : {}),
         // Audio-only explicit layout choice; `auto` is the default and stays
         // implicit, so untouched blocks keep their lightweight clipboard HTML.
         ...(kind === 'audio' && audioLayout !== 'auto' ? { 'data-audio-layout': audioLayout } : {}),

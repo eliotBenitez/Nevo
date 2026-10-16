@@ -15,6 +15,7 @@ import { visibleRecords } from '../../editor-core/databaseFilterSort'
 import { normalizeQueryBlockData } from '../../features/query/queryBlockData'
 import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSummary'
 import { formatAudioTime, readAudioBookmarks } from '../../core/media/audioBookmarks'
+import { readAudioTranscript } from '../../core/media/audioTranscript'
 
 export interface TypstImageAsset {
   /** Filename referenced inside the Typst source via `image("name")`. */
@@ -293,11 +294,15 @@ function nodeToTypst(node: BlockNode, ctx: SerializeCtx): string {
       const title = `#emph[${kind === 'video' ? '🎬' : '🔊'} ${escapeText(name)}]`
       if (kind !== 'audio') return title
       const bookmarks = readAudioBookmarks(node.attrs?.bookmarks)
-      if (!bookmarks.length) return title
       const entries = bookmarks.map(bookmark => {
-        const label = bookmark.label.replace(/[\r\n]+/g, ' ')
+        const label = bookmark.label.replace(/\s+/g, ' ')
         return `#linebreak()${escapeText(formatAudioTime(bookmark.time))} — ${escapeText(label)}`
       })
+      const transcript = readAudioTranscript(node.attrs?.transcript)
+      if (transcript.length) {
+        entries.push('#linebreak()#strong[Transcript]', ...transcript.map(segment =>
+          `#linebreak()${escapeText(formatAudioTime(segment.start))} — ${escapeText(segment.text.replace(/\s+/g, ' '))}`))
+      }
       return [title, ...entries].join(' ')
     }
     case 'block_embed': {

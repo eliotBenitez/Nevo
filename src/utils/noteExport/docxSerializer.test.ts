@@ -35,6 +35,16 @@ async function docxFileXml(
 }
 
 describe('serializeNoteToDocx', () => {
+  it('exports audio transcripts as escaped timestamp paragraphs', async () => {
+    const doc = await serializeNoteToDocx(note({ type: 'doc', content: [
+      { type: 'media_block', attrs: { kind: 'audio', name: 'Track',
+        transcript: [{ start: 1, end: 2, text: 'Hello <world>' }] } },
+    ] }), stubHelpers())
+    const xml = await documentXml(doc)
+    expect(xml).toContain('Transcript')
+    expect(xml).toContain('0:01 — Hello &lt;world&gt;')
+  })
+
   it('includes audio bookmarks as readable escaped timestamp paragraphs and ignores invalid/video bookmarks', async () => {
     const doc = await serializeNoteToDocx(note({
       type: 'doc',

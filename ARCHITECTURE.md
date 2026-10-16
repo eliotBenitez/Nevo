@@ -343,6 +343,22 @@ change stored note icons.
   Markdown, HTML, DOCX, and Typst/PDF exports preserve bookmark labels as readable timestamp
   text, with `#t=` links in HTML. Markdown import normalizes the asset link and list into
   ordinary content instead of rebuilding an editable media node.
+- **Offline audio transcription** — On desktop, `src-tauri/src/commands/transcription/`
+  decodes active-workspace audio assets with Symphonia and resamples mono to 16 kHz
+  while decoding, retaining only the target-rate samples. It runs multilingual
+  `whisper-rs` inference in a blocking worker. The `base` model is
+  checksum-verified at build time and bundled as a Tauri resource in Windows, macOS,
+  and Linux installers; installed apps make no network request to transcribe.
+  The media node view mounts `audioTranscriptView.ts`, which shows timed segments
+  and seeks the player. Its transient language selector defaults to automatic
+  detection; an explicit selection is sent to the native worker for the next run.
+  The transcript lives in `media_block.attrs.transcript` as
+  `{ start: number, end: number, text: string }[]`; `readAudioTranscript` validates
+  untrusted records. A result updates the live editor by transaction only if the
+  audio source and node still match. Replacing an asset clears its old transcript.
+  The command is not registered on mobile and restricts files to direct children
+  of `.nevo/assets` in the current workspace (100 MiB, 30 minutes). Markdown,
+  HTML, DOCX, and Typst/PDF exports include timestamped transcript text.
 - **Canvas / draw** — the data model and pure editing algorithms live in `src/core/canvas/`
   (entry `index.ts`: geometry, hit-testing, strokes, connectors, mind-map layout,
   migration of legacy canvas shapes). The interactive drawing feature UI is

@@ -10,6 +10,15 @@ function note(content: NoteDocument['content']): NoteDocument {
 }
 
 describe('serializeNoteToTypst', () => {
+  it('exports audio transcripts as timestamped escaped text', () => {
+    const { source } = serializeNoteToTypst(note({ type: 'doc', content: [
+      { type: 'media_block', attrs: { kind: 'audio', name: 'Track',
+        transcript: [{ start: 1, end: 2, text: 'Hello #world' }] } },
+    ] }))
+    expect(source).toContain('Transcript')
+    expect(source).toContain('0:01 — Hello \\#world')
+  })
+
   it('emits a page preamble and title', () => {
     const { source } = serializeNoteToTypst(note({ type: 'doc', content: [] }))
     expect(source).toContain('#set page(paper: "a4"')

@@ -70,6 +70,7 @@ export function useMediaUpload(
       duration,
       poster: '',
       bookmarks: [],
+      transcript: [],
       audioLayout: 'auto',
     }
 

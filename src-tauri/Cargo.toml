@@ -56,6 +56,8 @@ toml_edit = "0.25"
 # no third-party Tauri plugin. cpal owns the input stream, hound writes WAV.
 cpal = "0.15"
 hound = "3.5"
+whisper-rs = "0.16"
+symphonia = { version = "0.5.5", default-features = false, features = ["aac", "mp3", "isomp4", "ogg", "vorbis", "flac", "wav", "pcm", "mkv"] }
 
 [target."cfg(target_os = \"linux\")".dependencies]
 webkit2gtk = "2.0.2"
