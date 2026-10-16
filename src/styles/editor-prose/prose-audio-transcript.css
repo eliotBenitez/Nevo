@@ -29,15 +29,8 @@
   color: var(--text-secondary);
   font-size: 12px;
 }
-.doc-editor .nv-prosemirror .nv-audio-transcript-language {
-  min-height: 32px;
-  padding: 4px 8px;
-  border: 1px solid var(--border-default);
-  border-radius: calc(6px * var(--radius-scale, 1));
-  background: var(--surface-panel);
-  color: var(--text-primary);
-  font: inherit;
-}
+/* Language picker uses NvSelect; keep its trigger sized like the transcribe button. */
+.doc-editor .nv-prosemirror .nv-audio-transcript-language { display: inline-flex; }
 .doc-editor .nv-prosemirror .nv-audio-transcribe {
   min-height: 32px;
   padding: 5px 10px;

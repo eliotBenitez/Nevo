@@ -61,10 +61,15 @@ describe('media node view source lifecycle', () => {
     ] }, () => null, transcribe)
     try {
       await tick()
-      const select = editor.mount.querySelector<HTMLSelectElement>('.nv-audio-transcript-language')!
-      expect(select).toBeTruthy()
-      expect(select.value).toBe('auto')
-      select.value = 'ru'
+      const trigger = editor.mount.querySelector<HTMLButtonElement>('.nv-audio-transcript-language .nv-select__trigger')!
+      expect(trigger.getAttribute('aria-label')).toBe('media.transcriptLanguage')
+      trigger.click()
+      await tick()
+      const ru = [...document.querySelectorAll<HTMLButtonElement>('.nv-select__option')]
+        .find(option => option.textContent?.includes('media.transcriptLanguages.ru'))!
+      ru.click()
+      await tick()
+      expect(trigger.textContent).toContain('media.transcriptLanguages.ru')
       editor.mount.querySelector<HTMLButtonElement>('.nv-audio-transcribe')!.click()
       await tick()
       expect(transcribe).toHaveBeenCalledWith('.nevo/assets/song.mp3', 'ru')

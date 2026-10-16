@@ -1,5 +1,7 @@
+import { h, render as renderVNode } from 'vue'
 import type { Node as PMNode } from 'prosemirror-model'
 import type { EditorView } from 'prosemirror-view'
+import NvSelect from '../../ui/primitives/NvSelect.vue'
 import { formatAudioTime } from '../../core/media/audioBookmarks'
 import { readAudioTranscript, type AudioTranscriptSegment } from '../../core/media/audioTranscript'
 import { TRANSCRIPTION_LANGUAGES, type TranscriptionLanguage } from '../../core/media/transcriptionLanguage'
@@ -25,19 +27,16 @@ export function createAudioTranscriptView(node: PMNode, options: AudioTranscript
   title.textContent = t('media.transcript')
   const controls = document.createElement('div')
   controls.className = 'nv-audio-transcript-controls'
-  const languageControl = document.createElement('label')
+  const languageControl = document.createElement('div')
   languageControl.className = 'nv-audio-transcript-language-control'
   const languageText = document.createElement('span')
   languageText.textContent = t('media.transcriptLanguage')
-  const languageSelect = document.createElement('select')
-  languageSelect.className = 'nv-audio-transcript-language'
-  for (const language of TRANSCRIPTION_LANGUAGES) {
-    const option = document.createElement('option')
-    option.value = language
-    option.textContent = t(`media.transcriptLanguages.${language}`)
-    languageSelect.append(option)
-  }
-  languageControl.append(languageText, languageSelect)
+  // Uses the project's NvSelect primitive, matching the playback speed control.
+  const languageContainer = document.createElement('div')
+  languageContainer.className = 'nv-audio-transcript-language'
+  const languageOptions = TRANSCRIPTION_LANGUAGES.map(value => ({ value, label: t(`media.transcriptLanguages.${value}`) }))
+  let language: TranscriptionLanguage = 'auto'
+  languageControl.append(languageText, languageContainer)
   const button = document.createElement('button')
   button.type = 'button'
   button.className = 'nv-audio-transcribe'
@@ -76,7 +75,7 @@ export function createAudioTranscriptView(node: PMNode, options: AudioTranscript
     }
     const canTranscribe = !!transcribe && view.editable && !!currentNode.attrs.src
     languageControl.hidden = !canTranscribe
-    languageSelect.disabled = busy
+    renderLanguageSelect()
     button.hidden = !canTranscribe
     button.disabled = busy
     button.textContent = busy ? t('media.transcribing') : t(segments.length ? 'media.retranscribe' : 'media.transcribe')
@@ -84,6 +83,20 @@ export function createAudioTranscriptView(node: PMNode, options: AudioTranscript
     title.hidden = !segments.length
     editable = view.editable
     snapshot = JSON.stringify(currentNode.attrs.transcript ?? [])
+  }
+
+  function renderLanguageSelect() {
+    renderVNode(h(NvSelect, {
+      modelValue: language,
+      options: languageOptions,
+      disabled: busy,
+      minWidth: 0,
+      ariaLabel: t('media.transcriptLanguage'),
+      'onUpdate:modelValue': (value: string) => {
+        language = TRANSCRIPTION_LANGUAGES.find(candidate => candidate === value) ?? 'auto'
+        renderLanguageSelect()
+      },
+    }), languageContainer)
   }
 
   button.addEventListener('click', async () => {
@@ -96,7 +109,6 @@ export function createAudioTranscriptView(node: PMNode, options: AudioTranscript
     status.textContent = ''
     render()
     try {
-      const language = TRANSCRIPTION_LANGUAGES.find(value => value === languageSelect.value) ?? 'auto'
       const result = readAudioTranscript(await transcribe(src, language))
       if (destroyed || view.isDestroyed || requestGeneration !== generation) return
       let position: number | undefined
@@ -136,6 +148,10 @@ export function createAudioTranscriptView(node: PMNode, options: AudioTranscript
     dom: root,
     update,
     stopEvent: (target: Node) => root.contains(target),
-    destroy() { destroyed = true; generation++ },
+    destroy() {
+      destroyed = true
+      generation++
+      renderVNode(null, languageContainer)
+    },
   }
 }
