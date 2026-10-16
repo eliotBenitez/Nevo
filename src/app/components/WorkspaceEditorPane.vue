@@ -27,6 +27,7 @@ import { useMarkmapEditor } from '../composables/editor/useMarkmapEditor'
 import { useVegaEditor } from '../composables/editor/useVegaEditor'
 import { useLinkEditor } from '../composables/editor/useLinkEditor'
 import { useImageContextMenu } from '../composables/editor/useImageContextMenu'
+import { useImageLightbox } from '../composables/editor/useImageLightbox'
 import { useEditorContextMenu } from '../composables/editor/useEditorContextMenu'
 import { useEmbedUrlPopover } from '../composables/editor/useEmbedUrlPopover'
 import { useNoteEmbedPicker } from '../composables/editor/useNoteEmbedPicker'
@@ -59,6 +60,7 @@ import NvPopupMenu from '../../ui/primitives/NvPopupMenu.vue'
 import DocAppearance from './editor/DocAppearance.vue'
 import AiAskModal from './editor/AiAskModal.vue'
 import NoteEmbedPicker from './editor/NoteEmbedPicker.vue'
+import ImageLightbox from './editor/ImageLightbox.vue'
 import EditorOverlayContainer from './editor/EditorOverlayContainer.vue'
 import EditorFindBar from './editor/EditorFindBar.vue'
 import MobileEditorTabBar from './editor/MobileEditorTabBar.vue'
@@ -225,7 +227,8 @@ const overlays = useEditorOverlays(core, {
 })
 const { slashOverlay, toolbarOverlay, tableMenuOverlay, linkPopover, highlightPicker, textColorPicker, mathPopover, formulaPopover, mermaidPopover, queryPopover, markmapPopover, vegaPopover, pluginNodePopover, linkPickerOverlay, activeMarkNames } = overlays
 
-const { imageCtxMenu, imageMenuItems, openImageContextMenu } = useImageContextMenu(() => props.workspacePath)
+const imageLightbox = useImageLightbox(editorRoot)
+const { imageCtxMenu, imageMenuItems, openImageContextMenu } = useImageContextMenu(() => props.workspacePath, imageLightbox.openFrom)
 const { ctxMenu: editorCtxMenu, menuItems: editorMenuItems, openContextMenu: openEditorContextMenu } = useEditorContextMenu(core, () => props.note?.id ?? null)
 
 const {
@@ -1012,6 +1015,15 @@ defineExpose({ editorRoot, flushPendingContent, updateDrawBlock, dispatchPluginU
       :position="imageCtxMenu.pos"
       :items="imageMenuItems"
       width="192px"
+    />
+
+    <ImageLightbox
+      :open="imageLightbox.open.value"
+      :images="imageLightbox.images.value"
+      :index="imageLightbox.index.value"
+      @close="imageLightbox.close"
+      @next="imageLightbox.next"
+      @previous="imageLightbox.previous"
     />
 
     <NoteEmbedPicker

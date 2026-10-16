@@ -2561,13 +2561,20 @@
       "alignLeft": "Links",
       "alignCenter": "Zentriert",
       "alignRight": "Rechts",
-      "width": "Breite"
+      "width": "Breite",
+      "open": "Im Vollbild öffnen"
     },
     "size": {
       "small": "Klein",
       "medium": "Mittel",
       "large": "Groß",
       "full": "Volle Breite"
+    },
+    "lightbox": {
+      "title": "Bildbetrachter",
+      "counter": "{current} von {total}",
+      "previous": "Vorheriges Bild",
+      "next": "Nächstes Bild"
     }
   },
   "database": {

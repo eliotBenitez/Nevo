@@ -2561,13 +2561,20 @@
       "alignLeft": "Left",
       "alignCenter": "Center",
       "alignRight": "Right",
-      "width": "Width"
+      "width": "Width",
+      "open": "Open full screen"
     },
     "size": {
       "small": "Small",
       "medium": "Medium",
       "large": "Large",
       "full": "Full width"
+    },
+    "lightbox": {
+      "title": "Image viewer",
+      "counter": "{current} of {total}",
+      "previous": "Previous image",
+      "next": "Next image"
     }
   },
   "database": {

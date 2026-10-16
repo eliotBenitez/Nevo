@@ -2,7 +2,7 @@ import { computed, markRaw, reactive, toRaw } from 'vue'
 import type { EditorView } from 'prosemirror-view'
 import { NodeSelection } from 'prosemirror-state'
 import { useI18n } from 'vue-i18n'
-import { AlignCenter, AlignLeft, AlignRight, ArrowLeftRight, Copy, PencilLine, Scissors, Trash2 } from '../../../ui/icons'
+import { AlignCenter, AlignLeft, AlignRight, ArrowLeftRight, Copy, Maximize2, PencilLine, Scissors, Trash2 } from '../../../ui/icons'
 import type { NvMenuItemDef } from '../../../ui/primitives/menu-types'
 import { isProseMirrorTransformError } from './prosemirrorErrors'
 import { appLogger } from '../../../utils/logger'
@@ -30,7 +30,10 @@ interface ImageCtxMenuState {
 
 /** Image block context menu (caption / copy / cut / align / size / delete),
  *  extracted from WorkspaceEditorPane. */
-export function useImageContextMenu(getWorkspacePath: () => string | null) {
+export function useImageContextMenu(
+  getWorkspacePath: () => string | null,
+  onOpenImage?: (image: HTMLImageElement) => void,
+) {
   const { t } = useI18n()
 
   const imageCtxMenu = reactive<ImageCtxMenuState>({
@@ -134,9 +137,20 @@ export function useImageContextMenu(getWorkspacePath: () => string | null) {
     ctx.view.focus()
   }
 
+  function openImageBlock() {
+    const ctx = getImageNodeView()
+    const dom = ctx?.view.nodeDOM(ctx.pos)
+    const image = dom instanceof HTMLElement ? dom.querySelector('img.nv-image-preview') : null
+    imageCtxMenu.open = false
+    if (image instanceof HTMLImageElement) onOpenImage?.(image)
+  }
+
   const imageMenuItems = computed<NvMenuItemDef[]>(() => {
     if (!imageCtxMenu.view) return []
     return [
+      ...(onOpenImage
+        ? [{ label: t('image.menu.open'), icon: markRaw(Maximize2), action: openImageBlock } satisfies NvMenuItemDef]
+        : []),
       {
         label: t('image.menu.caption'),
         icon: markRaw(PencilLine),
