@@ -162,7 +162,7 @@ pub async fn rename_folder(
     .map_err(|error| error.to_string())?
 }
 
-fn rename_folder_sync(
+pub(crate) fn rename_folder_sync(
     workspace_path: String,
     folder_id: String,
     title: String,

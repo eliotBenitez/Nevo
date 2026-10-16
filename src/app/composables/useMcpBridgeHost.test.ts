@@ -4,6 +4,8 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import { createPinia, setActivePinia } from 'pinia'
 import { useWorkspaceStore } from '../../stores/workspace'
+import { useNoteStore } from '../../stores/note'
+import { respondToMcpRequest } from '../../tauri/mcp'
 import { useMcpBridgeHost } from './useMcpBridgeHost'
 
 const eventMocks = vi.hoisted(() => ({
@@ -32,9 +34,14 @@ vi.mock('../../utils/logger', () => ({
   },
 }))
 
+const hostOptions = {
+  openNote: vi.fn(),
+  renameNote: vi.fn().mockResolvedValue(undefined),
+}
+
 const Host = defineComponent({
   setup() {
-    useMcpBridgeHost({ openNote: vi.fn() })
+    useMcpBridgeHost(hostOptions)
     return () => h('div')
   },
 })
@@ -80,5 +87,43 @@ describe('useMcpBridgeHost', () => {
 
     wrapper.unmount()
     expect(eventMocks.unlisten).toHaveBeenCalledTimes(2)
+  })
+
+  it('routes agent renames through the shell and replies with the new title', async () => {
+    const wrapper = mount(Host, { global: { plugins: [i18n] } })
+    await flushPromises()
+
+    eventMocks.listeners.get('mcp-bridge-request')?.({
+      payload: { requestId: 'r1', kind: 'notes.rename', payload: { noteId: 'note-1', title: 'Renamed' } },
+    })
+    await flushPromises()
+
+    expect(hostOptions.renameNote).toHaveBeenCalledWith('note-1', 'Renamed')
+    expect(respondToMcpRequest).toHaveBeenCalledWith('r1', { noteId: 'note-1', title: 'Renamed' }, null)
+    wrapper.unmount()
+  })
+
+  it('restores snapshots through the note store so an open note is reloaded', async () => {
+    const noteStore = useNoteStore()
+    const restore = vi.spyOn(noteStore, 'restoreSnapshot').mockResolvedValue({
+      note: {} as never,
+      recoverySnapshotId: 'recovery-1',
+      warnings: [],
+    })
+    const wrapper = mount(Host, { global: { plugins: [i18n] } })
+    await flushPromises()
+
+    eventMocks.listeners.get('mcp-bridge-request')?.({
+      payload: { requestId: 'r2', kind: 'history.restore', payload: { noteId: 'note-1', snapshotId: 's1' } },
+    })
+    await flushPromises()
+
+    expect(restore).toHaveBeenCalledWith('note-1', 's1')
+    expect(respondToMcpRequest).toHaveBeenCalledWith(
+      'r2',
+      { noteId: 'note-1', recoverySnapshotId: 'recovery-1', warnings: [] },
+      null,
+    )
+    wrapper.unmount()
   })
 })

@@ -115,7 +115,7 @@ const { importMarkdownFile, importMarkdownIntoNote } = useMarkdownImport()
 // Starts or stops the local MCP bridge to match the workspace's access mode,
 // and serves the requests it can only answer from the webview.
 useMcpBridge()
-useMcpBridgeHost({ openNote })
+useMcpBridgeHost({ openNote, renameNote: renameNoteFromAgent })
 
 const appUpdater = useAppUpdater()
 
@@ -1006,6 +1006,11 @@ watch(activeNote, (note) => {
 })
 watch(saveStatus, (status) => { tabsStore.syncActiveTab({ isDirty: status === 'unsaved' || status === 'saving' }) })
 
+async function renameNoteFromAgent(noteId: string, title: string) {
+  // An open note's title is held by the note store until its next save; mirror the rename dialog.
+  if (activeNoteId.value === noteId) { updateTitle(title); await flushSave(); return }
+  await treeStore.renameNote(noteId, title)
+}
 function updateTitle(value: string) { noteStore.setTitle(value); if (activeNoteId.value) treeStore.syncNoteMeta(activeNoteId.value, { title: value }) }
 function updateIcon(value: string) { noteStore.setIcon(value); if (activeNoteId.value) treeStore.syncNoteMeta(activeNoteId.value, { icon: value }) }
 function updateCover(value: string | null) { noteStore.setCover(value) }

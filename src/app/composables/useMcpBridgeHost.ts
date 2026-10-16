@@ -24,6 +24,8 @@ interface McpBridgeRequest {
 export interface McpBridgeHostOptions {
   /** Opens a note through the shell's normal navigation, so tabs and the pending save flush behave as for a user click. */
   openNote: (noteId: string) => void
+  /** Renames through the shell so an open note's pending title and the sidebar stay in sync. */
+  renameNote: (noteId: string, title: string) => Promise<void>
 }
 
 interface McpWorkspaceChangedEvent {
@@ -74,6 +76,16 @@ export function useMcpBridgeHost(options: McpBridgeHostOptions): void {
         const payload = request.payload as unknown as WriteMarkdownRequest
         assertEditorFormatSupportsEdit(noteStore.getActiveNoteFormat(payload.noteId))
         return writeEditorMarkdown(payload)
+      }
+      case 'notes.rename': {
+        const { noteId, title } = request.payload as { noteId: string, title: string }
+        await options.renameNote(noteId, title)
+        return { noteId, title }
+      }
+      case 'history.restore': {
+        const { noteId, snapshotId } = request.payload as { noteId: string, snapshotId: string }
+        const result = await noteStore.restoreSnapshot(noteId, snapshotId)
+        return { noteId, recoverySnapshotId: result.recoverySnapshotId, warnings: result.warnings }
       }
       case 'confirm': {
         const approved = await confirm({

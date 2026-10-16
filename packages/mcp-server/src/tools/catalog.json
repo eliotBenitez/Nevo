@@ -233,6 +233,31 @@
     }
   },
   {
+    "name": "nevo_rename_note",
+    "title": "Rename a Nevo note",
+    "description": "Change a note's title. Works whether or not the note is open in the editor.",
+    "method": "notes.rename",
+    "access": "write",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "noteId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Note id, as returned by nevo_list_notes."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "description": "New title."
+        }
+      },
+      "required": ["noteId", "title"],
+      "additionalProperties": false
+    }
+  },
+  {
     "name": "nevo_delete_note",
     "title": "Move a Nevo note to the trash",
     "description": "Move a note to the workspace trash, where the user can restore it. There is no permanent delete.",
@@ -248,6 +273,171 @@
         }
       },
       "required": ["noteId"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "nevo_list_folders",
+    "title": "List Nevo folders",
+    "description": "List every folder in the open workspace with its id, parent id, path, and number of notes. Use the ids with nevo_create_note, nevo_move_note, and nevo_create_folder.",
+    "method": "folders.list",
+    "access": "read",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "nevo_create_folder",
+    "title": "Create a Nevo folder",
+    "description": "Create a folder at the workspace root or inside another folder. Returns the new folder id.",
+    "method": "folders.create",
+    "access": "write",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "description": "Folder name."
+        },
+        "parentId": {
+          "type": "string",
+          "description": "Parent folder id; omit for a top-level folder."
+        }
+      },
+      "required": ["title"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "nevo_rename_folder",
+    "title": "Rename a Nevo folder",
+    "description": "Change a folder's name.",
+    "method": "folders.rename",
+    "access": "write",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "folderId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Folder id, as returned by nevo_list_folders."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "description": "New folder name."
+        }
+      },
+      "required": ["folderId", "title"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "nevo_list_trash",
+    "title": "List the Nevo trash",
+    "description": "List items in the workspace trash with their ids, titles, and deletion times.",
+    "method": "trash.list",
+    "access": "read",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "nevo_restore_from_trash",
+    "title": "Restore a note from the Nevo trash",
+    "description": "Restore a trashed note to its original folder, or to the workspace root if that folder no longer exists.",
+    "method": "trash.restore",
+    "access": "write",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "itemId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Item id, as returned by nevo_list_trash."
+        }
+      },
+      "required": ["itemId"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "nevo_list_snapshots",
+    "title": "List a Nevo note's history",
+    "description": "List saved versions (snapshots) of a note, newest first. Nevo snapshots a note before every agent change.",
+    "method": "notes.listSnapshots",
+    "access": "read",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "noteId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Note id, as returned by nevo_list_notes."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200,
+          "description": "Maximum number of snapshots to return (default 20)."
+        }
+      },
+      "required": ["noteId"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "nevo_read_snapshot",
+    "title": "Read a Nevo note snapshot",
+    "description": "Read the title and ProseMirror content of one saved version of a note.",
+    "method": "notes.readSnapshot",
+    "access": "read",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "noteId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Note id, as returned by nevo_list_notes."
+        },
+        "snapshotId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Snapshot id, as returned by nevo_list_snapshots."
+        }
+      },
+      "required": ["noteId", "snapshotId"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "nevo_restore_snapshot",
+    "title": "Restore a Nevo note snapshot",
+    "description": "Restore a note to a saved version. The current state is snapshotted first and its id is returned as recoverySnapshotId, so the restore can be undone by restoring that snapshot.",
+    "method": "notes.restoreSnapshot",
+    "access": "write",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "noteId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Note id, as returned by nevo_list_notes."
+        },
+        "snapshotId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Snapshot id, as returned by nevo_list_snapshots."
+        }
+      },
+      "required": ["noteId", "snapshotId"],
       "additionalProperties": false
     }
   }

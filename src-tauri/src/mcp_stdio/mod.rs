@@ -1,12 +1,17 @@
 mod endpoint;
+mod prompts;
+mod resources;
 mod tools;
 
 use std::time::Duration;
 
 use futures_util::StreamExt;
 use rmcp::model::{
-    CallToolRequestParams, CallToolResponse, CallToolResult, ContentBlock, Implementation,
-    ListToolsResult, PaginatedRequestParams, ServerCapabilities, ServerConfig, Tool,
+    CallToolRequestParams, CallToolResponse, CallToolResult, ContentBlock, GetPromptRequestParams,
+    GetPromptResponse, Implementation, ListPromptsResult, ListResourceTemplatesResult,
+    ListResourcesResult, ListToolsResult, PaginatedRequestParams, ReadResourceRequestParams,
+    ReadResourceResponse, ReadResourceResult, ResourceContents, ServerCapabilities, ServerConfig,
+    Tool,
 };
 use rmcp::service::{RequestContext, RoleServer};
 use rmcp::{ErrorData as McpError, ServerHandler, ServiceExt};
@@ -31,8 +36,14 @@ impl NevoStdioServer {
 
 impl ServerHandler for NevoStdioServer {
     fn get_info(&self) -> ServerConfig {
-        ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
-            .with_server_info(Implementation::new("nevo", env!("CARGO_PKG_VERSION")))
+        ServerConfig::new(
+            ServerCapabilities::builder()
+                .enable_tools()
+                .enable_resources()
+                .enable_prompts()
+                .build(),
+        )
+        .with_server_info(Implementation::new("nevo", env!("CARGO_PKG_VERSION")))
     }
 
     fn get_tool(&self, name: &str) -> Option<Tool> {
@@ -73,29 +84,100 @@ impl ServerHandler for NevoStdioServer {
         };
         Ok(result.into())
     }
+
+    async fn list_resources(
+        &self,
+        _request: Option<PaginatedRequestParams>,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ListResourcesResult, McpError> {
+        Ok(ListResourcesResult::with_all_items(resources::listed()))
+    }
+
+    async fn list_resource_templates(
+        &self,
+        _request: Option<PaginatedRequestParams>,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ListResourceTemplatesResult, McpError> {
+        Ok(ListResourceTemplatesResult::with_all_items(
+            resources::templates(),
+        ))
+    }
+
+    async fn read_resource(
+        &self,
+        request: ReadResourceRequestParams,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ReadResourceResponse, McpError> {
+        let Some((method, params)) = resources::resolve(&request.uri) else {
+            return Err(McpError::resource_not_found("Unknown Nevo resource", None));
+        };
+        let (status, body) = forward_raw(method, params)
+            .await
+            .map_err(|message| McpError::internal_error(message, None))?;
+        let value = bridge_value(status, &body)
+            .map_err(|message| McpError::resource_not_found(message, None))?;
+        let text = serde_json::to_string_pretty(&value).unwrap_or_else(|_| "null".to_string());
+        Ok(ReadResourceResult::new(vec![
+            ResourceContents::text(text, request.uri).with_mime_type("application/json")
+        ])
+        .into())
+    }
+
+    async fn list_prompts(
+        &self,
+        _request: Option<PaginatedRequestParams>,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ListPromptsResult, McpError> {
+        Ok(ListPromptsResult::with_all_items(prompts::listed()))
+    }
+
+    async fn get_prompt(
+        &self,
+        request: GetPromptRequestParams,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<GetPromptResponse, McpError> {
+        prompts::render(&request.name, request.arguments.as_ref())
+            .map(Into::into)
+            .map_err(|message| McpError::invalid_params(message, None))
+    }
 }
 
 fn tool_error(message: impl Into<String>) -> CallToolResult {
     CallToolResult::error(vec![ContentBlock::text(message.into())])
 }
 
-fn bridge_to_result(status: u16, raw: &[u8]) -> CallToolResult {
-    let Ok(envelope) = serde_json::from_slice::<Value>(raw) else {
-        return tool_error("Nevo returned an invalid bridge response");
+/// Unwraps the bridge envelope into its result, or a caller-facing error.
+fn bridge_value(status: u16, raw: &[u8]) -> Result<Value, String> {
+    let Ok(mut envelope) = serde_json::from_slice::<Value>(raw) else {
+        return Err("Nevo returned an invalid bridge response".to_string());
     };
     if status >= 400 || envelope["ok"] != true {
         let code = envelope["error"]["code"].as_str().unwrap_or("bridge_error");
         let message = envelope["error"]["message"]
             .as_str()
             .unwrap_or("Nevo rejected this request");
-        return tool_error(format!("{message} ({code})"));
+        return Err(format!("{message} ({code})"));
     }
-    let pretty =
-        serde_json::to_string_pretty(&envelope["result"]).unwrap_or_else(|_| "null".to_string());
-    CallToolResult::success(vec![ContentBlock::text(pretty)])
+    Ok(envelope["result"].take())
+}
+
+fn bridge_to_result(status: u16, raw: &[u8]) -> CallToolResult {
+    match bridge_value(status, raw) {
+        Ok(result) => {
+            let pretty =
+                serde_json::to_string_pretty(&result).unwrap_or_else(|_| "null".to_string());
+            CallToolResult::success(vec![ContentBlock::text(pretty)])
+        }
+        Err(message) => tool_error(message),
+    }
 }
 
 async fn forward(method: &str, params: Value) -> Result<CallToolResult, String> {
+    let (status, body) = forward_raw(method, params).await?;
+    Ok(bridge_to_result(status, &body))
+}
+
+async fn forward_raw(method: &str, params: Value) -> Result<(u16, Vec<u8>), String> {
     let endpoint = tokio::task::spawn_blocking(endpoint::read)
         .await
         .map_err(|_| "Could not read the Nevo MCP endpoint".to_string())??;
@@ -126,7 +208,7 @@ async fn forward(method: &str, params: Value) -> Result<CallToolResult, String> 
         }
         body.extend_from_slice(&chunk);
     }
-    Ok(bridge_to_result(status, &body))
+    Ok((status, body))
 }
 
 pub fn run() -> Result<(), String> {
@@ -152,7 +234,7 @@ mod tests {
     #[test]
     fn exposes_the_shared_catalog() {
         let tools = tools::catalog().expect("tool catalog");
-        assert_eq!(tools.len(), 11);
+        assert_eq!(tools.len(), 20);
         assert_eq!(tools[0].name, "nevo_workspace_info");
         assert_eq!(tools[5].method, "notes.editorSnapshot");
         assert_eq!(tools[5].access, "read");
@@ -181,7 +263,7 @@ mod tests {
     #[test]
     fn exported_tools_keep_the_catalog_schemas() {
         let tools = tools::as_mcp_tools().expect("MCP tools");
-        assert_eq!(tools.len(), 11);
+        assert_eq!(tools.len(), 20);
         let edit = tools
             .iter()
             .find(|tool| tool.name == "nevo_apply_edit")

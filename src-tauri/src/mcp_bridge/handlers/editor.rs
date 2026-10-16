@@ -180,6 +180,34 @@ pub async fn write_markdown(
     .await
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RenameParams {
+    pub note_id: String,
+    pub title: String,
+}
+
+/// Renames a note. Runs in the webview because an open note's title lives in
+/// the note store until the next save; writing it from Rust would be undone by
+/// that save.
+pub async fn rename_note(
+    app: &tauri::AppHandle,
+    workspace_path: &str,
+    params: Value,
+) -> Result<Value, RpcError> {
+    let params: RenameParams = parse_params(params)?;
+    validate_id(&params.note_id)
+        .map_err(|error| RpcError::bad_request("invalid_note_id", &error))?;
+    let title = super::folders::valid_title(&params.title)?.to_string();
+    load_note(workspace_path, &params.note_id).await?;
+    webview::request(
+        app,
+        "notes.rename",
+        json!({ "noteId": params.note_id, "title": title }),
+    )
+    .await
+}
+
 async fn load_note(workspace_path: &str, note_id: &str) -> Result<NoteDocument, RpcError> {
     let workspace_path = workspace_path.to_string();
     let note_id = note_id.to_string();
