@@ -22,6 +22,20 @@ fn is_audible(pcm: &[f32]) -> bool {
 }
 const LEVEL_INTERVAL: Duration = Duration::from_millis(100);
 
+fn words(text: &str) -> Vec<String> {
+    text.split(|c: char| !c.is_alphanumeric())
+        .filter(|word| !word.is_empty())
+        .map(str::to_lowercase)
+        .collect()
+}
+
+/// Whisper tends to copy its prompt back for short or unclear audio, so a phrase
+/// that only repeats the end of the already dictated text is dropped.
+fn echoes_prompt(finalized: &str, text: &str) -> bool {
+    let text = words(text);
+    !text.is_empty() && words(finalized).ends_with(&text)
+}
+
 pub(super) struct WorkerConfig {
     pub sample_rate: u32,
     pub language: Option<String>,
@@ -59,7 +73,7 @@ impl Worker<'_> {
             return Ok(());
         }
         let text = self.recognize(pcm)?;
-        if !text.is_empty() {
+        if !text.is_empty() && !echoes_prompt(&self.finalized, &text) {
             if !self.finalized.is_empty() {
                 self.finalized.push(' ');
             }
@@ -74,7 +88,7 @@ impl Worker<'_> {
             return Ok(());
         }
         let text = self.recognize(pcm)?;
-        if !text.is_empty() {
+        if !text.is_empty() && !echoes_prompt(&self.finalized, &text) {
             let _ = self.events.send(DictationEvent::Partial { text });
         }
         Ok(())
@@ -177,7 +191,18 @@ fn process(
 
 #[cfg(test)]
 mod tests {
-    use super::is_audible;
+    use super::{echoes_prompt, is_audible};
+
+    #[test]
+    fn drops_a_phrase_that_repeats_the_dictated_tail() {
+        let before = "Музыка. На индиктафон.";
+        assert!(echoes_prompt(before, "На индиктафон"));
+        assert!(echoes_prompt(before, "на индиктафон!"));
+        assert!(!echoes_prompt(before, "Новая фраза"));
+        assert!(!echoes_prompt(before, "Музыка"));
+        assert!(!echoes_prompt("", "Алло"));
+        assert!(!echoes_prompt(before, "..."));
+    }
 
     #[test]
     fn quiet_noise_is_not_audible_but_speech_level_audio_is() {

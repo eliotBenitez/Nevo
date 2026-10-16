@@ -14,7 +14,7 @@ vi.mock('../../../ui/composables/useToast', () => ({
 }))
 
 vi.mock('../../../i18n', () => ({
-  i18n: { global: { t: (key: string) => key } },
+  i18n: { global: { t: (key: string) => key, locale: { value: 'ru' } } },
 }))
 
 vi.mock('../../../tauri/dictation', async (importOriginal) => {
@@ -55,7 +55,7 @@ describe('useDictation', () => {
     await d.toggle()
     expect(getDictationState(view.state).active).toBe(true)
     expect(hasActiveRecording()).toBe(true)
-    expect(api.startDictation).toHaveBeenCalledWith('auto', expect.any(Function))
+    expect(api.startDictation).toHaveBeenCalledWith('ru', expect.any(Function))
 
     emit()({ kind: 'partial', text: 'hel' })
     expect(getDictationState(view.state).partial).toBe('hel')

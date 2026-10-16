@@ -1436,7 +1436,8 @@
       },
       "dictationLanguage": {
         "title": "Idioma del dictado",
-        "description": "Idioma hablado para el dictado. «Automático» lo detecta solo"
+        "description": "Idioma hablado para el dictado. Por defecto, el de la interfaz",
+        "interface": "Idioma de la interfaz"
       },
       "activeBlockEmphasis": {
         "title": "Énfasis del bloque activo",

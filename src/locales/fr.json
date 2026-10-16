@@ -1436,7 +1436,8 @@
       },
       "dictationLanguage": {
         "title": "Langue de dictée",
-        "description": "Langue parlée pour la dictée. « Auto » la détecte automatiquement"
+        "description": "Langue parlée pour la dictée. Par défaut, celle de l’interface",
+        "interface": "Langue de l’interface"
       },
       "activeBlockEmphasis": {
         "title": "Emphase du bloc actif",

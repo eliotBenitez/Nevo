@@ -206,7 +206,7 @@ export function buildWorkspaceSettingsSearchItems(options: BuildWorkspaceSetting
       sectionLabel: sectionLabel(t, 'editor'),
       title: t('settings.editor.dictationLanguage.title'),
       description: t('settings.editor.dictationLanguage.description'),
-      value: t(`media.transcriptLanguages.${settings.editor.dictationLanguage}`),
+      value: t(settings.editor.dictationLanguage === 'auto' ? 'settings.editor.dictationLanguage.interface' : `media.transcriptLanguages.${settings.editor.dictationLanguage}`),
     }] : []),
     {
       type: 'setting', id: 'editor.tabKeyBehavior', section: 'editor',

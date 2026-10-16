@@ -1436,7 +1436,8 @@
       },
       "dictationLanguage": {
         "title": "Diktiersprache",
-        "description": "Sprache für das Diktat. „Automatisch“ erkennt sie selbst"
+        "description": "Sprache für das Diktat. Standardmäßig die Sprache der Oberfläche",
+        "interface": "Sprache der Oberfläche"
       },
       "activeBlockEmphasis": {
         "title": "Aktive Block-Hervorhebung",

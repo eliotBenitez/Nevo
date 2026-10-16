@@ -22,6 +22,20 @@ describe('joinDictatedText', () => {
     }
   })
 
+  it('lowercases a phrase that continues a sentence', () => {
+    expect(joinDictatedText('Алло, алло', 'Музыка')).toBe(' музыка')
+    expect(joinDictatedText('Hello ', 'World')).toBe('world')
+  })
+
+  it('keeps the capital after a sentence end, at the block start, and for I or acronyms', () => {
+    expect(joinDictatedText('Done.', 'Next')).toBe(' Next')
+    expect(joinDictatedText('Done?» ', 'Next')).toBe('Next')
+    expect(joinDictatedText('', 'Hello')).toBe('Hello')
+    expect(joinDictatedText('and', 'I think')).toBe(' I think')
+    expect(joinDictatedText('and', "I'm")).toBe(" I'm")
+    expect(joinDictatedText('at', 'NASA')).toBe(' NASA')
+  })
+
   it('returns an empty string for a blank chunk', () => {
     expect(joinDictatedText('word', '   ')).toBe('')
   })

@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { i18n } from '../../../i18n'
-import type { TranscriptionLanguage } from '../../../core/media/transcriptionLanguage'
+import { resolveDictationLanguage, type TranscriptionLanguage } from '../../../core/media/transcriptionLanguage'
 import { clearActiveRecording, hasActiveRecording, setActiveRecording } from '../../../core/voice-recording/activeRecording'
 import {
   commitDictatedText,
@@ -121,7 +121,7 @@ export function useDictation(core: EditorCore, getLanguage: () => TranscriptionL
     startDictationUi(view)
     setActiveRecording(s.id, () => stop())
     try {
-      await startDictation(getLanguage(), event => onEvent(s, event))
+      await startDictation(resolveDictationLanguage(getLanguage(), i18n.global.locale.value), event => onEvent(s, event))
       resolveStarted(true)
     } catch (error) {
       resolveStarted(false)

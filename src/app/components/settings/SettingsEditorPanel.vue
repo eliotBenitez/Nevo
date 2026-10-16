@@ -39,7 +39,7 @@ const focusModeOptions = ['off', 'soft'].map(v => ({ value: v, label: opt('focus
 const typewriterPositionOptions = ['upper', 'center', 'lower'].map(v => ({ value: v, label: opt('typewriterPosition', v) }))
 const caretAnimationOptions = ['system', 'steady', 'blink', 'fade', 'smooth', 'sparkle', 'glow', 'comet', 'jelly'].map(v => ({ value: v, label: opt('caretAnimation', v) }))
 const dictationSupported = isDictationSupported()
-const dictationLanguageOptions = TRANSCRIPTION_LANGUAGES.map(v => ({ value: v, label: t(`media.transcriptLanguages.${v}`) }))
+const dictationLanguageOptions = TRANSCRIPTION_LANGUAGES.map(v => ({ value: v, label: t(v === 'auto' ? 'settings.editor.dictationLanguage.interface' : `media.transcriptLanguages.${v}`) }))
 const tabKeyBehaviorOptions = ['indent', 'focus'].map(v => ({ value: v, label: opt('tabKeyBehavior', v) }))
 const autosavePolicyOptions = ['immediate', 'window-idle'].map(v => ({ value: v, label: opt('autosavePolicy', v) }))
 const pasteBehaviorOptions = ['smart', 'plain-text'].map(v => ({ value: v, label: opt('pasteBehavior', v) }))
