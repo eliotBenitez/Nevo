@@ -45,7 +45,7 @@
   --radius-nv-lg: var(--radius-lg);
   --radius-nv-xl: var(--radius-xl);
   --shadow-nv-modal: var(--modal-shadow);
-  --z-nv-scrim: var(--z-scrim);
-  --z-nv-modal: var(--z-modal);
-  --z-nv-popover: var(--z-popover);
+  --z-index-nv-scrim: var(--z-scrim);
+  --z-index-nv-modal: var(--z-modal);
+  --z-index-nv-popover: var(--z-popover);
 }
