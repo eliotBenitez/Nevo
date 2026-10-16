@@ -38,6 +38,8 @@ import { useFileUpload } from '../composables/editor/useFileUpload'
 import { useMediaUpload } from '../composables/editor/useMediaUpload'
 import { useVoiceRecording } from '../composables/editor/useVoiceRecording'
 import { isVoiceRecordingSupported } from '../../tauri/voiceRecording'
+import { useDictation } from '../composables/editor/useDictation'
+import { isDictationSupported } from '../../tauri/dictation'
 import { useBlockHandle } from '../composables/editor/useBlockHandle'
 import { useDeviceLayout } from '../../composables/useDeviceLayout'
 import { useEditorScrollbar } from '../composables/editor/useEditorScrollbar'
@@ -372,6 +374,7 @@ const imageUpload = useImageUpload(core, () => props.workspacePath, overlays.upd
 const fileUpload = useFileUpload(core, () => props.workspacePath, overlays.updateOverlays)
 const mediaUpload = useMediaUpload(core, () => props.workspacePath, overlays.updateOverlays)
 const voiceRecording = useVoiceRecording(core, () => props.workspacePath, overlays.updateOverlays)
+const dictation = useDictation(core, () => props.settings.editor.dictationLanguage)
 const notePreload = useNotePreload()
 
 const insertTemplatePickerOpen = ref(false)
@@ -455,6 +458,7 @@ const {
   openFileAsset,
   requestMediaPicker: mediaUpload.requestMediaPicker,
   voiceRecording: isVoiceRecordingSupported() ? voiceRecording.bindings : undefined,
+  dictation: isDictationSupported() ? dictation.bindings : undefined,
   openNoteEmbedPicker,
   openEmbedUrlPopover,
   openNoteEmbed: openNoteById,
@@ -747,7 +751,7 @@ pluginRuntime = useEditorPluginRuntime({
 })
 const { dispatchPluginUiEvent } = pluginRuntime
 
-defineExpose({ editorRoot, flushPendingContent, updateDrawBlock, dispatchPluginUiEvent, openFindInNote })
+defineExpose({ toggleDictation: () => { if (isDictationSupported()) dictation.toggle() }, editorRoot, flushPendingContent, updateDrawBlock, dispatchPluginUiEvent, openFindInNote })
 </script>
 
 <template>

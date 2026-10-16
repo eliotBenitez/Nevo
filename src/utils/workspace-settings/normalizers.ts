@@ -1,4 +1,5 @@
 import type { AppConfig, CaretAnimationMode, FirstStepId, FirstUseHintId, HotkeyBinding, HotkeyScope, OnboardingState, ProductTourStatus, RecentWorkspace, ThemeSchedule, WorkspaceHomeFavorite, WorkspaceSettings, WorkspaceView } from '../../types/workspace'
+import { TRANSCRIPTION_LANGUAGES, type TranscriptionLanguage } from '../../core/media/transcriptionLanguage'
 import { normalizeNotebookPalette } from '../../core/notebook/palette'
 import { normalizeNotebookToolPreferences } from '../../core/notebook/toolPreferences'
 import { normalizeHotkeyChord } from '../hotkey-chords'
@@ -202,6 +203,8 @@ export function normalizeWorkspaceSettings(input: unknown): WorkspaceSettings {
   normalized.editor.autosavePolicy = editor.autosavePolicy === 'window-idle' ? 'window-idle' : defaults.editor.autosavePolicy
   normalized.editor.focusMode = editor.focusMode === 'soft' ? 'soft' : defaults.editor.focusMode
   normalized.editor.typewriterScrolling = typeof editor.typewriterScrolling === 'boolean' ? editor.typewriterScrolling : defaults.editor.typewriterScrolling
+  normalized.editor.dictationLanguage = TRANSCRIPTION_LANGUAGES.includes(editor.dictationLanguage as TranscriptionLanguage)
+    ? editor.dictationLanguage as TranscriptionLanguage : defaults.editor.dictationLanguage
   normalized.editor.activeBlockEmphasis = typeof editor.activeBlockEmphasis === 'boolean' ? editor.activeBlockEmphasis : defaults.editor.activeBlockEmphasis
   normalized.editor.pasteBehavior = editor.pasteBehavior === 'plain-text' ? 'plain-text' : defaults.editor.pasteBehavior
   normalized.editor.slashMenuHints = typeof editor.slashMenuHints === 'boolean' ? editor.slashMenuHints : defaults.editor.slashMenuHints

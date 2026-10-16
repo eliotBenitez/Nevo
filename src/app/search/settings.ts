@@ -1,6 +1,7 @@
 import type { WorkspaceSettingSearchItem } from '../../types/search'
 import { resolveBindingChord } from '../../utils/workspace-settings'
 import { LOCAL_SHORTCUT_COMMAND_IDS } from '../../utils/hotkeys'
+import { isDictationSupported } from '../../tauri/dictation'
 import { isSystemPluginId, SYSTEM_PLUGIN_SHORT_IDS } from '../../utils/system-plugins'
 import type { BuildWorkspaceSettingsSearchItemsOptions } from './settings-helpers'
 import {
@@ -200,6 +201,13 @@ export function buildWorkspaceSettingsSearchItems(options: BuildWorkspaceSetting
       description: t('settings.editor.caretAnimation.description'),
       value: t(`settings.options.caretAnimation.${settings.editor.caretAnimation}`),
     },
+    ...(isDictationSupported() ? [{
+      type: 'setting' as const, id: 'editor.dictationLanguage', section: 'editor' as const,
+      sectionLabel: sectionLabel(t, 'editor'),
+      title: t('settings.editor.dictationLanguage.title'),
+      description: t('settings.editor.dictationLanguage.description'),
+      value: t(`media.transcriptLanguages.${settings.editor.dictationLanguage}`),
+    }] : []),
     {
       type: 'setting', id: 'editor.tabKeyBehavior', section: 'editor',
       sectionLabel: sectionLabel(t, 'editor'),

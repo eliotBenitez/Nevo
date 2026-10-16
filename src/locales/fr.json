@@ -1434,6 +1434,10 @@
         "title": "Défilement machine à écrire",
         "description": "Garder le bloc actif près du centre de la vue pendant la frappe"
       },
+      "dictationLanguage": {
+        "title": "Langue de dictée",
+        "description": "Langue parlée pour la dictée. « Auto » la détecte automatiquement"
+      },
       "activeBlockEmphasis": {
         "title": "Emphase du bloc actif",
         "description": "Atténuer légèrement les blocs adjacents pour focaliser sur le bloc courant"
@@ -1885,6 +1889,7 @@
         "inlineMath": "Math en ligne",
         "findInNote": "Rechercher dans la note",
         "replaceInNote": "Rechercher et remplacer",
+        "toggleDictation": "Activer ou désactiver la dictée",
         "newNote": "Créer une note",
         "newFolder": "Créer un dossier",
         "saveNote": "Enregistrer la note",
@@ -2488,6 +2493,19 @@
       "unsupported": "L'enregistrement vocal n'est pas encore disponible sur cet appareil."
     }
   },
+  "dictation": {
+    "indicator": "Dictée en cours. Cliquez pour arrêter, ou appuyez sur Échap",
+    "errors": {
+      "noDevice": "Aucun microphone trouvé.",
+      "permissionDenied": "Accès au microphone refusé. Autorisez-le dans les paramètres système et réessayez.",
+      "busy": "Une transcription audio est en cours. Attendez qu’elle se termine.",
+      "alreadyRecording": "Un enregistrement est déjà en cours.",
+      "modelUnavailable": "Le modèle de reconnaissance vocale n’est pas encore téléchargé.",
+      "unsupported": "La dictée n’est pas encore disponible sur cet appareil.",
+      "startFailed": "Impossible de démarrer la dictée.",
+      "failed": "La dictée s’est arrêtée à cause d’une erreur."
+    }
+  },
   "slashMenu": {
     "categories": {
       "text": "Texte",
@@ -2516,6 +2534,7 @@
       "video": "Vidéo",
       "audio": "Audio",
       "voice_recording": "Enregistrement vocal",
+      "dictation": "Dictée",
       "file": "Fichier joint",
       "table": "Tableau",
       "mermaid": "Diagramme Mermaid",

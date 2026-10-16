@@ -214,10 +214,16 @@ pub struct EditorSettings {
     pub autosave_policy: String,
     #[serde(rename = "slashMenuLayout", default = "default_slash_menu_layout")]
     pub slash_menu_layout: String,
+    #[serde(rename = "dictationLanguage", default = "default_dictation_language")]
+    pub dictation_language: String,
 }
 
 fn default_slash_menu_layout() -> String {
     "list".to_string()
+}
+
+fn default_dictation_language() -> String {
+    "auto".to_string()
 }
 
 impl Default for EditorSettings {
@@ -231,6 +237,7 @@ impl Default for EditorSettings {
             tab_key_behavior: "indent".to_string(),
             autosave_policy: "immediate".to_string(),
             slash_menu_layout: default_slash_menu_layout(),
+            dictation_language: default_dictation_language(),
         }
     }
 }

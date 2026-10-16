@@ -2,6 +2,7 @@ pub mod ai;
 pub mod auth;
 pub mod config;
 pub mod database;
+pub mod dictation;
 pub mod folder;
 pub mod fonts;
 pub mod github_sync;

@@ -72,6 +72,7 @@ const editorRef = ref<{
   updateDrawBlock?: (payload: { drawId: string; svgPreview: string; src: string; title?: string }) => void
   dispatchPluginUiEvent?: (pluginId: string, contributionId: string, event: { type: string; payload: unknown }) => Promise<unknown>
   openFindInNote?: (withReplace?: boolean) => boolean
+  toggleDictation?: () => void
 } | null>(null)
 const notebookRef = ref<{
   editorRootEl?: HTMLElement | null
@@ -115,6 +116,10 @@ function dispatchPluginUiEvent(pluginId: string, contributionId: string, event: 
   return editorRef.value?.dispatchPluginUiEvent?.(pluginId, contributionId, event) ?? Promise.resolve(undefined)
 }
 
+function toggleDictation(): void {
+  editorRef.value?.toggleDictation?.()
+}
+
 function openFindInNote(withReplace = false): boolean {
   return editorRef.value?.openFindInNote?.(withReplace) ?? false
 }
@@ -141,7 +146,7 @@ async function exportRawSource(): Promise<void> {
   }
 }
 
-defineExpose({ editorRoot, flushPendingContent, updateDrawBlock, dispatchPluginUiEvent, openFindInNote })
+defineExpose({ editorRoot, flushPendingContent, updateDrawBlock, dispatchPluginUiEvent, openFindInNote, toggleDictation })
 </script>
 
 <template>

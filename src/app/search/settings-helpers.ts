@@ -33,6 +33,7 @@ export const hotkeyLabelKeys: Record<string, string> = {
   'core.block.appendEnd': 'settings.hotkeys.commands.appendBlockAtEnd',
   'core.math.inline.insert': 'settings.hotkeys.commands.inlineMath',
   'editor.find-in-note': 'settings.hotkeys.commands.findInNote',
+  'editor.dictation.toggle': 'settings.hotkeys.commands.toggleDictation',
   'editor.replace-in-note': 'settings.hotkeys.commands.replaceInNote',
   'workspace.new-note': 'settings.hotkeys.commands.newNote',
   'workspace.new-folder': 'settings.hotkeys.commands.newFolder',

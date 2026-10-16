@@ -311,6 +311,12 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
         .filter(|value| matches!(*value, "list" | "grid" | "preview"))
         .unwrap_or("list")
         .to_string();
+    settings.editor.dictation_language = editor
+        .get("dictationLanguage")
+        .and_then(|value| value.as_str())
+        .filter(|value| matches!(*value, "auto" | "ru" | "en" | "de" | "fr" | "es"))
+        .unwrap_or("auto")
+        .to_string();
 
     let workspace = object
         .get("workspace")
@@ -1007,6 +1013,22 @@ mod tests {
         assert_eq!(settings.files.snapshot_retention_count, 5);
         assert_eq!(settings.general.default_startup_view, "editor");
         assert_eq!(settings.appearance.accent_preset, "mineral");
+    }
+
+    #[test]
+    fn keeps_dictation_language_and_defaults_unknown_values_to_auto() {
+        assert_eq!(
+            normalize_settings_value(json!({}))
+                .editor
+                .dictation_language,
+            "auto"
+        );
+        let ru = normalize_settings_value(json!({ "editor": { "dictationLanguage": "ru" } }));
+        assert_eq!(ru.editor.dictation_language, "ru");
+        let bogus = normalize_settings_value(json!({ "editor": { "dictationLanguage": "zz" } }));
+        assert_eq!(bogus.editor.dictation_language, "auto");
+        let saved = serde_json::to_value(&ru).unwrap();
+        assert_eq!(saved["editor"]["dictationLanguage"], "ru");
     }
 
     #[test]

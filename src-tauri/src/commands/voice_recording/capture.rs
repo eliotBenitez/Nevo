@@ -68,7 +68,7 @@ pub fn fallback_config(
 }
 
 #[cfg_attr(mobile, allow(dead_code))]
-pub trait ToI16Sample: Copy {
+pub(crate) trait ToI16Sample: Copy {
     fn to_i16_sample(self) -> i32;
 }
 impl ToI16Sample for f32 {
@@ -90,7 +90,7 @@ impl ToI16Sample for u16 {
 /// Averages each interleaved frame into one i16 sample; a trailing partial
 /// frame is dropped.
 #[cfg_attr(mobile, allow(dead_code))]
-pub fn downmix_to_i16<T: ToI16Sample>(data: &[T], channels: u16, out: &mut Vec<i16>) {
+pub(crate) fn downmix_to_i16<T: ToI16Sample>(data: &[T], channels: u16, out: &mut Vec<i16>) {
     let channels = channels.max(1) as usize;
     for frame in data.chunks_exact(channels) {
         let sum: i32 = frame.iter().map(|s| s.to_i16_sample()).sum();
@@ -187,7 +187,7 @@ fn cleanup_failed_wav(path: &Path) {
 }
 
 #[cfg(desktop)]
-fn log_stream_error(error: cpal::StreamError) {
+pub(crate) fn log_stream_error(error: cpal::StreamError) {
     let logger = crate::logging::logger();
     let _ = logger.error(
         "tauri.voice_recording",
@@ -254,16 +254,11 @@ fn build_stream(
     built.map_err(|error| RecorderError::Other(error.to_string()))
 }
 
-/// Everything the capture thread needs to produce before signalling "ready":
-/// the live stream (kept alive until stop), the writer it feeds, the frame
-/// counter, the final WAV path, and the sample rate (for `duration_ms`).
+/// Picks the input config (16 kHz when possible) among the formats we can decode.
 #[cfg(desktop)]
-fn open_capture(
-    output_base: &Path,
-) -> Result<(cpal::Stream, SharedWriter, Arc<AtomicU64>, PathBuf, u32), RecorderError> {
-    let host = cpal::default_host();
-    let device = host.default_input_device().ok_or(RecorderError::NoDevice)?;
-
+pub(crate) fn select_input_config(
+    device: &cpal::Device,
+) -> Result<cpal::SupportedStreamConfig, RecorderError> {
     // Some devices (observed on a virtual/dummy ALSA input in this sandbox)
     // advertise the identical channel/rate range under several sample
     // formats. `ConfigCandidate` intentionally carries no format field (see
@@ -295,7 +290,7 @@ fn open_capture(
         })
         .collect();
 
-    let supported_config = match pick_config(&candidates, PREFERRED_SAMPLE_RATE) {
+    let config = match pick_config(&candidates, PREFERRED_SAMPLE_RATE) {
         Some((index, rate)) => supported_configs[index]
             .clone()
             .with_sample_rate(cpal::SampleRate(rate)),
@@ -321,6 +316,19 @@ fn open_capture(
             .default_input_config()
             .map_err(|error| RecorderError::Other(error.to_string()))?,
     };
+    Ok(config)
+}
+
+/// Everything the capture thread needs to produce before signalling "ready":
+/// the live stream (kept alive until stop), the writer it feeds, the frame
+/// counter, the final WAV path, and the sample rate (for `duration_ms`).
+#[cfg(desktop)]
+fn open_capture(
+    output_base: &Path,
+) -> Result<(cpal::Stream, SharedWriter, Arc<AtomicU64>, PathBuf, u32), RecorderError> {
+    let host = cpal::default_host();
+    let device = host.default_input_device().ok_or(RecorderError::NoDevice)?;
+    let supported_config = select_input_config(&device)?;
 
     let sample_rate = supported_config.sample_rate().0;
     let channels = supported_config.channels();

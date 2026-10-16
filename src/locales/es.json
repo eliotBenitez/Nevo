@@ -1434,6 +1434,10 @@
         "title": "Desplazamiento máquina de escribir",
         "description": "Mantener el bloque activo cerca del centro durante la escritura"
       },
+      "dictationLanguage": {
+        "title": "Idioma del dictado",
+        "description": "Idioma hablado para el dictado. «Automático» lo detecta solo"
+      },
       "activeBlockEmphasis": {
         "title": "Énfasis del bloque activo",
         "description": "Atenúa ligeramente los bloques adyacentes para foco en el actual"
@@ -1885,6 +1889,7 @@
         "inlineMath": "Matemática en línea",
         "findInNote": "Buscar en la nota",
         "replaceInNote": "Buscar y reemplazar",
+        "toggleDictation": "Activar o desactivar el dictado",
         "newNote": "Crear nota",
         "newFolder": "Crear carpeta",
         "saveNote": "Guardar nota",
@@ -2488,6 +2493,19 @@
       "unsupported": "La grabación de voz aún no está disponible en este dispositivo."
     }
   },
+  "dictation": {
+    "indicator": "Dictado en curso. Haz clic para detenerlo o pulsa Esc",
+    "errors": {
+      "noDevice": "No se encontró ningún micrófono.",
+      "permissionDenied": "Acceso al micrófono denegado. Permítelo en los ajustes del sistema e inténtalo de nuevo.",
+      "busy": "Ahora se está transcribiendo un audio. Espera a que termine.",
+      "alreadyRecording": "Ya hay una grabación en curso.",
+      "modelUnavailable": "El modelo de reconocimiento de voz aún no está descargado.",
+      "unsupported": "El dictado todavía no está disponible en este dispositivo.",
+      "startFailed": "No se pudo iniciar el dictado.",
+      "failed": "El dictado se detuvo por un error."
+    }
+  },
   "slashMenu": {
     "categories": {
       "text": "Texto",
@@ -2516,6 +2534,7 @@
       "video": "Vídeo",
       "audio": "Audio",
       "voice_recording": "Grabación de voz",
+      "dictation": "Dictado",
       "file": "Archivo adjunto",
       "table": "Tabla",
       "mermaid": "Diagrama Mermaid",

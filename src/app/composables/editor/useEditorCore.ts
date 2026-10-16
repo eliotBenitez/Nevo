@@ -28,6 +28,7 @@ import {
 } from '../../../editor-core'
 import { registerEditorPersistence } from '../../../core/document-session/editorSessionRegistry'
 import type { VoiceRecordingEditorBindings } from './useVoiceRecording'
+import type { DictationEditorBindings } from './useDictation'
 import { useToast } from '../../../ui/composables/useToast'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { useOnboardingStore } from '../../../stores/onboarding'
@@ -174,6 +175,7 @@ export interface EditorCoreCallbacks {
   /** Bindings for the `voice-recording` slash item; omitted by hosts/platforms
    *  where `isVoiceRecordingSupported()` is false (see Step 2 in the hosts). */
   voiceRecording?: VoiceRecordingEditorBindings
+  dictation?: DictationEditorBindings
   onAfterTransaction?: (view: EditorView) => void
   onAssetSrcsRemoved?: (srcs: string[]) => void
   onAiAskRequest?: (onSubmit: (instruction: string) => void) => void
@@ -551,6 +553,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
 
   function destroyEditorView() {
     callbacks.voiceRecording?.onEditorDestroy()
+    callbacks.dictation?.onEditorDestroy()
     flushPendingContentUpdate()
     unregisterPersistenceSession()
     if (core.editorView) clearActiveEditor(core.editorView)
@@ -684,6 +687,8 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
       voiceRecordingPlaceholder: callbacks.voiceRecording
         ? { ...callbacks.voiceRecording.placeholder, t: (key: string) => i18n.global.t(key) }
         : undefined,
+      onDictationToggle: callbacks.dictation?.toggle,
+      dictation: callbacks.dictation?.plugin,
       enableVega: core.systemPlugins.vega,
       enableMarkmap: core.systemPlugins.markmap,
       enableDraw: settings.features?.draw !== false,

@@ -9,9 +9,9 @@ mod mobile_lifecycle;
 #[cfg(desktop)]
 use commands::transcription;
 use commands::{
-    ai, auth, config, database, folder, fonts, github_sync, graph, kanban, kanban_ops, mcp, note,
-    note_index, notebook_export, notion_import, system, templates, typst_export, voice_recording,
-    workspace, workspace_transfer,
+    ai, auth, config, database, dictation, folder, fonts, github_sync, graph, kanban, kanban_ops,
+    mcp, note, note_index, notebook_export, notion_import, system, templates, typst_export,
+    voice_recording, workspace, workspace_transfer,
 };
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{Emitter, Manager, WindowEvent};
@@ -173,6 +173,7 @@ pub fn run() {
         .manage(typst_export::PdfPreviewCache::default())
         .manage(notion_import::NotionImportState::default())
         .manage(voice_recording::VoiceRecordingState::default())
+        .manage(dictation::DictationState::default())
         .manage(CloseGuard {
             allowed: AtomicBool::new(false),
         })
@@ -367,6 +368,9 @@ pub fn run() {
             voice_recording::voice_recording_start,
             voice_recording::voice_recording_stop,
             voice_recording::voice_recording_cancel,
+            dictation::dictation_start,
+            dictation::dictation_stop,
+            dictation::dictation_cancel,
             #[cfg(desktop)]
             transcription::transcribe_audio,
             mcp::apply_mcp_mode,

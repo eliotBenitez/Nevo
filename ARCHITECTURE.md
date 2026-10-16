@@ -359,6 +359,19 @@ change stored note icons.
   The command is not registered on mobile and restricts files to direct children
   of `.nevo/assets` in the current workspace (100 MiB, 30 minutes). Markdown,
   HTML, DOCX, and Typst/PDF exports include timestamped transcript text.
+- **Live dictation** — desktop only. `src-tauri/src/commands/dictation/` opens the
+  default microphone on its own thread (`stream.rs`), resamples to 16 kHz, cuts speech
+  segments with an energy VAD (`segmenter.rs`) and recognizes them with the same cached
+  Whisper context as transcription (`worker.rs`, `transcription::recognize_text`, which
+  also drops no-speech segments and known silence hallucinations). Events
+  (`partial`/`final`/`level`/`error`/`stopped`) stream over a `tauri::ipc::Channel`.
+  A session holds the transcription busy guard and is mutually exclusive with voice
+  recording. On the frontend `useDictation` (`src/app/composables/editor/`) owns the
+  session, and `src/editor-core/plugins/dictation.ts` shows the indicator and interim
+  text as a decoration and commits each final phrase as one undo step at an anchor that
+  follows the caret. Entry points: hotkey `editor.dictation.toggle` (Ctrl+Shift+D,
+  routed through `WorkspaceShell` → `WorkspaceNoteHost` → `WorkspaceEditorPane`), the
+  `dictation` slash item, Esc or a click on the indicator to stop.
 - **Canvas / draw** — the data model and pure editing algorithms live in `src/core/canvas/`
   (entry `index.ts`: geometry, hit-testing, strokes, connectors, mind-map layout,
   migration of legacy canvas shapes). The interactive drawing feature UI is

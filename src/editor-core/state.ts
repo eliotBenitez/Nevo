@@ -28,6 +28,7 @@ import { createAiStreamingPlugin } from './plugins/ai-streaming'
 import { createBrokenLinkDecorationPlugin } from './plugins/broken-link-decoration'
 import { createFindInNotePlugin } from './plugins/find-in-note'
 import { createVoiceRecordingPlaceholderPlugin, type VoiceRecordingPlaceholderOptions } from './plugins/voice-recording-placeholder'
+import { createDictationPlugin, type DictationPluginOptions } from './plugins/dictation'
 
 export interface CreateNevoEditorStateOptions {
   schema: Schema
@@ -44,6 +45,9 @@ export interface CreateNevoEditorStateOptions {
   /** Adds the `voice-recording` slash item; the host owns the session. */
   onVoiceRecordingRequest?: () => void
   voiceRecordingPlaceholder?: VoiceRecordingPlaceholderOptions
+  /** Adds the `dictation` slash item; the host owns the session. */
+  onDictationToggle?: () => void
+  dictation?: DictationPluginOptions
   enableVega?: boolean
   enableMarkmap?: boolean
   enableDraw?: boolean
@@ -195,6 +199,13 @@ export function createNevoEditorState(options: CreateNevoEditorStateOptions): Ne
     })
   }
 
+  if (options.onDictationToggle) {
+    commandRegistry.set('core.dictation.toggle', () => {
+      options.onDictationToggle?.()
+      return true
+    })
+  }
+
   const host = options.pluginHost
   if (host) {
     for (const [id, command] of host.registries.commands.entries()) {
@@ -250,6 +261,19 @@ export function createNevoEditorState(options: CreateNevoEditorStateOptions): Ne
       },
     })
   }
+  if (commandRegistry.has('core.dictation.toggle')) {
+    const anchorIdx = slashItems.findIndex(item => item.id === 'voice-recording')
+      + 1 || slashItems.findIndex(item => item.id === 'audio') + 1
+    slashItems.splice(anchorIdx || slashItems.length, 0, {
+      id: 'dictation',
+      title: 'Dictation',
+      category: 'media',
+      keywords: ['dictation', 'dictate', 'speech', 'voice', 'microphone', 'диктовка'],
+      run: ({ state, dispatch }) => {
+        commandRegistry.get('core.dictation.toggle')?.(state, dispatch)
+      },
+    })
+  }
   if (host) {
     const pluginSlashItems = host.listSlashItems()
     for (const pluginItem of pluginSlashItems) {
@@ -276,6 +300,7 @@ export function createNevoEditorState(options: CreateNevoEditorStateOptions): Ne
   if (options.voiceRecordingPlaceholder) {
     plugins.push(createVoiceRecordingPlaceholderPlugin(options.voiceRecordingPlaceholder))
   }
+  if (options.dictation) plugins.push(createDictationPlugin(options.dictation))
   plugins.push(headingFoldingPlugin)
   plugins.push(createToggleFoldingPlugin())
   if (options.enableSlashCommands !== false) {

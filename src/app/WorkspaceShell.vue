@@ -146,6 +146,7 @@ const editorPaneRef = ref<{
     event: { type: string; payload: unknown },
   ) => Promise<unknown>
   openFindInNote?: (withReplace?: boolean) => boolean
+  toggleDictation?: () => void
 } | null>(null)
 const editorRootEl = computed(() => editorPaneRef.value?.editorRoot ?? null)
 const workspaceNoteHostKey = computed(() => `${workspaceStore.backendKind ?? 'none'}:${workspaceStore.activePath ?? ''}:${activeNoteId.value ?? 'empty'}`)
@@ -862,7 +863,7 @@ const { renameModal, onTreeAction, handleRequestExport, submitRename, closeRenam
   { openHistory, runSearch: async (seed) => { await runWorkspaceSearch(seed) }, navigateToNote: async (noteId) => { await router.push(`/workspace/note/${noteId}`) }, navigateToWorkspaceRoot: async () => { await router.push('/workspace') }, exportAsMarkdown, exportAsHtml, exportAsDocx: async (note, path) => { exportAsDocx(note, path) }, exportAsTypst, exportAsPdf },
 )
 
-useWorkspaceKeymap(settings, { createNote, createFolder, saveNote: flushSave, runSearch: () => toggleSearch(), toggleSidebar: () => toggleSidebarOrPin(), toggleRightPanel: () => uiStore.toggleRightPanel(), openGraph: () => openGraph(), openHistory: () => toggleHistory(), openTrash: () => toggleTrash(), openSettings: () => toggleSettings(), findInNote: () => { editorPaneRef.value?.openFindInNote?.(false) }, replaceInNote: () => { editorPaneRef.value?.openFindInNote?.(true) } })
+useWorkspaceKeymap(settings, { createNote, createFolder, saveNote: flushSave, runSearch: () => toggleSearch(), toggleSidebar: () => toggleSidebarOrPin(), toggleRightPanel: () => uiStore.toggleRightPanel(), openGraph: () => openGraph(), openHistory: () => toggleHistory(), openTrash: () => toggleTrash(), openSettings: () => toggleSettings(), findInNote: () => { editorPaneRef.value?.openFindInNote?.(false) }, replaceInNote: () => { editorPaneRef.value?.openFindInNote?.(true) }, toggleDictation: () => { editorPaneRef.value?.toggleDictation?.() } })
 
 watch(manifest, (workspace) => {
   if (!workspace) { router.replace('/onboarding'); return }

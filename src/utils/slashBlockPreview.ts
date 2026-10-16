@@ -12,7 +12,7 @@ const kinds: Record<string, SlashPreviewKind> = {
   checklist: 'checks', code: 'code', math: 'math', 'math-inline': 'math-inline',
   table: 'table', database: 'database', query: 'query', image: 'image',
   divider: 'divider', embed: 'embed', 'note-embed': 'note-embed', emoji: 'emoji', draw: 'draw',
-  audio: 'audio', 'voice-recording': 'audio', video: 'video', file: 'file', chart: 'chart',
+  audio: 'audio', 'voice-recording': 'audio', dictation: 'audio', video: 'video', file: 'file', chart: 'chart',
   mermaid: 'mermaid', markmap: 'markmap', 'insert-template': 'template',
 }
 

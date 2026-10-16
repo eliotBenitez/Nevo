@@ -1,6 +1,7 @@
 mod decode;
+pub(crate) mod resample;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, OnceLock};
 use tauri::{AppHandle, Manager, State};
@@ -20,10 +21,10 @@ pub struct TranscriptionState {
     context: OnceLock<Result<WhisperContext, String>>,
 }
 
-struct BusyGuard(Arc<TranscriptionState>);
+pub(crate) struct BusyGuard(Arc<TranscriptionState>);
 
 impl BusyGuard {
-    fn acquire(state: Arc<TranscriptionState>) -> Option<Self> {
+    pub(crate) fn acquire(state: Arc<TranscriptionState>) -> Option<Self> {
         state
             .busy
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Relaxed)
@@ -51,7 +52,7 @@ fn transcript_segment(start: i64, end: i64, text: &str) -> Option<TranscriptSegm
     })
 }
 
-fn validate_language(language: Option<String>) -> Result<Option<String>, String> {
+pub(crate) fn validate_language(language: Option<String>) -> Result<Option<String>, String> {
     let Some(language) = language else {
         return Ok(None);
     };
@@ -68,24 +69,34 @@ fn validate_language(language: Option<String>) -> Result<Option<String>, String>
     Ok(Some(language))
 }
 
-fn transcribe(
-    state: &TranscriptionState,
+pub(crate) fn whisper_context<'a>(
+    state: &'a TranscriptionState,
     model: &Path,
-    audio: &Path,
-    language: Option<&str>,
-) -> Result<Vec<TranscriptSegment>, String> {
+) -> Result<&'a WhisperContext, String> {
     // whisper.cpp otherwise writes recognized words to stderr in debug output.
     whisper_rs::install_logging_hooks();
-    let pcm = decode::decode_audio(audio)?;
-    let context = state
+    state
         .context
         .get_or_init(|| {
             WhisperContext::new_with_params(model, WhisperContextParameters::default())
                 .map_err(|_| "model_unavailable".to_string())
         })
         .as_ref()
-        .map_err(Clone::clone)?;
-    let mut whisper = context.create_state().map_err(|_| "inference_failed")?;
+        .map_err(Clone::clone)
+}
+
+pub(crate) fn resolve_model_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let model = app
+        .path()
+        .resolve("models/ggml-base.bin", tauri::path::BaseDirectory::Resource)
+        .map_err(|_| "model_unavailable")?;
+    if !model.is_file() {
+        return Err("model_unavailable".to_string());
+    }
+    Ok(model)
+}
+
+fn base_params<'a>(language: Option<&'a str>) -> FullParams<'a, 'a> {
     let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
     params.set_language(language);
     params.set_translate(false);
@@ -95,7 +106,81 @@ fn transcribe(
     params.set_n_threads(
         std::thread::available_parallelism().map_or(4, |count| count.get().min(8)) as i32,
     );
-    whisper.full(params, &pcm).map_err(|_| "inference_failed")?;
+    params
+}
+
+/// Recognizes one short utterance as a single segment of plain text.
+pub(crate) fn recognize_text(
+    ctx: &WhisperContext,
+    pcm: &[f32],
+    language: Option<&str>,
+    prompt: Option<&str>,
+) -> Result<String, String> {
+    let mut whisper = ctx.create_state().map_err(|_| "inference_failed")?;
+    let mut params = base_params(language);
+    params.set_single_segment(true);
+    params.set_no_timestamps(true);
+    if let Some(prompt) = prompt {
+        params.set_initial_prompt(prompt);
+    }
+    whisper.full(params, pcm).map_err(|_| "inference_failed")?;
+    // A whole dictated phrase may legitimately be "Thank you."; only short bursts are suspect.
+    let short = pcm.len() < SHORT_SEGMENT_SAMPLES;
+    let text = (0..whisper.full_n_segments())
+        .filter_map(|index| whisper.get_segment(index))
+        // Whisper invents text for noise ("you", "Thank you."); trust its own no-speech estimate.
+        .filter(|segment| segment.no_speech_probability() <= NO_SPEECH_MAX_PROBABILITY)
+        .filter_map(|segment| segment.to_str().ok().map(|text| text.trim().to_string()))
+        .filter(|text| !text.is_empty() && !(short && is_silence_hallucination(text)))
+        .collect::<Vec<_>>()
+        .join(" ");
+    Ok(text.trim().to_string())
+}
+
+const NO_SPEECH_MAX_PROBABILITY: f32 = 0.6;
+const SHORT_SEGMENT_SAMPLES: usize = 16_000 * 5 / 2;
+
+/// Phrases Whisper is known to produce for silence or room noise (subtitle credits
+/// learned from its training data). Only a segment that is exactly one of them is dropped.
+const SILENCE_HALLUCINATIONS: &[&str] = &[
+    "you",
+    "thank you",
+    "thanks for watching",
+    "thank you for watching",
+    "продолжение следует",
+    "субтитры сделал dimatorzok",
+    "субтитры создавал dimatorzok",
+    "редактор субтитров а.семкин корректор а.егорова",
+    "спасибо за просмотр",
+    "спасибо",
+    "thanks",
+    "danke",
+    "merci",
+    "gracias",
+    "untertitel im auftrag des zdf für funk, 2017",
+    "sous-titrage st' 501",
+    "subtítulos realizados por la comunidad de amara.org",
+];
+
+fn is_silence_hallucination(text: &str) -> bool {
+    let normalized = text
+        .trim_matches(|c: char| c.is_ascii_punctuation() || c.is_whitespace() || c == '…')
+        .to_lowercase();
+    SILENCE_HALLUCINATIONS.contains(&normalized.as_str())
+}
+
+fn transcribe(
+    state: &TranscriptionState,
+    model: &Path,
+    audio: &Path,
+    language: Option<&str>,
+) -> Result<Vec<TranscriptSegment>, String> {
+    let pcm = decode::decode_audio(audio)?;
+    let context = whisper_context(state, model)?;
+    let mut whisper = context.create_state().map_err(|_| "inference_failed")?;
+    whisper
+        .full(base_params(language), &pcm)
+        .map_err(|_| "inference_failed")?;
     Ok((0..whisper.full_n_segments())
         .filter_map(|index| whisper.get_segment(index))
         .filter_map(|segment| {
@@ -116,13 +201,7 @@ pub async fn transcribe_audio(
     let language = validate_language(language)?;
     // Only a currently open workspace asset may be read. No filesystem path is accepted via IPC.
     let audio = crate::commands::path_utils::active_workspace_audio_asset(&src)?;
-    let model = app
-        .path()
-        .resolve("models/ggml-base.bin", tauri::path::BaseDirectory::Resource)
-        .map_err(|_| "model_unavailable")?;
-    if !model.is_file() {
-        return Err("model_unavailable".to_string());
-    }
+    let model = resolve_model_path(&app)?;
     let guard = BusyGuard::acquire(Arc::clone(state.inner()))
         .ok_or_else(|| "transcription_busy".to_string())?;
     tauri::async_runtime::spawn_blocking(move || {
@@ -186,6 +265,22 @@ mod tests {
         assert_eq!(segment.end, 2.45);
         assert_eq!(segment.text, "Hello");
         assert!(transcript_segment(0, 10, "   ").is_none());
+    }
+
+    #[test]
+    fn drops_whole_segment_silence_hallucinations_only() {
+        assert!(super::is_silence_hallucination(" you"));
+        assert!(super::is_silence_hallucination("Thank you."));
+        assert!(super::is_silence_hallucination("Продолжение следует..."));
+        assert!(super::is_silence_hallucination(
+            "Субтитры сделал DimaTorzok"
+        ));
+        assert!(!super::is_silence_hallucination(
+            "Thank you for the report."
+        ));
+        assert!(!super::is_silence_hallucination("you know"));
+        assert!(super::is_silence_hallucination("Спасибо!"));
+        assert!(!super::is_silence_hallucination("Спасибо за помощь"));
     }
 
     #[test]

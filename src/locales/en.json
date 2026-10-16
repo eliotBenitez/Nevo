@@ -1434,6 +1434,10 @@
         "title": "Typewriter scrolling",
         "description": "Keep the active block near the centre of the viewport while typing"
       },
+      "dictationLanguage": {
+        "title": "Dictation language",
+        "description": "Speech language for dictation. \"Auto\" detects it by itself"
+      },
       "activeBlockEmphasis": {
         "title": "Active block emphasis",
         "description": "Slightly dim adjacent blocks to focus attention on the current one"
@@ -1885,6 +1889,7 @@
         "inlineMath": "Inline math",
         "findInNote": "Find in note",
         "replaceInNote": "Find & replace",
+        "toggleDictation": "Toggle dictation",
         "newNote": "Create note",
         "newFolder": "Create folder",
         "saveNote": "Save note",
@@ -2488,6 +2493,19 @@
       "unsupported": "Voice recording is not available on this device yet."
     }
   },
+  "dictation": {
+    "indicator": "Dictation is on. Click to stop, or press Esc",
+    "errors": {
+      "noDevice": "No microphone found.",
+      "permissionDenied": "Microphone access denied. Allow it in system settings and try again.",
+      "busy": "Audio is being transcribed right now. Wait for it to finish.",
+      "alreadyRecording": "A recording is already in progress.",
+      "modelUnavailable": "The speech model is not downloaded yet.",
+      "unsupported": "Dictation is not available on this device yet.",
+      "startFailed": "Could not start dictation.",
+      "failed": "Dictation stopped because of an error."
+    }
+  },
   "slashMenu": {
     "categories": {
       "text": "Text",
@@ -2516,6 +2534,7 @@
       "video": "Video",
       "audio": "Audio",
       "voice_recording": "Voice recording",
+      "dictation": "Dictation",
       "file": "File Attachment",
       "table": "Table",
       "mermaid": "Mermaid Diagram",

@@ -21,6 +21,7 @@ export const LOCAL_SHORTCUT_COMMAND_IDS = new Set([
   'workspace.save-note',
   'editor.find-in-note',
   'editor.replace-in-note',
+  'editor.dictation.toggle',
 ])
 
 interface HotkeyCommandDetail {

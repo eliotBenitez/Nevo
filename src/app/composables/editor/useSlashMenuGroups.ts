@@ -78,6 +78,7 @@ const slashIconById: Record<string, Component> = {
   draw: Palette,
   audio: Music,
   'voice-recording': Mic,
+  dictation: Mic,
   video: Video,
   file: Paperclip,
   chart: BarChart3,

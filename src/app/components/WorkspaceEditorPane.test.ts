@@ -319,6 +319,7 @@ const defaultSettings: WorkspaceSettings = {
     autosavePolicy: 'immediate',
     focusMode: 'off',
     typewriterScrolling: false,
+    dictationLanguage: 'auto',
     activeBlockEmphasis: false,
     pasteBehavior: 'smart',
     slashMenuHints: true,

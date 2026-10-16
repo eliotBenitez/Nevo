@@ -1,5 +1,6 @@
 import type { FolderMeta, NoteMeta } from './note'
 import type { IconSet } from '../ui/icons/iconSet'
+import type { TranscriptionLanguage } from '../core/media/transcriptionLanguage'
 import type {
   NevoEditorCapability,
   NevoPluginCapability,
@@ -164,6 +165,7 @@ export interface EditorSettings {
   autosavePolicy: AutosavePolicy
   focusMode: FocusMode
   typewriterScrolling: boolean
+  dictationLanguage: TranscriptionLanguage
   activeBlockEmphasis: boolean
   pasteBehavior: PasteBehavior
   slashMenuHints: boolean

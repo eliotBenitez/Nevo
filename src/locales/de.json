@@ -1434,6 +1434,10 @@
         "title": "Schreibmaschinen-Scrollen",
         "description": "Aktiven Block während des Tippens nahe der Mitte halten"
       },
+      "dictationLanguage": {
+        "title": "Diktiersprache",
+        "description": "Sprache für das Diktat. „Automatisch“ erkennt sie selbst"
+      },
       "activeBlockEmphasis": {
         "title": "Aktive Block-Hervorhebung",
         "description": "Angrenzende Blöcke leicht abdunkeln, um auf den aktuellen zu fokussieren"
@@ -1885,6 +1889,7 @@
         "inlineMath": "Inline-Mathe",
         "findInNote": "In Notiz suchen",
         "replaceInNote": "Suchen und Ersetzen",
+        "toggleDictation": "Diktat ein- oder ausschalten",
         "newNote": "Notiz erstellen",
         "newFolder": "Ordner erstellen",
         "saveNote": "Notiz speichern",
@@ -2488,6 +2493,19 @@
       "unsupported": "Sprachaufnahme ist auf diesem Gerät noch nicht verfügbar."
     }
   },
+  "dictation": {
+    "indicator": "Diktat läuft. Klicken zum Beenden oder Esc drücken",
+    "errors": {
+      "noDevice": "Kein Mikrofon gefunden.",
+      "permissionDenied": "Mikrofonzugriff verweigert. Erlaube ihn in den Systemeinstellungen und versuche es erneut.",
+      "busy": "Gerade wird Audio transkribiert. Warte, bis es fertig ist.",
+      "alreadyRecording": "Eine Aufnahme läuft bereits.",
+      "modelUnavailable": "Das Spracherkennungsmodell ist noch nicht heruntergeladen.",
+      "unsupported": "Diktat ist auf diesem Gerät noch nicht verfügbar.",
+      "startFailed": "Das Diktat konnte nicht gestartet werden.",
+      "failed": "Das Diktat wurde wegen eines Fehlers beendet."
+    }
+  },
   "slashMenu": {
     "categories": {
       "text": "Text",
@@ -2516,6 +2534,7 @@
       "video": "Video",
       "audio": "Audio",
       "voice_recording": "Sprachaufnahme",
+      "dictation": "Diktat",
       "file": "Dateianhang",
       "table": "Tabelle",
       "mermaid": "Mermaid-Diagramm",

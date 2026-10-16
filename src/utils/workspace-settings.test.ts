@@ -149,6 +149,20 @@ describe('normalizeWorkspaceSettings', () => {
     expect(settings.hotkeys.bindings.find(binding => binding.commandId === 'workspace.open-trash')?.defaultChord).toBe('Ctrl+Alt+T')
   })
 
+  it('normalizes dictationLanguage and adds the dictation hotkey to older settings', () => {
+    expect(createDefaultWorkspaceSettings().editor.dictationLanguage).toBe('auto')
+    expect(normalizeWorkspaceSettings({}).editor.dictationLanguage).toBe('auto')
+    expect(normalizeWorkspaceSettings({ editor: { dictationLanguage: 'klingon' } }).editor.dictationLanguage).toBe('auto')
+    expect(normalizeWorkspaceSettings({ editor: { dictationLanguage: 'ru' } }).editor.dictationLanguage).toBe('ru')
+
+    const settings = normalizeWorkspaceSettings({
+      hotkeys: { bindings: [{ commandId: 'editor.dictation.toggle', label: 'x', defaultChord: 'Ctrl+Shift+D', customChord: 'Ctrl+Alt+D', scope: 'workspace' }] },
+    })
+    expect(settings.hotkeys.bindings.find(b => b.commandId === 'editor.dictation.toggle')?.customChord).toBe('Ctrl+Alt+D')
+    const old = normalizeWorkspaceSettings({ hotkeys: { bindings: [] } })
+    expect(old.hotkeys.bindings.find(b => b.commandId === 'editor.dictation.toggle')?.defaultChord).toBe('Ctrl+Shift+D')
+  })
+
   it('preserves custom note template ids and normalizes templates feature flag', () => {
     const settings = normalizeWorkspaceSettings({
       workspace: { newNoteTemplate: 'project-brief' },

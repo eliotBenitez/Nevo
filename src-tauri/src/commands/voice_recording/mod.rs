@@ -16,8 +16,8 @@
 //! `start` during that window is rejected the same as one during an active
 //! recording, and `stop`/`cancel` treat `Starting` as nothing-to-take.
 
-mod capture;
-mod session;
+pub(crate) mod capture;
+pub(crate) mod session;
 
 use session::RecordedAudioAsset;
 
@@ -116,6 +116,17 @@ pub struct VoiceRecordingState {
     active: std::sync::Mutex<Slot>,
 }
 
+impl VoiceRecordingState {
+    /// True when no recording is starting or active (dictation needs the microphone).
+    #[cfg(desktop)]
+    pub(crate) fn is_idle(&self) -> bool {
+        self.active
+            .lock()
+            .map(|slot| slot.state() == SlotState::Idle)
+            .unwrap_or(false)
+    }
+}
+
 #[cfg(desktop)]
 fn lock_active(state: &VoiceRecordingState) -> Result<std::sync::MutexGuard<'_, Slot>, String> {
     state
@@ -160,10 +171,17 @@ async fn start_capture(app: &AppHandle) -> Result<capture::CaptureSession, Strin
 pub async fn voice_recording_start(
     app: AppHandle,
     state: State<'_, VoiceRecordingState>,
+    dictation: State<'_, crate::commands::dictation::DictationState>,
 ) -> Result<(), String> {
     {
         let mut guard = lock_active(&state)?;
         start_is_allowed(guard.state()).map_err(|e| e.code())?;
+        // Dictation owns the microphone while starting/active. Checked after the
+        // reservation: dictation reserves first and then checks `is_idle`, so at
+        // least one of the two sees the other.
+        if dictation.is_active() {
+            return Err(RecorderError::AlreadyRecording.code());
+        }
         *guard = Slot::Starting;
     }
 
