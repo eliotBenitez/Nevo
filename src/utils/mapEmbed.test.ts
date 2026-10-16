@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mapEmbedUrl } from './mapEmbed'
+import { addressMapUrl, mapEmbedUrl } from './mapEmbed'
 import { detectEmbedProvider, generateEmbedHtml, resolveEmbed } from './oembed'
 import { extractEmbedIframeAttrs } from '../editor-core/node-views/embed'
 
@@ -18,6 +18,15 @@ describe('mapEmbedUrl', () => {
     expect(new URL(mapEmbedUrl('https://www.google.ru/maps/@55.75,37.61,12z')!).searchParams.get('q')).toBe('55.75,37.61')
     expect(new URL(mapEmbedUrl('https://maps.google.com/?q=Berlin')!).searchParams.get('q')).toBe('Berlin')
     expect(mapEmbedUrl('https://www.google.com/maps/embed?pb=!1m18')).toBe('https://www.google.com/maps/embed?pb=!1m18')
+  })
+
+  it('turns a free-text address into a Google Maps embed', () => {
+    const link = addressMapUrl('  Red Square, Moscow ')
+    expect(detectEmbedProvider(link)).toBe('map')
+    const src = new URL(mapEmbedUrl(link)!)
+    expect(src.origin + src.pathname).toBe('https://maps.google.com/maps')
+    expect(src.searchParams.get('q')).toBe('Red Square, Moscow')
+    expect(src.searchParams.has('z')).toBe(false)
   })
 
   it('rewrites Yandex Maps links to the map widget', () => {

@@ -370,7 +370,7 @@ const editorSetup = useEditorCore(core, {
   onMediaPickerRequest: (pos, kind) => mediaUpload.requestMediaPicker(pos, kind),
   voiceRecording: isVoiceRecordingSupported() ? voiceRecording.bindings : undefined,
   onNoteEmbedPickRequest: (pos, anchorRect) => openNoteEmbedPicker(pos, anchorRect),
-  onEmbedUrlRequest: (pos, anchorRect) => openEmbedUrlPopover(pos, anchorRect),
+  onEmbedUrlRequest: (pos, anchorRect, mode) => openEmbedUrlPopover(pos, anchorRect, mode),
   onNoteEmbedContentLoad: async ({ noteId, setHtml, setLoading }) => {
     setLoading(true)
     try {

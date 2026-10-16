@@ -46,6 +46,7 @@ import { createIdleTaskScheduler } from './idleTaskScheduler'
 import { resolveBlockRef } from '../../../core/blockRef/resolveBlockRef'
 import { isTranscriptionSupported, transcribeAudio } from '../../../tauri/transcription'
 import { slashGridColumns } from '../../../utils/slashMenuLayout'
+import type { EmbedUrlMode } from './useEmbedUrlPopover'
 import {
   clearActiveEditor,
   notifyActiveEditorTransaction,
@@ -148,7 +149,7 @@ export interface EditorCoreCallbacks {
   onFileOpenRequest: (src: string) => void
   onMediaPickerRequest: (pos: number, kind: 'audio' | 'video') => void
   onNoteEmbedPickRequest: (pos: number, anchorRect: DOMRect) => void
-  onEmbedUrlRequest: (pos: number, anchorRect: DOMRect) => void
+  onEmbedUrlRequest: (pos: number, anchorRect: DOMRect, mode?: EmbedUrlMode) => void
   onNoteEmbedContentLoad?: (ctx: { noteId: string; setHtml: (html: string) => void; setLoading: (v: boolean) => void }) => void
   onNoteEmbedOpen: (noteId: string) => void
   onOpenBlockRefSource?: (noteId: string) => void
@@ -420,12 +421,12 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     return new DOMRect(coords.left, coords.top, coords.right - coords.left, coords.bottom - coords.top)
   }
 
-  function requestEmbedUrlForSelectedBlock(): boolean {
+  function requestEmbedUrlForSelectedBlock(mode?: EmbedUrlMode): boolean {
     const view = core.editorView
     if (!view) return false
     const target = getSelectedEmbedBlock()
     if (!target) return false
-    callbacks.onEmbedUrlRequest(target.pos, getAnchorRectForNode(view, target.pos))
+    callbacks.onEmbedUrlRequest(target.pos, getAnchorRectForNode(view, target.pos), mode)
     return true
   }
 
@@ -475,8 +476,8 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     if (item.id === 'math-inline' || item.id === 'math') {
       callbacks.onSlashMathItemRan()
     }
-    if (item.id === 'embed') {
-      requestEmbedUrlForSelectedBlock()
+    if (item.id === 'embed' || item.id === 'map') {
+      requestEmbedUrlForSelectedBlock(item.id === 'map' ? 'map' : 'embed')
     }
     view.focus()
     callbacks.onOverlaysUpdate()

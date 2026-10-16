@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { resolveEmbed, type EmbedResult } from '../../../utils/oembed'
+import { addressMapUrl } from '../../../utils/mapEmbed'
+import type { EmbedUrlMode } from '../../composables/editor/useEmbedUrlPopover'
 
 const props = defineProps<{
   open: boolean
+  mode: EmbedUrlMode
   position: { top: number; left: number }
 }>()
 
@@ -28,6 +31,8 @@ function focusInput() {
 
 defineExpose({ focusInput })
 
+const isMap = computed(() => props.mode === 'map')
+
 watch(
   () => props.open,
   (open) => {
@@ -41,8 +46,11 @@ watch(
 )
 
 async function handleSubmit() {
-  const url = urlRef.value.trim()
-  if (!url) return
+  const input = urlRef.value.trim()
+  if (!input) return
+  // In map mode anything that is not a link is treated as an address.
+  const isAddress = isMap.value && !/^https?:\/\//i.test(input)
+  const url = isAddress ? addressMapUrl(input) : input
 
   loadingRef.value = true
   errorRef.value = ''
@@ -59,7 +67,7 @@ async function handleSubmit() {
       url,
       embedType: result.provider,
       embedHtml: result.embedHtml,
-      title: result.title,
+      title: isAddress ? input : result.title,
       thumbnailUrl: result.thumbnailUrl,
     })
   } catch {
@@ -77,21 +85,21 @@ async function handleSubmit() {
     :style="{ top: position.top + 'px', left: position.left + 'px' }"
     @submit.prevent="handleSubmit"
   >
-    <label class="embed-popover__label tw:text-[13px] tw:font-medium tw:text-content-secondary" for="embed-url-input">{{ t('embed.pasteUrl') }}</label>
+    <label class="embed-popover__label tw:text-[13px] tw:font-medium tw:text-content-secondary" for="embed-url-input">{{ isMap ? t('embed.mapLabel') : t('embed.pasteUrl') }}</label>
     <input
       id="embed-url-input"
       ref="inputRef"
       v-model="urlRef"
       class="embed-popover__input tw:w-full tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-line-default tw:bg-(--surface-raised) tw:px-3 tw:py-2 tw:text-sm tw:text-content-primary tw:outline-none tw:transition-colors tw:duration-120 tw:focus:border-accent tw:disabled:opacity-50"
-      type="url"
-      placeholder="https://www.youtube.com/watch?v=..."
+      :type="isMap ? 'text' : 'url'"
+      :placeholder="isMap ? t('embed.mapPlaceholder') : 'https://www.youtube.com/watch?v=...'"
       :disabled="loadingRef"
       @keydown="emit('keydown', $event)"
     />
     <div v-if="errorRef" class="embed-popover__error tw:text-xs tw:text-danger">{{ errorRef }}</div>
     <div class="embed-popover__actions tw:flex tw:justify-end tw:gap-2">
       <button type="submit" class="nv-btn nv-btn--primary" :disabled="!urlRef.trim() || loadingRef">
-        {{ loadingRef ? t('embed.loading') : t('embed.pasteUrl') }}
+        {{ loadingRef ? t('embed.loading') : isMap ? t('embed.showMap') : t('embed.pasteUrl') }}
       </button>
       <button type="button" class="nv-btn" @click="emit('cancel')">
         {{ t('embed.remove') }}

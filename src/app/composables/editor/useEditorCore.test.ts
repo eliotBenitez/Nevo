@@ -306,6 +306,41 @@ describe('useEditorCore internal links', () => {
     }
   })
 
+  it('opens the embed request in map mode after running the map slash item', async () => {
+    const note = createNote({
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: '/map' }],
+        },
+      ],
+    })
+
+    const { core, callbacks, editor, destroy } = await mountEditor(note)
+
+    try {
+      const view = core.editorView
+      expect(view).not.toBeNull()
+      if (!view) return
+
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 5)))
+      const slashState = getSlashMenuState(view.state)
+      expect(slashState.open).toBe(true)
+
+      const mapItem = core.slashItems.find((item) => item.id === 'map')
+      expect(mapItem).toBeDefined()
+      expect(editor.runSlashItemFromOverlay(mapItem!, slashState)).toBe(true)
+
+      expect(callbacks.onEmbedUrlRequest).toHaveBeenCalledTimes(1)
+      const [pos, , mode] = callbacks.onEmbedUrlRequest.mock.calls[0]
+      expect(mode).toBe('map')
+      expect(core.editorView?.state.doc.nodeAt(pos)?.type.name).toBe('embed_block')
+    } finally {
+      destroy()
+    }
+  })
+
   it('batches content updates and flushes the latest document on demand', async () => {
     vi.useFakeTimers()
     const note = createNote({

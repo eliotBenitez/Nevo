@@ -2545,6 +2545,7 @@
       "chart": "Diagramm",
       "database": "Datenbank",
       "note_embed": "Notiz einbetten",
+      "map": "Karte",
       "embed": "Einbettung",
       "insert_template": "Vorlage einfügen",
       "quote": "Zitat",
@@ -2572,7 +2573,10 @@
     "remove": "Entfernen",
     "loading": "Einbettung wird geladen…",
     "error": "Einbettung konnte nicht geladen werden",
-    "unsupported": "Nicht unterstützte URL"
+    "unsupported": "Nicht unterstützte URL",
+    "mapLabel": "Adresse oder Kartenlink",
+    "mapPlaceholder": "Brandenburger Tor, Berlin",
+    "showMap": "Karte anzeigen"
   },
   "image": {
     "menu": {

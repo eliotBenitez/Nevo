@@ -2545,6 +2545,7 @@
       "chart": "Graphique",
       "database": "Base de données",
       "note_embed": "Intégration de note",
+      "map": "Carte",
       "embed": "Intégration",
       "insert_template": "Insérer un modèle",
       "quote": "Citation",
@@ -2572,7 +2573,10 @@
     "remove": "Retirer",
     "loading": "Chargement de l'intégration…",
     "error": "Échec du chargement de l'intégration",
-    "unsupported": "URL non prise en charge"
+    "unsupported": "URL non prise en charge",
+    "mapLabel": "Adresse ou lien de carte",
+    "mapPlaceholder": "Tour Eiffel, Paris",
+    "showMap": "Afficher la carte"
   },
   "image": {
     "menu": {

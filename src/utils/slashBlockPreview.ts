@@ -11,7 +11,7 @@ const kinds: Record<string, SlashPreviewKind> = {
   callout: 'callout', toggle: 'toggle', ul: 'bullets', ol: 'numbers',
   checklist: 'checks', code: 'code', math: 'math', 'math-inline': 'math-inline',
   table: 'table', database: 'database', query: 'query', image: 'image',
-  divider: 'divider', embed: 'embed', 'note-embed': 'note-embed', emoji: 'emoji', draw: 'draw',
+  divider: 'divider', embed: 'embed', map: 'embed', 'note-embed': 'note-embed', emoji: 'emoji', draw: 'draw',
   audio: 'audio', 'voice-recording': 'audio', dictation: 'audio', video: 'video', file: 'file', chart: 'chart',
   mermaid: 'mermaid', markmap: 'markmap', 'insert-template': 'template',
 }

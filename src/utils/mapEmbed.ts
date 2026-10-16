@@ -79,6 +79,11 @@ function osmEmbedUrl(parsed: URL): string | null {
   return `https://www.openstreetmap.org/export/embed.html?${params.toString()}`
 }
 
+/** Google Maps search link for a free-text address; `mapEmbedUrl` turns it into an embed. */
+export function addressMapUrl(address: string): string {
+  return `https://www.google.com/maps/search/?${new URLSearchParams({ api: '1', query: address.trim() }).toString()}`
+}
+
 export function mapEmbedUrl(url: string): string | null {
   let parsed: URL
   try {

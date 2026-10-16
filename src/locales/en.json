@@ -2545,6 +2545,7 @@
       "chart": "Chart",
       "database": "Database",
       "note_embed": "Note Embed",
+      "map": "Map",
       "embed": "Embed",
       "insert_template": "Insert Template",
       "quote": "Quote",
@@ -2572,7 +2573,10 @@
     "remove": "Remove",
     "loading": "Loading embed…",
     "error": "Failed to load embed",
-    "unsupported": "Unsupported URL"
+    "unsupported": "Unsupported URL",
+    "mapLabel": "Address or map link",
+    "mapPlaceholder": "Red Square, Moscow",
+    "showMap": "Show map"
   },
   "image": {
     "menu": {
