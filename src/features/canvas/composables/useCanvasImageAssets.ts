@@ -14,7 +14,7 @@ interface CanvasImageActions {
 interface UseCanvasImageAssetsOptions {
   insertionPoint: Ref<CanvasPoint>
   actions: CanvasImageActions
-  select: (id: string) => void
+  clearSelection: () => void
   getBackend: () => WorkspaceBackend | null
 }
 
@@ -53,7 +53,7 @@ export function useCanvasImageAssets(options: UseCanvasImageAssetsOptions) {
 
   async function insertImported(src: string, alt: string, dimensions: ImageDimensions) {
     const id = options.actions.addImageElement(src, alt, fitImage(options.insertionPoint.value, dimensions))
-    if (id) options.select(id)
+    if (id) options.clearSelection()
   }
 
   async function importFile(file: File) {

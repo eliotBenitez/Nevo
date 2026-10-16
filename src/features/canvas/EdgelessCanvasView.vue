@@ -144,6 +144,7 @@ const inlineEditing = useCanvasInlineEditing({
   setText: canvas.setText,
 })
 const selectionActions = useCanvasSelectionActions(canvas.snapshot, selectedIds, canvas)
+const clearSelection = () => { selectedIds.value = [] }
 const p1 = useCanvasP1Features({
   snapshot: canvas.snapshot,
   camera: cameraView,
@@ -162,7 +163,7 @@ const clipboard = useCanvasClipboard({ snapshot: canvas.snapshot, selectedIds, a
 const imageAssets = useCanvasImageAssets({
   insertionPoint,
   actions: canvas,
-  select,
+  clearSelection,
   getBackend: () => props.getWorkspaceBackend?.() ?? null,
 })
 const { requestImage, onImageInput, onPaste, onDrop, pasteFromClipboard } = useCanvasContentIO({
@@ -186,6 +187,7 @@ const creation = useCanvasCreationGestures({
   viewport,
   actions: canvas,
   select,
+  clearSelection,
   onEditText: inlineEditing.start,
   onEditRichText: p1.richEditing.start,
   onRequestImage: requestImage,

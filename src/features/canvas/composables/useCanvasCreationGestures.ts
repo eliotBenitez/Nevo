@@ -51,6 +51,7 @@ interface UseCanvasCreationGesturesOptions {
   viewport: Ref<HTMLElement | null>
   actions: CanvasCreationActions
   select: (id: string) => void
+  clearSelection: () => void
   onEditText: (id: string) => void
   onEditRichText: (id: string) => void
   onRequestImage: (point: CanvasPoint) => void
@@ -210,9 +211,12 @@ export function useCanvasCreationGestures(options: UseCanvasCreationGesturesOpti
       options.actions.eraseStrokeParts(eraserTrail, 12 / options.camera.zoom)
       if (erasedIds.size) options.actions.deleteCanvasItems([...erasedIds])
     }
-    if (id) {
+    // Only text enters editing right away; other new items stay unselected so the properties panel does not pop up.
+    if (id && current?.kind === 'text') {
       options.select(id)
-      if (current?.kind === 'text') options.onEditText(id)
+      options.onEditText(id)
+    } else if (id) {
+      options.clearSelection()
     }
     const remainsActive = current?.kind === 'stroke' || options.activeTool.value === 'eraser'
     if (!remainsActive) options.returnToSelect()
