@@ -858,7 +858,7 @@ async function importMdIntoNote(noteId: string) {
 }
 
 const { renameModal, onTreeAction, handleRequestExport, submitRename, closeRenameModal } = useTreeContextMenu(
-  { settings, manifest, activeNoteId, activeFolderId, activeNote, workspacePath: computed(() => workspaceStore.activePath), getBackend: () => workspaceStore.backend, treeOps: { deleteNote: treeStore.deleteNote, deleteFolder: treeStore.deleteFolder, renameFolder: treeStore.renameFolder, renameNote: treeStore.renameNote, syncNoteMeta: treeStore.syncNoteMeta }, clearNote: noteStore.clearNote, closeNoteTab, setTitle: noteStore.setTitle, flushSave, t, onUnsupportedExport: () => showToast({ message: t('app.notebook.unsupportedTextExport'), variant: 'error' }), renameInputRef },
+  { settings, manifest, activeNoteId, activeFolderId, activeNote, workspacePath: computed(() => workspaceStore.activePath), getBackend: () => workspaceStore.backend, treeOps: { deleteNote: treeStore.deleteNote, restoreFromTrash: treeStore.restoreFromTrash, deleteFolder: treeStore.deleteFolder, renameFolder: treeStore.renameFolder, renameNote: treeStore.renameNote, syncNoteMeta: treeStore.syncNoteMeta }, clearNote: noteStore.clearNote, closeNoteTab, setTitle: noteStore.setTitle, flushSave, t, onUnsupportedExport: () => showToast({ message: t('app.notebook.unsupportedTextExport'), variant: 'error' }), renameInputRef },
   { openHistory, runSearch: async (seed) => { await runWorkspaceSearch(seed) }, navigateToNote: async (noteId) => { await router.push(`/workspace/note/${noteId}`) }, navigateToWorkspaceRoot: async () => { await router.push('/workspace') }, exportAsMarkdown, exportAsHtml, exportAsDocx: async (note, path) => { exportAsDocx(note, path) }, exportAsTypst, exportAsPdf },
 )
 

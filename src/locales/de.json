@@ -290,6 +290,7 @@
     }
   },
   "common": {
+    "undo": "Rückgängig",
     "datePicker": {
       "placeholder": "Datum wählen",
       "previousMonth": "Vorheriger Monat",
@@ -768,6 +769,7 @@
     "mathApply": "Formel anwenden",
     "mathRemove": "Formel entfernen",
     "context": {
+      "noteArchived": "Notiz ins Archiv verschoben",
       "rename": "Umbenennen",
       "delete": "Löschen",
       "search": "Suchen",

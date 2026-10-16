@@ -4,6 +4,7 @@ import type { FolderMeta, NoteDocument, NoteMeta } from '../../types/note'
 import type { WorkspaceManifest, WorkspaceSettings } from '../../types/workspace'
 import type { WorkspaceBackend } from '../../core/workspace-backend'
 import { useConfirmDialog } from '../../ui/composables/useConfirmDialog'
+import { useToast } from '../../ui/composables/useToast'
 import { decodeNoteFormat } from '../../core/notebook/codec'
 
 /**
@@ -23,6 +24,7 @@ export type TreeMenuTarget = { kind: 'folder' | 'note'; id: string; title: strin
 
 interface TreeOps {
   deleteNote: (id: string) => Promise<void>
+  restoreFromTrash: (id: string) => Promise<void>
   deleteFolder: (id: string, recursive: boolean) => Promise<void>
   renameFolder: (id: string, title: string) => Promise<void>
   renameNote: (id: string, title: string) => Promise<void>
@@ -63,6 +65,7 @@ interface ContextMenuHandlers {
 export function useTreeContextMenu(deps: ContextMenuDeps, handlers: ContextMenuHandlers) {
   const renameModal = reactive<{ open: boolean; target: TreeMenuTarget | null; title: string }>({ open: false, target: null, title: '' })
   const { confirm } = useConfirmDialog()
+  const { showToast } = useToast()
 
   function closeRenameModal() {
     renameModal.open = false; renameModal.target = null; renameModal.title = ''
@@ -132,6 +135,17 @@ export function useTreeContextMenu(deps: ContextMenuDeps, handlers: ContextMenuH
           if (nextNoteId) await handlers.navigateToNote(nextNoteId)
           else await handlers.navigateToWorkspaceRoot()
         }
+        // Folders are not offered an undo: deleting one removes the folder itself and only its notes reach the archive.
+        showToast({
+          message: deps.t('workspace.context.noteArchived'),
+          action: {
+            label: deps.t('common.undo'),
+            run: async () => {
+              await deps.treeOps.restoreFromTrash(target.id)
+              if (wasActive) await handlers.navigateToNote(target.id)
+            },
+          },
+        })
         return
       }
       const folder = deps.manifest.value ? findFolderById(deps.manifest.value.tree, target.id) : null

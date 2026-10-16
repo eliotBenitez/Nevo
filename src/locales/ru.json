@@ -290,6 +290,7 @@
     }
   },
   "common": {
+    "undo": "Отменить",
     "datePicker": {
       "placeholder": "Выберите дату",
       "previousMonth": "Предыдущий месяц",
@@ -768,6 +769,7 @@
     "mathApply": "Применить формулу",
     "mathRemove": "Удалить формулу",
     "context": {
+      "noteArchived": "Заметка перемещена в архив",
       "rename": "Переименовать",
       "delete": "Удалить",
       "search": "Поиск",

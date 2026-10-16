@@ -2,7 +2,7 @@
 import { AlertTriangle, CheckCircle2, Info, X } from '../icons'
 import { useToast, type ToastVariant } from '../composables/useToast'
 
-const { toastState, dismissToast } = useToast()
+const { toastState, dismissToast, pauseToast, resumeToast, runToastAction } = useToast()
 
 const icons = {
   success: CheckCircle2,
@@ -30,6 +30,10 @@ function iconFor(variant: ToastVariant) {
           class="nv-toast tw:pointer-events-auto tw:flex tw:items-start tw:gap-2.5 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-content-primary tw:py-3 tw:px-3.5 tw:text-surface-canvas tw:shadow-(--shadow-overlay)"
           :class="`nv-toast--${toast.variant}`"
           role="status"
+          @mouseenter="pauseToast(toast.id)"
+          @mouseleave="resumeToast(toast.id)"
+          @focusin="pauseToast(toast.id)"
+          @focusout="resumeToast(toast.id)"
         >
           <span class="nv-toast__icon tw:flex-none tw:grid tw:mt-px tw:place-items-center tw:text-inherit" aria-hidden="true">
             <component :is="iconFor(toast.variant)" :size="16" />
@@ -38,6 +42,14 @@ function iconFor(variant: ToastVariant) {
             <div v-if="toast.title" class="nv-toast__title tw:text-[13px] tw:font-[640] tw:tracking-normal">{{ toast.title }}</div>
             <div class="nv-toast__message tw:text-[12.5px] tw:leading-[1.45] tw:text-inherit tw:opacity-[0.82] tw:[overflow-wrap:anywhere]">{{ toast.message }}</div>
           </div>
+          <button
+            v-if="toast.action"
+            type="button"
+            class="nv-toast__action tw:flex-none tw:-my-1 tw:cursor-pointer tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border-0 tw:bg-[color-mix(in_oklab,var(--surface-canvas)_14%,transparent)] tw:px-2.5 tw:py-1 tw:text-[12.5px] tw:font-[620] tw:text-inherit tw:transition-[background-color] tw:duration-[140ms] tw:hover:bg-[color-mix(in_oklab,var(--surface-canvas)_24%,transparent)] tw:focus-visible:outline-2 tw:focus-visible:outline-offset-1 tw:focus-visible:outline-current tw:motion-reduce:transition-none"
+            @click="runToastAction(toast.id)"
+          >
+            {{ toast.action.label }}
+          </button>
           <button
             type="button"
             class="nv-toast__close tw:flex-none tw:grid tw:h-[22px] tw:w-[22px] tw:-mt-0.5 tw:-mr-0.5 tw:place-items-center tw:cursor-pointer tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:text-inherit tw:opacity-[0.72] tw:transition-[background-color,opacity] tw:duration-[140ms] tw:hover:bg-[color-mix(in_oklab,var(--surface-canvas)_18%,transparent)] tw:hover:opacity-100"
