@@ -68,22 +68,36 @@ export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOpt
   function rememberDisplayedNoteView() {
     const view = options.core.editorView
     const scrollEl = options.getScrollEl()
-    if (view && scrollEl && displayedNoteId) rememberNoteView(displayedNoteId, captureNoteViewState(view, scrollEl))
+    if (!view?.state || !scrollEl || !displayedNoteId) return
+    // Best effort: a failed capture must never block a note switch or unmount.
+    try {
+      rememberNoteView(displayedNoteId, captureNoteViewState(view, scrollEl))
+    } catch {
+      // Keep the previously remembered position.
+    }
   }
 
   function restoreNoteView(noteId: string) {
     const remembered = recallNoteView(noteId)
     const view = options.core.editorView
     const scrollEl = options.getScrollEl()
-    if (!remembered || !view || !scrollEl) return
-    applyNoteViewState(view, scrollEl, remembered)
+    if (!remembered || !view?.state || !scrollEl) return
+    try {
+      applyNoteViewState(view, scrollEl, remembered)
+    } catch {
+      return
+    }
     // Images above the anchor can change height once decoded; re-anchor unless the user already scrolled.
     const restoredTop = scrollEl.scrollTop
     if (lateRestoreTimer) clearTimeout(lateRestoreTimer)
     lateRestoreTimer = setTimeout(() => {
       lateRestoreTimer = null
-      if (options.core.editorView === view && displayedNoteId === noteId && scrollEl.scrollTop === restoredTop) {
-        applyNoteViewState(view, scrollEl, remembered)
+      if (options.core.editorView === view && !view.isDestroyed && displayedNoteId === noteId && scrollEl.scrollTop === restoredTop) {
+        try {
+          applyNoteViewState(view, scrollEl, remembered)
+        } catch {
+          // Layout changed under us; the first restore already placed the reader.
+        }
       }
     }, LATE_LAYOUT_RESTORE_MS)
   }
