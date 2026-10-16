@@ -47,6 +47,16 @@ async function bootstrap() {
     if (!e.shiftKey) e.preventDefault()
   })
 
+  // dragDropEnabled is off so WebView2 delivers HTML5 drag events; an OS file
+  // dropped where no handler accepts it would otherwise navigate the webview.
+  const blockUnhandledFileDrop = (e: DragEvent) => {
+    if (e.defaultPrevented || !e.dataTransfer?.types.includes('Files')) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'none'
+  }
+  window.addEventListener('dragover', blockUnhandledFileDrop)
+  window.addEventListener('drop', blockUnhandledFileDrop)
+
   const restored = await workspaceStore.restoreLastWorkspace()
   await router.replace(restored ? '/workspace' : '/onboarding')
 
