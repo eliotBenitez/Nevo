@@ -689,6 +689,7 @@ const editorLifecycle = useWorkspaceEditorLifecycle({
   core,
   editorSetup,
   editorRoot,
+  getScrollEl: () => editorScrollEl.value,
   isTouch,
   scrollbarVisible,
   locale,
