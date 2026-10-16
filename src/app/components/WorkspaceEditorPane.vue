@@ -585,6 +585,7 @@ const {
   closeNoteEmbedPicker,
   isEmbedOpeningClickIgnored,
   onEditorScroll: originalOnEditorScroll,
+  resizeTarget: editorScrollEl,
   repositionOverlays: [
     {
       isActive: () => slashOverlay.open

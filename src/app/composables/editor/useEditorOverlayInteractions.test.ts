@@ -138,4 +138,37 @@ describe('useEditorOverlayInteractions', () => {
     expect(calls).toEqual(['scroll', 'toolbar'])
     requestFrame.mockRestore()
   })
+
+  it('repositions active overlays without scroll side effects when the editor box resizes', () => {
+    let resizeCallback: ResizeObserverCallback | null = null
+    const observe = vi.fn()
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: ResizeObserverCallback) { resizeCallback = callback }
+      observe = observe
+      unobserve = vi.fn()
+      disconnect = vi.fn()
+    })
+    const requestFrame = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      callback(16)
+      return 1
+    })
+    const calls: string[] = []
+    const scrollEl = document.createElement('div')
+    useEditorOverlayInteractions(createOptions({
+      resizeTarget: ref<HTMLElement | null>(scrollEl),
+      onEditorScroll: () => calls.push('scroll'),
+      repositionOverlays: [
+        { isActive: () => true, reposition: () => calls.push('handle') },
+        { isActive: () => false, reposition: () => calls.push('math') },
+      ],
+    }))
+
+    expect(observe).toHaveBeenCalledWith(scrollEl)
+    const callback = resizeCallback as ResizeObserverCallback | null
+    callback?.([], {} as ResizeObserver)
+
+    expect(calls).toEqual(['handle'])
+    requestFrame.mockRestore()
+    vi.unstubAllGlobals()
+  })
 })
