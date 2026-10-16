@@ -89,6 +89,8 @@ fn transcribe(
     let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
     params.set_language(language);
     params.set_translate(false);
+    // Without this, music is captioned as "[Music]"/"[Música]" instead of lyrics or nothing.
+    params.set_suppress_nst(true);
     params.set_print_progress(false);
     params.set_n_threads(
         std::thread::available_parallelism().map_or(4, |count| count.get().min(8)) as i32,
