@@ -131,6 +131,8 @@ pub struct GeneralSettings {
     pub confirm_before_delete: bool,
     #[serde(rename = "lastContext")]
     pub last_context: WorkspaceLastContext,
+    #[serde(rename = "startupNoteId", default)]
+    pub startup_note_id: Option<String>,
     #[serde(rename = "homeFavorites", default)]
     pub home_favorites: Vec<WorkspaceHomeFavorite>,
 }
@@ -143,6 +145,7 @@ impl Default for GeneralSettings {
             recent_items_behavior: "remember".to_string(),
             confirm_before_delete: true,
             last_context: WorkspaceLastContext::default(),
+            startup_note_id: None,
             home_favorites: Vec::new(),
         }
     }
@@ -216,6 +219,39 @@ pub struct EditorSettings {
     pub slash_menu_layout: String,
     #[serde(rename = "dictationLanguage", default = "default_dictation_language")]
     pub dictation_language: String,
+    #[serde(rename = "focusMode", default = "default_focus_mode")]
+    pub focus_mode: String,
+    #[serde(rename = "typewriterScrolling", default)]
+    pub typewriter_scrolling: bool,
+    #[serde(rename = "activeBlockEmphasis", default)]
+    pub active_block_emphasis: bool,
+    #[serde(rename = "pasteBehavior", default = "default_paste_behavior")]
+    pub paste_behavior: String,
+    #[serde(rename = "slashMenuHints", default = "bool_true")]
+    pub slash_menu_hints: bool,
+    #[serde(
+        rename = "editorStatsVisibility",
+        default = "default_editor_stats_visibility"
+    )]
+    pub editor_stats_visibility: String,
+    #[serde(rename = "typewriterPosition", default = "default_typewriter_position")]
+    pub typewriter_position: String,
+}
+
+fn default_focus_mode() -> String {
+    "off".to_string()
+}
+
+fn default_paste_behavior() -> String {
+    "smart".to_string()
+}
+
+fn default_editor_stats_visibility() -> String {
+    "off".to_string()
+}
+
+fn default_typewriter_position() -> String {
+    "lower".to_string()
 }
 
 fn default_slash_menu_layout() -> String {
@@ -238,6 +274,13 @@ impl Default for EditorSettings {
             autosave_policy: "immediate".to_string(),
             slash_menu_layout: default_slash_menu_layout(),
             dictation_language: default_dictation_language(),
+            focus_mode: default_focus_mode(),
+            typewriter_scrolling: false,
+            active_block_emphasis: false,
+            paste_behavior: default_paste_behavior(),
+            slash_menu_hints: true,
+            editor_stats_visibility: default_editor_stats_visibility(),
+            typewriter_position: default_typewriter_position(),
         }
     }
 }
@@ -299,6 +342,8 @@ pub struct WorkspaceBehaviorSettings {
         default = "default_sidebar_content_mode"
     )]
     pub sidebar_content_mode: String,
+    #[serde(rename = "sidebarLayout", default = "default_sidebar_layout")]
+    pub sidebar_layout: String,
     #[serde(rename = "graphEntryMode", default = "default_graph_entry_mode")]
     pub graph_entry_mode: String,
     #[serde(rename = "graphScopeDefault", default = "default_scope_workspace")]
@@ -347,6 +392,9 @@ fn default_starter_structure() -> String {
 fn default_sidebar_content_mode() -> String {
     "tree".to_string()
 }
+fn default_sidebar_layout() -> String {
+    "docked".to_string()
+}
 fn default_graph_entry_mode() -> String {
     "global".to_string()
 }
@@ -386,6 +434,7 @@ impl Default for WorkspaceBehaviorSettings {
             new_workspace_home_note: true,
             auto_create_starter_structure: default_starter_structure(),
             sidebar_content_mode: default_sidebar_content_mode(),
+            sidebar_layout: default_sidebar_layout(),
             graph_entry_mode: default_graph_entry_mode(),
             graph_scope_default: default_scope_workspace(),
             search_start_scope: default_scope_workspace(),
@@ -467,6 +516,10 @@ impl Default for PluginsSettings {
 pub struct FeaturesSettings {
     pub kanban: bool,
     pub templates: bool,
+    #[serde(default = "default_true")]
+    pub vega: bool,
+    #[serde(default = "default_true")]
+    pub markmap: bool,
 }
 
 impl Default for FeaturesSettings {
@@ -474,6 +527,8 @@ impl Default for FeaturesSettings {
         Self {
             kanban: true,
             templates: true,
+            vega: true,
+            markmap: true,
         }
     }
 }

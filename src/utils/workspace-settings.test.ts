@@ -6,6 +6,7 @@ import {
   normalizeAppConfig,
   normalizeWorkspaceSettings,
 } from './workspace-settings'
+import roundtripFixture from './workspace-settings/roundtrip.fixture.json'
 
 describe('normalizeWorkspaceSettings', () => {
   it('migrates legacy flat keys into the nested schema', () => {
@@ -189,6 +190,21 @@ describe('normalizeWorkspaceSettings', () => {
   it('falls back to solid for a missing or invalid surfaceStyle', () => {
     expect(normalizeWorkspaceSettings({ appearance: {} }).appearance.surfaceStyle).toBe('solid')
     expect(normalizeWorkspaceSettings({ appearance: { surfaceStyle: 'not-a-style' } }).appearance.surfaceStyle).toBe('solid')
+  })
+
+  // The same fixture drives the Rust save/reload test in
+  // src-tauri/src/commands/workspace/settings.rs, so a field added here
+  // without a Rust counterpart fails there instead of being silently dropped.
+  it('keeps the shared round-trip fixture in sync with every settings field', () => {
+    const keyShape = (value: unknown): unknown => value && typeof value === 'object' && !Array.isArray(value)
+      ? Object.fromEntries(Object.keys(value).sort().map(key => [key, keyShape((value as Record<string, unknown>)[key])]))
+      : 'leaf'
+    expect(keyShape({ ...roundtripFixture, pluginSettings: {} })).toEqual(keyShape(createDefaultWorkspaceSettings()))
+
+    const normalized = normalizeWorkspaceSettings(roundtripFixture)
+    expect({ ...normalized, hotkeys: roundtripFixture.hotkeys }).toEqual(roundtripFixture)
+    expect(normalized.hotkeys.bindings.find(binding => binding.commandId === 'core.undo'))
+      .toEqual(roundtripFixture.hotkeys.bindings[0])
   })
 })
 
