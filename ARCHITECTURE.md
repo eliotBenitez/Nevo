@@ -349,6 +349,13 @@ change stored note icons.
   `whisper-rs` inference in a blocking worker. The `base` model is
   checksum-verified at build time and bundled as a Tauri resource in Windows, macOS,
   and Linux installers; installed apps make no network request to transcribe.
+  `src-tauri/src/commands/speech_models/` lets the user download stronger pinned
+  models (`small`, `turbo`) from Settings → Editor (`SpeechModelSettings.vue`,
+  `useSpeechModels`) into `<app data>/models/`, verified by size and SHA-256, and
+  selects the active one in `models/active.json`; `transcription::resolve_model_path`
+  falls back to the bundled `base` when the selection is missing or invalid. The cached
+  Whisper context reloads when the active model path changes; select/delete are refused
+  while a transcription or dictation holds the busy guard.
   The media node view mounts `audioTranscriptView.ts`, which shows timed segments
   and seeks the player. Its transient language selector defaults to automatic
   detection; an explicit selection is sent to the native worker for the next run.

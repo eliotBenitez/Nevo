@@ -169,7 +169,7 @@ fn start_session(
         .name("nevo-dictation".to_string())
         .spawn(move || {
             if let Ok(ctx) = whisper_context(&transcription, &model) {
-                worker::run(ctx, config, chunk_rx, events);
+                worker::run(&ctx, config, chunk_rx, events);
             }
         });
     match spawned {
@@ -371,7 +371,7 @@ mod tests {
         segments.extend(segmenter.finish());
         let text = segments
             .iter()
-            .map(|pcm| crate::commands::transcription::recognize_text(ctx, pcm, None, None, true))
+            .map(|pcm| crate::commands::transcription::recognize_text(&ctx, pcm, None, None, true))
             .collect::<Result<Vec<_>, _>>()
             .unwrap()
             .join(" ")

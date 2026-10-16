@@ -1439,6 +1439,32 @@
         "description": "Speech language for dictation. By default it follows the interface language",
         "interface": "Interface language"
       },
+      "speechModel": {
+        "title": "Speech recognition model",
+        "description": "Model used for dictation and audio transcripts. Larger models are more accurate but slower and need a one-time download",
+        "models": {
+          "base": "Base (built-in)",
+          "small": "Small — more accurate",
+          "turbo": "Large v3 Turbo — maximum accuracy"
+        },
+        "hints": {
+          "base": "Fast, basic accuracy",
+          "small": "Better accuracy, about 2–3× slower",
+          "turbo": "Best accuracy, slow on CPU: several seconds per phrase"
+        },
+        "active": "Active",
+        "download": "Download",
+        "cancel": "Cancel",
+        "use": "Use",
+        "delete": "Delete",
+        "errors": {
+          "generic": "Could not change the speech model",
+          "busy": "Speech recognition is busy. Try again in a moment",
+          "inProgress": "A model is already downloading",
+          "integrity": "The downloaded model is corrupted. Try again",
+          "download": "Could not download the model. Check your connection"
+        }
+      },
       "activeBlockEmphasis": {
         "title": "Active block emphasis",
         "description": "Slightly dim adjacent blocks to focus attention on the current one"

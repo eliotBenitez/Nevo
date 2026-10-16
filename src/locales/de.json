@@ -1439,6 +1439,32 @@
         "description": "Sprache für das Diktat. Standardmäßig die Sprache der Oberfläche",
         "interface": "Sprache der Oberfläche"
       },
+      "speechModel": {
+        "title": "Spracherkennungsmodell",
+        "description": "Modell für Diktat und Audio-Transkripte. Größere Modelle sind genauer, aber langsamer und müssen einmalig heruntergeladen werden",
+        "models": {
+          "base": "Basis (integriert)",
+          "small": "Small — genauer",
+          "turbo": "Large v3 Turbo — höchste Genauigkeit"
+        },
+        "hints": {
+          "base": "Schnell, einfache Genauigkeit",
+          "small": "Bessere Genauigkeit, etwa 2–3× langsamer",
+          "turbo": "Beste Genauigkeit, auf der CPU langsam: mehrere Sekunden pro Satz"
+        },
+        "active": "Aktiv",
+        "download": "Herunterladen",
+        "cancel": "Abbrechen",
+        "use": "Verwenden",
+        "delete": "Löschen",
+        "errors": {
+          "generic": "Das Spracherkennungsmodell konnte nicht geändert werden",
+          "busy": "Die Spracherkennung ist ausgelastet. Bitte gleich noch einmal versuchen",
+          "inProgress": "Ein Modell wird bereits heruntergeladen",
+          "integrity": "Das heruntergeladene Modell ist beschädigt. Bitte erneut versuchen",
+          "download": "Das Modell konnte nicht heruntergeladen werden. Verbindung prüfen"
+        }
+      },
       "activeBlockEmphasis": {
         "title": "Aktive Block-Hervorhebung",
         "description": "Angrenzende Blöcke leicht abdunkeln, um auf den aktuellen zu fokussieren"

@@ -1439,6 +1439,32 @@
         "description": "Idioma hablado para el dictado. Por defecto, el de la interfaz",
         "interface": "Idioma de la interfaz"
       },
+      "speechModel": {
+        "title": "Modelo de reconocimiento de voz",
+        "description": "Modelo usado para el dictado y las transcripciones de audio. Los modelos más grandes son más precisos pero más lentos y requieren una descarga única",
+        "models": {
+          "base": "Básico (integrado)",
+          "small": "Small — más preciso",
+          "turbo": "Large v3 Turbo — máxima precisión"
+        },
+        "hints": {
+          "base": "Rápido, precisión básica",
+          "small": "Mejor precisión, aproximadamente 2–3 veces más lento",
+          "turbo": "Mejor precisión, lento en CPU: varios segundos por frase"
+        },
+        "active": "Activo",
+        "download": "Descargar",
+        "cancel": "Cancelar",
+        "use": "Usar",
+        "delete": "Eliminar",
+        "errors": {
+          "generic": "No se pudo cambiar el modelo de reconocimiento de voz",
+          "busy": "El reconocimiento de voz está ocupado. Inténtalo de nuevo en un momento",
+          "inProgress": "Ya se está descargando un modelo",
+          "integrity": "El modelo descargado está dañado. Inténtalo de nuevo",
+          "download": "No se pudo descargar el modelo. Comprueba tu conexión"
+        }
+      },
       "activeBlockEmphasis": {
         "title": "Énfasis del bloque activo",
         "description": "Atenúa ligeramente los bloques adyacentes para foco en el actual"

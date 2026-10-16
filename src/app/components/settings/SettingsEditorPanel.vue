@@ -8,6 +8,7 @@ import NvToggle from '../../../ui/primitives/NvToggle.vue'
 import SettingsSectionHeader from './ui/SettingsSectionHeader.vue'
 import SettingsGroup from './ui/SettingsGroup.vue'
 import SettingsRow from './ui/SettingsRow.vue'
+import SpeechModelSettings from './SpeechModelSettings.vue'
 import { TRANSCRIPTION_LANGUAGES, type TranscriptionLanguage } from '../../../core/media/transcriptionLanguage'
 import { isDictationSupported } from '../../../tauri/dictation'
 import { useEditorFontOptions } from '../../composables/useEditorFontOptions'
@@ -267,6 +268,15 @@ const editorStatsOptions = ['off', 'corner'].map(v => ({ value: v, label: opt('e
             :options="dictationLanguageOptions"
             @update:model-value="v => u(d => { d.editor.dictationLanguage = v as TranscriptionLanguage })"
           />
+        </SettingsRow>
+
+        <SettingsRow
+          v-if="dictationSupported"
+          layout="stacked"
+          :title="t('settings.editor.speechModel.title')"
+          :description="t('settings.editor.speechModel.description')"
+        >
+          <SpeechModelSettings />
         </SettingsRow>
 
         <SettingsRow

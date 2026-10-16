@@ -23,10 +23,11 @@ for (const fileName of await readdir(assetsDir)) {
 // stores/workspace.ts) started pulling in code that should only load with a
 // route/feature — see the F14 fix that made the cloud backend, the
 // marketplace-plugin migration, and highlight.js/katex/unified all lazy.
-// 900 KiB sits ~170 KiB above the ~734 KiB measured after that fix — enough
-// headroom for normal growth, but reintroducing any one of those (each
-// 117 KiB-520 KiB) trips it immediately.
-const initialGraphBudget = 900 * 1024
+// 950 KiB sits ~50 KiB above the ~902 KiB measured in October 2026 (all five
+// locale catalogs are eager and grow with every feature) — enough headroom for
+// normal growth, but reintroducing any one of those (each 117 KiB-520 KiB)
+// trips it immediately.
+const initialGraphBudget = 950 * 1024
 const html = await readFile(join(distDir, 'index.html'), 'utf8')
 const entryScript = html.match(/<script[^>]*\bsrc="\/assets\/([^"]+)"/)?.[1]
 const preloadMatches = [...html.matchAll(/<link rel="modulepreload"[^>]*\bhref="\/assets\/([^"]+)"/g)]

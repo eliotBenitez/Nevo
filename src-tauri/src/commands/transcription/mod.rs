@@ -3,8 +3,8 @@ pub(crate) mod resample;
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, OnceLock};
-use tauri::{AppHandle, Manager, State};
+use std::sync::{Arc, Mutex};
+use tauri::{AppHandle, State};
 use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
 
 #[derive(serde::Serialize, Debug)]
@@ -18,7 +18,7 @@ pub struct TranscriptSegment {
 #[derive(Default)]
 pub struct TranscriptionState {
     busy: AtomicBool,
-    context: OnceLock<Result<WhisperContext, String>>,
+    context: Mutex<Option<(PathBuf, Arc<WhisperContext>)>>,
 }
 
 pub(crate) struct BusyGuard(Arc<TranscriptionState>);
@@ -69,31 +69,33 @@ pub(crate) fn validate_language(language: Option<String>) -> Result<Option<Strin
     Ok(Some(language))
 }
 
-pub(crate) fn whisper_context<'a>(
-    state: &'a TranscriptionState,
+pub(crate) fn whisper_context(
+    state: &TranscriptionState,
     model: &Path,
-) -> Result<&'a WhisperContext, String> {
+) -> Result<Arc<WhisperContext>, String> {
     // whisper.cpp otherwise writes recognized words to stderr in debug output.
     whisper_rs::install_logging_hooks();
-    state
+    let mut cached = state
         .context
-        .get_or_init(|| {
-            WhisperContext::new_with_params(model, WhisperContextParameters::default())
-                .map_err(|_| "model_unavailable".to_string())
-        })
-        .as_ref()
-        .map_err(Clone::clone)
+        .lock()
+        .map_err(|_| "model_unavailable".to_string())?;
+    if let Some((path, ctx)) = cached.as_ref() {
+        if path == model {
+            return Ok(Arc::clone(ctx));
+        }
+    }
+    // Free the previous model before loading the next one to cap peak memory.
+    *cached = None;
+    let ctx = Arc::new(
+        WhisperContext::new_with_params(model, WhisperContextParameters::default())
+            .map_err(|_| "model_unavailable".to_string())?,
+    );
+    *cached = Some((model.to_path_buf(), Arc::clone(&ctx)));
+    Ok(ctx)
 }
 
 pub(crate) fn resolve_model_path(app: &AppHandle) -> Result<PathBuf, String> {
-    let model = app
-        .path()
-        .resolve("models/ggml-base.bin", tauri::path::BaseDirectory::Resource)
-        .map_err(|_| "model_unavailable")?;
-    if !model.is_file() {
-        return Err("model_unavailable".to_string());
-    }
-    Ok(model)
+    crate::commands::speech_models::active_model_path(app)
 }
 
 const GREEDY: SamplingStrategy = SamplingStrategy::Greedy { best_of: 1 };

@@ -6,13 +6,13 @@ pub mod mcp_stdio;
 mod media_server;
 mod mobile_lifecycle;
 
-#[cfg(desktop)]
-use commands::transcription;
 use commands::{
     ai, auth, config, database, dictation, folder, fonts, github_sync, graph, kanban, kanban_ops,
     mcp, note, note_index, notebook_export, notion_import, system, templates, typst_export,
     voice_recording, workspace, workspace_transfer,
 };
+#[cfg(desktop)]
+use commands::{speech_models, transcription};
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{Emitter, Manager, WindowEvent};
 
@@ -189,9 +189,12 @@ pub fn run() {
         })
         .setup(|app| {
             #[cfg(desktop)]
-            app.manage(std::sync::Arc::new(
-                transcription::TranscriptionState::default(),
-            ));
+            {
+                app.manage(std::sync::Arc::new(
+                    transcription::TranscriptionState::default(),
+                ));
+                app.manage(speech_models::SpeechModelsState::default());
+            }
             let logger = logging::AppLogger::new(logging::resolve_logs_dir(app.handle())?)?;
             logging::install_global_logger(logger)?;
             let logger = logging::logger();
@@ -373,6 +376,16 @@ pub fn run() {
             dictation::dictation_cancel,
             #[cfg(desktop)]
             transcription::transcribe_audio,
+            #[cfg(desktop)]
+            speech_models::speech_models_list,
+            #[cfg(desktop)]
+            speech_models::speech_model_download,
+            #[cfg(desktop)]
+            speech_models::speech_model_cancel_download,
+            #[cfg(desktop)]
+            speech_models::speech_model_select,
+            #[cfg(desktop)]
+            speech_models::speech_model_delete,
             mcp::apply_mcp_mode,
             mcp::get_mcp_bridge_info,
             mcp::stop_mcp_bridge,

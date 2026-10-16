@@ -17,6 +17,8 @@ pub mod note_index;
 pub mod notebook_export;
 pub mod notion_import;
 pub mod path_utils;
+#[cfg(desktop)]
+pub mod speech_models;
 pub mod system;
 pub mod templates;
 #[cfg(desktop)]

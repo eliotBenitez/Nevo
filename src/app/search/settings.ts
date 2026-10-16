@@ -207,6 +207,12 @@ export function buildWorkspaceSettingsSearchItems(options: BuildWorkspaceSetting
       title: t('settings.editor.dictationLanguage.title'),
       description: t('settings.editor.dictationLanguage.description'),
       value: t(settings.editor.dictationLanguage === 'auto' ? 'settings.editor.dictationLanguage.interface' : `media.transcriptLanguages.${settings.editor.dictationLanguage}`),
+    }, {
+      type: 'setting' as const, id: 'editor.speechModel', section: 'editor' as const,
+      sectionLabel: sectionLabel(t, 'editor'),
+      title: t('settings.editor.speechModel.title'),
+      description: t('settings.editor.speechModel.description'),
+      value: t('settings.editor.speechModel.title'),
     }] : []),
     {
       type: 'setting', id: 'editor.tabKeyBehavior', section: 'editor',

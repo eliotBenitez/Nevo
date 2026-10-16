@@ -1439,6 +1439,32 @@
         "description": "Langue parlée pour la dictée. Par défaut, celle de l’interface",
         "interface": "Langue de l’interface"
       },
+      "speechModel": {
+        "title": "Modèle de reconnaissance vocale",
+        "description": "Modèle utilisé pour la dictée et les transcriptions audio. Les modèles plus grands sont plus précis mais plus lents et nécessitent un téléchargement unique",
+        "models": {
+          "base": "Base (intégré)",
+          "small": "Small — plus précis",
+          "turbo": "Large v3 Turbo — précision maximale"
+        },
+        "hints": {
+          "base": "Rapide, précision de base",
+          "small": "Meilleure précision, environ 2 à 3 fois plus lent",
+          "turbo": "Meilleure précision, lent sur processeur : plusieurs secondes par phrase"
+        },
+        "active": "Actif",
+        "download": "Télécharger",
+        "cancel": "Annuler",
+        "use": "Utiliser",
+        "delete": "Supprimer",
+        "errors": {
+          "generic": "Impossible de changer le modèle de reconnaissance vocale",
+          "busy": "La reconnaissance vocale est occupée. Réessayez dans un instant",
+          "inProgress": "Un modèle est déjà en cours de téléchargement",
+          "integrity": "Le modèle téléchargé est corrompu. Réessayez",
+          "download": "Impossible de télécharger le modèle. Vérifiez votre connexion"
+        }
+      },
       "activeBlockEmphasis": {
         "title": "Emphase du bloc actif",
         "description": "Atténuer légèrement les blocs adjacents pour focaliser sur le bloc courant"
