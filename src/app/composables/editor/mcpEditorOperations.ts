@@ -4,6 +4,7 @@ import {
   validateTransactionIntent,
 } from '../../../editor-core/plugin-host/sandboxTransactions'
 import { getActiveEditor } from './activeEditorRegistry'
+import { parseMarkdownToSlice } from './markdownPaste'
 import type { NoteFormatResult } from '../../../core/notebook/types'
 
 /**
@@ -136,4 +137,54 @@ export function applyEditorEdit(request: ApplyEditRequest): ApplyEditResult {
     noteId: active.noteId,
     revision: after?.revision ?? active.revision,
   }
+}
+
+export interface WriteMarkdownRequest {
+  noteId: string
+  markdown: string
+  mode: 'append' | 'replace'
+  /** Required for `replace`: replacing a document the agent has not seen would discard the user's typing. */
+  revision?: number
+}
+
+export function writeEditorMarkdown(request: WriteMarkdownRequest): ApplyEditResult {
+  const active = requireActiveEditor(request.noteId)
+  if (request.mode === 'replace' && request.revision !== active.revision) {
+    throw new Error(
+      `The note changed since revision ${request.revision ?? 'unknown'} (now ${active.revision}). Read a fresh snapshot and retry.`,
+    )
+  }
+
+  const { state } = active.view
+  const slice = parseMarkdownToSlice(request.markdown, state.schema)
+  if (!slice) throw new Error('The Markdown produced no content.')
+
+  const doc = state.doc
+  // A fresh note is a single empty paragraph; appending after it would leave a blank first line.
+  const isBlank = doc.childCount === 1 && doc.firstChild!.isTextblock && doc.firstChild!.content.size === 0
+  const from = request.mode === 'replace' || isBlank ? 0 : doc.content.size
+  active.view.dispatch(state.tr.replaceWith(from, doc.content.size, slice.content).scrollIntoView())
+
+  return {
+    applied: true,
+    noteId: active.noteId,
+    revision: getActiveEditor()?.revision ?? active.revision,
+  }
+}
+
+const OPEN_POLL_MS = 50
+
+/**
+ * Resolves once the editor for `noteId` has mounted. Opening a note is a route
+ * change followed by an async load, so there is no single event to await.
+ */
+export async function waitForActiveEditor(noteId: string, timeoutMs = 10_000): Promise<EditorSnapshotResult> {
+  const deadline = Date.now() + timeoutMs
+  while (getActiveEditor()?.noteId !== noteId) {
+    if (Date.now() >= deadline) {
+      throw new EditorUnavailableError(`Note ${noteId} did not open in the editor in time.`)
+    }
+    await new Promise(resolve => setTimeout(resolve, OPEN_POLL_MS))
+  }
+  return readEditorSnapshot(noteId)
 }

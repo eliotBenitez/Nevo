@@ -34,7 +34,7 @@ vi.mock('../../utils/logger', () => ({
 
 const Host = defineComponent({
   setup() {
-    useMcpBridgeHost()
+    useMcpBridgeHost({ openNote: vi.fn() })
     return () => h('div')
   },
 })

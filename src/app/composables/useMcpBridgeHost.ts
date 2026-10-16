@@ -3,7 +3,14 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { useI18n } from 'vue-i18n'
 import { respondToMcpRequest } from '../../tauri/mcp'
 import { useConfirmDialog } from '../../ui/composables/useConfirmDialog'
-import { applyEditorEdit, assertEditorFormatSupportsEdit, readEditorSnapshot } from './editor/mcpEditorOperations'
+import {
+  applyEditorEdit,
+  assertEditorFormatSupportsEdit,
+  readEditorSnapshot,
+  waitForActiveEditor,
+  writeEditorMarkdown,
+  type WriteMarkdownRequest,
+} from './editor/mcpEditorOperations'
 import { appLogger } from '../../utils/logger'
 import { useWorkspaceStore } from '../../stores/workspace'
 import { useNoteStore } from '../../stores/note'
@@ -12,6 +19,11 @@ interface McpBridgeRequest {
   requestId: string
   kind: string
   payload: Record<string, unknown>
+}
+
+export interface McpBridgeHostOptions {
+  /** Opens a note through the shell's normal navigation, so tabs and the pending save flush behave as for a user click. */
+  openNote: (noteId: string) => void
 }
 
 interface McpWorkspaceChangedEvent {
@@ -32,7 +44,7 @@ function errorMessage(error: unknown): string {
  * editing the live editor state, and asking the user to approve a write while
  * the bridge is in `ask` mode.
  */
-export function useMcpBridgeHost(): void {
+export function useMcpBridgeHost(options: McpBridgeHostOptions): void {
   const { t } = useI18n()
   const { confirm } = useConfirmDialog()
   const workspaceStore = useWorkspaceStore()
@@ -52,6 +64,16 @@ export function useMcpBridgeHost(): void {
           revision: request.payload.revision as number,
           operations: request.payload.operations as unknown[],
         })
+      }
+      case 'editor.open': {
+        const noteId = request.payload.noteId as string
+        options.openNote(noteId)
+        return waitForActiveEditor(noteId)
+      }
+      case 'editor.writeMarkdown': {
+        const payload = request.payload as unknown as WriteMarkdownRequest
+        assertEditorFormatSupportsEdit(noteStore.getActiveNoteFormat(payload.noteId))
+        return writeEditorMarkdown(payload)
       }
       case 'confirm': {
         const approved = await confirm({

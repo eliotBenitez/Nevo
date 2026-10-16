@@ -152,7 +152,7 @@ mod tests {
     #[test]
     fn exposes_the_shared_catalog() {
         let tools = tools::catalog().expect("tool catalog");
-        assert_eq!(tools.len(), 9);
+        assert_eq!(tools.len(), 11);
         assert_eq!(tools[0].name, "nevo_workspace_info");
         assert_eq!(tools[5].method, "notes.editorSnapshot");
         assert_eq!(tools[5].access, "read");
@@ -181,7 +181,7 @@ mod tests {
     #[test]
     fn exported_tools_keep_the_catalog_schemas() {
         let tools = tools::as_mcp_tools().expect("MCP tools");
-        assert_eq!(tools.len(), 9);
+        assert_eq!(tools.len(), 11);
         let edit = tools
             .iter()
             .find(|tool| tool.name == "nevo_apply_edit")

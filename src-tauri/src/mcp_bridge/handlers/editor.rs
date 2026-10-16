@@ -69,14 +69,7 @@ pub async fn apply_edit(
         ));
     }
 
-    let workspace_path = workspace_path.to_string();
-    let note_id = params.note_id.clone();
-    let note =
-        tauri::async_runtime::spawn_blocking(move || load_note_impl(workspace_path, note_id))
-            .await
-            .map_err(|error| RpcError::internal(error.to_string()))?
-            .map_err(|error| RpcError::not_found(&error))?;
-    require_document_editor(&note)?;
+    require_document_editor(&load_note(workspace_path, &params.note_id).await?)?;
 
     webview::request(
         app,
@@ -88,6 +81,112 @@ pub async fn apply_edit(
         }),
     )
     .await
+}
+
+/// Bounds one Markdown write; a whole book in one call is not a real use case
+/// and would stall the webview's parser.
+const MAX_MARKDOWN_BYTES: usize = 1024 * 1024;
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenParams {
+    pub note_id: String,
+}
+
+/// Opens a note in the editor and returns its snapshot, so the content tools
+/// can address a note the user did not have open.
+pub async fn open_note(
+    app: &tauri::AppHandle,
+    workspace_path: &str,
+    params: Value,
+) -> Result<Value, RpcError> {
+    let params: OpenParams = parse_params(params)?;
+    validate_id(&params.note_id)
+        .map_err(|error| RpcError::bad_request("invalid_note_id", &error))?;
+    require_document_editor(&load_note(workspace_path, &params.note_id).await?)?;
+    webview::request(app, "editor.open", json!({ "noteId": params.note_id })).await
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum WriteMode {
+    Append,
+    Replace,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WriteMarkdownParams {
+    pub note_id: String,
+    pub markdown: String,
+    pub mode: WriteMode,
+    #[serde(default)]
+    pub revision: Option<u32>,
+}
+
+fn validate_write_markdown(params: &WriteMarkdownParams) -> Result<(), RpcError> {
+    validate_id(&params.note_id)
+        .map_err(|error| RpcError::bad_request("invalid_note_id", &error))?;
+    if params.markdown.trim().is_empty() {
+        return Err(RpcError::bad_request(
+            "invalid_params",
+            "markdown must not be empty",
+        ));
+    }
+    if params.markdown.len() > MAX_MARKDOWN_BYTES {
+        return Err(RpcError::bad_request(
+            "invalid_params",
+            "markdown is larger than 1 MiB",
+        ));
+    }
+    if params.mode == WriteMode::Replace && params.revision.is_none() {
+        return Err(RpcError::bad_request(
+            "invalid_params",
+            "replace requires the revision from nevo_editor_snapshot",
+        ));
+    }
+    Ok(())
+}
+
+/// Appends Markdown to, or replaces the body of, the note open in the editor.
+pub async fn write_markdown(
+    app: &tauri::AppHandle,
+    workspace_path: &str,
+    params: Value,
+) -> Result<Value, RpcError> {
+    let params: WriteMarkdownParams = parse_params(params)?;
+    validate_write_markdown(&params)?;
+    require_document_editor(&load_note(workspace_path, &params.note_id).await?)?;
+
+    // Snapshots the saved copy; unsaved typing is still covered by editor undo.
+    let snapshot_path = workspace_path.to_string();
+    let note_id = params.note_id.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        super::write::snapshot_before_mutation(&snapshot_path, &note_id)
+    })
+    .await
+    .map_err(|error| RpcError::internal(error.to_string()))??;
+
+    webview::request(
+        app,
+        "editor.writeMarkdown",
+        json!({
+            "noteId": params.note_id,
+            "markdown": params.markdown,
+            "mode": if params.mode == WriteMode::Replace { "replace" } else { "append" },
+            "revision": params.revision,
+        }),
+    )
+    .await
+}
+
+async fn load_note(workspace_path: &str, note_id: &str) -> Result<NoteDocument, RpcError> {
+    let workspace_path = workspace_path.to_string();
+    let note_id = note_id.to_string();
+    tauri::async_runtime::spawn_blocking(move || load_note_impl(workspace_path, note_id))
+        .await
+        .map_err(|error| RpcError::internal(error.to_string()))?
+        .map_err(|error| RpcError::not_found(&error))
 }
 
 fn require_document_editor(note: &NoteDocument) -> Result<(), RpcError> {
@@ -132,6 +231,28 @@ mod tests {
         assert!(params(json!({ "noteId": "n1", "revision": 3, "operations": [] })).is_ok());
         assert!(params(json!({ "noteId": "n1", "revision": 3 })).is_err());
         assert!(params(json!({ "noteId": "n1", "operations": [] })).is_err());
+    }
+
+    fn markdown(value: Value) -> Result<(), RpcError> {
+        validate_write_markdown(&parse_params::<WriteMarkdownParams>(value)?)
+    }
+
+    #[test]
+    fn write_markdown_validates_mode_content_and_revision() {
+        assert!(markdown(json!({ "noteId": "n1", "markdown": "# Hi", "mode": "append" })).is_ok());
+        assert!(markdown(
+            json!({ "noteId": "n1", "markdown": "# Hi", "mode": "replace", "revision": 2 })
+        )
+        .is_ok());
+        // Replacing without having read the note would discard unseen typing.
+        assert!(
+            markdown(json!({ "noteId": "n1", "markdown": "# Hi", "mode": "replace" })).is_err()
+        );
+        assert!(markdown(json!({ "noteId": "n1", "markdown": "  ", "mode": "append" })).is_err());
+        assert!(markdown(json!({ "noteId": "n1", "markdown": "x", "mode": "overwrite" })).is_err());
+        assert!(markdown(json!({ "noteId": "../x", "markdown": "x", "mode": "append" })).is_err());
+        let huge = "x".repeat(MAX_MARKDOWN_BYTES + 1);
+        assert!(markdown(json!({ "noteId": "n1", "markdown": huge, "mode": "append" })).is_err());
     }
 
     #[test]

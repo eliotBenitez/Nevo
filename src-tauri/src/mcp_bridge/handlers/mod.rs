@@ -78,8 +78,13 @@ pub fn access_for(method: &str) -> Option<Access> {
         | "notes.list"
         | "notes.search"
         | "notes.read"
-        | "notes.editorSnapshot" => Some(Access::Read),
-        "notes.create" | "notes.move" | "notes.delete" | "notes.applyEdit" => Some(Access::Write),
+        | "notes.editorSnapshot"
+        | "notes.open" => Some(Access::Read),
+        "notes.create"
+        | "notes.move"
+        | "notes.delete"
+        | "notes.applyEdit"
+        | "notes.writeMarkdown" => Some(Access::Write),
         _ => None,
     }
 }
@@ -120,6 +125,10 @@ pub async fn dispatch(
         // path; everything else is filesystem work moved off the runtime.
         "notes.editorSnapshot" => editor::editor_snapshot(require_app(app)?, params).await,
         "notes.applyEdit" => editor::apply_edit(require_app(app)?, workspace_path, params).await,
+        "notes.open" => editor::open_note(require_app(app)?, workspace_path, params).await,
+        "notes.writeMarkdown" => {
+            editor::write_markdown(require_app(app)?, workspace_path, params).await
+        }
         _ => {
             let result =
                 run_blocking(workspace_path.to_string(), method.to_string(), params).await?;
@@ -182,18 +191,20 @@ async fn run_blocking(
 mod tests {
     use super::*;
 
-    const READ_METHODS: [&str; 5] = [
+    const READ_METHODS: [&str; 6] = [
         "workspace.info",
         "notes.list",
         "notes.search",
         "notes.read",
         "notes.editorSnapshot",
+        "notes.open",
     ];
-    const WRITE_METHODS: [&str; 4] = [
+    const WRITE_METHODS: [&str; 5] = [
         "notes.create",
         "notes.move",
         "notes.delete",
         "notes.applyEdit",
+        "notes.writeMarkdown",
     ];
 
     #[test]
@@ -210,7 +221,7 @@ mod tests {
     fn packaged_tool_catalog_matches_bridge_permissions() {
         let raw = include_str!("../../../../packages/mcp-server/src/tools/catalog.json");
         let catalog: Vec<serde_json::Value> = serde_json::from_str(raw).expect("tool catalog");
-        assert_eq!(catalog.len(), 9);
+        assert_eq!(catalog.len(), 11);
         for tool in catalog {
             let method = tool["method"].as_str().expect("method");
             let expected = match tool["access"].as_str().expect("access") {

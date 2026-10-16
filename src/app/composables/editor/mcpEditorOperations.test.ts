@@ -8,12 +8,19 @@ import {
   notifyActiveEditorTransaction,
   registerActiveEditor,
 } from './activeEditorRegistry'
-import { applyEditorEdit, assertEditorFormatSupportsEdit, EditorUnavailableError, readEditorSnapshot } from './mcpEditorOperations'
+import {
+  applyEditorEdit,
+  assertEditorFormatSupportsEdit,
+  EditorUnavailableError,
+  readEditorSnapshot,
+  waitForActiveEditor,
+  writeEditorMarkdown,
+} from './mcpEditorOperations'
 
 function mountEditor(text = 'Hello'): EditorView {
   const state = EditorState.create({
     doc: nevoBaseSchema.node('doc', null, [
-      nevoBaseSchema.node('paragraph', null, [nevoBaseSchema.text(text)]),
+      nevoBaseSchema.node('paragraph', null, text ? [nevoBaseSchema.text(text)] : []),
     ]),
     schema: nevoBaseSchema,
   })
@@ -202,5 +209,63 @@ describe('mcpEditorOperations', () => {
     stale.destroy()
 
     expect(getActiveEditor()?.noteId).toBe('note-2')
+  })
+
+  it('appends Markdown after the existing blocks', () => {
+    view = mountEditor('Intro')
+    registerActiveEditor(view, 'note-1')
+
+    const result = writeEditorMarkdown({ noteId: 'note-1', markdown: '## Plan\n\n- **one**\n- two', mode: 'append' })
+
+    expect(result.revision).toBe(1)
+    const types = view.state.doc.content.content.map(node => node.type.name)
+    expect(types[0]).toBe('paragraph')
+    expect(types[1]).toBe('heading')
+    expect(view.state.doc.textContent).toBe('IntroPlanonetwo')
+  })
+
+  it('appends into a blank note without leaving an empty first line', () => {
+    view = mountEditor('')
+    registerActiveEditor(view, 'note-1')
+
+    writeEditorMarkdown({ noteId: 'note-1', markdown: 'First', mode: 'append' })
+
+    expect(view.state.doc.childCount).toBe(1)
+    expect(view.state.doc.textContent).toBe('First')
+  })
+
+  it('replaces the body only when the revision is current', () => {
+    view = mountEditor('Old')
+    registerActiveEditor(view, 'note-1')
+    view.dispatch(view.state.tr.insertText('!', 4))
+
+    expect(() => writeEditorMarkdown({ noteId: 'note-1', markdown: 'New', mode: 'replace', revision: 0 }))
+      .toThrow(/changed since revision 0 \(now 1\)/)
+    expect(view.state.doc.textContent).toBe('Old!')
+
+    writeEditorMarkdown({ noteId: 'note-1', markdown: 'New', mode: 'replace', revision: 1 })
+    expect(view.state.doc.textContent).toBe('New')
+  })
+
+  it('refuses Markdown for a note other than the open one', () => {
+    view = mountEditor()
+    registerActiveEditor(view, 'note-1')
+
+    expect(() => writeEditorMarkdown({ noteId: 'note-2', markdown: 'x', mode: 'append' }))
+      .toThrow(/not the note currently open/)
+  })
+
+  it('waits for the requested note to mount and returns its snapshot', async () => {
+    view = mountEditor('Target')
+    const pending = waitForActiveEditor('note-2', 1000)
+    setTimeout(() => registerActiveEditor(view!, 'note-2'), 20)
+
+    const snapshot = await pending
+    expect(snapshot.noteId).toBe('note-2')
+    expect(JSON.stringify(snapshot.doc)).toContain('Target')
+  })
+
+  it('gives up when the note never opens', async () => {
+    await expect(waitForActiveEditor('note-9', 60)).rejects.toThrow(/did not open/)
   })
 })

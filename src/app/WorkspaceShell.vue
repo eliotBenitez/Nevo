@@ -115,7 +115,7 @@ const { importMarkdownFile, importMarkdownIntoNote } = useMarkdownImport()
 // Starts or stops the local MCP bridge to match the workspace's access mode,
 // and serves the requests it can only answer from the webview.
 useMcpBridge()
-useMcpBridgeHost()
+useMcpBridgeHost({ openNote })
 
 const appUpdater = useAppUpdater()
 
