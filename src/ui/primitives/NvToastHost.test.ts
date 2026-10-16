@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mount, type VueWrapper } from '@vue/test-utils'
 import { nextTick } from 'vue'
+import { createI18n } from 'vue-i18n'
+import en from '../../locales/en.json'
 import NvToastHost from './NvToastHost.vue'
 import { useToast } from '../composables/useToast'
 
@@ -16,7 +18,7 @@ afterEach(() => {
 
 describe('NvToastHost', () => {
   it('renders the action button and runs it on click', async () => {
-    wrapper = mount(NvToastHost, { attachTo: document.body })
+    wrapper = mount(NvToastHost, { attachTo: document.body, global: { plugins: [createI18n({ legacy: false, locale: 'en', messages: { en } })] } })
     const run = vi.fn()
     toast.showToast({ message: 'Note moved to archive', action: { label: 'Undo', run } })
     await nextTick()
@@ -31,7 +33,7 @@ describe('NvToastHost', () => {
 
   it('keeps the toast while it has keyboard focus', async () => {
     vi.useFakeTimers()
-    wrapper = mount(NvToastHost, { attachTo: document.body })
+    wrapper = mount(NvToastHost, { attachTo: document.body, global: { plugins: [createI18n({ legacy: false, locale: 'en', messages: { en } })] } })
     toast.showToast({ message: 'Moved', duration: 1000, action: { label: 'Undo', run: () => {} } })
     await nextTick()
 
@@ -41,9 +43,17 @@ describe('NvToastHost', () => {
   })
 
   it('omits the action button for plain toasts', async () => {
-    wrapper = mount(NvToastHost, { attachTo: document.body })
+    wrapper = mount(NvToastHost, { attachTo: document.body, global: { plugins: [createI18n({ legacy: false, locale: 'en', messages: { en } })] } })
     toast.showToast({ message: 'Saved' })
     await nextTick()
     expect(document.body.querySelector('.nv-toast__action')).toBeNull()
+  })
+
+  it('labels the region and close button through i18n', async () => {
+    wrapper = mount(NvToastHost, { attachTo: document.body, global: { plugins: [createI18n({ legacy: false, locale: 'en', messages: { en } })] } })
+    toast.showToast({ message: 'Saved' })
+    await nextTick()
+    expect(document.body.querySelector('.nv-toast-host')!.getAttribute('aria-label')).toBe(en.common.notifications)
+    expect(document.body.querySelector('.nv-toast__close')!.getAttribute('aria-label')).toBe(en.common.close)
   })
 })

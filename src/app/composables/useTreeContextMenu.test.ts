@@ -59,6 +59,7 @@ describe('useTreeContextMenu delete undo', () => {
     const [item] = toast.toastState.items
     expect(item.message).toBe('workspace.context.noteArchived')
     expect(item.action?.label).toBe('common.undo')
+    expect(item.variant).toBe('success')
 
     await toast.runToastAction(item.id)
     expect(treeOps.restoreFromTrash).toHaveBeenCalledWith('n1')

@@ -138,6 +138,7 @@ export function useTreeContextMenu(deps: ContextMenuDeps, handlers: ContextMenuH
         // Folders are not offered an undo: deleting one removes the folder itself and only its notes reach the archive.
         showToast({
           message: deps.t('workspace.context.noteArchived'),
+          variant: 'success',
           action: {
             label: deps.t('common.undo'),
             run: async () => {

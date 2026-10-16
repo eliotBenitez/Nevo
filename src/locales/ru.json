@@ -290,6 +290,7 @@
     }
   },
   "common": {
+    "notifications": "Уведомления",
     "undo": "Отменить",
     "datePicker": {
       "placeholder": "Выберите дату",

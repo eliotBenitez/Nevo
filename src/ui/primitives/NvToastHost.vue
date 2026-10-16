@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { AlertTriangle, CheckCircle2, Info, X } from '../icons'
 import { useToast, type ToastVariant } from '../composables/useToast'
 
+const { t } = useI18n()
 const { toastState, dismissToast, pauseToast, resumeToast, runToastAction } = useToast()
 
 const icons = {
@@ -13,21 +15,26 @@ const icons = {
 function iconFor(variant: ToastVariant) {
   return icons[variant]
 }
+
+// Ghost controls on the inverted toast surface (docs/design/nevo-reference.html `.toast .btn`).
+const ghostButton =
+  'tw:flex-none tw:inline-flex tw:h-[26px] tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-nv-sm tw:border-0 tw:bg-transparent tw:text-inherit tw:transition-[background-color,opacity] tw:duration-[120ms] tw:hover:bg-[color-mix(in_oklab,var(--surface-canvas)_16%,transparent)] tw:active:scale-[0.97] tw:focus-visible:outline-2 tw:focus-visible:outline-offset-1 tw:focus-visible:outline-current tw:motion-reduce:transition-none tw:motion-reduce:active:scale-100'
 </script>
 
 <template>
   <Teleport to="body">
+    <!-- Bottom-centre keeps toasts clear of the window controls and pane headers; on phones it sits above the bottom navigation. -->
     <div
-      class="nv-toast-host tw:fixed tw:top-4 tw:right-4 tw:z-[9600] tw:flex tw:w-[min(360px,calc(100vw-32px))] tw:flex-col tw:gap-2.5 tw:pointer-events-none"
+      class="nv-toast-host tw:fixed tw:left-1/2 tw:bottom-[calc(20px+var(--safe-area-bottom,0px))] tw:max-md:bottom-[calc(92px+var(--safe-area-bottom,0px))] tw:z-[9600] tw:flex tw:w-[min(440px,calc(100vw-32px))] tw:-translate-x-1/2 tw:flex-col tw:items-center tw:gap-2 tw:pointer-events-none"
       role="region"
       aria-live="polite"
-      aria-label="Notifications"
+      :aria-label="t('common.notifications')"
     >
       <TransitionGroup name="nv-toast">
         <article
           v-for="toast in toastState.items"
           :key="toast.id"
-          class="nv-toast tw:pointer-events-auto tw:flex tw:items-start tw:gap-2.5 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-content-primary tw:py-3 tw:px-3.5 tw:text-surface-canvas tw:shadow-(--shadow-overlay)"
+          class="nv-toast tw:pointer-events-auto tw:flex tw:max-w-full tw:items-center tw:gap-2.5 tw:rounded-nv-md tw:py-2.5 tw:pr-2 tw:pl-3.5 tw:bg-content-primary tw:text-surface-canvas tw:text-[13px] tw:shadow-(--shadow-overlay)"
           :class="`nv-toast--${toast.variant}`"
           role="status"
           @mouseenter="pauseToast(toast.id)"
@@ -35,25 +42,27 @@ function iconFor(variant: ToastVariant) {
           @focusin="pauseToast(toast.id)"
           @focusout="resumeToast(toast.id)"
         >
-          <span class="nv-toast__icon tw:flex-none tw:grid tw:mt-px tw:place-items-center tw:text-inherit" aria-hidden="true">
+          <span class="nv-toast__icon tw:flex-none tw:grid tw:place-items-center tw:text-inherit" :class="{ 'tw:self-start tw:pt-0.5': toast.title }" aria-hidden="true">
             <component :is="iconFor(toast.variant)" :size="16" />
           </span>
-          <div class="nv-toast__body tw:min-w-0 tw:flex-1 tw:grid tw:gap-0.5">
-            <div v-if="toast.title" class="nv-toast__title tw:text-[13px] tw:font-[640] tw:tracking-normal">{{ toast.title }}</div>
-            <div class="nv-toast__message tw:text-[12.5px] tw:leading-[1.45] tw:text-inherit tw:opacity-[0.82] tw:[overflow-wrap:anywhere]">{{ toast.message }}</div>
+          <div class="nv-toast__body tw:min-w-0 tw:flex-1 tw:grid tw:gap-0.5 tw:leading-[1.4]">
+            <div v-if="toast.title" class="nv-toast__title tw:font-[620]">{{ toast.title }}</div>
+            <div class="nv-toast__message tw:[overflow-wrap:anywhere]" :class="{ 'tw:opacity-80': toast.title }">{{ toast.message }}</div>
           </div>
           <button
             v-if="toast.action"
             type="button"
-            class="nv-toast__action tw:flex-none tw:-my-1 tw:cursor-pointer tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border-0 tw:bg-[color-mix(in_oklab,var(--surface-canvas)_14%,transparent)] tw:px-2.5 tw:py-1 tw:text-[12.5px] tw:font-[620] tw:text-inherit tw:transition-[background-color] tw:duration-[140ms] tw:hover:bg-[color-mix(in_oklab,var(--surface-canvas)_24%,transparent)] tw:focus-visible:outline-2 tw:focus-visible:outline-offset-1 tw:focus-visible:outline-current tw:motion-reduce:transition-none"
+            class="nv-toast__action tw:px-2.5 tw:text-[12px] tw:font-medium"
+            :class="ghostButton"
             @click="runToastAction(toast.id)"
           >
             {{ toast.action.label }}
           </button>
           <button
             type="button"
-            class="nv-toast__close tw:flex-none tw:grid tw:h-[22px] tw:w-[22px] tw:-mt-0.5 tw:-mr-0.5 tw:place-items-center tw:cursor-pointer tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:text-inherit tw:opacity-[0.72] tw:transition-[background-color,opacity] tw:duration-[140ms] tw:hover:bg-[color-mix(in_oklab,var(--surface-canvas)_18%,transparent)] tw:hover:opacity-100"
-            aria-label="Dismiss"
+            class="nv-toast__close tw:w-[26px] tw:p-0 tw:opacity-70 tw:hover:opacity-100"
+            :class="ghostButton"
+            :aria-label="t('common.close')"
             @click="dismissToast(toast.id)"
           >
             <X :size="14" />
@@ -70,26 +79,24 @@ function iconFor(variant: ToastVariant) {
   transition: opacity 200ms ease, transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.nv-toast-enter-from {
-  opacity: 0;
-  transform: translateX(16px) scale(0.98);
+.nv-toast-move {
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.nv-toast-enter-from,
 .nv-toast-leave-to {
   opacity: 0;
-  transform: translateX(16px) scale(0.98);
-}
-
-.nv-toast-leave-active {
-  position: absolute;
-  right: 0;
-  width: 100%;
+  transform: translateY(8px) scale(0.98);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .nv-toast-enter-active,
   .nv-toast-leave-active {
     transition: opacity 120ms ease;
+  }
+
+  .nv-toast-move {
+    transition: none;
   }
 
   .nv-toast-enter-from,

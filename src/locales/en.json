@@ -290,6 +290,7 @@
     }
   },
   "common": {
+    "notifications": "Notifications",
     "undo": "Undo",
     "datePicker": {
       "placeholder": "Pick a date",

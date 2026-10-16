@@ -290,6 +290,7 @@
     }
   },
   "common": {
+    "notifications": "Notificaciones",
     "undo": "Deshacer",
     "datePicker": {
       "placeholder": "Elegir una fecha",
