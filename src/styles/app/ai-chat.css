@@ -1,0 +1,120 @@
+/* AI chat frame: launcher, floating/docked/sheet containers, header, scope row, composer.
+   Message content lives in ai-chat-messages.css. Visual contract: docs/design/ai-chat-reference.html. */
+
+/* Anchor: 16px from the island's bottom-right corner, clear of the right panel and the phone bottom nav. */
+.ai-fab, .ai-chat-float {
+  right: calc(var(--island-inset) + 16px + var(--ai-right-extra, 0px));
+  bottom: calc(var(--island-inset) + 16px + max(var(--safe-area-bottom), 0px) + var(--ai-bottom-extra, 0px));
+}
+
+/* ───────── Launcher ───────── */
+.ai-fab {
+  position: absolute; z-index: var(--z-sticky); display: inline-flex; align-items: center; gap: 0;
+  height: 40px; min-width: 40px; padding: 0 11px; border: 1px solid transparent;
+  border-radius: calc(12px * var(--radius-scale, 1)); background: var(--surface-overlay); color: var(--text-secondary);
+  box-shadow: var(--shadow-overlay); cursor: pointer; font: 500 13px/1 var(--font-ui);
+  transition: gap 0.28s var(--ease-out), color 0.12s, opacity 0.18s, transform 0.28s var(--ease-out);
+}
+.ai-fab--phone { height: 44px; min-width: 44px; padding: 0 12px; }
+.ai-fab__mark { width: 18px; height: 18px; flex: none; }
+.ai-fab__label {
+  display: inline-flex; align-items: center; gap: 8px; max-width: 0; overflow: hidden; opacity: 0; white-space: nowrap;
+  transition: max-width 0.32s var(--ease-out), opacity 0.2s;
+}
+.ai-fab:hover, .ai-fab:focus-visible { color: var(--accent); gap: 8px; }
+.ai-fab:hover .ai-fab__label, .ai-fab:focus-visible .ai-fab__label { max-width: 200px; opacity: 1; color: var(--text-primary); }
+.ai-fab:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.ai-fab__badge {
+  position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 0 2px var(--island-bg, var(--surface-canvas));
+}
+.ai-fab--busy .ai-fab__badge { animation: ai-fab-breathe 1.6s ease-in-out infinite; }
+.ai-fab--warning { color: var(--text-secondary); }
+.ai-fab--warning .ai-fab__badge { background: var(--warning); }
+.ai-fab[aria-expanded="true"] { opacity: 0; transform: scale(0.86); pointer-events: none; }
+@keyframes ai-fab-breathe { 50% { transform: scale(0.6); opacity: 0.55; } }
+
+/* ───────── Containers ───────── */
+.ai-chat-float {
+  position: absolute; z-index: var(--z-sticky); width: min(392px, calc(100% - 32px)); height: min(560px, calc(100% - 32px));
+  transform-origin: bottom right; opacity: 0; transform: translateY(4px); pointer-events: none;
+  /* Closed box == launcher box, so the panel grows out of the launcher. */
+  clip-path: inset(calc(100% - 40px) 0 0 calc(100% - 40px) round 12px);
+  transition: clip-path 0.42s var(--ease-out), opacity 0.16s, transform 0.42s var(--ease-out);
+}
+/* Negative inset keeps the panel's shadow outside the clip. */
+.ai-chat-float--open { clip-path: inset(-48px round 12px); opacity: 1; transform: none; pointer-events: auto; }
+
+.workspace-ai-dock-shell {
+  flex: 0 0 360px; width: 360px; display: flex; overflow: hidden; contain: layout paint;
+  transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), flex-basis 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.workspace-ai-dock-shell--hidden { flex-basis: 0; width: 0; }
+.workspace-ai-dock-shell > .ai-panel { margin-left: var(--island-inset); }
+
+/* Below NvPopupMenu (500), so the scope menu opens above the sheet; above the shell chrome. */
+.ai-chat-scrim {
+  position: fixed; inset: 0; z-index: var(--z-dropdown); background: var(--scrim); opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+}
+.ai-chat-scrim--open { opacity: 1; pointer-events: auto; }
+.ai-chat-sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: calc(var(--z-dropdown) + 1); height: 86dvh;
+  max-height: calc(100dvh - max(var(--safe-area-top), 0px) - 12px);
+  transform: translateY(100%); visibility: hidden; transition: transform 0.32s var(--ease-out), visibility 0s 0.32s;
+}
+.ai-chat-sheet--open { transform: none; visibility: visible; transition: transform 0.32s var(--ease-out); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-chat-float { clip-path: none; transform: none; transition: opacity 0.12s; }
+  .ai-chat-sheet { transform: none; opacity: 0; transition: opacity 0.12s, visibility 0s 0.12s; }
+  .ai-chat-sheet--open { opacity: 1; transition: opacity 0.12s; }
+  .ai-fab, .ai-fab__label { transition: opacity 0.12s; }
+  .ai-fab--busy .ai-fab__badge, .ai-caret { animation: none; }
+}
+.workspace-root--reduced-motion .ai-chat-float, .ai-chat-sheet.workspace-root--reduced-motion { clip-path: none; transform: none; }
+.workspace-root--reduced-motion .ai-fab--busy .ai-fab__badge, .workspace-root--reduced-motion .ai-caret { animation: none; }
+
+/* ───────── Panel frame ───────── */
+.ai-panel {
+  width: 100%; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+  border: 1px solid transparent; border-radius: var(--radius-lg); background: var(--surface-overlay);
+  box-shadow: var(--shadow-overlay); color: var(--text-primary);
+}
+.ai-panel--docked { background: var(--surface-panel); box-shadow: none; border-radius: var(--island-radius); }
+.ai-panel--sheet { border-radius: 24px 24px 0 0; padding-bottom: max(var(--safe-area-bottom), 0px); }
+.ai-grab { width: 36px; height: 4px; border-radius: 2px; background: var(--border-strong); margin: 8px auto 0; flex: none; }
+
+.ai-head { display: flex; align-items: center; gap: 2px; height: 48px; padding: 0 8px 0 18px; flex: none; }
+.ai-head__title { flex: 1; min-width: 0; margin: 0; font: 600 13.5px/1.2 var(--font-ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ai-scope { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 0 16px 10px; font-size: 12px; color: var(--text-secondary); flex: none; }
+.ai-chip {
+  display: inline-flex; align-items: center; gap: 5px; height: 24px; max-width: 100%; padding: 0 8px; border: 0; border-radius: 999px;
+  background: var(--surface-subtle); color: var(--text-secondary); font: 500 12px/1 var(--font-ui); cursor: pointer;
+}
+.ai-chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-chip--scope { background: var(--accent-soft); color: var(--accent); }
+.ai-chip--excluded { background: transparent; color: var(--text-secondary); box-shadow: inset 0 0 0 1px var(--border-default); }
+.ai-chip:focus-visible, .ai-model:focus-visible, .ai-input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* ───────── Composer ───────── */
+.ai-composer { margin: 0 10px 10px; padding: 10px 10px 8px 12px; border-radius: 12px; background: var(--surface-subtle); display: flex; flex-direction: column; gap: 8px; flex: none; }
+.ai-composer:focus-within { box-shadow: 0 0 0 2px var(--accent-soft); }
+.ai-input {
+  width: 100%; min-height: 40px; max-height: 120px; resize: none; border: 0; outline: 0; background: transparent;
+  color: var(--text-primary); font: 13.5px/1.5 var(--font-ui); padding: 0; border-radius: 4px;
+}
+.ai-input::placeholder { color: var(--text-secondary); }
+.ai-composer .ai-input:focus-visible { outline: none; }
+.ai-cbar { display: flex; align-items: center; gap: 4px; }
+.ai-model {
+  display: inline-flex; align-items: center; gap: 6px; height: 26px; min-width: 0; padding: 0 8px; border: 0; border-radius: var(--radius-sm);
+  background: transparent; color: var(--text-secondary); font: 500 12px/1 var(--font-ui); cursor: pointer;
+}
+.ai-model:hover { background: color-mix(in oklab, var(--surface-subtle) 80%, var(--text-primary) 8%); }
+.ai-model__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-model__where { display: inline-flex; align-items: center; gap: 4px; color: var(--success); }
+.ai-model__where--cloud { color: var(--warning); }
+.ai-send { margin-left: auto; width: 30px; height: 30px; border-radius: 9px; }
+.ai-fab__label .nv-kbd { color: var(--text-secondary); }

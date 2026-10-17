@@ -10,6 +10,7 @@ import {
   type EditorCoreCallbacks,
 } from './useEditorCore'
 import type { VoiceRecordingEditorBindings } from './useVoiceRecording'
+import type { DictationEditorBindings } from './useDictation'
 
 const TYPEWRITER_POSITION_RATIO: Record<string, number> = {
   upper: 0.30,
@@ -50,6 +51,7 @@ export interface WorkspaceEditorCoreOptions {
   openFileAsset: (src: string) => Promise<unknown>
   requestMediaPicker: RequiredCallback<'onMediaPickerRequest'>
   voiceRecording?: VoiceRecordingEditorBindings
+  dictation?: DictationEditorBindings
   openNoteEmbedPicker: RequiredCallback<'onNoteEmbedPickRequest'>
   openEmbedUrlPopover: RequiredCallback<'onEmbedUrlRequest'>
   openNoteEmbed: (noteId: string) => void
@@ -181,6 +183,7 @@ export function useWorkspaceEditorCore(options: WorkspaceEditorCoreOptions) {
     },
     onMediaPickerRequest: options.requestMediaPicker,
     voiceRecording: options.voiceRecording,
+    dictation: options.dictation,
     onNoteEmbedPickRequest: options.openNoteEmbedPicker,
     onEmbedUrlRequest: options.openEmbedUrlPopover,
     onNoteEmbedContentLoad: async ({ noteId, setHtml, setLoading }) => {

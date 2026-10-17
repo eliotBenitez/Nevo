@@ -134,6 +134,7 @@ function updateConnectorSelect(
     v-if="selectionCount"
     class="canvas-properties tw:absolute tw:z-28 tw:top-[76px] tw:right-4 tw:grid tw:w-60 tw:gap-2.5 tw:p-3 tw:rounded-[14px] tw:border tw:border-solid tw:border-(--border-subtle) tw:text-content-secondary tw:bg-[color-mix(in_srgb,var(--surface-canvas)_92%,transparent)] tw:shadow-(--shadow-raised) tw:text-xs tw:max-[760px]:top-auto tw:max-[760px]:right-[calc(12px+max(var(--safe-area-right),0px))] tw:max-[760px]:bottom-[calc(84px+max(var(--safe-area-bottom),0px))] tw:max-[760px]:left-[calc(12px+max(var(--safe-area-left),0px))] tw:max-[760px]:w-auto tw:max-[760px]:max-h-[38vh] tw:max-[760px]:overflow-y-auto"
     :aria-label="labels.properties"
+    @pointerdown.stop
   >
     <div class="canvas-properties__header tw:flex tw:items-center tw:justify-between tw:gap-2.5 tw:text-content-primary tw:font-semibold">
       <span>{{ labels.properties }}</span>

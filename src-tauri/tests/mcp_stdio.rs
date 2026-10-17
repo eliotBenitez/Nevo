@@ -56,7 +56,7 @@ fn headless_server_handshakes_and_reports_unavailable_bridge_on_stdout() {
             .as_array()
             .expect("tools")
             .len(),
-        9
+        20
     );
     assert_eq!(responses[2]["result"]["isError"], true);
     assert!(!stdout.contains("Bearer "));

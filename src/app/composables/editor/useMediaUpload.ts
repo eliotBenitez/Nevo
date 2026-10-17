@@ -69,6 +69,9 @@ export function useMediaUpload(
       size: (imported as { bytes?: number }).bytes ?? 0,
       duration,
       poster: '',
+      bookmarks: [],
+      transcript: [],
+      audioLayout: 'auto',
     }
 
     if (!core.editorView) return

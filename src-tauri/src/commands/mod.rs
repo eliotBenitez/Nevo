@@ -2,6 +2,7 @@ pub mod ai;
 pub mod auth;
 pub mod config;
 pub mod database;
+pub mod dictation;
 pub mod folder;
 pub mod fonts;
 pub mod github_sync;
@@ -16,8 +17,12 @@ pub mod note_index;
 pub mod notebook_export;
 pub mod notion_import;
 pub mod path_utils;
+#[cfg(desktop)]
+pub mod speech_models;
 pub mod system;
 pub mod templates;
+#[cfg(desktop)]
+pub mod transcription;
 pub mod typst_export;
 pub mod voice_recording;
 pub mod workspace;

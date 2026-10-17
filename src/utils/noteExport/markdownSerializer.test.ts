@@ -92,6 +92,57 @@ describe('serializeNoteToMarkdown — block types', () => {
     expect(assetSrcs).toEqual(['.nevo/assets/a.mp3'])
   })
 
+  it('exports audio transcripts with timestamps and escaped text', () => {
+    const note = noteWith([{ type: 'media_block', attrs: {
+      kind: 'audio', src: '.nevo/assets/a.mp3', name: 'Track',
+      transcript: [{ start: 1, end: 3, text: 'Hello **world**\n<bad>' }],
+    } }])
+    const { markdown } = serializeNoteToMarkdown(note, 'assets')
+    expect(markdown).toContain('Transcript:')
+    expect(markdown).toContain('0:01 — Hello \\*\\*world\\*\\* \\<bad\\>')
+  })
+
+  it('renders valid audio bookmarks as escaped readable Markdown without changing asset collection', () => {
+    const note = noteWith([{
+      type: 'media_block',
+      attrs: {
+        kind: 'audio', src: '.nevo/assets/a.mp3', name: 'Track',
+        bookmarks: [
+          { id: 'later', time: 65, label: 'Later **chapter**\nnext line' },
+          { id: 'first', time: 2, label: 'Intro [start]' },
+        ],
+      },
+    }])
+    const { markdown, assetSrcs } = serializeNoteToMarkdown(note, 'assets')
+
+    expect(markdown).toContain('[Track](assets/a.mp3)')
+    expect(markdown).toContain('0:02 — Intro \\[start\\]')
+    expect(markdown).toContain('1:05 — Later \\*\\*chapter\\*\\* next line')
+    expect(assetSrcs).toEqual(['.nevo/assets/a.mp3'])
+  })
+
+  it('omits invalid and empty audio bookmarks and leaves video output unchanged', () => {
+    const note = noteWith([
+      { type: 'media_block', attrs: { kind: 'audio', src: '.nevo/assets/a.mp3', bookmarks: [{ id: 'bad', time: Infinity, label: 'bad' }] } },
+      { type: 'media_block', attrs: { kind: 'video', src: '.nevo/assets/v.mp4', name: 'Clip', bookmarks: [{ id: 'ok', time: 1, label: 'ignored' }] } },
+    ])
+    const { markdown } = serializeNoteToMarkdown(note, 'assets')
+
+    expect(markdown).not.toContain('bad')
+    expect(markdown).not.toContain('ignored')
+  })
+
+  it('keeps the legacy Markdown output and deduplicated assets for audio without usable bookmarks', () => {
+    const note = noteWith([
+      { type: 'media_block', attrs: { kind: 'audio', src: '.nevo/assets/a.mp3', name: 'Track', bookmarks: [] } },
+      { type: 'media_block', attrs: { kind: 'audio', src: '.nevo/assets/a.mp3', name: 'Track', bookmarks: [{ id: '', time: 1, label: 'ignored' }] } },
+    ])
+    const { markdown, assetSrcs } = serializeNoteToMarkdown(note, 'assets')
+
+    expect(markdown).toBe('# Test\n\n[Track](assets/a.mp3)\n\n[Track](assets/a.mp3)')
+    expect(assetSrcs).toEqual(['.nevo/assets/a.mp3'])
+  })
+
   it('renders note embeds, external embeds and toggles', () => {
     const note = noteWith([
       { type: 'note_embed', attrs: { noteId: 'n2', title: 'Other', previewText: 'Preview' } },

@@ -49,6 +49,7 @@ defineEmits<{
     class="canvas-toolbar tw:absolute tw:z-30 tw:top-4 tw:left-1/2 tw:flex tw:max-w-[calc(100%-32px)] tw:items-center tw:gap-0.5 tw:min-h-11 tw:p-[5px] tw:overflow-x-auto tw:rounded-[14px] tw:border tw:border-solid tw:border-(--border-subtle) tw:bg-[color-mix(in_srgb,var(--surface-canvas)_88%,transparent)] tw:shadow-(--shadow-raised) tw:-translate-x-1/2 tw:[scrollbar-width:none] tw:max-[760px]:top-auto tw:max-[760px]:right-[calc(12px+max(var(--safe-area-right),0px))] tw:max-[760px]:bottom-[calc(16px+max(var(--safe-area-bottom),0px))] tw:max-[760px]:left-[calc(12px+max(var(--safe-area-left),0px))] tw:max-[760px]:max-w-none tw:max-[760px]:min-h-14 tw:max-[760px]:p-1.5 tw:max-[760px]:rounded-[18px] tw:max-[760px]:bg-[color-mix(in_srgb,var(--surface-canvas)_90%,transparent)] tw:max-[760px]:shadow-[0_18px_44px_-18px_var(--shadow)] tw:max-[760px]:translate-x-0 tw:max-[760px]:[scroll-snap-type:x_proximity]"
     role="toolbar"
     :aria-label="labels.toolbar"
+    @pointerdown.stop
   >
     <button
       v-for="item in [

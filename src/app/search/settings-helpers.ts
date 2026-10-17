@@ -33,6 +33,7 @@ export const hotkeyLabelKeys: Record<string, string> = {
   'core.block.appendEnd': 'settings.hotkeys.commands.appendBlockAtEnd',
   'core.math.inline.insert': 'settings.hotkeys.commands.inlineMath',
   'editor.find-in-note': 'settings.hotkeys.commands.findInNote',
+  'editor.dictation.toggle': 'settings.hotkeys.commands.toggleDictation',
   'editor.replace-in-note': 'settings.hotkeys.commands.replaceInNote',
   'workspace.new-note': 'settings.hotkeys.commands.newNote',
   'workspace.new-folder': 'settings.hotkeys.commands.newFolder',
@@ -43,6 +44,7 @@ export const hotkeyLabelKeys: Record<string, string> = {
   'workspace.open-graph': 'settings.hotkeys.commands.openGraph',
   'workspace.open-history': 'settings.hotkeys.commands.openHistory',
   'workspace.open-trash': 'settings.hotkeys.commands.openTrash',
+  'ai.chat.toggle': 'settings.hotkeys.commands.toggleAiChat',
   'app.open-settings': 'settings.hotkeys.commands.openSettings',
 }
 

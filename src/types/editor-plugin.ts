@@ -5,7 +5,7 @@ import type { NodeSpec, MarkSpec } from 'prosemirror-model'
 import type { Decoration, DecorationSet } from 'prosemirror-view'
 
 export const NEVO_EDITOR_SDK_VERSION = '1.0.0'
-export const NEVO_SANDBOX_SDK_VERSION = '2.0.0'
+export const NEVO_SANDBOX_SDK_VERSION = '2.1.0'
 
 export type NevoPluginExecutionMode = 'trusted-webview' | 'sandboxed-worker'
 
@@ -281,11 +281,51 @@ export interface NevoNodeHtmlSerializerHelpers extends NevoNodeSerializerHelpers
   escapeHtml: (value: string) => string
 }
 
+/** Текстовый фрагмент DOCX-описания плагинной ноды. */
+export interface NevoDocxText {
+  type: 'text'
+  text: string
+  bold?: boolean
+  italic?: boolean
+  underline?: boolean
+  strike?: boolean
+  code?: boolean
+  /** Цвет в формате #RRGGBB. */
+  color?: string
+  /** Ссылка со схемой http(s) или mailto. */
+  link?: string
+}
+
+export interface NevoDocxBreak {
+  type: 'break'
+}
+
+export type NevoDocxInline = NevoDocxText | NevoDocxBreak
+
+/** Блок декларативного DOCX-описания плагинной ноды. */
+export type NevoDocxBlock =
+  | { type: 'paragraph'; children: NevoDocxInline[] }
+  | { type: 'heading'; level: 1 | 2 | 3 | 4 | 5 | 6; children: NevoDocxInline[] }
+  /** rows → cells → inlines. */
+  | { type: 'table'; header?: boolean; rows: NevoDocxInline[][][] }
+  | { type: 'image'; svg: string; caption?: string }
+  /** src — путь к ассету относительно workspace. */
+  | { type: 'image'; src: string; caption?: string }
+  /** Хост подставляет сюда дочерние ноды самой плагинной ноды. */
+  | { type: 'children' }
+
+/** Данные (не docx-объекты), которые хост валидирует и превращает в блоки Nevo. */
+export interface NevoDocxFragment {
+  blocks: NevoDocxBlock[]
+}
+
 /** Хуки сериализации плагинной ноды во все форматы экспорта. */
 export interface NevoNodeSerializer {
   markdown?: (node: NevoSerializableNode, helpers: NevoNodeSerializerHelpers) => string | Promise<string>
   html?: (node: NevoSerializableNode, helpers: NevoNodeHtmlSerializerHelpers) => string | Promise<string>
   typst?: (node: NevoSerializableNode, helpers: NevoNodeSerializerHelpers) => string | Promise<string>
+  /** Требует SDK >= 2.1.0. Невалидный фрагмент отбрасывается целиком, нода экспортируется текстом детей. */
+  docx?: (node: NevoSerializableNode) => NevoDocxFragment | Promise<NevoDocxFragment>
 }
 
 /** Импорт плагинной ноды из fenced code block Markdown по языку. */
@@ -365,6 +405,7 @@ export interface NevoTableContext {
   selectedCols: number
   canMerge: boolean
   canSplit: boolean
+  canSort: boolean
   isMergedCell: boolean
   activeCell: {
     pos: number

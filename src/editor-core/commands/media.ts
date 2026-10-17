@@ -10,6 +10,8 @@ export interface MediaBlockAttrs {
   size: number
   duration: number | null
   poster: string
+  bookmarks: unknown[]
+  audioLayout: 'auto' | 'player' | 'bookmarks'
 }
 
 export function createInsertMediaBlockCommand(mediaBlock: NodeType, kind: 'audio' | 'video'): Command {
@@ -21,6 +23,8 @@ export function createInsertMediaBlockCommand(mediaBlock: NodeType, kind: 'audio
     size: 0,
     duration: null,
     poster: '',
+    bookmarks: [],
+    audioLayout: 'auto',
   })
 }
 

@@ -16,6 +16,12 @@ export const COVER_GRADIENTS: string[] = [
   'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
   'linear-gradient(135deg, #7f00ff 0%, #e100ff 100%)',
   'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+  'linear-gradient(135deg, #f7971e 0%, #ffd200 100%)',
+  'linear-gradient(135deg, #ee9ca7 0%, #ffdde1 100%)',
+  'linear-gradient(135deg, #0f2027 0%, #2c5364 100%)',
+  'linear-gradient(135deg, #a8e063 0%, #56ab2f 100%)',
+  'linear-gradient(135deg, #f953c6 0%, #b91d73 100%)',
+  'linear-gradient(135deg, #c79081 0%, #dfa579 100%)',
 ]
 
 /** pastel solid colors used in the cover picker */
@@ -28,4 +34,8 @@ export const COVER_PASTEL_COLORS: string[] = [
   '#d9f0ff',
   '#f5e6ff',
   '#e8f8dc',
+  '#ffe5d0',
+  '#d4f1ee',
+  '#e9e4f0',
+  '#f0ebe3',
 ]

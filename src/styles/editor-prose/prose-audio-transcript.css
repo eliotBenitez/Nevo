@@ -1,0 +1,78 @@
+.doc-editor .nv-prosemirror .nv-audio-transcript {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font: 13px/1.5 var(--font-ui);
+}
+.doc-editor .nv-prosemirror .nv-audio-transcript[hidden],
+.doc-editor .nv-prosemirror .nv-audio-transcript [hidden] { display: none !important; }
+.doc-editor .nv-prosemirror .nv-audio-transcript-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.doc-editor .nv-prosemirror .nv-audio-transcript h3 {
+  margin: 0;
+  font: 600 13px/1.4 var(--font-ui);
+}
+.doc-editor .nv-prosemirror .nv-audio-transcript-controls,
+.doc-editor .nv-prosemirror .nv-audio-transcript-language-control {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.doc-editor .nv-prosemirror .nv-audio-transcript-language-control {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+/* Language picker uses NvSelect; keep its trigger sized like the transcribe button. */
+.doc-editor .nv-prosemirror .nv-audio-transcript-language { display: inline-flex; }
+.doc-editor .nv-prosemirror .nv-audio-transcribe {
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: calc(8px * var(--radius-scale, 1));
+  background: var(--accent-soft);
+  color: var(--accent);
+  font: 500 12.5px/1.4 var(--font-ui);
+  cursor: pointer;
+}
+.doc-editor .nv-prosemirror .nv-audio-transcribe:hover:not(:disabled) { background: var(--hover); }
+.doc-editor .nv-prosemirror .nv-audio-transcribe:disabled { opacity: .65; cursor: wait; }
+.doc-editor .nv-prosemirror .nv-audio-transcript-status:not(:empty) {
+  display: block;
+  margin-top: 8px;
+  color: var(--text-secondary);
+}
+.doc-editor .nv-prosemirror .nv-audio-transcript-list {
+  max-height: 240px;
+  overflow-y: auto;
+  margin-top: 8px;
+}
+.doc-editor .nv-prosemirror .nv-audio-transcript-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 2px;
+  overflow-wrap: anywhere;
+}
+.doc-editor .nv-prosemirror .nv-audio-transcript-time {
+  border: 0;
+  padding: 2px;
+  border-radius: calc(4px * var(--radius-scale, 1));
+  background: transparent;
+  color: var(--accent);
+  text-align: left;
+  font: 12px/1.4 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.doc-editor .nv-prosemirror .nv-audio-transcript :focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}

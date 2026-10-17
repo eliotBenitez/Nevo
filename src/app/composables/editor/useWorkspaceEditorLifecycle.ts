@@ -1,6 +1,7 @@
 import { nextTick, onBeforeUnmount, onMounted, toRaw, watch, type Ref } from 'vue'
 import type { EditorCore } from './useEditorCore'
 import { applyCaretAnimation } from './caretAnimation'
+import { applyNoteViewState, captureNoteViewState, recallNoteView, rememberNoteView } from './noteViewMemory'
 import type { SaveStatus } from '../../../stores/note'
 import type { NoteDocument } from '../../../types/note'
 import type { WorkspaceSettings } from '../../../types/workspace'
@@ -19,6 +20,7 @@ interface WorkspaceEditorLifecycleOptions {
   core: EditorCore
   editorSetup: WorkspaceEditorLifecycleSetup
   editorRoot: Ref<HTMLDivElement | null>
+  getScrollEl: () => HTMLElement | null
   isTouch: Ref<boolean>
   scrollbarVisible: Ref<boolean>
   locale: Ref<string>
@@ -56,7 +58,50 @@ interface WorkspaceEditorLifecycleOptions {
   disposePluginRuntime: () => Promise<void>
 }
 
+const LATE_LAYOUT_RESTORE_MS = 250
+
 export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOptions) {
+  // The note currently rendered in the view; the note prop already points at the next one when we rebuild.
+  let displayedNoteId: string | null = null
+  let lateRestoreTimer: ReturnType<typeof setTimeout> | null = null
+
+  function rememberDisplayedNoteView() {
+    const view = options.core.editorView
+    const scrollEl = options.getScrollEl()
+    if (!view?.state || !scrollEl || !displayedNoteId) return
+    // Best effort: a failed capture must never block a note switch or unmount.
+    try {
+      rememberNoteView(displayedNoteId, captureNoteViewState(view, scrollEl))
+    } catch {
+      // Keep the previously remembered position.
+    }
+  }
+
+  function restoreNoteView(noteId: string) {
+    const remembered = recallNoteView(noteId)
+    const view = options.core.editorView
+    const scrollEl = options.getScrollEl()
+    if (!remembered || !view?.state || !scrollEl) return
+    try {
+      applyNoteViewState(view, scrollEl, remembered)
+    } catch {
+      return
+    }
+    // Images above the anchor can change height once decoded; re-anchor unless the user already scrolled.
+    const restoredTop = scrollEl.scrollTop
+    if (lateRestoreTimer) clearTimeout(lateRestoreTimer)
+    lateRestoreTimer = setTimeout(() => {
+      lateRestoreTimer = null
+      if (options.core.editorView === view && !view.isDestroyed && displayedNoteId === noteId && scrollEl.scrollTop === restoredTop) {
+        try {
+          applyNoteViewState(view, scrollEl, remembered)
+        } catch {
+          // Layout changed under us; the first restore already placed the reader.
+        }
+      }
+    }, LATE_LAYOUT_RESTORE_MS)
+  }
+
   async function reinitializeEditor(mountBlockHandle = false) {
     const note = options.getNote()
     if (!note) {
@@ -69,6 +114,8 @@ export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOpt
     const root = options.editorRoot.value
     if (!root) return
     await options.editorSetup.setupEditorForNote(note, root, options.getSettings())
+    displayedNoteId = note.id
+    restoreNoteView(note.id)
     options.mountNotePreload(root)
     options.updateEditorStatsNow()
     if (mountBlockHandle) options.mountBlockHandle()
@@ -126,7 +173,9 @@ export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOpt
     async ({ state: noteState, ready, paused }) => {
       if (paused || !ready) return
       options.unmountBlockHandle()
+      rememberDisplayedNoteView()
       if (!noteState) {
+        displayedNoteId = null
         options.unmountNotePreload()
         options.editorSetup.destroyEditorView()
         return
@@ -219,6 +268,8 @@ export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOpt
     document.removeEventListener('mousedown', options.onDocumentMouseDown)
     options.clearStatsTimers()
     options.flushPendingContent()
+    rememberDisplayedNoteView()
+    if (lateRestoreTimer) clearTimeout(lateRestoreTimer)
     options.unmountBlockHandle()
     options.unmountNotePreload()
     options.editorSetup.destroyEditorView()

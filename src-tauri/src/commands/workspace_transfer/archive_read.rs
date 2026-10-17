@@ -21,17 +21,21 @@ const MAX_ENTRY_DEPTH: usize = 64;
 const MAX_TOTAL_UNCOMPRESSED_BYTES: u64 = 20 * 1024 * 1024 * 1024;
 
 fn normalized_entry_path(entry: &ZipFile<'_, File>) -> Result<String, String> {
-    if entry.name().contains('\\') {
+    let name = entry
+        .name()
+        .map_err(|error| format!("Archive entry has an invalid name: {error}"))?;
+    if name.contains('\\') {
         return Err("Archive entries with backslash paths are not supported".to_string());
     }
+    // zip >= 9 strips a leading root from `enclosed_name` instead of rejecting it.
     let enclosed = entry
         .enclosed_name()
-        .ok_or_else(|| format!("Archive entry has an unsafe path: {}", entry.name()))?;
+        .filter(|_| !name.starts_with('/'))
+        .ok_or_else(|| format!("Archive entry has an unsafe path: {name}"))?;
     let depth = enclosed.components().count();
     if depth == 0 || depth > MAX_ENTRY_DEPTH {
         return Err(format!(
-            "Archive entry exceeds the path depth limit: {}",
-            entry.name()
+            "Archive entry exceeds the path depth limit: {name}"
         ));
     }
     Ok(enclosed

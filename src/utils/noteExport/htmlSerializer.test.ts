@@ -81,6 +81,47 @@ describe('serializeNoteToHtml', () => {
     expect(html).toContain('<audio controls><source src="https://cdn.test/audio.mp3"></audio>')
   })
 
+  it('exports audio transcripts as escaped timestamped text', async () => {
+    const { html } = await serializeNoteToHtml(note({ type: 'doc', content: [
+      { type: 'media_block', attrs: { kind: 'audio', src: '.nevo/assets/a.mp3',
+        transcript: [{ start: 1, end: 2, text: '<script>alert(1)</script>' }] } },
+    ] }, 'Doc'), 'assets')
+    expect(html).toContain('class="audio-transcript"')
+    expect(html).toContain('0:01 — &lt;script&gt;alert(1)&lt;/script&gt;')
+    expect(html).not.toContain('<script>alert(1)</script>')
+  })
+
+  it('renders audio bookmarks as escaped readable timestamp links and preserves audio asset registration', async () => {
+    const { html, assetSrcs } = await serializeNoteToHtml(note({
+      type: 'doc',
+      content: [{ type: 'media_block', attrs: {
+        kind: 'audio', src: '.nevo/assets/audio.mp3', name: 'Track',
+        bookmarks: [{ id: 'b1', time: 62, label: '<script>alert("x")</script>' }],
+      } }],
+    }, 'Doc'), 'Doc_assets')
+
+    expect(html).toContain('<audio controls><source src="Doc_assets/audio.mp3"></audio>')
+    expect(html).toContain('class="audio-bookmarks"')
+    expect(html).toContain('href="Doc_assets/audio.mp3#t=62">1:02 — &lt;script&gt;alert("x")&lt;/script&gt;</a>')
+    expect(html).not.toContain('<script>alert')
+    expect(assetSrcs).toEqual(['.nevo/assets/audio.mp3'])
+  })
+
+  it('keeps legacy audio HTML and registers each asset once when bookmarks are empty or invalid', async () => {
+    const { html, assetSrcs } = await serializeNoteToHtml(note({
+      type: 'doc',
+      content: [
+        { type: 'media_block', attrs: { kind: 'audio', src: '.nevo/assets/audio.mp3', name: 'Track', bookmarks: [] } },
+        { type: 'media_block', attrs: { kind: 'audio', src: '.nevo/assets/audio.mp3', name: 'Track', bookmarks: [{ id: 'bad', time: -1, label: 'ignored' }] } },
+      ],
+    }, 'Doc'), 'Doc_assets')
+
+    expect(html.match(/<audio controls>/g)).toHaveLength(2)
+    expect(html).not.toContain('audio-bookmarks')
+    expect(html).not.toContain('ignored')
+    expect(assetSrcs).toEqual(['.nevo/assets/audio.mp3'])
+  })
+
   it('renders tables, code blocks, callouts, toggles, math, mermaid and note embeds', async () => {
     const { html } = await serializeNoteToHtml(note({
       type: 'doc',

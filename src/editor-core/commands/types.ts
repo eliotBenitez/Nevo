@@ -54,6 +54,8 @@ export type CoreCommandId =
   | 'core.table.header.toggle.column'
   | 'core.table.header.toggle.cell'
   | 'core.table.delete'
+  | 'core.table.column.sort.asc'
+  | 'core.table.column.sort.desc'
   | 'core.image.insert'
   | 'core.image.remove'
   | 'core.file.insert'

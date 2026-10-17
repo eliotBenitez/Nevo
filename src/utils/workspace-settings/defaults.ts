@@ -22,6 +22,7 @@ export const DEFAULT_HOTKEY_BINDINGS: HotkeyBinding[] = [
   { commandId: 'core.math.inline.insert', label: 'core.math.inline.insert', defaultChord: 'Ctrl+M', customChord: null, scope: 'workspace' },
   { commandId: 'editor.find-in-note', label: 'editor.find-in-note', defaultChord: 'Ctrl+F', customChord: null, scope: 'workspace' },
   { commandId: 'editor.replace-in-note', label: 'editor.replace-in-note', defaultChord: 'Ctrl+H', customChord: null, scope: 'workspace' },
+  { commandId: 'editor.dictation.toggle', label: 'editor.dictation.toggle', defaultChord: 'Ctrl+Shift+D', customChord: null, scope: 'workspace' },
   { commandId: 'workspace.new-note', label: 'workspace.new-note', defaultChord: 'Ctrl+N', customChord: null, scope: 'workspace' },
   { commandId: 'workspace.new-folder', label: 'workspace.new-folder', defaultChord: 'Ctrl+Shift+N', customChord: null, scope: 'workspace' },
   { commandId: 'workspace.save-note', label: 'workspace.save-note', defaultChord: 'Ctrl+S', customChord: null, scope: 'workspace' },
@@ -31,6 +32,7 @@ export const DEFAULT_HOTKEY_BINDINGS: HotkeyBinding[] = [
   { commandId: 'workspace.open-graph', label: 'workspace.open-graph', defaultChord: 'Ctrl+Alt+G', customChord: null, scope: 'workspace' },
   { commandId: 'workspace.open-history', label: 'workspace.open-history', defaultChord: 'Ctrl+Alt+H', customChord: null, scope: 'workspace' },
   { commandId: 'workspace.open-trash', label: 'workspace.open-trash', defaultChord: 'Ctrl+Alt+T', customChord: null, scope: 'workspace' },
+  { commandId: 'ai.chat.toggle', label: 'ai.chat.toggle', defaultChord: 'Ctrl+J', customChord: null, scope: 'workspace' },
   { commandId: 'app.open-settings', label: 'app.open-settings', defaultChord: 'Ctrl+,', customChord: null, scope: 'app' },
 ]
 
@@ -122,6 +124,7 @@ export function createDefaultWorkspaceSettings(): WorkspaceSettings {
       autosavePolicy: 'immediate',
       focusMode: 'off',
       typewriterScrolling: false,
+      dictationLanguage: 'auto',
       activeBlockEmphasis: false,
       pasteBehavior: 'smart',
       slashMenuHints: true,

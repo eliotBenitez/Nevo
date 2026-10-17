@@ -14,6 +14,8 @@ import type { NvMenuItemDef } from '../../ui/primitives/menu-types'
 import type { DatabaseRepository } from '../../features/database/databaseRepository'
 import type { NoteQueryRequest, NoteRow } from '../../types/note-query'
 import type { BlockRefResolution, BlockRefTarget } from '../../core/blockRef/resolveBlockRef'
+import type { AudioTranscriptSegment } from '../../core/media/audioTranscript'
+import type { TranscriptionLanguage } from '../../core/media/transcriptionLanguage'
 import { isElementWithinViewportMargin } from './viewportVisibility'
 
 export type NodeViewPosition = (() => number | undefined) | boolean
@@ -69,6 +71,8 @@ export interface CoreNodeViewOptions {
     setLoading: (v: boolean) => void
   }) => void
   onRequestMediaAsset?: (ctx: { view: EditorView; position: number; kind: 'audio' | 'video'; attrs: Record<string, unknown> }) => void
+  /** App-side native IPC; editor-core stays independent of Tauri and workspaces. */
+  onTranscribeAudio?: (src: string, language: TranscriptionLanguage) => Promise<AudioTranscriptSegment[]>
   onRequestEmbedUrl?: (ctx: { view: EditorView; position: number; anchorRect: DOMRect }) => void
   /** Resolves a `block_embed`'s target against the workspace backend. Absent
    *  (e.g. no app context in a test/preview render) renders the fallback. */

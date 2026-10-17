@@ -290,6 +290,8 @@
     }
   },
   "common": {
+    "notifications": "Notifications",
+    "undo": "Undo",
     "datePicker": {
       "placeholder": "Pick a date",
       "previousMonth": "Previous month",
@@ -768,6 +770,7 @@
     "mathApply": "Apply formula",
     "mathRemove": "Remove formula",
     "context": {
+      "noteArchived": "Note moved to archive",
       "rename": "Rename",
       "delete": "Delete",
       "search": "Search",
@@ -1431,6 +1434,37 @@
         "title": "Typewriter scrolling",
         "description": "Keep the active block near the centre of the viewport while typing"
       },
+      "dictationLanguage": {
+        "title": "Dictation language",
+        "description": "Speech language for dictation. By default it follows the interface language",
+        "interface": "Interface language"
+      },
+      "speechModel": {
+        "title": "Speech recognition model",
+        "description": "Model used for dictation and audio transcripts. Larger models are more accurate but slower and need a one-time download",
+        "models": {
+          "base": "Base (built-in)",
+          "small": "Small — more accurate",
+          "turbo": "Large v3 Turbo — maximum accuracy"
+        },
+        "hints": {
+          "base": "Fast, basic accuracy",
+          "small": "Better accuracy, about 2–3× slower",
+          "turbo": "Best accuracy, slow on CPU: several seconds per phrase"
+        },
+        "active": "Active",
+        "download": "Download",
+        "cancel": "Cancel",
+        "use": "Use",
+        "delete": "Delete",
+        "errors": {
+          "generic": "Could not change the speech model",
+          "busy": "Speech recognition is busy. Try again in a moment",
+          "inProgress": "A model is already downloading",
+          "integrity": "The downloaded model is corrupted. Try again",
+          "download": "Could not download the model. Check your connection"
+        }
+      },
       "activeBlockEmphasis": {
         "title": "Active block emphasis",
         "description": "Slightly dim adjacent blocks to focus attention on the current one"
@@ -1623,7 +1657,10 @@
         "title": "API type",
         "description": "Local server API protocol",
         "ollama": "Ollama",
-        "openai": "OpenAI-compatible (LM Studio, llama.cpp)"
+        "openai": "OpenAI-compatible (LM Studio, llama.cpp)",
+        "openrouter": "OpenRouter (free models)",
+        "openrouterNotice": "Cloud provider: your question and note excerpts are sent to OpenRouter. Free models have strict daily limits and some providers may log prompts. Needs a free API key from openrouter.ai/keys.",
+        "openrouterPrivacy": "Privacy mode is on and blocks cloud models — turn it off below to use OpenRouter."
       },
       "endpoint": {
         "title": "Ollama endpoint",
@@ -1660,9 +1697,16 @@
         "title": "Streaming output",
         "description": "Allow partial streamed completions"
       },
-      "cloudCredentials": {
-        "title": "Cloud credentials",
-        "description": "Provider secrets stay out of `.nevo/settings.json` until secure storage exists"
+      "apiKey": {
+        "title": "API key",
+        "description": "Needed by cloud OpenAI-compatible providers such as OpenRouter or Groq. Stored in the system keychain, never in workspace settings",
+        "saved": "A key is saved in the system keychain",
+        "error": "Could not access the system keychain",
+        "placeholder": "Paste API key",
+        "replacePlaceholder": "Paste a new key to replace it",
+        "save": "Save",
+        "replace": "Replace",
+        "clear": "Clear"
       }
     },
     "plugins": {
@@ -1882,6 +1926,8 @@
         "inlineMath": "Inline math",
         "findInNote": "Find in note",
         "replaceInNote": "Find & replace",
+        "toggleDictation": "Toggle dictation",
+        "toggleAiChat": "Toggle AI chat",
         "newNote": "Create note",
         "newFolder": "Create folder",
         "saveNote": "Save note",
@@ -2077,12 +2123,16 @@
       "deleteRow": "Delete Row",
       "deleteCol": "Delete Col",
       "deleteTable": "Delete Table",
+      "sortAsc": "Sort Column A→Z",
+      "sortDesc": "Sort Column Z→A",
+      "sortUnavailable": "Sorting is unavailable for tables with merged rows or formulas",
       "categories": {
         "insert": "Insert",
         "cells": "Cells",
         "alignment": "Alignment",
         "styling": "Styling",
-        "actions": "Actions"
+        "actions": "Actions",
+        "sort": "Sort"
       }
     },
     "assets": {
@@ -2426,7 +2476,43 @@
     "videoFile": "Video file",
     "audioFile": "Audio file",
     "play": "Play",
-    "pause": "Pause"
+    "pause": "Pause",
+    "audioPlayer": "Audio player",
+    "seek": "Seek audio",
+    "audioViewLabel": "Audio view",
+    "audioViewPlayer": "Player only",
+    "audioViewBookmarks": "With bookmarks",
+    "skipBack": "Back 10 seconds",
+    "skipForward": "Forward 10 seconds",
+    "playbackSpeed": "Playback speed",
+    "volume": "Volume",
+    "bookmarks": "Bookmarks",
+    "emptyBookmarks": "Add a bookmark to return to an important moment.",
+    "addBookmark": "Add bookmark",
+    "bookmarkName": "Bookmark name",
+    "bookmarkNamePlaceholder": "Name this moment",
+    "renameBookmark": "Rename bookmark",
+    "deleteBookmark": "Delete bookmark",
+    "loadingAudio": "Loading audio…",
+    "audioError": "Audio could not be loaded. Check the file and try again.",
+    "retryAudio": "Retry",
+    "transcript": "Transcript",
+    "transcribe": "Transcribe offline",
+    "retranscribe": "Transcribe again",
+    "transcriptLanguage": "Speech language",
+    "transcriptLanguages": {
+      "auto": "Detect automatically",
+      "ru": "Russian",
+      "en": "English",
+      "de": "German",
+      "fr": "French",
+      "es": "Spanish"
+    },
+    "transcribing": "Transcribing on this device…",
+    "transcriptEmpty": "No speech was recognized.",
+    "transcriptBusy": "Another recording is being transcribed. Try again shortly.",
+    "transcriptFailed": "Could not transcribe this audio. Check the file and try again.",
+    "cancel": "Cancel"
   },
   "voiceRecording": {
     "recording": "Recording",
@@ -2443,6 +2529,19 @@
       "stopFailed": "Could not stop recording.",
       "saveFailed": "The recording could not be saved. The audio file was kept in the app cache.",
       "unsupported": "Voice recording is not available on this device yet."
+    }
+  },
+  "dictation": {
+    "indicator": "Dictation is on. Click to stop, or press Esc",
+    "errors": {
+      "noDevice": "No microphone found.",
+      "permissionDenied": "Microphone access denied. Allow it in system settings and try again.",
+      "busy": "Audio is being transcribed right now. Wait for it to finish.",
+      "alreadyRecording": "A recording is already in progress.",
+      "modelUnavailable": "The speech model is not downloaded yet.",
+      "unsupported": "Dictation is not available on this device yet.",
+      "startFailed": "Could not start dictation.",
+      "failed": "Dictation stopped because of an error."
     }
   },
   "slashMenu": {
@@ -2473,6 +2572,7 @@
       "video": "Video",
       "audio": "Audio",
       "voice_recording": "Voice recording",
+      "dictation": "Dictation",
       "file": "File Attachment",
       "table": "Table",
       "mermaid": "Mermaid Diagram",
@@ -2482,6 +2582,7 @@
       "chart": "Chart",
       "database": "Database",
       "note_embed": "Note Embed",
+      "map": "Map",
       "embed": "Embed",
       "insert_template": "Insert Template",
       "quote": "Quote",
@@ -2509,7 +2610,10 @@
     "remove": "Remove",
     "loading": "Loading embed…",
     "error": "Failed to load embed",
-    "unsupported": "Unsupported URL"
+    "unsupported": "Unsupported URL",
+    "mapLabel": "Address or map link",
+    "mapPlaceholder": "Red Square, Moscow",
+    "showMap": "Show map"
   },
   "image": {
     "menu": {
@@ -2521,13 +2625,20 @@
       "alignLeft": "Left",
       "alignCenter": "Center",
       "alignRight": "Right",
-      "width": "Width"
+      "width": "Width",
+      "open": "Open full screen"
     },
     "size": {
       "small": "Small",
       "medium": "Medium",
       "large": "Large",
       "full": "Full width"
+    },
+    "lightbox": {
+      "title": "Image viewer",
+      "counter": "{current} of {total}",
+      "previous": "Previous image",
+      "next": "Next image"
     }
   },
   "database": {
@@ -3094,5 +3205,99 @@
     "errors": { "pageLimit": "The notebook has reached the page limit.", "objectLimit": "The notebook has reached the mark limit.", "pointLimit": "The notebook has reached the ink detail limit.", "serializedLimit": "The notebook has reached its storage limit.", "unsupported": "This notebook format cannot be edited by this version.", "invalid": "Notebook data could not be safely opened for editing.", "export": "The PDF could not be exported.", "imageType": "Only PNG, JPEG, WebP, and GIF images are supported.", "imageImport": "Could not insert the image." },
     "deletePage": { "title": "Delete this page?", "message": "This page contains ink. You can restore it with Undo.", "confirm": "Delete page", "cancel": "Keep page" },
     "palette": {"open": "Color palette", "builtin": "Palette", "custom": "My colors", "recent": "Recent", "addCurrent": "Add current color", "edit": "Edit", "done": "Done", "remove": "Remove color {color}", "quick": "Quick color choice", "colors": {"black": "Black", "graphite": "Graphite", "blue": "Blue", "sky": "Sky blue", "red": "Red", "orange": "Orange", "yellow": "Yellow", "green": "Green", "teal": "Teal", "purple": "Purple", "pink": "Pink", "brown": "Brown"}}
+  },
+  "aiChat": {
+    "launcher": {
+      "label": "Ask AI",
+      "busy": "Answering in the background",
+      "unread": "Answer ready",
+      "offline": "Model unavailable"
+    },
+    "dialogLabel": "AI chat",
+    "header": {
+      "newChatTitle": "New chat",
+      "newChat": "New chat",
+      "dock": "Dock to the right",
+      "undock": "Undock",
+      "collapse": "Collapse",
+      "close": "Close chat"
+    },
+    "scope": {
+      "searchingIn": "Searching in",
+      "menuLabel": "Search scope",
+      "workspace": "Whole workspace",
+      "note": "This note only",
+      "removeNote": "Remove note from context",
+      "addNote": "Add this note to context"
+    },
+    "log": {
+      "label": "Conversation"
+    },
+    "empty": {
+      "heading": "What do you want to ask your notes?",
+      "description": "Answers draw on your notes and show where each fact came from.",
+      "forNote": "For this note",
+      "forWorkspace": "Try asking",
+      "suggestions": {
+        "summarizeNote": "Summarize this note",
+        "relatedNotes": "Find notes related to this one",
+        "openTasks": "List open tasks in this note",
+        "workspaceRecent": "What have I been working on lately?",
+        "workspaceTasks": "List open tasks across my notes",
+        "workspaceThemes": "What are the main themes in my notes?"
+      }
+    },
+    "message": {
+      "sources": "Sources",
+      "stopped": "stopped",
+      "citation": "Source {n}: {title}",
+      "thinking": "Thinking"
+    },
+    "actions": {
+      "insert": "Insert",
+      "replace": "Replace selection",
+      "replaceNeedsSelection": "Select text in a note first",
+      "copy": "Copy",
+      "saveAsNote": "Save as new note",
+      "retry": "Retry",
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "diffLabel": "Replacement preview"
+    },
+    "error": {
+      "offlineTitle": "Model not responding",
+      "offlineBody": "No response from {host}. Start the model server or choose another model.",
+      "privacyTitle": "Cloud model blocked",
+      "privacyBody": "Private mode only allows models on this computer, so the request to {host} was not sent.",
+      "otherTitle": "Something went wrong",
+      "rateLimitTitle": "Rate limit reached",
+      "rateLimitBody": "{host} is limiting requests. Free models allow only a few requests per minute and per day — wait a little or choose another model.",
+      "authTitle": "API key rejected",
+      "authBody": "{host} did not accept the API key. Check the key in AI settings.",
+      "retry": "Retry",
+      "openSettings": "AI settings",
+      "chooseLocal": "Choose local model"
+    },
+    "composer": {
+      "label": "Message",
+      "placeholder": "Ask about your notes",
+      "send": "Send",
+      "stop": "Stop",
+      "modelAria": "Model: {model}, {where}",
+      "modelsLoading": "Loading models…",
+      "modelsError": "Couldn't load models — check AI settings",
+      "modelsEmpty": "No models found",
+      "local": "local"
+    },
+    "toast": {
+      "selectionChanged": "The selected text changed. Select it again and retry.",
+      "emptyAnswer": "The answer is empty.",
+      "editorUnavailable": "Open a note in the editor first.",
+      "createFailed": "Could not create the note.",
+      "noteCreated": "Saved as a new note",
+      "copyFailed": "Could not copy the answer.",
+      "actionFailed": "The action could not be completed."
+    },
+    "untitled": "Untitled"
   }
 }

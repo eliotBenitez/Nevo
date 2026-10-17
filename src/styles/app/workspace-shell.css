@@ -25,19 +25,22 @@
   /* The bottom safe area keeps the island clear of a tablet's gesture bar. */
   padding: 0 var(--island-inset) calc(var(--island-inset) + max(var(--safe-area-bottom), 0px)) 0;
 }
+.workspace-body:not(.workspace-body--drawer) { transition: padding-left 0.22s cubic-bezier(0.4, 0, 0.2, 1); }
 .workspace-body--inset-left { padding-left: var(--island-inset); }
-.workspace-sidebar-shell { flex: 0 0 var(--app-sidebar-width, 272px); width: var(--app-sidebar-width, 272px); overflow: hidden; transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), flex-basis 0.22s cubic-bezier(0.4, 0, 0.2, 1); contain: layout paint; }
+/* Content keeps its full width and is anchored to the shell's right edge, so it
+   slides out under the clip like the right panel instead of squeezing. */
+.workspace-sidebar-shell { display: flex; justify-content: flex-end; flex: 0 0 var(--app-sidebar-width, 272px); width: var(--app-sidebar-width, 272px); overflow: hidden; transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), flex-basis 0.22s cubic-bezier(0.4, 0, 0.2, 1); contain: layout paint; }
 .workspace-sidebar-shell--tag-preview { --app-sidebar-width: clamp(420px, 28vw, 480px); }
 .workspace-sidebar-shell--hidden { flex-basis: 0; width: 0; }
 .workspace-sidebar-shell--desktop:not(.workspace-sidebar-shell--floating) .sidebar {
-  width: 100%;
-  flex-basis: auto;
+  width: var(--app-sidebar-width, 272px);
+  flex: 0 0 var(--app-sidebar-width, 272px);
   border-radius: 0;
 }
 /* Floating sidebar is an overlay surface (spec §5, §10.1): it hovers above the
    island content on hover/pin rather than sharing the frame tone. */
 .workspace-sidebar-shell--floating {
-  position: absolute; left: 0; top: 0; bottom: 0; height: 100%;
+  display: block; position: absolute; left: 0; top: 0; bottom: 0; height: 100%;
   z-index: 20; flex: none;
   width: var(--app-sidebar-width, 272px);
   transform: translateX(calc(-100% - 64px));

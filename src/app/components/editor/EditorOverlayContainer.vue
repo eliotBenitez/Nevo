@@ -37,6 +37,7 @@ export interface CalloutIconPickerState {
 
 export interface EmbedUrlPopoverState {
   open: boolean
+  mode: 'embed' | 'map'
   nodePos: number | null
   position: { top: number; left: number }
 }
@@ -406,6 +407,7 @@ defineExpose({
       <EditorEmbedUrlPopover
         ref="embedUrlPopoverCompRef"
         :open="embedUrlPopover.open"
+        :mode="embedUrlPopover.mode"
         :position="embedUrlPopover.position"
         @confirm="handlers.confirmEmbedUrl"
         @cancel="handlers.cancelEmbedUrl"

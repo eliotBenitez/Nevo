@@ -290,6 +290,8 @@
     }
   },
   "common": {
+    "notifications": "Notificaciones",
+    "undo": "Deshacer",
     "datePicker": {
       "placeholder": "Elegir una fecha",
       "previousMonth": "Mes anterior",
@@ -768,6 +770,7 @@
     "mathApply": "Aplicar fórmula",
     "mathRemove": "Quitar fórmula",
     "context": {
+      "noteArchived": "Nota movida al archivo",
       "rename": "Renombrar",
       "delete": "Eliminar",
       "search": "Buscar",
@@ -1431,6 +1434,37 @@
         "title": "Desplazamiento máquina de escribir",
         "description": "Mantener el bloque activo cerca del centro durante la escritura"
       },
+      "dictationLanguage": {
+        "title": "Idioma del dictado",
+        "description": "Idioma hablado para el dictado. Por defecto, el de la interfaz",
+        "interface": "Idioma de la interfaz"
+      },
+      "speechModel": {
+        "title": "Modelo de reconocimiento de voz",
+        "description": "Modelo usado para el dictado y las transcripciones de audio. Los modelos más grandes son más precisos pero más lentos y requieren una descarga única",
+        "models": {
+          "base": "Básico (integrado)",
+          "small": "Small — más preciso",
+          "turbo": "Large v3 Turbo — máxima precisión"
+        },
+        "hints": {
+          "base": "Rápido, precisión básica",
+          "small": "Mejor precisión, aproximadamente 2–3 veces más lento",
+          "turbo": "Mejor precisión, lento en CPU: varios segundos por frase"
+        },
+        "active": "Activo",
+        "download": "Descargar",
+        "cancel": "Cancelar",
+        "use": "Usar",
+        "delete": "Eliminar",
+        "errors": {
+          "generic": "No se pudo cambiar el modelo de reconocimiento de voz",
+          "busy": "El reconocimiento de voz está ocupado. Inténtalo de nuevo en un momento",
+          "inProgress": "Ya se está descargando un modelo",
+          "integrity": "El modelo descargado está dañado. Inténtalo de nuevo",
+          "download": "No se pudo descargar el modelo. Comprueba tu conexión"
+        }
+      },
       "activeBlockEmphasis": {
         "title": "Énfasis del bloque activo",
         "description": "Atenúa ligeramente los bloques adyacentes para foco en el actual"
@@ -1623,7 +1657,10 @@
         "title": "Tipo de API",
         "description": "Protocolo del servidor local",
         "ollama": "Ollama",
-        "openai": "Compatible con OpenAI (LM Studio, llama.cpp)"
+        "openai": "Compatible con OpenAI (LM Studio, llama.cpp)",
+        "openrouter": "OpenRouter (modelos gratuitos)",
+        "openrouterNotice": "Proveedor en la nube: tu pregunta y fragmentos de notas se envían a OpenRouter. Los modelos gratuitos tienen límites diarios estrictos y algunos proveedores pueden registrar las solicitudes. Necesita una clave de API gratuita de openrouter.ai/keys.",
+        "openrouterPrivacy": "El modo de privacidad está activado y bloquea los modelos en la nube: desactívalo abajo para usar OpenRouter."
       },
       "endpoint": {
         "title": "Endpoint de Ollama",
@@ -1660,9 +1697,16 @@
         "title": "Salida en flujo",
         "description": "Permitir respuestas parciales en flujo"
       },
-      "cloudCredentials": {
-        "title": "Credenciales en la nube",
-        "description": "Los secretos de proveedores se mantienen fuera de `.nevo/settings.json` hasta que exista almacenamiento seguro"
+      "apiKey": {
+        "title": "Clave de API",
+        "description": "La necesitan los proveedores en la nube compatibles con OpenAI, como OpenRouter o Groq. Se guarda en el llavero del sistema, nunca en los ajustes del espacio de trabajo",
+        "saved": "Hay una clave guardada en el llavero del sistema",
+        "error": "No se pudo acceder al llavero del sistema",
+        "placeholder": "Pega la clave de API",
+        "replacePlaceholder": "Pega una clave nueva para reemplazarla",
+        "save": "Guardar",
+        "replace": "Reemplazar",
+        "clear": "Borrar"
       }
     },
     "plugins": {
@@ -1882,6 +1926,8 @@
         "inlineMath": "Matemática en línea",
         "findInNote": "Buscar en la nota",
         "replaceInNote": "Buscar y reemplazar",
+        "toggleDictation": "Activar o desactivar el dictado",
+        "toggleAiChat": "Mostrar u ocultar el chat de IA",
         "newNote": "Crear nota",
         "newFolder": "Crear carpeta",
         "saveNote": "Guardar nota",
@@ -2077,12 +2123,16 @@
       "deleteRow": "Eliminar fila",
       "deleteCol": "Eliminar columna",
       "deleteTable": "Eliminar tabla",
+      "sortAsc": "Ordenar columna A→Z",
+      "sortDesc": "Ordenar columna Z→A",
+      "sortUnavailable": "No se puede ordenar una tabla con filas combinadas o fórmulas",
       "categories": {
         "insert": "Insertar",
         "cells": "Celdas",
         "alignment": "Alineación",
         "styling": "Estilo",
-        "actions": "Acciones"
+        "actions": "Acciones",
+        "sort": "Ordenar"
       }
     },
     "assets": {
@@ -2426,7 +2476,43 @@
     "videoFile": "Archivo de vídeo",
     "audioFile": "Archivo de audio",
     "play": "Reproducir",
-    "pause": "Pausar"
+    "pause": "Pausar",
+    "audioPlayer": "Reproductor de audio",
+    "seek": "Buscar en el audio",
+    "audioViewLabel": "Vista de audio",
+    "audioViewPlayer": "Solo escucha",
+    "audioViewBookmarks": "Con marcadores",
+    "skipBack": "Retroceder 10 segundos",
+    "skipForward": "Avanzar 10 segundos",
+    "playbackSpeed": "Velocidad de reproducción",
+    "volume": "Volumen",
+    "bookmarks": "Marcadores",
+    "emptyBookmarks": "Añade un marcador para volver a un momento importante.",
+    "addBookmark": "Añadir marcador",
+    "bookmarkName": "Nombre del marcador",
+    "bookmarkNamePlaceholder": "Nombra este momento",
+    "renameBookmark": "Cambiar nombre del marcador",
+    "deleteBookmark": "Eliminar marcador",
+    "loadingAudio": "Cargando audio…",
+    "audioError": "No se pudo cargar el audio. Comprueba el archivo e inténtalo de nuevo.",
+    "retryAudio": "Reintentar",
+    "transcript": "Transcripción",
+    "transcribe": "Transcribir sin conexión",
+    "retranscribe": "Transcribir de nuevo",
+    "transcriptLanguage": "Idioma de la grabación",
+    "transcriptLanguages": {
+      "auto": "Detectar automáticamente",
+      "ru": "Ruso",
+      "en": "Inglés",
+      "de": "Alemán",
+      "fr": "Francés",
+      "es": "Español"
+    },
+    "transcribing": "Transcribiendo en este dispositivo…",
+    "transcriptEmpty": "No se reconoció voz.",
+    "transcriptBusy": "Ya se está transcribiendo otra grabación. Inténtalo más tarde.",
+    "transcriptFailed": "No se pudo transcribir este audio. Comprueba el archivo e inténtalo de nuevo.",
+    "cancel": "Cancelar"
   },
   "voiceRecording": {
     "recording": "Grabando",
@@ -2443,6 +2529,19 @@
       "stopFailed": "No se pudo detener la grabación.",
       "saveFailed": "No se pudo guardar la grabación. El archivo de audio se conservó en la caché de la aplicación.",
       "unsupported": "La grabación de voz aún no está disponible en este dispositivo."
+    }
+  },
+  "dictation": {
+    "indicator": "Dictado en curso. Haz clic para detenerlo o pulsa Esc",
+    "errors": {
+      "noDevice": "No se encontró ningún micrófono.",
+      "permissionDenied": "Acceso al micrófono denegado. Permítelo en los ajustes del sistema e inténtalo de nuevo.",
+      "busy": "Ahora se está transcribiendo un audio. Espera a que termine.",
+      "alreadyRecording": "Ya hay una grabación en curso.",
+      "modelUnavailable": "El modelo de reconocimiento de voz aún no está descargado.",
+      "unsupported": "El dictado todavía no está disponible en este dispositivo.",
+      "startFailed": "No se pudo iniciar el dictado.",
+      "failed": "El dictado se detuvo por un error."
     }
   },
   "slashMenu": {
@@ -2473,6 +2572,7 @@
       "video": "Vídeo",
       "audio": "Audio",
       "voice_recording": "Grabación de voz",
+      "dictation": "Dictado",
       "file": "Archivo adjunto",
       "table": "Tabla",
       "mermaid": "Diagrama Mermaid",
@@ -2482,6 +2582,7 @@
       "chart": "Gráfico",
       "database": "Base de datos",
       "note_embed": "Incrustar nota",
+      "map": "Mapa",
       "embed": "Incrustación",
       "insert_template": "Insertar plantilla",
       "quote": "Cita",
@@ -2509,7 +2610,10 @@
     "remove": "Quitar",
     "loading": "Cargando incrustación…",
     "error": "Error al cargar la incrustación",
-    "unsupported": "URL no admitida"
+    "unsupported": "URL no admitida",
+    "mapLabel": "Dirección o enlace de mapa",
+    "mapPlaceholder": "Puerta del Sol, Madrid",
+    "showMap": "Mostrar mapa"
   },
   "image": {
     "menu": {
@@ -2521,13 +2625,20 @@
       "alignLeft": "Izquierda",
       "alignCenter": "Centro",
       "alignRight": "Derecha",
-      "width": "Ancho"
+      "width": "Ancho",
+      "open": "Abrir a pantalla completa"
     },
     "size": {
       "small": "Pequeña",
       "medium": "Mediana",
       "large": "Grande",
       "full": "Ancho completo"
+    },
+    "lightbox": {
+      "title": "Visor de imágenes",
+      "counter": "{current} de {total}",
+      "previous": "Imagen anterior",
+      "next": "Imagen siguiente"
     }
   },
   "database": {
@@ -3094,5 +3205,99 @@
     "errors": { "pageLimit": "El cuaderno alcanzó el límite de páginas.", "objectLimit": "El cuaderno alcanzó el límite de trazos.", "pointLimit": "El cuaderno alcanzó el límite de detalle de tinta.", "serializedLimit": "El cuaderno alcanzó el límite de almacenamiento.", "unsupported": "Esta versión no puede editar este cuaderno.", "invalid": "No se pudieron abrir los datos del cuaderno de forma segura para editarlos.", "export": "No se pudo exportar el PDF.", "imageType": "Solo se admiten imágenes PNG, JPEG, WebP y GIF.", "imageImport": "No se pudo insertar la imagen." },
     "deletePage": { "title": "¿Eliminar esta página?", "message": "La página contiene tinta. Puedes restaurarla con Deshacer.", "confirm": "Eliminar página", "cancel": "Conservar página" },
     "palette": {"open": "Paleta de colores", "builtin": "Paleta", "custom": "Mis colores", "recent": "Recientes", "addCurrent": "Añadir el color actual", "edit": "Editar", "done": "Hecho", "remove": "Eliminar el color {color}", "quick": "Selección rápida de color", "colors": {"black": "Negro", "graphite": "Grafito", "blue": "Azul", "sky": "Celeste", "red": "Rojo", "orange": "Naranja", "yellow": "Amarillo", "green": "Verde", "teal": "Turquesa", "purple": "Morado", "pink": "Rosa", "brown": "Marrón"}}
+  },
+  "aiChat": {
+    "launcher": {
+      "label": "Preguntar a la IA",
+      "busy": "Respondiendo en segundo plano",
+      "unread": "Respuesta lista",
+      "offline": "Modelo no disponible"
+    },
+    "dialogLabel": "Chat de IA",
+    "header": {
+      "newChatTitle": "Nuevo chat",
+      "newChat": "Nuevo chat",
+      "dock": "Anclar a la derecha",
+      "undock": "Desanclar",
+      "collapse": "Contraer",
+      "close": "Cerrar el chat"
+    },
+    "scope": {
+      "searchingIn": "Buscando en",
+      "menuLabel": "Ámbito de búsqueda",
+      "workspace": "Todo el workspace",
+      "note": "Solo esta nota",
+      "removeNote": "Quitar la nota del contexto",
+      "addNote": "Añadir la nota al contexto"
+    },
+    "log": {
+      "label": "Conversación"
+    },
+    "empty": {
+      "heading": "¿Qué quieres preguntar a tus notas?",
+      "description": "Las respuestas se basan en tus notas e indican de dónde sale cada dato.",
+      "forNote": "Para esta nota",
+      "forWorkspace": "Prueba a preguntar",
+      "suggestions": {
+        "summarizeNote": "Resume esta nota",
+        "relatedNotes": "Busca notas relacionadas con esta",
+        "openTasks": "Enumera las tareas abiertas de esta nota",
+        "workspaceRecent": "¿En qué he estado trabajando últimamente?",
+        "workspaceTasks": "Enumera las tareas abiertas de todas mis notas",
+        "workspaceThemes": "¿Cuáles son los temas principales de mis notas?"
+      }
+    },
+    "message": {
+      "sources": "Fuentes",
+      "stopped": "detenido",
+      "citation": "Fuente {n}: {title}",
+      "thinking": "Pensando"
+    },
+    "actions": {
+      "insert": "Insertar",
+      "replace": "Reemplazar selección",
+      "replaceNeedsSelection": "Primero selecciona texto en una nota",
+      "copy": "Copiar",
+      "saveAsNote": "Guardar como nota nueva",
+      "retry": "Reintentar",
+      "apply": "Aplicar",
+      "cancel": "Cancelar",
+      "diffLabel": "Vista previa del reemplazo"
+    },
+    "error": {
+      "offlineTitle": "El modelo no responde",
+      "offlineBody": "Sin respuesta de {host}. Inicia el servidor del modelo o elige otro modelo.",
+      "privacyTitle": "Modelo en la nube bloqueado",
+      "privacyBody": "El modo privado solo permite modelos de este equipo, así que la solicitud a {host} no se envió.",
+      "otherTitle": "Algo salió mal",
+      "rateLimitTitle": "Límite de solicitudes alcanzado",
+      "rateLimitBody": "{host} está limitando las solicitudes. Los modelos gratuitos solo permiten unas pocas solicitudes por minuto y por día: espera un poco o elige otro modelo.",
+      "authTitle": "Clave de API rechazada",
+      "authBody": "{host} no aceptó la clave de API. Revísala en los ajustes de IA.",
+      "retry": "Reintentar",
+      "openSettings": "Ajustes de IA",
+      "chooseLocal": "Elegir un modelo local"
+    },
+    "composer": {
+      "label": "Mensaje",
+      "placeholder": "Pregunta sobre tus notas",
+      "send": "Enviar",
+      "stop": "Detener",
+      "modelAria": "Modelo: {model}, {where}",
+      "modelsLoading": "Cargando modelos…",
+      "modelsError": "No se pudieron cargar los modelos: revisa los ajustes de IA",
+      "modelsEmpty": "No se encontraron modelos",
+      "local": "local"
+    },
+    "toast": {
+      "selectionChanged": "El texto seleccionado cambió. Selecciónalo de nuevo y reintenta.",
+      "emptyAnswer": "La respuesta está vacía.",
+      "editorUnavailable": "Primero abre una nota en el editor.",
+      "createFailed": "No se pudo crear la nota.",
+      "noteCreated": "Guardado como nota nueva",
+      "copyFailed": "No se pudo copiar la respuesta.",
+      "actionFailed": "No se pudo completar la acción."
+    },
+    "untitled": "Sin título"
   }
 }

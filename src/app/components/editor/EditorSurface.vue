@@ -27,6 +27,8 @@ import { useMarkmapEditor } from '../../composables/editor/useMarkmapEditor'
 import { useVegaEditor } from '../../composables/editor/useVegaEditor'
 import { useLinkEditor } from '../../composables/editor/useLinkEditor'
 import { useImageContextMenu } from '../../composables/editor/useImageContextMenu'
+import { useImageLightbox } from '../../composables/editor/useImageLightbox'
+import ImageLightbox from './ImageLightbox.vue'
 import { useEmbedUrlPopover } from '../../composables/editor/useEmbedUrlPopover'
 import { useNoteEmbedPicker } from '../../composables/editor/useNoteEmbedPicker'
 import { useCalloutIconPicker } from '../../composables/editor/useCalloutIconPicker'
@@ -136,7 +138,8 @@ const overlays = useEditorOverlays(core, {
 })
 const { slashOverlay, toolbarOverlay, tableMenuOverlay, linkPopover, highlightPicker, textColorPicker, mathPopover, formulaPopover, mermaidPopover, queryPopover, markmapPopover, vegaPopover, pluginNodePopover, linkPickerOverlay, activeMarkNames } = overlays
 
-const { imageCtxMenu, imageMenuItems, openImageContextMenu } = useImageContextMenu(() => props.workspacePath)
+const imageLightbox = useImageLightbox(editorRoot)
+const { imageCtxMenu, imageMenuItems, openImageContextMenu } = useImageContextMenu(() => props.workspacePath, imageLightbox.openFrom)
 
 const imageUpload = useImageUpload(core, () => props.workspacePath, overlays.updateOverlays)
 const fileUpload = useFileUpload(core, () => props.workspacePath, overlays.updateOverlays)
@@ -367,7 +370,7 @@ const editorSetup = useEditorCore(core, {
   onMediaPickerRequest: (pos, kind) => mediaUpload.requestMediaPicker(pos, kind),
   voiceRecording: isVoiceRecordingSupported() ? voiceRecording.bindings : undefined,
   onNoteEmbedPickRequest: (pos, anchorRect) => openNoteEmbedPicker(pos, anchorRect),
-  onEmbedUrlRequest: (pos, anchorRect) => openEmbedUrlPopover(pos, anchorRect),
+  onEmbedUrlRequest: (pos, anchorRect, mode) => openEmbedUrlPopover(pos, anchorRect, mode),
   onNoteEmbedContentLoad: async ({ noteId, setHtml, setLoading }) => {
     setLoading(true)
     try {
@@ -859,6 +862,15 @@ defineExpose({
       </ul>
     </div>
   </div>
+
+  <ImageLightbox
+    :open="imageLightbox.open.value"
+    :images="imageLightbox.images.value"
+    :index="imageLightbox.index.value"
+    @close="imageLightbox.close"
+    @next="imageLightbox.next"
+    @previous="imageLightbox.previous"
+  />
 
   <EditorOverlayContainer
     ref="overlayContainerRef"

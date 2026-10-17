@@ -6,8 +6,11 @@ import type { ClampOverlayPosition } from './editorPopoverPosition'
 import { isProseMirrorTransformError } from './prosemirrorErrors'
 import { appLogger } from '../../../utils/logger'
 
+export type EmbedUrlMode = 'embed' | 'map'
+
 export interface EmbedUrlPopoverState {
   open: boolean
+  mode: EmbedUrlMode
   nodePos: number | null
   position: { top: number; left: number }
 }
@@ -35,6 +38,7 @@ export function useEmbedUrlPopover(
 ) {
   const embedUrlPopover = reactive<EmbedUrlPopoverState>({
     open: false,
+    mode: 'embed',
     nodePos: null,
     position: { top: 0, left: 0 },
   })
@@ -50,8 +54,10 @@ export function useEmbedUrlPopover(
     embedUrlPopover.nodePos = null
   }
 
-  function openEmbedUrlPopover(pos: number, anchorRect: DOMRect) {
+  function openEmbedUrlPopover(pos: number, anchorRect: DOMRect, mode?: EmbedUrlMode) {
     embedUrlOutsideClickIgnoreUntil = Date.now() + 250
+    // "Change URL" on an existing map block reopens the address field.
+    embedUrlPopover.mode = mode ?? (core.editorView?.state.doc.nodeAt(pos)?.attrs.embedType === 'map' ? 'map' : 'embed')
     embedUrlPopover.nodePos = pos
     embedUrlPopover.position = { top: anchorRect.bottom + 8, left: anchorRect.left }
     embedUrlPopover.open = true

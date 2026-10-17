@@ -548,9 +548,15 @@ mod tests {
     fn uses_codex_home_override_and_windows_profile_precedence() {
         let codex_home = temp_path("custom-codex-home");
         std::fs::create_dir_all(&codex_home).expect("Codex home");
+        // Profile paths must be absolute on the host OS, so derive them from temp_dir.
+        let unix_home = temp_path("home-unix");
+        let windows_profile = temp_path("users-windows");
         let env = HashMap::from([
-            ("HOME".to_string(), "/home/unix".to_string()),
-            ("USERPROFILE".to_string(), "/users/windows".to_string()),
+            ("HOME".to_string(), unix_home.to_string_lossy().into_owned()),
+            (
+                "USERPROFILE".to_string(),
+                windows_profile.to_string_lossy().into_owned(),
+            ),
             (
                 "CODEX_HOME".to_string(),
                 codex_home.to_string_lossy().into_owned(),
@@ -562,7 +568,7 @@ mod tests {
         );
         assert_eq!(
             paths::config_path_for(Agent::ClaudeCode, &env, "windows").expect("Claude path"),
-            std::path::PathBuf::from("/users/windows/.claude.json")
+            windows_profile.join(".claude.json")
         );
     }
 

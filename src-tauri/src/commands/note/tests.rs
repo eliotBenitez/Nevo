@@ -807,3 +807,34 @@ fn note_round_trip_preserves_an_unknown_top_level_field() {
         serde_json::Value::from("from-a-newer-build")
     );
 }
+
+#[test]
+fn search_note_context_skips_malformed_notes_and_returns_hits() {
+    let workspace = TestWorkspace::new();
+    let workspace_path = workspace.path_string();
+
+    let malformed_path = note_path(&workspace_path, "broken").expect("valid note id");
+    std::fs::write(&malformed_path, "{ nope").expect("write malformed note");
+
+    let mut note = create_note_impl(
+        workspace_path.clone(),
+        None,
+        "Sensors".to_string(),
+        "📄".to_string(),
+    )
+    .expect("create note");
+    note.content = json!({
+        "type": "doc",
+        "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Calibrated sensor readings" }] }]
+    });
+    save_note_impl(workspace_path.clone(), note).expect("save note");
+
+    let hits = crate::commands::note::context_search::search_note_context_sync(
+        workspace_path,
+        "sensors".to_string(),
+        None,
+    )
+    .expect("search context");
+    assert_eq!(hits.len(), 1);
+    assert_eq!(hits[0].note_title, "Sensors");
+}

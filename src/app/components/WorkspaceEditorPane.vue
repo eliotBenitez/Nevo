@@ -27,6 +27,7 @@ import { useMarkmapEditor } from '../composables/editor/useMarkmapEditor'
 import { useVegaEditor } from '../composables/editor/useVegaEditor'
 import { useLinkEditor } from '../composables/editor/useLinkEditor'
 import { useImageContextMenu } from '../composables/editor/useImageContextMenu'
+import { useImageLightbox } from '../composables/editor/useImageLightbox'
 import { useEditorContextMenu } from '../composables/editor/useEditorContextMenu'
 import { useEmbedUrlPopover } from '../composables/editor/useEmbedUrlPopover'
 import { useNoteEmbedPicker } from '../composables/editor/useNoteEmbedPicker'
@@ -37,6 +38,8 @@ import { useFileUpload } from '../composables/editor/useFileUpload'
 import { useMediaUpload } from '../composables/editor/useMediaUpload'
 import { useVoiceRecording } from '../composables/editor/useVoiceRecording'
 import { isVoiceRecordingSupported } from '../../tauri/voiceRecording'
+import { useDictation } from '../composables/editor/useDictation'
+import { isDictationSupported } from '../../tauri/dictation'
 import { useBlockHandle } from '../composables/editor/useBlockHandle'
 import { useDeviceLayout } from '../../composables/useDeviceLayout'
 import { useEditorScrollbar } from '../composables/editor/useEditorScrollbar'
@@ -59,6 +62,7 @@ import NvPopupMenu from '../../ui/primitives/NvPopupMenu.vue'
 import DocAppearance from './editor/DocAppearance.vue'
 import AiAskModal from './editor/AiAskModal.vue'
 import NoteEmbedPicker from './editor/NoteEmbedPicker.vue'
+import ImageLightbox from './editor/ImageLightbox.vue'
 import EditorOverlayContainer from './editor/EditorOverlayContainer.vue'
 import EditorFindBar from './editor/EditorFindBar.vue'
 import MobileEditorTabBar from './editor/MobileEditorTabBar.vue'
@@ -225,7 +229,8 @@ const overlays = useEditorOverlays(core, {
 })
 const { slashOverlay, toolbarOverlay, tableMenuOverlay, linkPopover, highlightPicker, textColorPicker, mathPopover, formulaPopover, mermaidPopover, queryPopover, markmapPopover, vegaPopover, pluginNodePopover, linkPickerOverlay, activeMarkNames } = overlays
 
-const { imageCtxMenu, imageMenuItems, openImageContextMenu } = useImageContextMenu(() => props.workspacePath)
+const imageLightbox = useImageLightbox(editorRoot)
+const { imageCtxMenu, imageMenuItems, openImageContextMenu } = useImageContextMenu(() => props.workspacePath, imageLightbox.openFrom)
 const { ctxMenu: editorCtxMenu, menuItems: editorMenuItems, openContextMenu: openEditorContextMenu } = useEditorContextMenu(core, () => props.note?.id ?? null)
 
 const {
@@ -369,6 +374,7 @@ const imageUpload = useImageUpload(core, () => props.workspacePath, overlays.upd
 const fileUpload = useFileUpload(core, () => props.workspacePath, overlays.updateOverlays)
 const mediaUpload = useMediaUpload(core, () => props.workspacePath, overlays.updateOverlays)
 const voiceRecording = useVoiceRecording(core, () => props.workspacePath, overlays.updateOverlays)
+const dictation = useDictation(core, () => props.settings.editor.dictationLanguage)
 const notePreload = useNotePreload()
 
 const insertTemplatePickerOpen = ref(false)
@@ -452,6 +458,7 @@ const {
   openFileAsset,
   requestMediaPicker: mediaUpload.requestMediaPicker,
   voiceRecording: isVoiceRecordingSupported() ? voiceRecording.bindings : undefined,
+  dictation: isDictationSupported() ? dictation.bindings : undefined,
   openNoteEmbedPicker,
   openEmbedUrlPopover,
   openNoteEmbed: openNoteById,
@@ -578,6 +585,7 @@ const {
   closeNoteEmbedPicker,
   isEmbedOpeningClickIgnored,
   onEditorScroll: originalOnEditorScroll,
+  resizeTarget: editorScrollEl,
   repositionOverlays: [
     {
       isActive: () => slashOverlay.open
@@ -686,6 +694,7 @@ const editorLifecycle = useWorkspaceEditorLifecycle({
   core,
   editorSetup,
   editorRoot,
+  getScrollEl: () => editorScrollEl.value,
   isTouch,
   scrollbarVisible,
   locale,
@@ -743,7 +752,7 @@ pluginRuntime = useEditorPluginRuntime({
 })
 const { dispatchPluginUiEvent } = pluginRuntime
 
-defineExpose({ editorRoot, flushPendingContent, updateDrawBlock, dispatchPluginUiEvent, openFindInNote })
+defineExpose({ toggleDictation: () => { if (isDictationSupported()) dictation.toggle() }, editorRoot, flushPendingContent, updateDrawBlock, dispatchPluginUiEvent, openFindInNote })
 </script>
 
 <template>
@@ -1012,6 +1021,15 @@ defineExpose({ editorRoot, flushPendingContent, updateDrawBlock, dispatchPluginU
       :position="imageCtxMenu.pos"
       :items="imageMenuItems"
       width="192px"
+    />
+
+    <ImageLightbox
+      :open="imageLightbox.open.value"
+      :images="imageLightbox.images.value"
+      :index="imageLightbox.index.value"
+      @close="imageLightbox.close"
+      @next="imageLightbox.next"
+      @previous="imageLightbox.previous"
     />
 
     <NoteEmbedPicker

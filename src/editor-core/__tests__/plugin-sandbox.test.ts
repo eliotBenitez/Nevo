@@ -728,7 +728,7 @@ describe('sandboxed plugin host', () => {
     expect(() => validateManifest(manifest({ capabilities: undefined }), '1.0.0'))
       .toThrow('requires a unified capabilities array')
     expect(() => validateManifest(manifest({ apiVersion: '1.0.0' }), '1.0.0'))
-      .toThrow('expected 2.0.0 for sandboxed-worker')
+      .toThrow('expected 2.1.0 for sandboxed-worker')
     expect(() => validateManifest(manifest({
       apiVersion: '2.0.0',
       executionMode: 'trusted-webview',
@@ -866,6 +866,43 @@ describe('sandboxed plugin host', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('registers a docx serializer and rejects non-object or oversized results', async () => {
+    let result: unknown = { blocks: [{ type: 'children' }] }
+    const worker = new FakeWorker(request => {
+      if (request.type === 'initialize') {
+        return response(request, {
+          contributions: [{
+            kind: 'serializer',
+            id: 'plugin.sandbox.docx',
+            handlerId: 'plugin.sandbox:h1',
+            descriptor: { id: 'plugin.sandbox.docx', nodeType: 'sandbox_box', format: 'docx' },
+          }],
+        })
+      }
+      if (request.type === 'invoke') return response(request, result)
+      return response(request, null)
+    })
+    const host = new EditorPluginHost({
+      workspacePath: '/workspace',
+      manifests: [manifest({ capabilities: ['editor.read'] })],
+      nevoVersion: '1.0.0',
+      workerFactory: () => worker as unknown as Worker,
+    })
+    await host.initialize()
+
+    const docx = host.registries.nodeSerializers.get('sandbox_box')?.docx
+    expect(docx).toBeTypeOf('function')
+    await expect(docx!({ type: 'sandbox_box' })).resolves.toEqual({ blocks: [{ type: 'children' }] })
+
+    result = 'text'
+    await expect(docx!({ type: 'sandbox_box' })).rejects.toThrow('must return an object')
+    result = [{ type: 'children' }]
+    await expect(docx!({ type: 'sandbox_box' })).rejects.toThrow('must return an object')
+    result = { blocks: [{ type: 'paragraph', children: [{ type: 'text', text: 'x'.repeat(1024 * 1024) }] }] }
+    await expect(docx!({ type: 'sandbox_box' })).rejects.toThrow(/exceed/)
+    await host.dispose()
   })
 
   it('renders a Tier 1 svg block through a sanitized Worker render handler', async () => {

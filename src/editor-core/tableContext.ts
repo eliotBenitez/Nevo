@@ -1,5 +1,6 @@
 import type { EditorState } from 'prosemirror-state'
 import { CellSelection, isInTable, mergeCells, selectedRect, splitCell } from 'prosemirror-tables'
+import { createSortTableColumnCommand } from './commands/tableSort'
 
 export interface NevoTableMenuContext {
   inTable: boolean
@@ -10,6 +11,7 @@ export interface NevoTableMenuContext {
   selectedCols: number
   canMerge: boolean
   canSplit: boolean
+  canSort: boolean
   isMergedCell: boolean
   activeCell: {
     pos: number
@@ -50,6 +52,7 @@ export function getTableMenuContext(state: EditorState): NevoTableMenuContext | 
       selectedCols,
       canMerge: mergeCells(state),
       canSplit: splitCell(state),
+      canSort: createSortTableColumnCommand('asc')(state),
       isMergedCell: Boolean(cellNode && (cellNode.attrs.colspan > 1 || cellNode.attrs.rowspan > 1)),
       activeCell: cellNode && typeof cellPos === 'number'
         ? {

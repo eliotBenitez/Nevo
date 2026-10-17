@@ -28,6 +28,7 @@ import {
 } from '../../../editor-core'
 import { registerEditorPersistence } from '../../../core/document-session/editorSessionRegistry'
 import type { VoiceRecordingEditorBindings } from './useVoiceRecording'
+import type { DictationEditorBindings } from './useDictation'
 import { useToast } from '../../../ui/composables/useToast'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { useOnboardingStore } from '../../../stores/onboarding'
@@ -43,7 +44,9 @@ import { createDatabaseRepository } from '../../../features/database/databaseRep
 import { createDatabaseCleanup, collectRemovedAssetSrcs } from './documentCleanup'
 import { createIdleTaskScheduler } from './idleTaskScheduler'
 import { resolveBlockRef } from '../../../core/blockRef/resolveBlockRef'
+import { isTranscriptionSupported, transcribeAudio } from '../../../tauri/transcription'
 import { slashGridColumns } from '../../../utils/slashMenuLayout'
+import type { EmbedUrlMode } from './useEmbedUrlPopover'
 import {
   clearActiveEditor,
   notifyActiveEditorTransaction,
@@ -146,7 +149,7 @@ export interface EditorCoreCallbacks {
   onFileOpenRequest: (src: string) => void
   onMediaPickerRequest: (pos: number, kind: 'audio' | 'video') => void
   onNoteEmbedPickRequest: (pos: number, anchorRect: DOMRect) => void
-  onEmbedUrlRequest: (pos: number, anchorRect: DOMRect) => void
+  onEmbedUrlRequest: (pos: number, anchorRect: DOMRect, mode?: EmbedUrlMode) => void
   onNoteEmbedContentLoad?: (ctx: { noteId: string; setHtml: (html: string) => void; setLoading: (v: boolean) => void }) => void
   onNoteEmbedOpen: (noteId: string) => void
   onOpenBlockRefSource?: (noteId: string) => void
@@ -173,6 +176,7 @@ export interface EditorCoreCallbacks {
   /** Bindings for the `voice-recording` slash item; omitted by hosts/platforms
    *  where `isVoiceRecordingSupported()` is false (see Step 2 in the hosts). */
   voiceRecording?: VoiceRecordingEditorBindings
+  dictation?: DictationEditorBindings
   onAfterTransaction?: (view: EditorView) => void
   onAssetSrcsRemoved?: (srcs: string[]) => void
   onAiAskRequest?: (onSubmit: (instruction: string) => void) => void
@@ -417,12 +421,12 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     return new DOMRect(coords.left, coords.top, coords.right - coords.left, coords.bottom - coords.top)
   }
 
-  function requestEmbedUrlForSelectedBlock(): boolean {
+  function requestEmbedUrlForSelectedBlock(mode?: EmbedUrlMode): boolean {
     const view = core.editorView
     if (!view) return false
     const target = getSelectedEmbedBlock()
     if (!target) return false
-    callbacks.onEmbedUrlRequest(target.pos, getAnchorRectForNode(view, target.pos))
+    callbacks.onEmbedUrlRequest(target.pos, getAnchorRectForNode(view, target.pos), mode)
     return true
   }
 
@@ -472,8 +476,8 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     if (item.id === 'math-inline' || item.id === 'math') {
       callbacks.onSlashMathItemRan()
     }
-    if (item.id === 'embed') {
-      requestEmbedUrlForSelectedBlock()
+    if (item.id === 'embed' || item.id === 'map') {
+      requestEmbedUrlForSelectedBlock(item.id === 'map' ? 'map' : 'embed')
     }
     view.focus()
     callbacks.onOverlaysUpdate()
@@ -550,6 +554,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
 
   function destroyEditorView() {
     callbacks.voiceRecording?.onEditorDestroy()
+    callbacks.dictation?.onEditorDestroy()
     flushPendingContentUpdate()
     unregisterPersistenceSession()
     if (core.editorView) clearActiveEditor(core.editorView)
@@ -683,6 +688,8 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
       voiceRecordingPlaceholder: callbacks.voiceRecording
         ? { ...callbacks.voiceRecording.placeholder, t: (key: string) => i18n.global.t(key) }
         : undefined,
+      onDictationToggle: callbacks.dictation?.toggle,
+      dictation: callbacks.dictation?.plugin,
       enableVega: core.systemPlugins.vega,
       enableMarkmap: core.systemPlugins.markmap,
       enableDraw: settings.features?.draw !== false,
@@ -708,6 +715,7 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
         onRequestVegaEdit: ({ position, anchorRect }) => callbacks.onVegaEditRequest(position, anchorRect),
         onRequestDrawOpen: ({ node }) => callbacks.onDrawOpen?.(node.attrs.drawId),
         onRequestMediaAsset: ({ position, kind }) => callbacks.onMediaPickerRequest(position, kind),
+        onTranscribeAudio: isTranscriptionSupported() ? transcribeAudio : undefined,
         onRequestNoteEmbedPick: ({ position, anchorRect }) => callbacks.onNoteEmbedPickRequest(position, anchorRect),
         onRequestEmbedUrl: ({ position, anchorRect }) => callbacks.onEmbedUrlRequest(position, anchorRect),
         onNoteEmbedContentLoad: (ctx) => callbacks.onNoteEmbedContentLoad?.(ctx),

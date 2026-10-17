@@ -1,4 +1,4 @@
-import { getCurrentScope, onScopeDispose, type Ref } from 'vue'
+import { getCurrentScope, onScopeDispose, watch, type Ref } from 'vue'
 import { createAnimationFrameBatcher } from './animationFrameBatcher'
 
 export interface EditorOverlayElements {
@@ -49,6 +49,9 @@ interface EditorOverlayInteractionsOptions {
   closeNoteEmbedPicker: () => void
   isEmbedOpeningClickIgnored: () => boolean
   onEditorScroll: () => void
+  /** Overlays are positioned in viewport coordinates, so they must follow the editor when
+   *  its box moves or resizes without a scroll (e.g. the sidebar opening or closing). */
+  resizeTarget?: Ref<HTMLElement | null>
   repositionOverlays: Array<{
     isActive: () => boolean
     reposition: () => void
@@ -60,13 +63,33 @@ function isInsideNestedControlPopup(target: Node): boolean {
 }
 
 export function useEditorOverlayInteractions(options: EditorOverlayInteractionsOptions) {
-  const scrollFrame = createAnimationFrameBatcher(() => {
-    options.onEditorScroll()
+  function repositionActiveOverlays() {
     for (const overlay of options.repositionOverlays) {
       if (overlay.isActive()) overlay.reposition()
     }
+  }
+  const scrollFrame = createAnimationFrameBatcher(() => {
+    options.onEditorScroll()
+    repositionActiveOverlays()
   })
-  if (getCurrentScope()) onScopeDispose(scrollFrame.cancel)
+  const resizeFrame = createAnimationFrameBatcher(repositionActiveOverlays)
+  const resizeObserver = options.resizeTarget && typeof ResizeObserver !== 'undefined'
+    ? new ResizeObserver(() => resizeFrame.schedule())
+    : null
+  const stopResizeWatch = resizeObserver && options.resizeTarget
+    ? watch(options.resizeTarget, (el, prev) => {
+      if (prev) resizeObserver.unobserve(prev)
+      if (el) resizeObserver.observe(el)
+    }, { immediate: true })
+    : null
+  if (getCurrentScope()) {
+    onScopeDispose(() => {
+      scrollFrame.cancel()
+      resizeFrame.cancel()
+      stopResizeWatch?.()
+      resizeObserver?.disconnect()
+    })
+  }
 
   function onDocumentMouseDown(event: MouseEvent) {
     const target = event.target as Node | null

@@ -10,6 +10,8 @@ import { normalizeDatabaseData, type DatabaseBlockData, type DbCellValue, type D
 import { visibleRecords } from '../../editor-core/databaseFilterSort'
 import { normalizeQueryBlockData } from '../../features/query/queryBlockData'
 import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSummary'
+import { formatAudioTime, readAudioBookmarks } from '../../core/media/audioBookmarks'
+import { readAudioTranscript } from '../../core/media/audioTranscript'
 
 export interface HtmlSerializeResult {
   html: string
@@ -468,7 +470,19 @@ export async function blockNode(node: BlockNode, ctx: SerializeCtx): Promise<str
       const media = kind === 'video'
         ? `<video controls${attr('poster', localPoster)}>${source}</video>`
         : `<audio controls>${source}</audio>`
-      return `<figure class="media-block">${media}<figcaption>${escapeHtml(name)}</figcaption></figure>`
+      const bookmarks = kind === 'audio' ? readAudioBookmarks(node.attrs?.bookmarks) : []
+      const bookmarkList = bookmarks.length
+        ? `<ol class="audio-bookmarks">${bookmarks.map(bookmark => {
+          const time = formatAudioTime(bookmark.time)
+          return `<li><a href="${escapeAttr(`${localSrc}#t=${bookmark.time}`)}">${escapeHtml(time)} — ${escapeHtml(bookmark.label)}</a></li>`
+        }).join('')}</ol>`
+        : ''
+      const transcript = kind === 'audio' ? readAudioTranscript(node.attrs?.transcript) : []
+      const transcriptList = transcript.length
+        ? `<section class="audio-transcript"><h3>Transcript</h3><ol>${transcript.map(segment =>
+          `<li>${escapeHtml(formatAudioTime(segment.start))} — ${escapeHtml(segment.text)}</li>`).join('')}</ol></section>`
+        : ''
+      return `<figure class="media-block">${media}<figcaption>${escapeHtml(name)}</figcaption>${bookmarkList}${transcriptList}</figure>`
     }
     case 'column_list': {
       const cols = await Promise.all((node.content ?? []).map(child => blockNode(child, ctx)))

@@ -26,6 +26,8 @@ fn normalize_view(value: Option<&str>) -> String {
         Some("table") => "table".to_string(),
         Some("kanban") => "kanban".to_string(),
         Some("graph") => "graph".to_string(),
+        Some("last-note") => "last-note".to_string(),
+        Some("specific-note") => "specific-note".to_string(),
         _ => "editor".to_string(),
     }
 }
@@ -148,6 +150,10 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
         .get("confirmBeforeDelete")
         .and_then(|value| value.as_bool())
         .unwrap_or(true);
+    settings.general.startup_note_id = general
+        .get("startupNoteId")
+        .and_then(|value| value.as_str())
+        .map(String::from);
     settings.general.home_favorites = normalize_home_favorites(general.get("homeFavorites"));
     if let Some(last_context) = general
         .get("lastContext")
@@ -174,15 +180,10 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
         .and_then(|value| value.as_object())
         .cloned()
         .unwrap_or_default();
+    // A preset id or a custom accent color picked in workspace settings.
     settings.appearance.accent_preset = appearance
         .get("accentPreset")
         .and_then(|value| value.as_str())
-        .filter(|value| {
-            matches!(
-                *value,
-                "violet" | "ember" | "sage" | "ocean" | "rose" | "azure" | "mineral"
-            )
-        })
         .unwrap_or("mineral")
         .to_string();
     settings.appearance.background_scene = appearance
@@ -212,7 +213,8 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
     settings.appearance.editor_font_family = appearance
         .get("editorFontFamily")
         .and_then(|value| value.as_str())
-        .filter(|value| matches!(*value, "ui" | "serif" | "mono"))
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
         .unwrap_or("ui")
         .to_string();
     settings.appearance.editor_font_size = clamp_u32(
@@ -246,6 +248,8 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
     settings.appearance.custom_css_filename = appearance
         .get("customCssFileName")
         .and_then(|value| value.as_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
         .unwrap_or("custom.css")
         .to_string();
     settings.appearance.accent_colored_headings = appearance
@@ -290,7 +294,20 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
     settings.editor.caret_animation = editor
         .get("caretAnimation")
         .and_then(|value| value.as_str())
-        .filter(|value| matches!(*value, "system" | "steady" | "blink"))
+        .filter(|value| {
+            matches!(
+                *value,
+                "system"
+                    | "steady"
+                    | "blink"
+                    | "fade"
+                    | "smooth"
+                    | "sparkle"
+                    | "glow"
+                    | "comet"
+                    | "jelly"
+            )
+        })
         .unwrap_or("system")
         .to_string();
     settings.editor.tab_key_behavior = editor
@@ -310,6 +327,51 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
         .and_then(|value| value.as_str())
         .filter(|value| matches!(*value, "list" | "grid" | "preview"))
         .unwrap_or("list")
+        .to_string();
+    settings.editor.dictation_language = editor
+        .get("dictationLanguage")
+        .and_then(|value| value.as_str())
+        .filter(|value| matches!(*value, "auto" | "ru" | "en" | "de" | "fr" | "es"))
+        .unwrap_or("auto")
+        .to_string();
+    settings.editor.focus_mode = editor
+        .get("focusMode")
+        .and_then(|value| value.as_str())
+        .filter(|value| matches!(*value, "off" | "soft"))
+        .unwrap_or("off")
+        .to_string();
+    settings.editor.typewriter_scrolling = editor
+        .get("typewriterScrolling")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false);
+    settings.editor.active_block_emphasis = editor
+        .get("activeBlockEmphasis")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false);
+    settings.editor.paste_behavior = editor
+        .get("pasteBehavior")
+        .and_then(|value| value.as_str())
+        .filter(|value| matches!(*value, "smart" | "plain-text"))
+        .unwrap_or("smart")
+        .to_string();
+    settings.editor.slash_menu_hints = editor
+        .get("slashMenuHints")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(true);
+    // Legacy "footer" placement was merged into "corner".
+    settings.editor.editor_stats_visibility = match editor
+        .get("editorStatsVisibility")
+        .and_then(|value| value.as_str())
+    {
+        Some("corner" | "footer") => "corner",
+        _ => "off",
+    }
+    .to_string();
+    settings.editor.typewriter_position = editor
+        .get("typewriterPosition")
+        .and_then(|value| value.as_str())
+        .filter(|value| matches!(*value, "upper" | "center" | "lower"))
+        .unwrap_or("lower")
         .to_string();
 
     let workspace = object
@@ -438,6 +500,12 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
         .filter(|value| matches!(*value, "tree" | "tag-preview"))
         .unwrap_or("tree")
         .to_string();
+    settings.workspace.sidebar_layout = workspace
+        .get("sidebarLayout")
+        .and_then(|value| value.as_str())
+        .filter(|value| matches!(*value, "docked" | "floating"))
+        .unwrap_or("docked")
+        .to_string();
     settings.workspace.graph_entry_mode = workspace
         .get("graphEntryMode")
         .and_then(|value| value.as_str())
@@ -564,6 +632,14 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
         .get("templates")
         .and_then(|value| value.as_bool())
         .unwrap_or(true);
+    settings.features.vega = features
+        .get("vega")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(true);
+    settings.features.markmap = features
+        .get("markmap")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(true);
 
     let mcp = object
         .get("mcp")
@@ -611,11 +687,14 @@ fn normalize_settings_value(raw: Value) -> WorkspaceSettings {
         1,
         200,
     );
-    settings.files.trash_retention_days = files
-        .get("trashRetentionDays")
-        .and_then(|value| value.as_u64())
-        .map(|v| v as u32)
-        .unwrap_or(30);
+    settings.files.trash_retention_days = clamp_u32(
+        files
+            .get("trashRetentionDays")
+            .and_then(|value| value.as_u64()),
+        30,
+        0,
+        365,
+    );
 
     let advanced = object
         .get("advanced")
@@ -1010,6 +1089,22 @@ mod tests {
     }
 
     #[test]
+    fn keeps_dictation_language_and_defaults_unknown_values_to_auto() {
+        assert_eq!(
+            normalize_settings_value(json!({}))
+                .editor
+                .dictation_language,
+            "auto"
+        );
+        let ru = normalize_settings_value(json!({ "editor": { "dictationLanguage": "ru" } }));
+        assert_eq!(ru.editor.dictation_language, "ru");
+        let bogus = normalize_settings_value(json!({ "editor": { "dictationLanguage": "zz" } }));
+        assert_eq!(bogus.editor.dictation_language, "auto");
+        let saved = serde_json::to_value(&ru).unwrap();
+        assert_eq!(saved["editor"]["dictationLanguage"], "ru");
+    }
+
+    #[test]
     fn normalizes_slash_menu_layout() {
         let grid = normalize_settings_value(json!({ "editor": { "slashMenuLayout": "grid" } }));
         assert_eq!(grid.editor.slash_menu_layout, "grid");
@@ -1037,13 +1132,196 @@ mod tests {
     fn falls_back_to_mineral_and_solid_for_invalid_appearance_values() {
         let settings = normalize_settings_value(json!({
             "appearance": {
-                "accentPreset": "not-a-real-preset",
+                "accentPreset": 42,
                 "surfaceStyle": "not-a-real-style"
             }
         }));
 
         assert_eq!(settings.appearance.accent_preset, "mineral");
         assert_eq!(settings.appearance.surface_style, "solid");
+    }
+
+    #[test]
+    fn keeps_custom_accent_color_and_system_editor_font() {
+        let settings = normalize_settings_value(json!({
+            "appearance": {
+                "accentPreset": "#ff6600",
+                "editorFontFamily": "  JetBrains Mono  ",
+                "customCssFileName": "   "
+            }
+        }));
+        assert_eq!(settings.appearance.accent_preset, "#ff6600");
+        assert_eq!(settings.appearance.editor_font_family, "JetBrains Mono");
+        assert_eq!(settings.appearance.custom_css_filename, "custom.css");
+
+        let blank = normalize_settings_value(json!({
+            "appearance": { "editorFontFamily": "   " }
+        }));
+        assert_eq!(blank.appearance.editor_font_family, "ui");
+    }
+
+    #[test]
+    fn normalizes_startup_view_and_note() {
+        let defaults = normalize_settings_value(json!({}));
+        assert_eq!(defaults.general.default_startup_view, "editor");
+        assert_eq!(defaults.general.startup_note_id, None);
+
+        let specific = normalize_settings_value(json!({
+            "general": { "defaultStartupView": "specific-note", "startupNoteId": "note-1" }
+        }));
+        assert_eq!(specific.general.default_startup_view, "specific-note");
+        assert_eq!(specific.general.startup_note_id.as_deref(), Some("note-1"));
+        let last = normalize_settings_value(json!({
+            "general": { "defaultStartupView": "last-note" }
+        }));
+        assert_eq!(last.general.default_startup_view, "last-note");
+
+        let invalid = normalize_settings_value(json!({
+            "general": { "defaultStartupView": "bogus", "startupNoteId": 7 }
+        }));
+        assert_eq!(invalid.general.default_startup_view, "editor");
+        assert_eq!(invalid.general.startup_note_id, None);
+    }
+
+    #[test]
+    fn normalizes_caret_animation_modes() {
+        assert_eq!(
+            normalize_settings_value(json!({})).editor.caret_animation,
+            "system"
+        );
+        for mode in [
+            "system", "steady", "blink", "fade", "smooth", "sparkle", "glow", "comet", "jelly",
+        ] {
+            let settings =
+                normalize_settings_value(json!({ "editor": { "caretAnimation": mode } }));
+            assert_eq!(settings.editor.caret_animation, mode);
+        }
+        let invalid = normalize_settings_value(json!({ "editor": { "caretAnimation": "magic" } }));
+        assert_eq!(invalid.editor.caret_animation, "system");
+    }
+
+    #[test]
+    fn normalizes_editor_writing_aids() {
+        let defaults = normalize_settings_value(json!({})).editor;
+        assert_eq!(defaults.focus_mode, "off");
+        assert!(!defaults.typewriter_scrolling);
+        assert_eq!(defaults.typewriter_position, "lower");
+        assert!(!defaults.active_block_emphasis);
+        assert_eq!(defaults.paste_behavior, "smart");
+        assert!(defaults.slash_menu_hints);
+        assert_eq!(defaults.editor_stats_visibility, "off");
+
+        let valid = normalize_settings_value(json!({ "editor": {
+            "focusMode": "soft",
+            "typewriterScrolling": true,
+            "typewriterPosition": "center",
+            "activeBlockEmphasis": true,
+            "pasteBehavior": "plain-text",
+            "slashMenuHints": false,
+            "editorStatsVisibility": "corner"
+        }}))
+        .editor;
+        assert_eq!(valid.focus_mode, "soft");
+        assert!(valid.typewriter_scrolling);
+        assert_eq!(valid.typewriter_position, "center");
+        assert!(valid.active_block_emphasis);
+        assert_eq!(valid.paste_behavior, "plain-text");
+        assert!(!valid.slash_menu_hints);
+        assert_eq!(valid.editor_stats_visibility, "corner");
+
+        let legacy_footer =
+            normalize_settings_value(json!({ "editor": { "editorStatsVisibility": "footer" } }));
+        assert_eq!(legacy_footer.editor.editor_stats_visibility, "corner");
+
+        let invalid = normalize_settings_value(json!({ "editor": {
+            "focusMode": "hard",
+            "typewriterScrolling": "yes",
+            "typewriterPosition": "top",
+            "activeBlockEmphasis": 1,
+            "pasteBehavior": "html",
+            "slashMenuHints": null,
+            "editorStatsVisibility": "sidebar"
+        }}))
+        .editor;
+        assert_eq!(invalid.focus_mode, "off");
+        assert!(!invalid.typewriter_scrolling);
+        assert_eq!(invalid.typewriter_position, "lower");
+        assert!(!invalid.active_block_emphasis);
+        assert_eq!(invalid.paste_behavior, "smart");
+        assert!(invalid.slash_menu_hints);
+        assert_eq!(invalid.editor_stats_visibility, "off");
+    }
+
+    #[test]
+    fn normalizes_sidebar_layout() {
+        assert_eq!(
+            normalize_settings_value(json!({})).workspace.sidebar_layout,
+            "docked"
+        );
+        let floating =
+            normalize_settings_value(json!({ "workspace": { "sidebarLayout": "floating" } }));
+        assert_eq!(floating.workspace.sidebar_layout, "floating");
+        let invalid =
+            normalize_settings_value(json!({ "workspace": { "sidebarLayout": "drawer" } }));
+        assert_eq!(invalid.workspace.sidebar_layout, "docked");
+    }
+
+    #[test]
+    fn normalizes_optional_feature_toggles() {
+        let defaults = normalize_settings_value(json!({})).features;
+        assert!(defaults.vega && defaults.markmap);
+
+        let disabled =
+            normalize_settings_value(json!({ "features": { "vega": false, "markmap": false } }))
+                .features;
+        assert!(!disabled.vega && !disabled.markmap);
+
+        let invalid =
+            normalize_settings_value(json!({ "features": { "vega": "no", "markmap": 0 } }))
+                .features;
+        assert!(invalid.vega && invalid.markmap);
+    }
+
+    #[test]
+    fn clamps_trash_retention_days() {
+        assert_eq!(
+            normalize_settings_value(json!({}))
+                .files
+                .trash_retention_days,
+            30
+        );
+        let kept = normalize_settings_value(json!({ "files": { "trashRetentionDays": 0 } }));
+        assert_eq!(kept.files.trash_retention_days, 0);
+        let huge = normalize_settings_value(
+            json!({ "files": { "trashRetentionDays": 5_000_000_000u64 } }),
+        );
+        assert_eq!(huge.files.trash_retention_days, 365);
+    }
+
+    #[test]
+    fn older_ipc_payload_without_new_fields_deserializes_with_defaults() {
+        let mut payload = serde_json::to_value(WorkspaceSettings::default()).unwrap();
+        for (section, key) in [
+            ("general", "startupNoteId"),
+            ("editor", "focusMode"),
+            ("editor", "typewriterScrolling"),
+            ("editor", "activeBlockEmphasis"),
+            ("editor", "pasteBehavior"),
+            ("editor", "slashMenuHints"),
+            ("editor", "editorStatsVisibility"),
+            ("editor", "typewriterPosition"),
+            ("workspace", "sidebarLayout"),
+            ("features", "vega"),
+            ("features", "markmap"),
+        ] {
+            payload[section].as_object_mut().unwrap().remove(key);
+        }
+        let settings: WorkspaceSettings =
+            serde_json::from_value(payload).expect("older payload still deserializes");
+        assert!(settings.editor.slash_menu_hints);
+        assert_eq!(settings.editor.typewriter_position, "lower");
+        assert_eq!(settings.workspace.sidebar_layout, "docked");
+        assert!(settings.features.vega && settings.features.markmap);
     }
 
     #[test]
@@ -1183,5 +1461,25 @@ mod tests {
             .expect("reload settings with accent colored headings");
 
         assert!(reloaded.appearance.accent_colored_headings);
+    }
+
+    /// Shared with `src/utils/workspace-settings.test.ts`: every field of the
+    /// TS `WorkspaceSettings`, each set to a valid non-default value.
+    const ROUNDTRIP_FIXTURE: &str =
+        include_str!("../../../../src/utils/workspace-settings/roundtrip.fixture.json");
+
+    #[test]
+    fn every_frontend_setting_survives_save_and_reload() {
+        let workspace = TestWorkspace::new();
+        let workspace_path = workspace.path_string();
+        let expected: Value = serde_json::from_str(ROUNDTRIP_FIXTURE).expect("parse fixture");
+        // Deserialize like the Tauri IPC boundary does before saving.
+        let settings: WorkspaceSettings =
+            serde_json::from_value(expected.clone()).expect("deserialize fixture");
+
+        save_workspace_settings_sync(workspace_path.clone(), settings).expect("save settings");
+        let reloaded = load_workspace_settings_sync(workspace_path).expect("reload settings");
+
+        assert_eq!(serde_json::to_value(&reloaded).unwrap(), expected);
     }
 }

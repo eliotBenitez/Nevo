@@ -15,6 +15,7 @@ interface Props {
   disabled?: boolean
   minWidth?: number | string
   maxMenuHeight?: number
+  ariaLabel?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -22,6 +23,7 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false,
   minWidth: 188,
   maxMenuHeight: 280,
+  ariaLabel: undefined,
 })
 
 const emit = defineEmits<{
@@ -297,6 +299,7 @@ onBeforeUnmount(() => {
         disabled && 'is-disabled',
       ]"
       :disabled="disabled"
+      :aria-label="ariaLabel"
       :aria-controls="menuId"
       :aria-expanded="isOpen"
       aria-haspopup="listbox"

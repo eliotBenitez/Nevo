@@ -10,6 +10,15 @@ function note(content: NoteDocument['content']): NoteDocument {
 }
 
 describe('serializeNoteToTypst', () => {
+  it('exports audio transcripts as timestamped escaped text', () => {
+    const { source } = serializeNoteToTypst(note({ type: 'doc', content: [
+      { type: 'media_block', attrs: { kind: 'audio', name: 'Track',
+        transcript: [{ start: 1, end: 2, text: 'Hello #world' }] } },
+    ] }))
+    expect(source).toContain('Transcript')
+    expect(source).toContain('0:01 — Hello \\#world')
+  })
+
   it('emits a page preamble and title', () => {
     const { source } = serializeNoteToTypst(note({ type: 'doc', content: [] }))
     expect(source).toContain('#set page(paper: "a4"')
@@ -255,6 +264,23 @@ describe('serializeNoteToTypst', () => {
     expect(source).toContain('#link("https://youtu.be/x")[Clip]')
     expect(source).toContain('#strong[Summary]')
     expect(source).toContain('Hidden body')
+  })
+
+  it('includes audio bookmarks as escaped readable timestamp labels and leaves video bookmarks out', () => {
+    const { source } = serializeNoteToTypst(note({
+      type: 'doc',
+      content: [
+        { type: 'media_block', attrs: { kind: 'audio', name: 'Track', bookmarks: [
+          { id: 'b1', time: 65, label: 'Part #1 [start]\n#show: evil' },
+        ] } },
+        { type: 'media_block', attrs: { kind: 'video', name: 'Clip', bookmarks: [{ id: 'v', time: 5, label: 'ignored' }] } },
+      ],
+    }))
+
+    expect(source).toContain('1:05')
+    expect(source).toContain('Part \\#1 \\[start\\]')
+    expect(source).toContain('\\#show: evil')
+    expect(source).not.toContain('ignored')
   })
 
   it('renders bullet and ordered lists with items', () => {

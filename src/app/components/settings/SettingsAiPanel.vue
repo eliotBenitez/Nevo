@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
@@ -11,20 +11,23 @@ import SettingsGroup from './ui/SettingsGroup.vue'
 import SettingsRow from './ui/SettingsRow.vue'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import type { AIApiKind, WorkspaceSettings } from '../../../types/workspace'
-import { aiCommands } from '../../../tauri/ai'
+import { useAiModels } from '../../../composables/useAiModels'
+import SettingsAiApiKeyRow from './SettingsAiApiKeyRow.vue'
+import { isOpenRouterUrl, OPENROUTER_BASE_URL } from '../../../core/ai/openrouter'
 
-type RowState = 'functional' | 'info' | 'coming'
-type ConnectionStatus = 'idle' | 'checking' | 'ok' | 'error'
+type ProviderPreset = AIApiKind | 'openrouter'
 
 const OLLAMA_DEFAULT_URL = 'http://localhost:11434'
 const OPENAI_DEFAULT_URL = 'http://localhost:1234/v1'
-const PROVIDER_DEFAULTS: Record<AIApiKind, string> = {
+const PROVIDER_DEFAULTS: Record<ProviderPreset, string> = {
   ollama: OLLAMA_DEFAULT_URL,
   openai: OPENAI_DEFAULT_URL,
+  openrouter: OPENROUTER_BASE_URL,
 }
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
+const { models, status: connectionStatus, load, reset } = useAiModels()
 const { settings } = storeToRefs(workspaceStore)
 const u = (fn: (draft: WorkspaceSettings) => void) => workspaceStore.updateSettings(fn)
 
@@ -34,16 +37,20 @@ const endpointInput = ref(settings.value.ai.baseUrl)
 const apiKindOptions = computed(() => [
   { value: 'ollama', label: t('settings.ai.apiKind.ollama') },
   { value: 'openai', label: t('settings.ai.apiKind.openai') },
+  { value: 'openrouter', label: t('settings.ai.apiKind.openrouter') },
 ])
+
+const preset = computed<ProviderPreset>(() => (
+  settings.value.ai.apiKind === 'openai' && isOpenRouterUrl(settings.value.ai.baseUrl)
+    ? 'openrouter'
+    : settings.value.ai.apiKind
+))
 
 const aiModelOptions = computed(() => [
   { value: 'llama3', label: t('settings.ai.models.llama3.label'), description: t('settings.ai.models.llama3.description') },
   { value: 'mistral', label: t('settings.ai.models.mistral.label'), description: t('settings.ai.models.mistral.description') },
   { value: 'cloud-gpt', label: t('settings.ai.models.cloudGpt.label'), description: t('settings.ai.models.cloudGpt.description') },
 ])
-
-const models = ref<string[]>([])
-const connectionStatus = ref<ConnectionStatus>('idle')
 
 const modelSelectOptions = computed(() => {
   if (models.value.length > 0) {
@@ -52,34 +59,32 @@ const modelSelectOptions = computed(() => {
   return aiModelOptions.value
 })
 
-function onApiKindChange(v: string) {
-  const newKind = v as AIApiKind
-  const newDefault = PROVIDER_DEFAULTS[newKind]
-  const otherDefault = newKind === 'ollama' ? OPENAI_DEFAULT_URL : OLLAMA_DEFAULT_URL
+async function onApiKindChange(v: string) {
+  const next = v as ProviderPreset
+  const newDefault = PROVIDER_DEFAULTS[next]
   const currentUrl = settings.value.ai.baseUrl
-  const shouldAutoFill = !currentUrl || currentUrl === otherDefault
-  u(d => {
-    d.ai.apiKind = newKind
+  // A hand-typed endpoint survives switching between the local kinds; the
+  // OpenRouter preset is its URL, so choosing it always sets it.
+  const shouldAutoFill = next === 'openrouter' || !currentUrl
+    || Object.values(PROVIDER_DEFAULTS).includes(currentUrl)
+  reset()
+  if (shouldAutoFill) {
+    endpointInput.value = newDefault
+  }
+  await u(d => {
+    d.ai.apiKind = next === 'openrouter' ? 'openai' : next
     if (shouldAutoFill) {
       d.ai.baseUrl = newDefault
     }
   })
-  if (shouldAutoFill) {
-    endpointInput.value = newDefault
-  }
+  if (next === 'openrouter') await testConnection()
 }
 
-async function testConnection() {
-  connectionStatus.value = 'checking'
-  try {
-    const result = await aiCommands.listModels(settings.value.ai.baseUrl, settings.value.ai.apiKind)
-    models.value = result
-    connectionStatus.value = 'ok'
-  } catch {
-    models.value = []
-    connectionStatus.value = 'error'
-  }
-}
+const testConnection = () => load(true)
+
+onMounted(() => {
+  if (settings.value.ai.enabled && preset.value === 'openrouter') void load()
+})
 
 function onEndpointChange(e: Event) {
   const val = (e.target as HTMLInputElement).value.trim()
@@ -87,17 +92,6 @@ function onEndpointChange(e: Event) {
   u(d => { d.ai.baseUrl = val })
 }
 
-function stateLabel(state: RowState): string {
-  if (state === 'functional') return t('settings.state.functional')
-  if (state === 'coming') return t('settings.state.coming')
-  return t('settings.state.info')
-}
-
-function stateClass(state: RowState): string {
-  if (state === 'functional') return 'status-chip--functional tw:bg-[var(--accent-soft)] tw:text-accent'
-  if (state === 'coming') return 'status-chip--coming tw:bg-[var(--surface-warning)] tw:text-[var(--warning)]'
-  return 'status-chip--info tw:bg-[var(--hover-strong)] tw:text-content-muted'
-}
 </script>
 
 <template>
@@ -124,11 +118,17 @@ function stateClass(state: RowState): string {
         <!-- API type selector -->
         <SettingsRow
           :title="t('settings.ai.apiKind.title')"
-          :description="t('settings.ai.apiKind.description')"
           :disabled="!settings.ai.enabled"
         >
+          <template #description>
+            <template v-if="preset === 'openrouter'">
+              <span class="openrouter-notice">{{ t('settings.ai.apiKind.openrouterNotice') }}</span>
+              <span v-if="settings.ai.privacyMode" class="openrouter-privacy tw:block tw:text-[var(--warning)]">{{ t('settings.ai.apiKind.openrouterPrivacy') }}</span>
+            </template>
+            <span v-else>{{ t('settings.ai.apiKind.description') }}</span>
+          </template>
           <NvSelect
-            :model-value="settings.ai.apiKind"
+            :model-value="preset"
             :options="apiKindOptions"
             :min-width="270"
             :disabled="!settings.ai.enabled"
@@ -152,6 +152,9 @@ function stateClass(state: RowState): string {
             @blur="onEndpointChange"
           />
         </SettingsRow>
+
+        <!-- API key (OpenAI-compatible only; stored in the OS keychain) -->
+        <SettingsAiApiKeyRow :disabled="!settings.ai.enabled || settings.ai.apiKind !== 'openai'" />
 
         <!-- Test connection -->
         <SettingsRow
@@ -259,12 +262,6 @@ function stateClass(state: RowState): string {
           />
         </SettingsRow>
 
-        <SettingsRow
-          :title="t('settings.ai.cloudCredentials.title')"
-          :description="t('settings.ai.cloudCredentials.description')"
-        >
-          <span class="status-chip tw:inline-flex tw:h-5 tw:items-center tw:justify-center tw:rounded-full tw:border tw:border-transparent tw:px-2 tw:text-[10.5px] tw:font-semibold" :class="stateClass('coming')">{{ stateLabel('coming') }}</span>
-        </SettingsRow>
       </SettingsGroup>
     </div>
   </section>

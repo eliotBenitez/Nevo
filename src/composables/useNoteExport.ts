@@ -102,7 +102,9 @@ export function useNoteExport() {
 
   async function exportAsDocx(note: NoteDocument, workspacePath: string | null): Promise<void> {
     assertDocumentExportSupported(note)
-    docxPreview.note = await hydrateDatabasesForExport(note, workspacePath)
+    const hydrated = await hydrateDatabasesForExport(note, workspacePath)
+    const { expandPluginDocxNodes } = await import('../utils/noteExport/pluginDocxNodes')
+    docxPreview.note = await expandPluginDocxNodes(hydrated)
     docxPreview.workspacePath = workspacePath ?? ''
     docxPreview.open = true
   }

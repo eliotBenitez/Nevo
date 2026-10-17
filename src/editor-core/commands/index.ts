@@ -28,6 +28,7 @@ import { createInsertDrawCommand, createUpdateDrawByIdCommand, createRemoveDrawC
 import { createInsertMarkmapCommand, createUpdateMarkmapCommand, createRemoveMarkmapCommand } from './markmap'
 import { createInsertVegaCommand, createUpdateVegaCommand, createRemoveVegaCommand } from './vega'
 import { createInsertTableCommand, createSetCellFormulaCommand } from './table'
+import { createSortTableColumnCommand } from './tableSort'
 import { createImageAttrsCommand, createInsertImageCommand, createRemoveImageCommand } from './image'
 import { createFileAttrsCommand, createInsertFileCommand, createRemoveFileCommand } from './file'
 import { createInsertNoteEmbedCommand, createNoteEmbedAttrsCommand } from './note-embed'
@@ -208,6 +209,8 @@ export function createCoreCommands(schema: Schema) {
   commands.set('core.table.header.toggle.column', toggleHeaderColumn)
   commands.set('core.table.header.toggle.cell', toggleHeaderCell)
   commands.set('core.table.delete', deleteTable)
+  commands.set('core.table.column.sort.asc', createSortTableColumnCommand('asc'))
+  commands.set('core.table.column.sort.desc', createSortTableColumnCommand('desc'))
 
   const setTableCellAlignment = (alignment: TableCellAlignment): Command => setCellAttr('align', alignment)
   const setTableCellBackground = (background: string | null): Command => setCellAttr('background', background)

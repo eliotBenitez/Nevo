@@ -6,6 +6,7 @@ import {
   normalizeAppConfig,
   normalizeWorkspaceSettings,
 } from './workspace-settings'
+import roundtripFixture from './workspace-settings/roundtrip.fixture.json'
 
 describe('normalizeWorkspaceSettings', () => {
   it('migrates legacy flat keys into the nested schema', () => {
@@ -147,6 +148,21 @@ describe('normalizeWorkspaceSettings', () => {
     expect(settings.hotkeys.bindings.find(binding => binding.commandId === 'workspace.open-graph')?.defaultChord).toBe('Ctrl+Alt+G')
     expect(settings.hotkeys.bindings.find(binding => binding.commandId === 'workspace.open-history')?.defaultChord).toBe('Ctrl+Alt+H')
     expect(settings.hotkeys.bindings.find(binding => binding.commandId === 'workspace.open-trash')?.defaultChord).toBe('Ctrl+Alt+T')
+    expect(settings.hotkeys.bindings.find(binding => binding.commandId === 'ai.chat.toggle')?.defaultChord).toBe('Ctrl+J')
+  })
+
+  it('normalizes dictationLanguage and adds the dictation hotkey to older settings', () => {
+    expect(createDefaultWorkspaceSettings().editor.dictationLanguage).toBe('auto')
+    expect(normalizeWorkspaceSettings({}).editor.dictationLanguage).toBe('auto')
+    expect(normalizeWorkspaceSettings({ editor: { dictationLanguage: 'klingon' } }).editor.dictationLanguage).toBe('auto')
+    expect(normalizeWorkspaceSettings({ editor: { dictationLanguage: 'ru' } }).editor.dictationLanguage).toBe('ru')
+
+    const settings = normalizeWorkspaceSettings({
+      hotkeys: { bindings: [{ commandId: 'editor.dictation.toggle', label: 'x', defaultChord: 'Ctrl+Shift+D', customChord: 'Ctrl+Alt+D', scope: 'workspace' }] },
+    })
+    expect(settings.hotkeys.bindings.find(b => b.commandId === 'editor.dictation.toggle')?.customChord).toBe('Ctrl+Alt+D')
+    const old = normalizeWorkspaceSettings({ hotkeys: { bindings: [] } })
+    expect(old.hotkeys.bindings.find(b => b.commandId === 'editor.dictation.toggle')?.defaultChord).toBe('Ctrl+Shift+D')
   })
 
   it('preserves custom note template ids and normalizes templates feature flag', () => {
@@ -175,6 +191,21 @@ describe('normalizeWorkspaceSettings', () => {
   it('falls back to solid for a missing or invalid surfaceStyle', () => {
     expect(normalizeWorkspaceSettings({ appearance: {} }).appearance.surfaceStyle).toBe('solid')
     expect(normalizeWorkspaceSettings({ appearance: { surfaceStyle: 'not-a-style' } }).appearance.surfaceStyle).toBe('solid')
+  })
+
+  // The same fixture drives the Rust save/reload test in
+  // src-tauri/src/commands/workspace/settings.rs, so a field added here
+  // without a Rust counterpart fails there instead of being silently dropped.
+  it('keeps the shared round-trip fixture in sync with every settings field', () => {
+    const keyShape = (value: unknown): unknown => value && typeof value === 'object' && !Array.isArray(value)
+      ? Object.fromEntries(Object.keys(value).sort().map(key => [key, keyShape((value as Record<string, unknown>)[key])]))
+      : 'leaf'
+    expect(keyShape({ ...roundtripFixture, pluginSettings: {} })).toEqual(keyShape(createDefaultWorkspaceSettings()))
+
+    const normalized = normalizeWorkspaceSettings(roundtripFixture)
+    expect({ ...normalized, hotkeys: roundtripFixture.hotkeys }).toEqual(roundtripFixture)
+    expect(normalized.hotkeys.bindings.find(binding => binding.commandId === 'core.undo'))
+      .toEqual(roundtripFixture.hotkeys.bindings[0])
   })
 })
 

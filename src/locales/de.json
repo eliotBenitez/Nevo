@@ -290,6 +290,8 @@
     }
   },
   "common": {
+    "notifications": "Benachrichtigungen",
+    "undo": "Rückgängig",
     "datePicker": {
       "placeholder": "Datum wählen",
       "previousMonth": "Vorheriger Monat",
@@ -768,6 +770,7 @@
     "mathApply": "Formel anwenden",
     "mathRemove": "Formel entfernen",
     "context": {
+      "noteArchived": "Notiz ins Archiv verschoben",
       "rename": "Umbenennen",
       "delete": "Löschen",
       "search": "Suchen",
@@ -1431,6 +1434,37 @@
         "title": "Schreibmaschinen-Scrollen",
         "description": "Aktiven Block während des Tippens nahe der Mitte halten"
       },
+      "dictationLanguage": {
+        "title": "Diktiersprache",
+        "description": "Sprache für das Diktat. Standardmäßig die Sprache der Oberfläche",
+        "interface": "Sprache der Oberfläche"
+      },
+      "speechModel": {
+        "title": "Spracherkennungsmodell",
+        "description": "Modell für Diktat und Audio-Transkripte. Größere Modelle sind genauer, aber langsamer und müssen einmalig heruntergeladen werden",
+        "models": {
+          "base": "Basis (integriert)",
+          "small": "Small — genauer",
+          "turbo": "Large v3 Turbo — höchste Genauigkeit"
+        },
+        "hints": {
+          "base": "Schnell, einfache Genauigkeit",
+          "small": "Bessere Genauigkeit, etwa 2–3× langsamer",
+          "turbo": "Beste Genauigkeit, auf der CPU langsam: mehrere Sekunden pro Satz"
+        },
+        "active": "Aktiv",
+        "download": "Herunterladen",
+        "cancel": "Abbrechen",
+        "use": "Verwenden",
+        "delete": "Löschen",
+        "errors": {
+          "generic": "Das Spracherkennungsmodell konnte nicht geändert werden",
+          "busy": "Die Spracherkennung ist ausgelastet. Bitte gleich noch einmal versuchen",
+          "inProgress": "Ein Modell wird bereits heruntergeladen",
+          "integrity": "Das heruntergeladene Modell ist beschädigt. Bitte erneut versuchen",
+          "download": "Das Modell konnte nicht heruntergeladen werden. Verbindung prüfen"
+        }
+      },
       "activeBlockEmphasis": {
         "title": "Aktive Block-Hervorhebung",
         "description": "Angrenzende Blöcke leicht abdunkeln, um auf den aktuellen zu fokussieren"
@@ -1623,7 +1657,10 @@
         "title": "API-Typ",
         "description": "Protokoll der lokalen Server-API",
         "ollama": "Ollama",
-        "openai": "OpenAI-kompatibel (LM Studio, llama.cpp)"
+        "openai": "OpenAI-kompatibel (LM Studio, llama.cpp)",
+        "openrouter": "OpenRouter (kostenlose Modelle)",
+        "openrouterNotice": "Cloud-Anbieter: Ihre Frage und Notizausschnitte werden an OpenRouter gesendet. Kostenlose Modelle haben strenge Tageslimits, und manche Anbieter protokollieren Anfragen. Benötigt einen kostenlosen API-Schlüssel von openrouter.ai/keys.",
+        "openrouterPrivacy": "Der Datenschutzmodus ist aktiv und blockiert Cloud-Modelle – deaktivieren Sie ihn unten, um OpenRouter zu nutzen."
       },
       "endpoint": {
         "title": "Ollama-Endpunkt",
@@ -1660,9 +1697,16 @@
         "title": "Streaming-Ausgabe",
         "description": "Partielle gestreamte Antworten zulassen"
       },
-      "cloudCredentials": {
-        "title": "Cloud-Anmeldedaten",
-        "description": "Anbieter-Geheimnisse bleiben außerhalb von `.nevo/settings.json`, bis sicherer Speicher existiert"
+      "apiKey": {
+        "title": "API-Schlüssel",
+        "description": "Wird von OpenAI-kompatiblen Cloud-Anbietern wie OpenRouter oder Groq benötigt. Wird im Schlüsselbund des Systems gespeichert, nie in den Arbeitsbereich-Einstellungen",
+        "saved": "Ein Schlüssel ist im Schlüsselbund des Systems gespeichert",
+        "error": "Kein Zugriff auf den Schlüsselbund des Systems",
+        "placeholder": "API-Schlüssel einfügen",
+        "replacePlaceholder": "Neuen Schlüssel zum Ersetzen einfügen",
+        "save": "Speichern",
+        "replace": "Ersetzen",
+        "clear": "Löschen"
       }
     },
     "plugins": {
@@ -1882,6 +1926,8 @@
         "inlineMath": "Inline-Mathe",
         "findInNote": "In Notiz suchen",
         "replaceInNote": "Suchen und Ersetzen",
+        "toggleDictation": "Diktat ein- oder ausschalten",
+        "toggleAiChat": "KI-Chat ein- oder ausblenden",
         "newNote": "Notiz erstellen",
         "newFolder": "Ordner erstellen",
         "saveNote": "Notiz speichern",
@@ -2077,12 +2123,16 @@
       "deleteRow": "Zeile löschen",
       "deleteCol": "Spalte löschen",
       "deleteTable": "Tabelle löschen",
+      "sortAsc": "Spalte sortieren A→Z",
+      "sortDesc": "Spalte sortieren Z→A",
+      "sortUnavailable": "Sortieren ist bei Tabellen mit verbundenen Zeilen oder Formeln nicht verfügbar",
       "categories": {
         "insert": "Einfügen",
         "cells": "Zellen",
         "alignment": "Ausrichtung",
         "styling": "Stil",
-        "actions": "Aktionen"
+        "actions": "Aktionen",
+        "sort": "Sortieren"
       }
     },
     "assets": {
@@ -2426,7 +2476,43 @@
     "videoFile": "Videodatei",
     "audioFile": "Audiodatei",
     "play": "Wiedergeben",
-    "pause": "Pause"
+    "pause": "Pause",
+    "audioPlayer": "Audioplayer",
+    "seek": "Audio durchsuchen",
+    "audioViewLabel": "Audioansicht",
+    "audioViewPlayer": "Nur Wiedergabe",
+    "audioViewBookmarks": "Mit Lesezeichen",
+    "skipBack": "10 Sekunden zurück",
+    "skipForward": "10 Sekunden vor",
+    "playbackSpeed": "Wiedergabegeschwindigkeit",
+    "volume": "Lautstärke",
+    "bookmarks": "Lesezeichen",
+    "emptyBookmarks": "Füge ein Lesezeichen hinzu, um zu einem wichtigen Moment zurückzukehren.",
+    "addBookmark": "Lesezeichen hinzufügen",
+    "bookmarkName": "Name des Lesezeichens",
+    "bookmarkNamePlaceholder": "Moment benennen",
+    "renameBookmark": "Lesezeichen umbenennen",
+    "deleteBookmark": "Lesezeichen löschen",
+    "loadingAudio": "Audio wird geladen…",
+    "audioError": "Audio konnte nicht geladen werden. Prüfe die Datei und versuche es erneut.",
+    "retryAudio": "Erneut versuchen",
+    "transcript": "Transkript",
+    "transcribe": "Offline transkribieren",
+    "retranscribe": "Erneut transkribieren",
+    "transcriptLanguage": "Sprache der Aufnahme",
+    "transcriptLanguages": {
+      "auto": "Automatisch erkennen",
+      "ru": "Russisch",
+      "en": "Englisch",
+      "de": "Deutsch",
+      "fr": "Französisch",
+      "es": "Spanisch"
+    },
+    "transcribing": "Wird auf diesem Gerät transkribiert…",
+    "transcriptEmpty": "Keine Sprache erkannt.",
+    "transcriptBusy": "Eine andere Aufnahme wird bereits transkribiert. Bitte später erneut versuchen.",
+    "transcriptFailed": "Audio konnte nicht transkribiert werden. Datei prüfen und erneut versuchen.",
+    "cancel": "Abbrechen"
   },
   "voiceRecording": {
     "recording": "Aufnahme",
@@ -2443,6 +2529,19 @@
       "stopFailed": "Aufnahme konnte nicht gestoppt werden.",
       "saveFailed": "Die Aufnahme konnte nicht gespeichert werden. Die Audiodatei wurde im App-Cache belassen.",
       "unsupported": "Sprachaufnahme ist auf diesem Gerät noch nicht verfügbar."
+    }
+  },
+  "dictation": {
+    "indicator": "Diktat läuft. Klicken zum Beenden oder Esc drücken",
+    "errors": {
+      "noDevice": "Kein Mikrofon gefunden.",
+      "permissionDenied": "Mikrofonzugriff verweigert. Erlaube ihn in den Systemeinstellungen und versuche es erneut.",
+      "busy": "Gerade wird Audio transkribiert. Warte, bis es fertig ist.",
+      "alreadyRecording": "Eine Aufnahme läuft bereits.",
+      "modelUnavailable": "Das Spracherkennungsmodell ist noch nicht heruntergeladen.",
+      "unsupported": "Diktat ist auf diesem Gerät noch nicht verfügbar.",
+      "startFailed": "Das Diktat konnte nicht gestartet werden.",
+      "failed": "Das Diktat wurde wegen eines Fehlers beendet."
     }
   },
   "slashMenu": {
@@ -2473,6 +2572,7 @@
       "video": "Video",
       "audio": "Audio",
       "voice_recording": "Sprachaufnahme",
+      "dictation": "Diktat",
       "file": "Dateianhang",
       "table": "Tabelle",
       "mermaid": "Mermaid-Diagramm",
@@ -2482,6 +2582,7 @@
       "chart": "Diagramm",
       "database": "Datenbank",
       "note_embed": "Notiz einbetten",
+      "map": "Karte",
       "embed": "Einbettung",
       "insert_template": "Vorlage einfügen",
       "quote": "Zitat",
@@ -2509,7 +2610,10 @@
     "remove": "Entfernen",
     "loading": "Einbettung wird geladen…",
     "error": "Einbettung konnte nicht geladen werden",
-    "unsupported": "Nicht unterstützte URL"
+    "unsupported": "Nicht unterstützte URL",
+    "mapLabel": "Adresse oder Kartenlink",
+    "mapPlaceholder": "Brandenburger Tor, Berlin",
+    "showMap": "Karte anzeigen"
   },
   "image": {
     "menu": {
@@ -2521,13 +2625,20 @@
       "alignLeft": "Links",
       "alignCenter": "Zentriert",
       "alignRight": "Rechts",
-      "width": "Breite"
+      "width": "Breite",
+      "open": "Im Vollbild öffnen"
     },
     "size": {
       "small": "Klein",
       "medium": "Mittel",
       "large": "Groß",
       "full": "Volle Breite"
+    },
+    "lightbox": {
+      "title": "Bildbetrachter",
+      "counter": "{current} von {total}",
+      "previous": "Vorheriges Bild",
+      "next": "Nächstes Bild"
     }
   },
   "database": {
@@ -3094,5 +3205,99 @@
     "errors": { "pageLimit": "Das Notizbuch hat die maximale Seitenzahl erreicht.", "objectLimit": "Das Notizbuch hat die maximale Anzahl an Strichen erreicht.", "pointLimit": "Das Notizbuch hat die maximale Zeichendetailgrenze erreicht.", "serializedLimit": "Das Notizbuch hat die maximale Speichergröße erreicht.", "unsupported": "Dieses Notizbuch kann mit dieser Version nicht bearbeitet werden.", "invalid": "Die Notizbuchdaten konnten nicht sicher zum Bearbeiten geöffnet werden.", "export": "Das PDF konnte nicht exportiert werden.", "imageType": "Es werden nur PNG-, JPEG-, WebP- und GIF-Bilder unterstützt.", "imageImport": "Das Bild konnte nicht eingefügt werden." },
     "deletePage": { "title": "Diese Seite löschen?", "message": "Diese Seite enthält Tinte. Mit Rückgängig kannst du sie wiederherstellen.", "confirm": "Seite löschen", "cancel": "Seite behalten" },
     "palette": {"open": "Farbpalette", "builtin": "Palette", "custom": "Meine Farben", "recent": "Zuletzt verwendet", "addCurrent": "Aktuelle Farbe hinzufügen", "edit": "Bearbeiten", "done": "Fertig", "remove": "Farbe {color} entfernen", "quick": "Schnelle Farbauswahl", "colors": {"black": "Schwarz", "graphite": "Graphit", "blue": "Blau", "sky": "Himmelblau", "red": "Rot", "orange": "Orange", "yellow": "Gelb", "green": "Grün", "teal": "Türkis", "purple": "Violett", "pink": "Rosa", "brown": "Braun"}}
+  },
+  "aiChat": {
+    "launcher": {
+      "label": "KI fragen",
+      "busy": "Antwortet im Hintergrund",
+      "unread": "Antwort bereit",
+      "offline": "Modell nicht erreichbar"
+    },
+    "dialogLabel": "KI-Chat",
+    "header": {
+      "newChatTitle": "Neuer Chat",
+      "newChat": "Neuer Chat",
+      "dock": "Rechts andocken",
+      "undock": "Lösen",
+      "collapse": "Einklappen",
+      "close": "Chat schließen"
+    },
+    "scope": {
+      "searchingIn": "Suche in",
+      "menuLabel": "Suchbereich",
+      "workspace": "Gesamter Workspace",
+      "note": "Nur diese Notiz",
+      "removeNote": "Notiz aus dem Kontext entfernen",
+      "addNote": "Notiz zum Kontext hinzufügen"
+    },
+    "log": {
+      "label": "Unterhaltung"
+    },
+    "empty": {
+      "heading": "Was möchtest du deine Notizen fragen?",
+      "description": "Antworten stützen sich auf deine Notizen und zeigen, woher jede Angabe stammt.",
+      "forNote": "Für diese Notiz",
+      "forWorkspace": "Frag zum Beispiel",
+      "suggestions": {
+        "summarizeNote": "Fasse diese Notiz zusammen",
+        "relatedNotes": "Finde Notizen, die zu dieser passen",
+        "openTasks": "Liste die offenen Aufgaben dieser Notiz auf",
+        "workspaceRecent": "Woran habe ich zuletzt gearbeitet?",
+        "workspaceTasks": "Liste die offenen Aufgaben aus allen Notizen auf",
+        "workspaceThemes": "Was sind die Hauptthemen meiner Notizen?"
+      }
+    },
+    "message": {
+      "sources": "Quellen",
+      "stopped": "angehalten",
+      "citation": "Quelle {n}: {title}",
+      "thinking": "Denkt nach"
+    },
+    "actions": {
+      "insert": "Einfügen",
+      "replace": "Auswahl ersetzen",
+      "replaceNeedsSelection": "Markiere zuerst Text in einer Notiz",
+      "copy": "Kopieren",
+      "saveAsNote": "Als neue Notiz speichern",
+      "retry": "Erneut versuchen",
+      "apply": "Anwenden",
+      "cancel": "Abbrechen",
+      "diffLabel": "Vorschau der Ersetzung"
+    },
+    "error": {
+      "offlineTitle": "Modell antwortet nicht",
+      "offlineBody": "Keine Antwort von {host}. Starte den Modellserver oder wähle ein anderes Modell.",
+      "privacyTitle": "Cloud-Modell blockiert",
+      "privacyBody": "Der private Modus erlaubt nur Modelle auf diesem Computer, daher wurde die Anfrage an {host} nicht gesendet.",
+      "otherTitle": "Etwas ist schiefgelaufen",
+      "rateLimitTitle": "Anfragelimit erreicht",
+      "rateLimitBody": "{host} begrenzt die Anfragen. Kostenlose Modelle erlauben nur wenige Anfragen pro Minute und pro Tag – warten Sie kurz oder wählen Sie ein anderes Modell.",
+      "authTitle": "API-Schlüssel abgelehnt",
+      "authBody": "{host} hat den API-Schlüssel nicht akzeptiert. Prüfen Sie ihn in den KI-Einstellungen.",
+      "retry": "Erneut versuchen",
+      "openSettings": "KI-Einstellungen",
+      "chooseLocal": "Lokales Modell wählen"
+    },
+    "composer": {
+      "label": "Nachricht",
+      "placeholder": "Frag etwas zu deinen Notizen",
+      "send": "Senden",
+      "stop": "Stoppen",
+      "modelAria": "Modell: {model}, {where}",
+      "modelsLoading": "Modelle werden geladen…",
+      "modelsError": "Modelle konnten nicht geladen werden – prüfen Sie die KI-Einstellungen",
+      "modelsEmpty": "Keine Modelle gefunden",
+      "local": "lokal"
+    },
+    "toast": {
+      "selectionChanged": "Der markierte Text hat sich geändert. Markiere ihn erneut und versuche es noch einmal.",
+      "emptyAnswer": "Die Antwort ist leer.",
+      "editorUnavailable": "Öffne zuerst eine Notiz im Editor.",
+      "createFailed": "Die Notiz konnte nicht erstellt werden.",
+      "noteCreated": "Als neue Notiz gespeichert",
+      "copyFailed": "Die Antwort konnte nicht kopiert werden.",
+      "actionFailed": "Die Aktion konnte nicht ausgeführt werden."
+    },
+    "untitled": "Unbenannt"
   }
 }

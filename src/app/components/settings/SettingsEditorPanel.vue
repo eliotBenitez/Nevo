@@ -8,6 +8,9 @@ import NvToggle from '../../../ui/primitives/NvToggle.vue'
 import SettingsSectionHeader from './ui/SettingsSectionHeader.vue'
 import SettingsGroup from './ui/SettingsGroup.vue'
 import SettingsRow from './ui/SettingsRow.vue'
+import SpeechModelSettings from './SpeechModelSettings.vue'
+import { TRANSCRIPTION_LANGUAGES, type TranscriptionLanguage } from '../../../core/media/transcriptionLanguage'
+import { isDictationSupported } from '../../../tauri/dictation'
 import { useEditorFontOptions } from '../../composables/useEditorFontOptions'
 
 const { t } = useI18n()
@@ -36,6 +39,8 @@ const slashMenuLayoutOptions = [
 const focusModeOptions = ['off', 'soft'].map(v => ({ value: v, label: opt('focusMode', v) }))
 const typewriterPositionOptions = ['upper', 'center', 'lower'].map(v => ({ value: v, label: opt('typewriterPosition', v) }))
 const caretAnimationOptions = ['system', 'steady', 'blink', 'fade', 'smooth', 'sparkle', 'glow', 'comet', 'jelly'].map(v => ({ value: v, label: opt('caretAnimation', v) }))
+const dictationSupported = isDictationSupported()
+const dictationLanguageOptions = TRANSCRIPTION_LANGUAGES.map(v => ({ value: v, label: t(v === 'auto' ? 'settings.editor.dictationLanguage.interface' : `media.transcriptLanguages.${v}`) }))
 const tabKeyBehaviorOptions = ['indent', 'focus'].map(v => ({ value: v, label: opt('tabKeyBehavior', v) }))
 const autosavePolicyOptions = ['immediate', 'window-idle'].map(v => ({ value: v, label: opt('autosavePolicy', v) }))
 const pasteBehaviorOptions = ['smart', 'plain-text'].map(v => ({ value: v, label: opt('pasteBehavior', v) }))
@@ -251,6 +256,27 @@ const editorStatsOptions = ['off', 'corner'].map(v => ({ value: v, label: opt('e
             :options="caretAnimationOptions"
             @update:model-value="v => u(d => { d.editor.caretAnimation = v as any })"
           />
+        </SettingsRow>
+
+        <SettingsRow
+          v-if="dictationSupported"
+          :title="t('settings.editor.dictationLanguage.title')"
+          :description="t('settings.editor.dictationLanguage.description')"
+        >
+          <NvSelect
+            :model-value="settings.editor.dictationLanguage"
+            :options="dictationLanguageOptions"
+            @update:model-value="v => u(d => { d.editor.dictationLanguage = v as TranscriptionLanguage })"
+          />
+        </SettingsRow>
+
+        <SettingsRow
+          v-if="dictationSupported"
+          layout="stacked"
+          :title="t('settings.editor.speechModel.title')"
+          :description="t('settings.editor.speechModel.description')"
+        >
+          <SpeechModelSettings />
         </SettingsRow>
 
         <SettingsRow

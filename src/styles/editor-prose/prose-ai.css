@@ -40,3 +40,37 @@
     animation: ai-text-fade-in 0.4s ease both;
   }
 }
+
+/* ── Live dictation (decoration only, never part of the document) ─────────── */
+
+.nv-dictation {
+  display: inline;
+  user-select: none;
+}
+
+.nv-dictation-indicator {
+  display: inline-block;
+  width: 0.55em;
+  height: 0.55em;
+  margin: 0 0.25em;
+  vertical-align: middle;
+  border-radius: 50%;
+  background: var(--danger);
+  box-shadow: 0 0 0 calc(var(--nv-dictation-level, 0) * 4px) var(--danger-soft);
+  cursor: pointer;
+}
+
+.nv-dictation-partial {
+  color: var(--text-muted);
+}
+
+@keyframes nv-dictation-pulse {
+  50% { opacity: 0.45; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nv-dictation-indicator {
+    animation: nv-dictation-pulse 1.2s ease-in-out infinite;
+    transition: box-shadow 0.1s linear;
+  }
+}

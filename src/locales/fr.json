@@ -290,6 +290,8 @@
     }
   },
   "common": {
+    "notifications": "Notifications",
+    "undo": "Annuler",
     "datePicker": {
       "placeholder": "Choisir une date",
       "previousMonth": "Mois précédent",
@@ -768,6 +770,7 @@
     "mathApply": "Appliquer la formule",
     "mathRemove": "Retirer la formule",
     "context": {
+      "noteArchived": "Note déplacée dans l’archive",
       "rename": "Renommer",
       "delete": "Supprimer",
       "search": "Rechercher",
@@ -1431,6 +1434,37 @@
         "title": "Défilement machine à écrire",
         "description": "Garder le bloc actif près du centre de la vue pendant la frappe"
       },
+      "dictationLanguage": {
+        "title": "Langue de dictée",
+        "description": "Langue parlée pour la dictée. Par défaut, celle de l’interface",
+        "interface": "Langue de l’interface"
+      },
+      "speechModel": {
+        "title": "Modèle de reconnaissance vocale",
+        "description": "Modèle utilisé pour la dictée et les transcriptions audio. Les modèles plus grands sont plus précis mais plus lents et nécessitent un téléchargement unique",
+        "models": {
+          "base": "Base (intégré)",
+          "small": "Small — plus précis",
+          "turbo": "Large v3 Turbo — précision maximale"
+        },
+        "hints": {
+          "base": "Rapide, précision de base",
+          "small": "Meilleure précision, environ 2 à 3 fois plus lent",
+          "turbo": "Meilleure précision, lent sur processeur : plusieurs secondes par phrase"
+        },
+        "active": "Actif",
+        "download": "Télécharger",
+        "cancel": "Annuler",
+        "use": "Utiliser",
+        "delete": "Supprimer",
+        "errors": {
+          "generic": "Impossible de changer le modèle de reconnaissance vocale",
+          "busy": "La reconnaissance vocale est occupée. Réessayez dans un instant",
+          "inProgress": "Un modèle est déjà en cours de téléchargement",
+          "integrity": "Le modèle téléchargé est corrompu. Réessayez",
+          "download": "Impossible de télécharger le modèle. Vérifiez votre connexion"
+        }
+      },
       "activeBlockEmphasis": {
         "title": "Emphase du bloc actif",
         "description": "Atténuer légèrement les blocs adjacents pour focaliser sur le bloc courant"
@@ -1623,7 +1657,10 @@
         "title": "Type d'API",
         "description": "Protocole de l'API du serveur local",
         "ollama": "Ollama",
-        "openai": "Compatible OpenAI (LM Studio, llama.cpp)"
+        "openai": "Compatible OpenAI (LM Studio, llama.cpp)",
+        "openrouter": "OpenRouter (modèles gratuits)",
+        "openrouterNotice": "Fournisseur cloud : votre question et des extraits de notes sont envoyés à OpenRouter. Les modèles gratuits ont des limites quotidiennes strictes et certains fournisseurs peuvent journaliser les requêtes. Nécessite une clé d’API gratuite sur openrouter.ai/keys.",
+        "openrouterPrivacy": "Le mode confidentialité est activé et bloque les modèles cloud — désactivez-le ci-dessous pour utiliser OpenRouter."
       },
       "endpoint": {
         "title": "Point de terminaison Ollama",
@@ -1660,9 +1697,16 @@
         "title": "Sortie en flux",
         "description": "Autoriser les complétions partielles en flux"
       },
-      "cloudCredentials": {
-        "title": "Identifiants cloud",
-        "description": "Les secrets des fournisseurs restent hors de `.nevo/settings.json` tant que le stockage sécurisé n'existe pas"
+      "apiKey": {
+        "title": "Clé d’API",
+        "description": "Requise par les fournisseurs cloud compatibles OpenAI comme OpenRouter ou Groq. Stockée dans le trousseau du système, jamais dans les réglages de l’espace de travail",
+        "saved": "Une clé est enregistrée dans le trousseau du système",
+        "error": "Impossible d’accéder au trousseau du système",
+        "placeholder": "Collez la clé d’API",
+        "replacePlaceholder": "Collez une nouvelle clé pour la remplacer",
+        "save": "Enregistrer",
+        "replace": "Remplacer",
+        "clear": "Effacer"
       }
     },
     "plugins": {
@@ -1882,6 +1926,8 @@
         "inlineMath": "Math en ligne",
         "findInNote": "Rechercher dans la note",
         "replaceInNote": "Rechercher et remplacer",
+        "toggleDictation": "Activer ou désactiver la dictée",
+        "toggleAiChat": "Afficher ou masquer le chat IA",
         "newNote": "Créer une note",
         "newFolder": "Créer un dossier",
         "saveNote": "Enregistrer la note",
@@ -2077,12 +2123,16 @@
       "deleteRow": "Supprimer la ligne",
       "deleteCol": "Supprimer la colonne",
       "deleteTable": "Supprimer le tableau",
+      "sortAsc": "Trier la colonne A→Z",
+      "sortDesc": "Trier la colonne Z→A",
+      "sortUnavailable": "Le tri n’est pas disponible pour les tableaux avec des lignes fusionnées ou des formules",
       "categories": {
         "insert": "Insérer",
         "cells": "Cellules",
         "alignment": "Alignement",
         "styling": "Style",
-        "actions": "Actions"
+        "actions": "Actions",
+        "sort": "Trier"
       }
     },
     "assets": {
@@ -2426,7 +2476,43 @@
     "videoFile": "Fichier vidéo",
     "audioFile": "Fichier audio",
     "play": "Lire",
-    "pause": "Pause"
+    "pause": "Pause",
+    "audioPlayer": "Lecteur audio",
+    "seek": "Parcourir l’audio",
+    "audioViewLabel": "Vue audio",
+    "audioViewPlayer": "Écoute seule",
+    "audioViewBookmarks": "Avec signets",
+    "skipBack": "Reculer de 10 secondes",
+    "skipForward": "Avancer de 10 secondes",
+    "playbackSpeed": "Vitesse de lecture",
+    "volume": "Volume",
+    "bookmarks": "Signets",
+    "emptyBookmarks": "Ajoutez un signet pour retrouver un moment important.",
+    "addBookmark": "Ajouter un signet",
+    "bookmarkName": "Nom du signet",
+    "bookmarkNamePlaceholder": "Nommer ce moment",
+    "renameBookmark": "Renommer le signet",
+    "deleteBookmark": "Supprimer le signet",
+    "loadingAudio": "Chargement audio…",
+    "audioError": "Impossible de charger l’audio. Vérifiez le fichier puis réessayez.",
+    "retryAudio": "Réessayer",
+    "transcript": "Transcription",
+    "transcribe": "Transcrire hors ligne",
+    "retranscribe": "Transcrire à nouveau",
+    "transcriptLanguage": "Langue de l'enregistrement",
+    "transcriptLanguages": {
+      "auto": "Détecter automatiquement",
+      "ru": "Russe",
+      "en": "Anglais",
+      "de": "Allemand",
+      "fr": "Français",
+      "es": "Espagnol"
+    },
+    "transcribing": "Transcription sur cet appareil…",
+    "transcriptEmpty": "Aucune parole reconnue.",
+    "transcriptBusy": "Un autre enregistrement est en cours de transcription. Réessayez plus tard.",
+    "transcriptFailed": "Impossible de transcrire cet audio. Vérifiez le fichier et réessayez.",
+    "cancel": "Annuler"
   },
   "voiceRecording": {
     "recording": "Enregistrement",
@@ -2443,6 +2529,19 @@
       "stopFailed": "Impossible d'arrêter l'enregistrement.",
       "saveFailed": "L'enregistrement n'a pas pu être sauvegardé. Le fichier audio a été conservé dans le cache de l'application.",
       "unsupported": "L'enregistrement vocal n'est pas encore disponible sur cet appareil."
+    }
+  },
+  "dictation": {
+    "indicator": "Dictée en cours. Cliquez pour arrêter, ou appuyez sur Échap",
+    "errors": {
+      "noDevice": "Aucun microphone trouvé.",
+      "permissionDenied": "Accès au microphone refusé. Autorisez-le dans les paramètres système et réessayez.",
+      "busy": "Une transcription audio est en cours. Attendez qu’elle se termine.",
+      "alreadyRecording": "Un enregistrement est déjà en cours.",
+      "modelUnavailable": "Le modèle de reconnaissance vocale n’est pas encore téléchargé.",
+      "unsupported": "La dictée n’est pas encore disponible sur cet appareil.",
+      "startFailed": "Impossible de démarrer la dictée.",
+      "failed": "La dictée s’est arrêtée à cause d’une erreur."
     }
   },
   "slashMenu": {
@@ -2473,6 +2572,7 @@
       "video": "Vidéo",
       "audio": "Audio",
       "voice_recording": "Enregistrement vocal",
+      "dictation": "Dictée",
       "file": "Fichier joint",
       "table": "Tableau",
       "mermaid": "Diagramme Mermaid",
@@ -2482,6 +2582,7 @@
       "chart": "Graphique",
       "database": "Base de données",
       "note_embed": "Intégration de note",
+      "map": "Carte",
       "embed": "Intégration",
       "insert_template": "Insérer un modèle",
       "quote": "Citation",
@@ -2509,7 +2610,10 @@
     "remove": "Retirer",
     "loading": "Chargement de l'intégration…",
     "error": "Échec du chargement de l'intégration",
-    "unsupported": "URL non prise en charge"
+    "unsupported": "URL non prise en charge",
+    "mapLabel": "Adresse ou lien de carte",
+    "mapPlaceholder": "Tour Eiffel, Paris",
+    "showMap": "Afficher la carte"
   },
   "image": {
     "menu": {
@@ -2521,13 +2625,20 @@
       "alignLeft": "Gauche",
       "alignCenter": "Centre",
       "alignRight": "Droite",
-      "width": "Largeur"
+      "width": "Largeur",
+      "open": "Ouvrir en plein écran"
     },
     "size": {
       "small": "Petite",
       "medium": "Moyenne",
       "large": "Grande",
       "full": "Pleine largeur"
+    },
+    "lightbox": {
+      "title": "Visionneuse d’images",
+      "counter": "{current} sur {total}",
+      "previous": "Image précédente",
+      "next": "Image suivante"
     }
   },
   "database": {
@@ -3094,5 +3205,99 @@
     "errors": { "pageLimit": "Le nombre maximal de pages est atteint.", "objectLimit": "Le nombre maximal de traits est atteint.", "pointLimit": "La limite de détails du dessin est atteinte.", "serializedLimit": "La taille maximale du carnet est atteinte.", "unsupported": "Ce carnet ne peut pas être modifié dans cette version.", "invalid": "Les données du carnet n'ont pas pu être ouvertes sans risque de perte.", "export": "L'export PDF a échoué.", "imageType": "Seules les images PNG, JPEG, WebP et GIF sont prises en charge.", "imageImport": "Impossible d'insérer l'image." },
     "deletePage": { "title": "Supprimer cette page ?", "message": "Cette page contient de l'encre. Vous pourrez la restaurer avec Annuler.", "confirm": "Supprimer la page", "cancel": "Garder la page" },
     "palette": {"open": "Palette de couleurs", "builtin": "Palette", "custom": "Mes couleurs", "recent": "Récentes", "addCurrent": "Ajouter la couleur actuelle", "edit": "Modifier", "done": "Terminé", "remove": "Supprimer la couleur {color}", "quick": "Choix rapide de couleur", "colors": {"black": "Noir", "graphite": "Graphite", "blue": "Bleu", "sky": "Bleu ciel", "red": "Rouge", "orange": "Orange", "yellow": "Jaune", "green": "Vert", "teal": "Turquoise", "purple": "Violet", "pink": "Rose", "brown": "Marron"}}
+  },
+  "aiChat": {
+    "launcher": {
+      "label": "Demander à l'IA",
+      "busy": "Répond en arrière-plan",
+      "unread": "Réponse prête",
+      "offline": "Modèle indisponible"
+    },
+    "dialogLabel": "Chat IA",
+    "header": {
+      "newChatTitle": "Nouveau chat",
+      "newChat": "Nouveau chat",
+      "dock": "Ancrer à droite",
+      "undock": "Détacher",
+      "collapse": "Réduire",
+      "close": "Fermer le chat"
+    },
+    "scope": {
+      "searchingIn": "Recherche dans",
+      "menuLabel": "Portée de la recherche",
+      "workspace": "Tout le workspace",
+      "note": "Cette note uniquement",
+      "removeNote": "Retirer la note du contexte",
+      "addNote": "Ajouter la note au contexte"
+    },
+    "log": {
+      "label": "Conversation"
+    },
+    "empty": {
+      "heading": "Que voulez-vous demander à vos notes ?",
+      "description": "Les réponses s'appuient sur vos notes et indiquent d'où vient chaque information.",
+      "forNote": "Pour cette note",
+      "forWorkspace": "Essayez de demander",
+      "suggestions": {
+        "summarizeNote": "Résume cette note",
+        "relatedNotes": "Trouve les notes liées à celle-ci",
+        "openTasks": "Liste les tâches ouvertes dans cette note",
+        "workspaceRecent": "Sur quoi ai-je travaillé récemment ?",
+        "workspaceTasks": "Liste les tâches ouvertes dans toutes mes notes",
+        "workspaceThemes": "Quels sont les grands thèmes de mes notes ?"
+      }
+    },
+    "message": {
+      "sources": "Sources",
+      "stopped": "arrêté",
+      "citation": "Source {n} : {title}",
+      "thinking": "Réflexion en cours"
+    },
+    "actions": {
+      "insert": "Insérer",
+      "replace": "Remplacer la sélection",
+      "replaceNeedsSelection": "Sélectionnez d'abord du texte dans une note",
+      "copy": "Copier",
+      "saveAsNote": "Enregistrer comme nouvelle note",
+      "retry": "Réessayer",
+      "apply": "Appliquer",
+      "cancel": "Annuler",
+      "diffLabel": "Aperçu du remplacement"
+    },
+    "error": {
+      "offlineTitle": "Le modèle ne répond pas",
+      "offlineBody": "Aucune réponse de {host}. Démarrez le serveur du modèle ou choisissez un autre modèle.",
+      "privacyTitle": "Modèle cloud bloqué",
+      "privacyBody": "Le mode privé n'autorise que les modèles de cet ordinateur ; la requête vers {host} n'a donc pas été envoyée.",
+      "otherTitle": "Une erreur s'est produite",
+      "rateLimitTitle": "Limite de requêtes atteinte",
+      "rateLimitBody": "{host} limite les requêtes. Les modèles gratuits n’autorisent que quelques requêtes par minute et par jour — patientez un peu ou choisissez un autre modèle.",
+      "authTitle": "Clé d’API refusée",
+      "authBody": "{host} n’a pas accepté la clé d’API. Vérifiez-la dans les réglages IA.",
+      "retry": "Réessayer",
+      "openSettings": "Paramètres de l'IA",
+      "chooseLocal": "Choisir un modèle local"
+    },
+    "composer": {
+      "label": "Message",
+      "placeholder": "Posez une question sur vos notes",
+      "send": "Envoyer",
+      "stop": "Arrêter",
+      "modelAria": "Modèle : {model}, {where}",
+      "modelsLoading": "Chargement des modèles…",
+      "modelsError": "Impossible de charger les modèles — vérifiez les réglages IA",
+      "modelsEmpty": "Aucun modèle trouvé",
+      "local": "local"
+    },
+    "toast": {
+      "selectionChanged": "Le texte sélectionné a changé. Sélectionnez-le à nouveau et réessayez.",
+      "emptyAnswer": "La réponse est vide.",
+      "editorUnavailable": "Ouvrez d'abord une note dans l'éditeur.",
+      "createFailed": "Impossible de créer la note.",
+      "noteCreated": "Enregistré comme nouvelle note",
+      "copyFailed": "Impossible de copier la réponse.",
+      "actionFailed": "L'action n'a pas pu être effectuée."
+    },
+    "untitled": "Sans titre"
   }
 }

@@ -1,0 +1,118 @@
+{
+  "general": {
+    "defaultStartupView": "specific-note",
+    "restoreLastContext": false,
+    "recentItemsBehavior": "manual",
+    "confirmBeforeDelete": false,
+    "lastContext": { "kind": "note", "folderId": "folder-1", "noteId": "note-1" },
+    "startupNoteId": "note-start",
+    "homeFavorites": [{ "kind": "note", "id": "note-1" }, { "kind": "graph" }]
+  },
+  "appearance": {
+    "accentPreset": "#ff6600",
+    "backgroundScene": "paper",
+    "surfaceStyle": "tinted",
+    "contrastMode": "high",
+    "sidebarStyle": "minimal",
+    "editorFontFamily": "JetBrains Mono",
+    "editorFontSize": 19,
+    "editorLineWidth": "wide",
+    "customCssEnabled": true,
+    "customCssFileName": "theme.css",
+    "accentColoredHeadings": true
+  },
+  "editor": {
+    "spellCheck": true,
+    "markdownShortcuts": false,
+    "slashCommands": false,
+    "smoothScrolling": false,
+    "caretAnimation": "jelly",
+    "tabKeyBehavior": "focus",
+    "autosavePolicy": "window-idle",
+    "focusMode": "soft",
+    "typewriterScrolling": true,
+    "dictationLanguage": "ru",
+    "activeBlockEmphasis": true,
+    "pasteBehavior": "plain-text",
+    "slashMenuHints": false,
+    "slashMenuLayout": "grid",
+    "editorStatsVisibility": "corner",
+    "typewriterPosition": "upper"
+  },
+  "workspace": {
+    "showBacklinksByDefault": false,
+    "showGraphLabels": true,
+    "folderCreateBehavior": "current-folder",
+    "rootNotesVisible": false,
+    "defaultSort": "updated-desc",
+    "description": "Round-trip fixture",
+    "workspaceType": "research",
+    "status": "draft",
+    "tags": ["alpha", "beta"],
+    "openLastVisitedSystemView": false,
+    "rememberExpandedFolders": false,
+    "sidebarDefaultState": "collapsed",
+    "newNotePlacement": "root",
+    "newFolderPlacement": "root",
+    "defaultChildSort": "title-asc",
+    "showEmptyFolders": false,
+    "defaultNoteIcon": "📝",
+    "defaultNoteTitlePattern": "date-time",
+    "defaultFolderIcon": "🗂️",
+    "newNoteTemplate": "meeting",
+    "newWorkspaceHomeNote": false,
+    "autoCreateStarterStructure": "structured",
+    "sidebarContentMode": "tree",
+    "sidebarLayout": "floating",
+    "sidebarSortMode": "name-desc",
+    "graphEntryMode": "from-current-note",
+    "graphScopeDefault": "current-folder",
+    "searchStartScope": "current-folder",
+    "historyDefaultRange": "all"
+  },
+  "ai": {
+    "enabled": true,
+    "privacyMode": false,
+    "defaultProvider": "cloud",
+    "apiKind": "openai",
+    "defaultModel": "qwen2.5",
+    "baseUrl": "http://localhost:1234/v1",
+    "slashCommands": true,
+    "contextualSuggestions": true,
+    "streamingOutput": false,
+    "maxTokensPerRequest": 4096,
+    "cloudDailyBudgetUsd": 25
+  },
+  "plugins": {
+    "autoReloadOnLaunch": false,
+    "installSource": "folder-only"
+  },
+  "pluginSettings": {
+    "plugin.alpha": { "enabled": true, "level": 3 }
+  },
+  "features": {
+    "kanban": false,
+    "templates": false,
+    "vega": false,
+    "markmap": false
+  },
+  "mcp": {
+    "mode": "read-only",
+    "autoSnapshot": false
+  },
+  "hotkeys": {
+    "bindings": [
+      { "commandId": "core.undo", "label": "core.undo", "defaultChord": "Ctrl+Z", "customChord": "Ctrl+Shift+K", "scope": "workspace" }
+    ]
+  },
+  "files": {
+    "attachmentImportBehavior": "copy-into-workspace",
+    "snapshotRetentionCount": 120,
+    "trashRetentionDays": 90
+  },
+  "advanced": {
+    "schemaVersion": 2,
+    "experimentalGraphTools": true,
+    "developerLogging": true
+  }
+}

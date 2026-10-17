@@ -5,6 +5,12 @@ import type { NoteDocument } from '../../types/note'
 import { serializeNoteToDocx, type DocxExportHelpers } from './docxSerializer'
 import { DEFAULT_DOCX_OPTIONS } from './docxOptions'
 
+const markmap = vi.hoisted(() => ({
+  renderMarkmapToExportSvg: vi.fn(async () => '<svg xmlns="http://www.w3.org/2000/svg"/>'),
+  renderMarkmapToSvg: vi.fn(async () => '<svg xmlns="http://www.w3.org/2000/svg"/>'),
+}))
+vi.mock('./markmapToSvg', () => markmap)
+
 function note(content: NoteDocument['content'], title = 'Doc'): NoteDocument {
   return { id: 'n1', title, icon: '', folderId: null, createdAt: '', updatedAt: '', content }
 }
@@ -35,6 +41,47 @@ async function docxFileXml(
 }
 
 describe('serializeNoteToDocx', () => {
+  it('exports markmap blocks through the native-label export renderer', async () => {
+    const helpers = stubHelpers()
+    await serializeNoteToDocx(note({ type: 'doc', content: [
+      { type: 'markmap_block', attrs: { markdown: '# Root' } },
+    ] }), helpers)
+    expect(markmap.renderMarkmapToExportSvg).toHaveBeenCalledWith('# Root')
+    expect(markmap.renderMarkmapToSvg).not.toHaveBeenCalled()
+    expect(helpers.rasterizeSvg).toHaveBeenCalled()
+  })
+
+  it('exports audio transcripts as escaped timestamp paragraphs', async () => {
+    const doc = await serializeNoteToDocx(note({ type: 'doc', content: [
+      { type: 'media_block', attrs: { kind: 'audio', name: 'Track',
+        transcript: [{ start: 1, end: 2, text: 'Hello <world>' }] } },
+    ] }), stubHelpers())
+    const xml = await documentXml(doc)
+    expect(xml).toContain('Transcript')
+    expect(xml).toContain('0:01 — Hello &lt;world&gt;')
+  })
+
+  it('includes audio bookmarks as readable escaped timestamp paragraphs and ignores invalid/video bookmarks', async () => {
+    const doc = await serializeNoteToDocx(note({
+      type: 'doc',
+      content: [
+        { type: 'media_block', attrs: { kind: 'audio', name: 'Track', bookmarks: [
+          { id: 'b2', time: 61, label: 'Chapter & ending' },
+          { id: 'b1', time: 3, label: '<Opening>\n#skip' },
+          { id: 'bad', time: -1, label: 'invalid' },
+        ] } },
+        { type: 'media_block', attrs: { kind: 'video', name: 'Clip', bookmarks: [{ id: 'v', time: 5, label: 'ignored' }] } },
+      ],
+    }), stubHelpers())
+    const xml = await documentXml(doc)
+
+    expect(xml).toContain('0:03 — &lt;Opening&gt;')
+    expect(xml).toContain('#skip')
+    expect(xml).toContain('1:01 — Chapter &amp; ending')
+    expect(xml).not.toContain('invalid')
+    expect(xml).not.toContain('ignored')
+  })
+
   it('writes the note title and a heading with styled runs', async () => {
     const doc = await serializeNoteToDocx(note({
       type: 'doc',

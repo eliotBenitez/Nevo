@@ -15,10 +15,34 @@
   overflow: hidden;
 }
 
-.docx-select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23888' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
+/* NvModal's header/footer padding is asymmetric to sit against an inset body.
+   With an edge-to-edge body that pulls the close button and actions toward the
+   preview, so centre them in their bands instead (the panel's 1px border counts on the outer side). */
+.docx-modal-panel .nv-modal__header {
+  align-items: center;
+  padding-top: 11px;
+  padding-bottom: 12px;
+}
+
+.docx-modal-panel .nv-modal__footer {
+  padding-top: 12px;
+  padding-bottom: 11px;
+}
+
+/* The font picker sits among steppers and segmented controls; match their
+   neutral surface instead of NvSelect's input-coloured default. */
+.docx-font-select .nv-select__trigger {
+  height: 30px;
+  border-radius: calc(7px * var(--radius-scale, 1));
+  background: var(--hover);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.docx-font-select .nv-select__trigger:hover,
+.docx-font-select .nv-select__trigger.is-open {
+  background: var(--hover-strong);
+  color: var(--text-primary);
 }
 
 /* Document Page Simulation */
@@ -267,6 +291,56 @@
 
 .docx-mark-underline {
   text-decoration: underline;
+}
+
+.docx-mark-superscript {
+  vertical-align: super;
+  font-size: 0.75em;
+}
+
+.docx-mark-subscript {
+  vertical-align: sub;
+  font-size: 0.75em;
+}
+
+.docx-page__embed-link {
+  color: #0563c1;
+  text-decoration: underline;
+}
+
+.docx-page__diagram-block {
+  display: flex;
+  justify-content: center;
+  max-width: 100%;
+  max-height: var(--docx-content-height);
+  margin: 0 0 var(--docx-paragraph-spacing, 8pt);
+}
+
+.docx-page__diagram {
+  display: block;
+  max-width: 100%;
+  max-height: var(--docx-content-height);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.docx-page__diagram--inline {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.docx-page__math-fallback {
+  text-align: center;
+}
+
+.docx-page__callout--plain {
+  border-left-color: #cbd5e1;
+  background: #f5f7fb;
+}
+
+.docx-page__callout--plain .docx-page__paragraph {
+  margin-bottom: 4px;
 }
 
 .docx-mark-code {

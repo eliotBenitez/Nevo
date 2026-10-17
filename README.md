@@ -62,8 +62,24 @@ Grab the latest installer for your OS from the **[Releases page](https://github.
 | 🪟 **Windows** | `.msi` or `.exe` |
 | 🍏 **macOS** | `.dmg` (Apple Silicon & Intel) |
 | 🐧 **Linux** | `.deb`, `.rpm`, AppImage, or Flatpak |
+| 🤖 **Android** | Signed `.apk` (sideload) |
 
-Nevo updates itself automatically once installed. 🎉
+Desktop installations update automatically. 🎉
+
+Android releases are distributed as APK files for manual installation. They are not published to Google Play and do not use Nevo's desktop updater.
+
+<details>
+<summary>🤖 Android release signing (maintainers)</summary>
+
+The release workflow needs these GitHub Actions repository secrets:
+
+- `ANDROID_KEY_BASE64` — base64-encoded Java keystore file.
+- `ANDROID_KEY_ALIAS` — signing key alias in that keystore.
+- `ANDROID_KEY_PASSWORD` — password for the key and keystore.
+
+Keep the same signing key for every release so Android can update an existing installation. Store the keystore and its passwords securely; losing the key prevents upgrades signed with it.
+
+</details>
 
 <details>
 <summary>🍏 macOS: first launch is blocked? (unnotarized build)</summary>
