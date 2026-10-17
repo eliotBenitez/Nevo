@@ -18,6 +18,11 @@ export default tseslint.config(
       'public/**',
       '*.config.*',
       'coverage/**',
+      // Local git worktrees carry their own tsconfig and confuse the TS parser.
+      '.worktrees/**',
+      '.claude/**',
+      // Local visual-QA sessions, probes and build output (git-ignored).
+      '.qa/**',
     ],
   },
   js.configs.recommended,

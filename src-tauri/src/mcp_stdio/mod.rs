@@ -244,16 +244,19 @@ mod tests {
     fn endpoint_override_is_used_without_exposing_the_token() {
         use std::collections::HashMap;
 
+        // The override must be absolute on the host OS, so derive it from temp_dir.
+        let endpoint = std::env::temp_dir().join("custom-endpoint.json");
+        let home = std::env::temp_dir().join("home-tester");
         let env = HashMap::from([
-            ("HOME".to_string(), "/home/tester".to_string()),
+            ("HOME".to_string(), home.to_string_lossy().into_owned()),
             (
                 "NEVO_MCP_ENDPOINT".to_string(),
-                "/tmp/custom-endpoint.json".to_string(),
+                endpoint.to_string_lossy().into_owned(),
             ),
         ]);
         assert_eq!(
             super::endpoint::path_for(&env, "linux").expect("endpoint path"),
-            std::path::PathBuf::from("/tmp/custom-endpoint.json")
+            endpoint
         );
         let error =
             super::endpoint::parse(r#"{"port":0,"token":"top-secret"}"#).expect_err("invalid port");

@@ -717,7 +717,7 @@ describe('WorkspaceEditorPane scrollbar overlay', () => {
     const core = editorCoreMocks.getLatestCore()
     expect(core).toBeTruthy()
     if (!core) return
-    core.editorView = { dom: document.createElement('div') }
+    core.editorView = { dom: document.createElement('div'), state: { doc: { nodeAt: () => null } } }
     core.lastLoadedNoteId = 'note-1'
     core.lastSerializedContent = JSON.stringify(syncedContent)
     core.lastSerializedContentRef = null
