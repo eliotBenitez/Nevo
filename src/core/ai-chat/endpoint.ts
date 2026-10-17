@@ -1,4 +1,4 @@
-export type AiErrorKind = 'privacy' | 'offline' | 'other'
+export type AiErrorKind = 'privacy' | 'offline' | 'rateLimit' | 'auth' | 'other'
 
 /** Mirrors Rust `url_is_loopback`: localhost, 127.0.0.0/8, ::1. */
 export function describeEndpoint(baseUrl: string): { local: boolean; host: string } {
@@ -16,6 +16,9 @@ export function describeEndpoint(baseUrl: string): { local: boolean; host: strin
 export function classifyAiError(message: string): AiErrorKind {
   const m = message.toLowerCase()
   if (m.includes('privacy mode')) return 'privacy'
+  // reqwest status errors read "HTTP status client error (429 Too Many Requests) for url (…)".
+  if (/\(429\b|too many requests|rate limit/.test(m)) return 'rateLimit'
+  if (/\(40[13]\b|unauthorized|forbidden/.test(m)) return 'auth'
   if (/connection refused|error sending request|tcp connect|timed out|dns/.test(m)) return 'offline'
   return 'other'
 }

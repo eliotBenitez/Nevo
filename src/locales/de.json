@@ -1657,7 +1657,10 @@
         "title": "API-Typ",
         "description": "Protokoll der lokalen Server-API",
         "ollama": "Ollama",
-        "openai": "OpenAI-kompatibel (LM Studio, llama.cpp)"
+        "openai": "OpenAI-kompatibel (LM Studio, llama.cpp)",
+        "openrouter": "OpenRouter (kostenlose Modelle)",
+        "openrouterNotice": "Cloud-Anbieter: Ihre Frage und Notizausschnitte werden an OpenRouter gesendet. Kostenlose Modelle haben strenge Tageslimits, und manche Anbieter protokollieren Anfragen. Benötigt einen kostenlosen API-Schlüssel von openrouter.ai/keys.",
+        "openrouterPrivacy": "Der Datenschutzmodus ist aktiv und blockiert Cloud-Modelle – deaktivieren Sie ihn unten, um OpenRouter zu nutzen."
       },
       "endpoint": {
         "title": "Ollama-Endpunkt",
@@ -3266,6 +3269,10 @@
       "privacyTitle": "Cloud-Modell blockiert",
       "privacyBody": "Der private Modus erlaubt nur Modelle auf diesem Computer, daher wurde die Anfrage an {host} nicht gesendet.",
       "otherTitle": "Etwas ist schiefgelaufen",
+      "rateLimitTitle": "Anfragelimit erreicht",
+      "rateLimitBody": "{host} begrenzt die Anfragen. Kostenlose Modelle erlauben nur wenige Anfragen pro Minute und pro Tag – warten Sie kurz oder wählen Sie ein anderes Modell.",
+      "authTitle": "API-Schlüssel abgelehnt",
+      "authBody": "{host} hat den API-Schlüssel nicht akzeptiert. Prüfen Sie ihn in den KI-Einstellungen.",
       "retry": "Erneut versuchen",
       "openSettings": "KI-Einstellungen",
       "chooseLocal": "Lokales Modell wählen"

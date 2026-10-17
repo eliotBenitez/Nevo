@@ -1657,7 +1657,10 @@
         "title": "Type d'API",
         "description": "Protocole de l'API du serveur local",
         "ollama": "Ollama",
-        "openai": "Compatible OpenAI (LM Studio, llama.cpp)"
+        "openai": "Compatible OpenAI (LM Studio, llama.cpp)",
+        "openrouter": "OpenRouter (modèles gratuits)",
+        "openrouterNotice": "Fournisseur cloud : votre question et des extraits de notes sont envoyés à OpenRouter. Les modèles gratuits ont des limites quotidiennes strictes et certains fournisseurs peuvent journaliser les requêtes. Nécessite une clé d’API gratuite sur openrouter.ai/keys.",
+        "openrouterPrivacy": "Le mode confidentialité est activé et bloque les modèles cloud — désactivez-le ci-dessous pour utiliser OpenRouter."
       },
       "endpoint": {
         "title": "Point de terminaison Ollama",
@@ -3266,6 +3269,10 @@
       "privacyTitle": "Modèle cloud bloqué",
       "privacyBody": "Le mode privé n'autorise que les modèles de cet ordinateur ; la requête vers {host} n'a donc pas été envoyée.",
       "otherTitle": "Une erreur s'est produite",
+      "rateLimitTitle": "Limite de requêtes atteinte",
+      "rateLimitBody": "{host} limite les requêtes. Les modèles gratuits n’autorisent que quelques requêtes par minute et par jour — patientez un peu ou choisissez un autre modèle.",
+      "authTitle": "Clé d’API refusée",
+      "authBody": "{host} n’a pas accepté la clé d’API. Vérifiez-la dans les réglages IA.",
       "retry": "Réessayer",
       "openSettings": "Paramètres de l'IA",
       "chooseLocal": "Choisir un modèle local"

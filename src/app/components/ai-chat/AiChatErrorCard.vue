@@ -14,7 +14,7 @@ const workspace = useWorkspaceStore()
 const host = computed(() => describeEndpoint(workspace.settings.ai.baseUrl).host)
 
 const icon = computed(() => props.kind === 'offline' ? PlugZap : props.kind === 'privacy' ? Shield : AlertTriangle)
-const tone = computed(() => props.kind === 'offline' ? 'warn' : 'bad')
+const tone = computed(() => props.kind === 'offline' || props.kind === 'rateLimit' ? 'warn' : 'bad')
 </script>
 
 <template>
@@ -27,6 +27,14 @@ const tone = computed(() => props.kind === 'offline' ? 'warn' : 'bad')
     <template v-else-if="kind === 'privacy'">
       <h4 class="ai-state__title">{{ t('aiChat.error.privacyTitle') }}</h4>
       <p class="ai-state__text">{{ t('aiChat.error.privacyBody', { host }) }}</p>
+    </template>
+    <template v-else-if="kind === 'rateLimit'">
+      <h4 class="ai-state__title">{{ t('aiChat.error.rateLimitTitle') }}</h4>
+      <p class="ai-state__text">{{ t('aiChat.error.rateLimitBody', { host }) }}</p>
+    </template>
+    <template v-else-if="kind === 'auth'">
+      <h4 class="ai-state__title">{{ t('aiChat.error.authTitle') }}</h4>
+      <p class="ai-state__text">{{ t('aiChat.error.authBody', { host }) }}</p>
     </template>
     <template v-else>
       <h4 class="ai-state__title">{{ t('aiChat.error.otherTitle') }}</h4>
