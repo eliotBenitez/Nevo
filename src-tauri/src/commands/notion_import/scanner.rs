@@ -20,18 +20,20 @@ const MAX_TOTAL_UNCOMPRESSED_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 const MAX_TOTAL_DOCUMENT_BYTES: u64 = 200 * 1024 * 1024;
 
 fn normalized_entry_path<R: Read>(entry: &zip::read::ZipFile<'_, R>) -> Result<String, String> {
-    if entry.name().contains('\\') {
+    let name = entry
+        .name()
+        .map_err(|error| format!("ZIP entry has an invalid name: {error}"))?;
+    if name.contains('\\') {
         return Err("ZIP entries with backslash paths are not supported".to_string());
     }
+    // zip >= 9 strips a leading root from `enclosed_name` instead of rejecting it.
     let enclosed = entry
         .enclosed_name()
-        .ok_or_else(|| format!("ZIP entry has an unsafe path: {}", entry.name()))?;
+        .filter(|_| !name.starts_with('/'))
+        .ok_or_else(|| format!("ZIP entry has an unsafe path: {name}"))?;
     let depth = enclosed.components().count();
     if depth == 0 || depth > MAX_ENTRY_DEPTH {
-        return Err(format!(
-            "ZIP entry exceeds the path depth limit: {}",
-            entry.name()
-        ));
+        return Err(format!("ZIP entry exceeds the path depth limit: {name}"));
     }
     Ok(enclosed
         .components()

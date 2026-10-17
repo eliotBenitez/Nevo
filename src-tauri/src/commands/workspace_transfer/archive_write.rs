@@ -24,7 +24,7 @@ fn validate_archive_entry_name(name: &str) -> Result<(), String> {
 /// Builds the per-entry write options: Deflate compression, plus AES-256
 /// encryption when a password is supplied. `FileOptions` is `Copy`, so the
 /// same value is reused for every entry rather than rebuilt per file.
-fn entry_options(password: Option<&str>) -> FileOptions<'_, ()> {
+fn entry_options(password: Option<&str>) -> FileOptions<'_, 'static, ()> {
     let base = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
     match password {
         Some(password) => base.with_aes_encryption(AesMode::Aes256, password),
