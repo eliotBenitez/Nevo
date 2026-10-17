@@ -17,8 +17,8 @@ export type AiStreamEvent =
   | { type: 'error'; message: string }
 
 export const aiCommands = {
-  listModels: (baseUrl: string, providerKind: string): Promise<string[]> =>
-    invoke('ai_list_models', { baseUrl, providerKind }),
+  listModels: (baseUrl: string, providerKind: string, apiKey?: string): Promise<string[]> =>
+    invoke('ai_list_models', { baseUrl, providerKind, apiKey }),
 
   complete: (req: AiCompleteRequest): Promise<string> =>
     invoke('ai_complete', { req }),

@@ -1694,9 +1694,16 @@
         "title": "Salida en flujo",
         "description": "Permitir respuestas parciales en flujo"
       },
-      "cloudCredentials": {
-        "title": "Credenciales en la nube",
-        "description": "Los secretos de proveedores se mantienen fuera de `.nevo/settings.json` hasta que exista almacenamiento seguro"
+      "apiKey": {
+        "title": "Clave de API",
+        "description": "La necesitan los proveedores en la nube compatibles con OpenAI, como OpenRouter o Groq. Se guarda en el llavero del sistema, nunca en los ajustes del espacio de trabajo",
+        "saved": "Hay una clave guardada en el llavero del sistema",
+        "error": "No se pudo acceder al llavero del sistema",
+        "placeholder": "Pega la clave de API",
+        "replacePlaceholder": "Pega una clave nueva para reemplazarla",
+        "save": "Guardar",
+        "replace": "Reemplazar",
+        "clear": "Borrar"
       }
     },
     "plugins": {

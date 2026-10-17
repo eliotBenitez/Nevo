@@ -11,9 +11,9 @@ import SettingsGroup from './ui/SettingsGroup.vue'
 import SettingsRow from './ui/SettingsRow.vue'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import type { AIApiKind, WorkspaceSettings } from '../../../types/workspace'
-import { aiCommands } from '../../../tauri/ai'
+import { useAiCompletion } from '../../../composables/useAiCompletion'
+import SettingsAiApiKeyRow from './SettingsAiApiKeyRow.vue'
 
-type RowState = 'functional' | 'info' | 'coming'
 type ConnectionStatus = 'idle' | 'checking' | 'ok' | 'error'
 
 const OLLAMA_DEFAULT_URL = 'http://localhost:11434'
@@ -25,6 +25,7 @@ const PROVIDER_DEFAULTS: Record<AIApiKind, string> = {
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
+const ai = useAiCompletion()
 const { settings } = storeToRefs(workspaceStore)
 const u = (fn: (draft: WorkspaceSettings) => void) => workspaceStore.updateSettings(fn)
 
@@ -72,7 +73,7 @@ function onApiKindChange(v: string) {
 async function testConnection() {
   connectionStatus.value = 'checking'
   try {
-    const result = await aiCommands.listModels(settings.value.ai.baseUrl, settings.value.ai.apiKind)
+    const result = await ai.testConnection()
     models.value = result
     connectionStatus.value = 'ok'
   } catch {
@@ -87,17 +88,6 @@ function onEndpointChange(e: Event) {
   u(d => { d.ai.baseUrl = val })
 }
 
-function stateLabel(state: RowState): string {
-  if (state === 'functional') return t('settings.state.functional')
-  if (state === 'coming') return t('settings.state.coming')
-  return t('settings.state.info')
-}
-
-function stateClass(state: RowState): string {
-  if (state === 'functional') return 'status-chip--functional tw:bg-[var(--accent-soft)] tw:text-accent'
-  if (state === 'coming') return 'status-chip--coming tw:bg-[var(--surface-warning)] tw:text-[var(--warning)]'
-  return 'status-chip--info tw:bg-[var(--hover-strong)] tw:text-content-muted'
-}
 </script>
 
 <template>
@@ -152,6 +142,9 @@ function stateClass(state: RowState): string {
             @blur="onEndpointChange"
           />
         </SettingsRow>
+
+        <!-- API key (OpenAI-compatible only; stored in the OS keychain) -->
+        <SettingsAiApiKeyRow :disabled="!settings.ai.enabled || settings.ai.apiKind !== 'openai'" />
 
         <!-- Test connection -->
         <SettingsRow
@@ -259,12 +252,6 @@ function stateClass(state: RowState): string {
           />
         </SettingsRow>
 
-        <SettingsRow
-          :title="t('settings.ai.cloudCredentials.title')"
-          :description="t('settings.ai.cloudCredentials.description')"
-        >
-          <span class="status-chip tw:inline-flex tw:h-5 tw:items-center tw:justify-center tw:rounded-full tw:border tw:border-transparent tw:px-2 tw:text-[10.5px] tw:font-semibold" :class="stateClass('coming')">{{ stateLabel('coming') }}</span>
-        </SettingsRow>
       </SettingsGroup>
     </div>
   </section>

@@ -282,12 +282,17 @@ pub fn parse_sse_line(line: &str) -> SseParsed {
 pub async fn ai_list_models(
     base_url: String,
     provider_kind: String,
+    api_key: Option<String>,
 ) -> Result<Vec<String>, String> {
     let client = build_ai_client(false)?;
 
     if provider_kind == "openai" {
         let url = endpoint_url(&base_url, "models")?;
-        let resp = client.get(url).send().await.map_err(|e| e.to_string())?;
+        let mut request_builder = client.get(url);
+        if let Some(key) = api_key.as_deref().filter(|key| !key.is_empty()) {
+            request_builder = request_builder.header("Authorization", format!("Bearer {}", key));
+        }
+        let resp = request_builder.send().await.map_err(|e| e.to_string())?;
         let bytes = response_bytes_limited(resp).await?;
         let body: OpenAiModelsResponse =
             serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;

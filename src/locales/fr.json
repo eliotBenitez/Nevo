@@ -1694,9 +1694,16 @@
         "title": "Sortie en flux",
         "description": "Autoriser les complétions partielles en flux"
       },
-      "cloudCredentials": {
-        "title": "Identifiants cloud",
-        "description": "Les secrets des fournisseurs restent hors de `.nevo/settings.json` tant que le stockage sécurisé n'existe pas"
+      "apiKey": {
+        "title": "Clé d’API",
+        "description": "Requise par les fournisseurs cloud compatibles OpenAI comme OpenRouter ou Groq. Stockée dans le trousseau du système, jamais dans les réglages de l’espace de travail",
+        "saved": "Une clé est enregistrée dans le trousseau du système",
+        "error": "Impossible d’accéder au trousseau du système",
+        "placeholder": "Collez la clé d’API",
+        "replacePlaceholder": "Collez une nouvelle clé pour la remplacer",
+        "save": "Enregistrer",
+        "replace": "Remplacer",
+        "clear": "Effacer"
       }
     },
     "plugins": {

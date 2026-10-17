@@ -1694,9 +1694,16 @@
         "title": "Streaming output",
         "description": "Allow partial streamed completions"
       },
-      "cloudCredentials": {
-        "title": "Cloud credentials",
-        "description": "Provider secrets stay out of `.nevo/settings.json` until secure storage exists"
+      "apiKey": {
+        "title": "API key",
+        "description": "Needed by cloud OpenAI-compatible providers such as OpenRouter or Groq. Stored in the system keychain, never in workspace settings",
+        "saved": "A key is saved in the system keychain",
+        "error": "Could not access the system keychain",
+        "placeholder": "Paste API key",
+        "replacePlaceholder": "Paste a new key to replace it",
+        "save": "Save",
+        "replace": "Replace",
+        "clear": "Clear"
       }
     },
     "plugins": {

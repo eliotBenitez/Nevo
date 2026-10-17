@@ -1694,9 +1694,16 @@
         "title": "Streaming-Ausgabe",
         "description": "Partielle gestreamte Antworten zulassen"
       },
-      "cloudCredentials": {
-        "title": "Cloud-Anmeldedaten",
-        "description": "Anbieter-Geheimnisse bleiben außerhalb von `.nevo/settings.json`, bis sicherer Speicher existiert"
+      "apiKey": {
+        "title": "API-Schlüssel",
+        "description": "Wird von OpenAI-kompatiblen Cloud-Anbietern wie OpenRouter oder Groq benötigt. Wird im Schlüsselbund des Systems gespeichert, nie in den Arbeitsbereich-Einstellungen",
+        "saved": "Ein Schlüssel ist im Schlüsselbund des Systems gespeichert",
+        "error": "Kein Zugriff auf den Schlüsselbund des Systems",
+        "placeholder": "API-Schlüssel einfügen",
+        "replacePlaceholder": "Neuen Schlüssel zum Ersetzen einfügen",
+        "save": "Speichern",
+        "replace": "Ersetzen",
+        "clear": "Löschen"
       }
     },
     "plugins": {
