@@ -6,7 +6,7 @@ import type { ChatSource } from '../../../core/ai-chat/prompt'
 import { useAiChatStore } from '../../../stores/aiChat'
 import { useTreeStore } from '../../../stores/tree'
 import { useWorkspaceStore } from '../../../stores/workspace'
-import { ChevronDown, FileText, Library, Minus, PanelRight, PictureInPicture2, SquarePen, X } from '../../../ui/icons'
+import { ChevronDown, FileText, Library, Minus, PanelRight, PictureInPicture2, Plus, SquarePen, X } from '../../../ui/icons'
 import type { NvMenuItemDef } from '../../../ui/primitives/menu-types'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvPopupMenu from '../../../ui/primitives/NvPopupMenu.vue'
@@ -116,17 +116,24 @@ defineExpose({ focusComposer: () => composer.value?.focus() })
           </button>
         </template>
       </NvPopupMenu>
-      <button
-        v-if="noteId && store.includeCurrentNote"
-        type="button"
-        class="ai-chip"
-        :aria-label="t('aiChat.scope.removeNote')"
-        :title="t('aiChat.scope.removeNote')"
-        @click="store.includeCurrentNote = false"
-      >
+      <!-- In "this note only" the note is the whole context, so it cannot be removed. -->
+      <span v-if="noteId && store.scope === 'note'" class="ai-chip">
         <FileText :size="14" aria-hidden="true" />
         <span>{{ noteTitle }}</span>
-        <X :size="12" aria-hidden="true" />
+      </span>
+      <button
+        v-else-if="noteId"
+        type="button"
+        class="ai-chip"
+        :class="{ 'ai-chip--excluded': !store.includeCurrentNote }"
+        :aria-pressed="store.includeCurrentNote"
+        :aria-label="t(store.includeCurrentNote ? 'aiChat.scope.removeNote' : 'aiChat.scope.addNote')"
+        :title="t(store.includeCurrentNote ? 'aiChat.scope.removeNote' : 'aiChat.scope.addNote')"
+        @click="store.includeCurrentNote = !store.includeCurrentNote"
+      >
+        <component :is="store.includeCurrentNote ? FileText : Plus" :size="14" aria-hidden="true" />
+        <span>{{ noteTitle }}</span>
+        <X v-if="store.includeCurrentNote" :size="12" aria-hidden="true" />
       </button>
     </div>
 

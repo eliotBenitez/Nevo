@@ -3227,7 +3227,8 @@
       "menuLabel": "Suchbereich",
       "workspace": "Gesamter Workspace",
       "note": "Nur diese Notiz",
-      "removeNote": "Notiz aus dem Kontext entfernen"
+      "removeNote": "Notiz aus dem Kontext entfernen",
+      "addNote": "Notiz zum Kontext hinzufügen"
     },
     "log": {
       "label": "Unterhaltung"

@@ -7,6 +7,7 @@ import { useAiChatStore, type AiChatMessage, type AiChatSelection } from '../../
 import { useTreeStore } from '../../../stores/tree'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { getActiveEditor } from '../editor/activeEditorRegistry'
+import { noteContextText } from '../../../core/ai-chat/noteText'
 
 type AssistantMessage = Extract<AiChatMessage, { role: 'assistant' }>
 
@@ -24,13 +25,14 @@ export function useAiChatSession() {
     if (!active) return { source: null }
     const { doc, selection } = active.view.state
     const noteTitle = tree.noteById.get(active.noteId)?.title ?? ''
-    const source: ChatSource | null = store.includeCurrentNote
+    // "This note only" without the note itself would send the model nothing to work with.
+    const source: ChatSource | null = store.scope === 'note' || store.includeCurrentNote
       ? {
         n: 1,
         noteId: active.noteId,
         noteTitle,
         blockIndex: null,
-        text: doc.textBetween(0, doc.content.size, '\n\n').replace(/\n{3,}/g, '\n\n').slice(0, NOTE_TEXT_LIMIT),
+        text: noteContextText(noteTitle, doc.toJSON()).slice(0, NOTE_TEXT_LIMIT),
         current: true,
       }
       : null

@@ -95,6 +95,7 @@
 }
 .ai-chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ai-chip--scope { background: var(--accent-soft); color: var(--accent); }
+.ai-chip--excluded { background: transparent; color: var(--text-secondary); box-shadow: inset 0 0 0 1px var(--border-default); }
 .ai-chip:focus-visible, .ai-model:focus-visible, .ai-input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 /* ───────── Composer ───────── */

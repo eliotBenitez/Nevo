@@ -68,6 +68,15 @@ describe('useAiChatSession', () => {
     expect(search).not.toHaveBeenCalled()
   })
 
+  it('note scope keeps the current note even after its chip was removed', async () => {
+    openEditor('only body')
+    const store = useAiChatStore()
+    store.scope = 'note'
+    store.includeCurrentNote = false
+    await useAiChatSession().send('summarize')
+    expect(generate.mock.calls[0][0].prompt).toContain('only body')
+  })
+
   it('captures a non-empty selection', async () => {
     openEditor('one two three', [5, 8])
     search.mockResolvedValue([])

@@ -3227,7 +3227,8 @@
       "menuLabel": "Ámbito de búsqueda",
       "workspace": "Todo el workspace",
       "note": "Solo esta nota",
-      "removeNote": "Quitar la nota del contexto"
+      "removeNote": "Quitar la nota del contexto",
+      "addNote": "Añadir la nota al contexto"
     },
     "log": {
       "label": "Conversación"

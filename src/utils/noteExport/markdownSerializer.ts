@@ -336,7 +336,7 @@ function nodeToMd(node: BlockNode, ctx: SerializeCtx): string {
 }
 
 export function serializeNoteToMarkdown(
-  note: NoteDocument,
+  note: Pick<NoteDocument, 'title' | 'content'>,
   assetsSubfolderName: string,
 ): MarkdownSerializeResult {
   const ctx: SerializeCtx = {
