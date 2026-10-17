@@ -15,6 +15,20 @@
   overflow: hidden;
 }
 
+/* NvModal's header/footer padding is asymmetric to sit against an inset body.
+   With an edge-to-edge body that pulls the close button and actions toward the
+   preview, so centre them in their bands instead (the panel's 1px border counts on the outer side). */
+.docx-modal-panel .nv-modal__header {
+  align-items: center;
+  padding-top: 11px;
+  padding-bottom: 12px;
+}
+
+.docx-modal-panel .nv-modal__footer {
+  padding-top: 12px;
+  padding-bottom: 11px;
+}
+
 /* The font picker sits among steppers and segmented controls; match their
    neutral surface instead of NvSelect's input-coloured default. */
 .docx-font-select .nv-select__trigger {
