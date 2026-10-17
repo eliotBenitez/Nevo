@@ -4,6 +4,7 @@ import { Decoration, DecorationSet } from 'prosemirror-view'
 import type { EditorView } from 'prosemirror-view'
 import type { EditorState } from 'prosemirror-state'
 import type {
+  NevoDocxFragment,
   NevoEditorContext,
   NevoEditorEventMap,
   NevoEditorPlugin,
@@ -683,7 +684,7 @@ export class EditorPluginHost {
     if (contribution.kind === 'serializer') {
       const nodeType = typeof descriptor.nodeType === 'string' ? descriptor.nodeType : ''
       const format = descriptor.format
-      if (!nodeType || !['markdown', 'html', 'typst'].includes(String(format))) {
+      if (!nodeType || !['markdown', 'html', 'typst', 'docx'].includes(String(format))) {
         throw new Error(`Serializer ${contribution.id} has invalid nodeType/format`)
       }
       const serializer = this.registries.nodeSerializers.get(nodeType) ?? {}
@@ -699,6 +700,20 @@ export class EditorPluginHost {
           throw new Error(`Serializer ${contribution.id} returned unsafe HTML`)
         }
         return result
+      }
+      if (format === 'docx') {
+        serializer.docx = async node => {
+          const result = await session.invoke(handlerId!, { node })
+          if (!result || typeof result !== 'object' || Array.isArray(result)) {
+            throw new Error(`Serializer ${contribution.id} must return an object`)
+          }
+          if (JSON.stringify(result).length > 1024 * 1024) {
+            throw new Error(`Serializer ${contribution.id} exceeded 1 MiB`)
+          }
+          return result as NevoDocxFragment
+        }
+        this.registries.nodeSerializers.set(nodeType, serializer)
+        return
       }
       if (format === 'markdown') serializer.markdown = invoke
       if (format === 'html') serializer.html = invoke

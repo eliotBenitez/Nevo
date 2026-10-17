@@ -193,9 +193,36 @@ api.serializer({
 })
 ```
 
-Добавьте Markdown/HTML/Typst serializer для каждого custom node, если этот
+Добавьте Markdown/HTML/Typst/DOCX serializer для каждого custom node, если этот
 format поддерживает продуктовый workflow. Importer нужен для обратного
 round-trip fenced syntax.
+
+DOCX serializer (нужен host SDK >= 2.1.0) возвращает не `docx`-объекты, а
+декларативный JSON-фрагмент; handler получает только `{ node }`:
+
+```ts
+api.serializer({
+  id: `${api.pluginId}.docx`,
+  nodeType: 'callout_block',
+  format: 'docx',
+}, (input) => {
+  const node = (input as JsonObject).node as JsonObject
+  const attrs = (node.attrs ?? {}) as JsonObject
+  return {
+    blocks: [
+      { type: 'heading', level: 3, children: [{ type: 'text', text: String(attrs.icon ?? ''), bold: true }] },
+      { type: 'children' },
+    ],
+  }
+})
+```
+
+Блоки: `paragraph`, `heading` (level 1-6), `table` (`rows` → cells → inlines,
+`header`), `image` (`svg` или `src` — путь к ассету внутри workspace) и
+`children` (хост подставляет дочерние ноды). Inline: `text` (`bold`, `italic`,
+`underline`, `strike`, `code`, `color` как `#RRGGBB`, `link` со схемой
+http/https/mailto) и `break`. Невалидный фрагмент отклоняется целиком, а нода
+экспортируется как текст детей.
 
 ## 6. Миграции persisted data
 

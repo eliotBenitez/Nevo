@@ -41,7 +41,7 @@ SDK V2 поддерживает:
 - editor commands, keymaps, slash items и toolbar actions;
 - schema nodes, marks и собственные block types;
 - declarative popovers и decorations;
-- Markdown, HTML и Typst serializers, а также fenced-code importers;
+- Markdown, HTML, Typst и DOCX serializers, а также fenced-code importers;
 - workspace views, sidebar items и modals;
 - событие `transactionApplied` и host-managed scheduling;
 - plugin-scoped settings, secrets, JSON storage и binary assets;
