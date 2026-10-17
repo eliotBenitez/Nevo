@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RectangleHorizontal, RectangleVertical } from '../../ui/icons'
+import NvSelect from '../../ui/primitives/NvSelect.vue'
 import DocxStepper from './DocxStepper.vue'
 import type { DocxOrientation, DocxPaperFormat } from '../../utils/noteExport/docxOptions'
 
-defineProps<{
+const props = defineProps<{
   title: string
   systemFonts: string[]
 }>()
@@ -29,6 +31,11 @@ const zoom = defineModel<number>('zoom', { required: true })
 const fitWidth = defineModel<boolean>('fitWidth', { required: true })
 
 const { t } = useI18n()
+
+const fontOptions = computed(() => [
+  { value: '', label: `${t('export.fontDefault')} (Calibri)` },
+  ...props.systemFonts.map(font => ({ value: font, label: font })),
+])
 
 const margins = [
   { label: 'export.marginTop', model: marginTop },
@@ -116,12 +123,12 @@ const documentToggles = [
 
       <div class="docx-field tw:grid tw:gap-[7px]">
         <span class="docx-field__label tw:text-[11px] tw:text-content-muted">{{ t('export.fontFamily') }}</span>
-        <div class="docx-select-wrap tw:relative">
-          <select v-model="fontFamily" class="docx-select tw:h-[30px] tw:w-full tw:cursor-pointer tw:appearance-none tw:rounded-[calc(7px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--hover) tw:pr-7 tw:pl-[9px] tw:font-nv-ui tw:text-xs tw:font-medium tw:text-content-secondary tw:transition-colors tw:duration-100 tw:hover:bg-(--hover-strong) tw:hover:text-content-primary tw:focus-visible:border-accent tw:focus-visible:outline-none">
-            <option value="">{{ t('export.fontDefault') }} (Calibri)</option>
-            <option v-for="f in systemFonts" :key="f" :value="f">{{ f }}</option>
-          </select>
-        </div>
+        <NvSelect
+          v-model="fontFamily"
+          :options="fontOptions"
+          :min-width="0"
+          :aria-label="t('export.fontFamily')"
+        />
       </div>
 
       <DocxStepper
