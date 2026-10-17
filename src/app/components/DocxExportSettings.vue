@@ -125,6 +125,7 @@ const documentToggles = [
         <span class="docx-field__label tw:text-[11px] tw:text-content-muted">{{ t('export.fontFamily') }}</span>
         <NvSelect
           v-model="fontFamily"
+          class="docx-font-select"
           :options="fontOptions"
           :min-width="0"
           :aria-label="t('export.fontFamily')"

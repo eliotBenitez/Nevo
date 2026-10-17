@@ -15,6 +15,22 @@
   overflow: hidden;
 }
 
+/* The font picker sits among steppers and segmented controls; match their
+   neutral surface instead of NvSelect's input-coloured default. */
+.docx-font-select .nv-select__trigger {
+  height: 30px;
+  border-radius: calc(7px * var(--radius-scale, 1));
+  background: var(--hover);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.docx-font-select .nv-select__trigger:hover,
+.docx-font-select .nv-select__trigger.is-open {
+  background: var(--hover-strong);
+  color: var(--text-primary);
+}
+
 /* Document Page Simulation */
 .docx-page {
   flex: 0 0 auto;
