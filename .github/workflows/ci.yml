@@ -100,6 +100,12 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
 
+      - name: Stub bundled speech model
+        # tauri-build only checks that bundled resources exist; tests needing the real
+        # Whisper model are #[ignore]d, so skip the 148 MB `pnpm model:prepare` download.
+        shell: bash
+        run: mkdir -p src-tauri/resources/models && touch src-tauri/resources/models/ggml-base.bin
+
       - name: Format
         run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
 
@@ -127,6 +133,12 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
+
+      - name: Stub bundled speech model
+        # tauri-build only checks that bundled resources exist; tests needing the real
+        # Whisper model are #[ignore]d, so skip the 148 MB `pnpm model:prepare` download.
+        shell: bash
+        run: mkdir -p src-tauri/resources/models && touch src-tauri/resources/models/ggml-base.bin
 
       - name: Test atomic replacement
         run: cargo test --manifest-path src-tauri/Cargo.toml commands::path_utils::tests
