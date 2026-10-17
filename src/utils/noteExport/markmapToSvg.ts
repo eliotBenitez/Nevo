@@ -15,7 +15,7 @@ const XML_NS = 'http://www.w3.org/XML/1998/namespace'
  * HTML export. For PDF use `renderMarkmapToExportSvg` instead.
  */
 export async function renderMarkmapToSvg(markdown: string): Promise<string | null> {
-  return withRenderedMarkmap(markdown, (svg) => new XMLSerializer().serializeToString(svg))
+  return withRenderedMarkmap(markdown, serializeMarkmapSvg)
 }
 
 /**
@@ -33,8 +33,19 @@ export async function renderMarkmapToExportSvg(markdown: string): Promise<string
       // Fall back to the raw markmap SVG (nodes/links only) rather than failing
       // the whole export.
     }
-    return new XMLSerializer().serializeToString(svg)
+    return serializeMarkmapSvg(svg)
   })
+}
+
+/**
+ * Serialize without the offscreen-layout styles: kept on the root they shift the
+ * whole map out of view when the SVG is shown standalone (<img>, canvas raster)
+ * or inlined into an HTML page.
+ */
+function serializeMarkmapSvg(svg: SVGSVGElement): string {
+  const clone = svg.cloneNode(true) as SVGSVGElement
+  for (const prop of ['position', 'left', 'top', 'visibility']) clone.style.removeProperty(prop)
+  return new XMLSerializer().serializeToString(clone)
 }
 
 /**
