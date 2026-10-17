@@ -5,6 +5,10 @@ import { createI18n } from 'vue-i18n'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { computed, nextTick, ref } from 'vue'
 import WorkspaceSettingsView from './WorkspaceSettingsView.vue'
+// Preload the async panels these tests render so their lazy imports resolve from
+// the module cache instead of loading after the environment is torn down.
+import './SettingsGeneralPanel.vue'
+import './SettingsAppearancePanel.vue'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import type { SettingsSectionId } from '../../../types/workspace'
 import en from '../../../locales/en.json'
