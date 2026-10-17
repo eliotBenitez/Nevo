@@ -44,6 +44,7 @@ export const hotkeyLabelKeys: Record<string, string> = {
   'workspace.open-graph': 'settings.hotkeys.commands.openGraph',
   'workspace.open-history': 'settings.hotkeys.commands.openHistory',
   'workspace.open-trash': 'settings.hotkeys.commands.openTrash',
+  'ai.chat.toggle': 'settings.hotkeys.commands.toggleAiChat',
   'app.open-settings': 'settings.hotkeys.commands.openSettings',
 }
 

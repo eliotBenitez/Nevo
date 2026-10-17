@@ -352,6 +352,7 @@ pub fn run() {
             system::pick_workspace_directory,
             media_server::get_media_server_info,
             note::search_workspace_blocks,
+            note::search_note_context,
             note::export_note_markdown,
             note::export_note_html,
             note::export_note_docx,

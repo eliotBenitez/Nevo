@@ -1917,6 +1917,7 @@
         "findInNote": "Buscar en la nota",
         "replaceInNote": "Buscar y reemplazar",
         "toggleDictation": "Activar o desactivar el dictado",
+        "toggleAiChat": "Mostrar u ocultar el chat de IA",
         "newNote": "Crear nota",
         "newFolder": "Crear carpeta",
         "saveNote": "Guardar nota",
@@ -3194,5 +3195,91 @@
     "errors": { "pageLimit": "El cuaderno alcanzó el límite de páginas.", "objectLimit": "El cuaderno alcanzó el límite de trazos.", "pointLimit": "El cuaderno alcanzó el límite de detalle de tinta.", "serializedLimit": "El cuaderno alcanzó el límite de almacenamiento.", "unsupported": "Esta versión no puede editar este cuaderno.", "invalid": "No se pudieron abrir los datos del cuaderno de forma segura para editarlos.", "export": "No se pudo exportar el PDF.", "imageType": "Solo se admiten imágenes PNG, JPEG, WebP y GIF.", "imageImport": "No se pudo insertar la imagen." },
     "deletePage": { "title": "¿Eliminar esta página?", "message": "La página contiene tinta. Puedes restaurarla con Deshacer.", "confirm": "Eliminar página", "cancel": "Conservar página" },
     "palette": {"open": "Paleta de colores", "builtin": "Paleta", "custom": "Mis colores", "recent": "Recientes", "addCurrent": "Añadir el color actual", "edit": "Editar", "done": "Hecho", "remove": "Eliminar el color {color}", "quick": "Selección rápida de color", "colors": {"black": "Negro", "graphite": "Grafito", "blue": "Azul", "sky": "Celeste", "red": "Rojo", "orange": "Naranja", "yellow": "Amarillo", "green": "Verde", "teal": "Turquesa", "purple": "Morado", "pink": "Rosa", "brown": "Marrón"}}
+  },
+  "aiChat": {
+    "launcher": {
+      "label": "Preguntar a la IA",
+      "busy": "Respondiendo en segundo plano",
+      "unread": "Respuesta lista",
+      "offline": "Modelo no disponible"
+    },
+    "dialogLabel": "Chat de IA",
+    "header": {
+      "newChatTitle": "Nuevo chat",
+      "newChat": "Nuevo chat",
+      "dock": "Anclar a la derecha",
+      "undock": "Desanclar",
+      "collapse": "Contraer",
+      "close": "Cerrar el chat"
+    },
+    "scope": {
+      "searchingIn": "Buscando en",
+      "menuLabel": "Ámbito de búsqueda",
+      "workspace": "Todo el workspace",
+      "note": "Solo esta nota",
+      "removeNote": "Quitar la nota del contexto"
+    },
+    "log": {
+      "label": "Conversación"
+    },
+    "empty": {
+      "heading": "¿Qué quieres preguntar a tus notas?",
+      "description": "Las respuestas se basan en tus notas e indican de dónde sale cada dato.",
+      "forNote": "Para esta nota",
+      "forWorkspace": "Prueba a preguntar",
+      "suggestions": {
+        "summarizeNote": "Resume esta nota",
+        "relatedNotes": "Busca notas relacionadas con esta",
+        "openTasks": "Enumera las tareas abiertas de esta nota",
+        "workspaceRecent": "¿En qué he estado trabajando últimamente?",
+        "workspaceTasks": "Enumera las tareas abiertas de todas mis notas",
+        "workspaceThemes": "¿Cuáles son los temas principales de mis notas?"
+      }
+    },
+    "message": {
+      "sources": "Fuentes",
+      "stopped": "detenido",
+      "citation": "Fuente {n}: {title}",
+      "thinking": "Pensando"
+    },
+    "actions": {
+      "insert": "Insertar",
+      "replace": "Reemplazar selección",
+      "replaceNeedsSelection": "Primero selecciona texto en una nota",
+      "copy": "Copiar",
+      "saveAsNote": "Guardar como nota nueva",
+      "retry": "Reintentar",
+      "apply": "Aplicar",
+      "cancel": "Cancelar",
+      "diffLabel": "Vista previa del reemplazo"
+    },
+    "error": {
+      "offlineTitle": "El modelo no responde",
+      "offlineBody": "Sin respuesta de {host}. Inicia el servidor del modelo o elige otro modelo.",
+      "privacyTitle": "Modelo en la nube bloqueado",
+      "privacyBody": "El modo privado solo permite modelos de este equipo, así que la solicitud a {host} no se envió.",
+      "otherTitle": "Algo salió mal",
+      "retry": "Reintentar",
+      "openSettings": "Ajustes de IA",
+      "chooseLocal": "Elegir un modelo local"
+    },
+    "composer": {
+      "label": "Mensaje",
+      "placeholder": "Pregunta sobre tus notas",
+      "send": "Enviar",
+      "stop": "Detener",
+      "modelAria": "Modelo: {model}, {where}",
+      "local": "local"
+    },
+    "toast": {
+      "selectionChanged": "El texto seleccionado cambió. Selecciónalo de nuevo y reintenta.",
+      "emptyAnswer": "La respuesta está vacía.",
+      "editorUnavailable": "Primero abre una nota en el editor.",
+      "createFailed": "No se pudo crear la nota.",
+      "noteCreated": "Guardado como nota nueva",
+      "copyFailed": "No se pudo copiar la respuesta.",
+      "actionFailed": "No se pudo completar la acción."
+    },
+    "untitled": "Sin título"
   }
 }

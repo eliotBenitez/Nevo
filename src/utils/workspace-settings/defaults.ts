@@ -32,6 +32,7 @@ export const DEFAULT_HOTKEY_BINDINGS: HotkeyBinding[] = [
   { commandId: 'workspace.open-graph', label: 'workspace.open-graph', defaultChord: 'Ctrl+Alt+G', customChord: null, scope: 'workspace' },
   { commandId: 'workspace.open-history', label: 'workspace.open-history', defaultChord: 'Ctrl+Alt+H', customChord: null, scope: 'workspace' },
   { commandId: 'workspace.open-trash', label: 'workspace.open-trash', defaultChord: 'Ctrl+Alt+T', customChord: null, scope: 'workspace' },
+  { commandId: 'ai.chat.toggle', label: 'ai.chat.toggle', defaultChord: 'Ctrl+J', customChord: null, scope: 'workspace' },
   { commandId: 'app.open-settings', label: 'app.open-settings', defaultChord: 'Ctrl+,', customChord: null, scope: 'app' },
 ]
 

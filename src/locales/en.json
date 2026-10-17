@@ -1917,6 +1917,7 @@
         "findInNote": "Find in note",
         "replaceInNote": "Find & replace",
         "toggleDictation": "Toggle dictation",
+        "toggleAiChat": "Toggle AI chat",
         "newNote": "Create note",
         "newFolder": "Create folder",
         "saveNote": "Save note",
@@ -3194,5 +3195,91 @@
     "errors": { "pageLimit": "The notebook has reached the page limit.", "objectLimit": "The notebook has reached the mark limit.", "pointLimit": "The notebook has reached the ink detail limit.", "serializedLimit": "The notebook has reached its storage limit.", "unsupported": "This notebook format cannot be edited by this version.", "invalid": "Notebook data could not be safely opened for editing.", "export": "The PDF could not be exported.", "imageType": "Only PNG, JPEG, WebP, and GIF images are supported.", "imageImport": "Could not insert the image." },
     "deletePage": { "title": "Delete this page?", "message": "This page contains ink. You can restore it with Undo.", "confirm": "Delete page", "cancel": "Keep page" },
     "palette": {"open": "Color palette", "builtin": "Palette", "custom": "My colors", "recent": "Recent", "addCurrent": "Add current color", "edit": "Edit", "done": "Done", "remove": "Remove color {color}", "quick": "Quick color choice", "colors": {"black": "Black", "graphite": "Graphite", "blue": "Blue", "sky": "Sky blue", "red": "Red", "orange": "Orange", "yellow": "Yellow", "green": "Green", "teal": "Teal", "purple": "Purple", "pink": "Pink", "brown": "Brown"}}
+  },
+  "aiChat": {
+    "launcher": {
+      "label": "Ask AI",
+      "busy": "Answering in the background",
+      "unread": "Answer ready",
+      "offline": "Model unavailable"
+    },
+    "dialogLabel": "AI chat",
+    "header": {
+      "newChatTitle": "New chat",
+      "newChat": "New chat",
+      "dock": "Dock to the right",
+      "undock": "Undock",
+      "collapse": "Collapse",
+      "close": "Close chat"
+    },
+    "scope": {
+      "searchingIn": "Searching in",
+      "menuLabel": "Search scope",
+      "workspace": "Whole workspace",
+      "note": "This note only",
+      "removeNote": "Remove note from context"
+    },
+    "log": {
+      "label": "Conversation"
+    },
+    "empty": {
+      "heading": "What do you want to ask your notes?",
+      "description": "Answers draw on your notes and show where each fact came from.",
+      "forNote": "For this note",
+      "forWorkspace": "Try asking",
+      "suggestions": {
+        "summarizeNote": "Summarize this note",
+        "relatedNotes": "Find notes related to this one",
+        "openTasks": "List open tasks in this note",
+        "workspaceRecent": "What have I been working on lately?",
+        "workspaceTasks": "List open tasks across my notes",
+        "workspaceThemes": "What are the main themes in my notes?"
+      }
+    },
+    "message": {
+      "sources": "Sources",
+      "stopped": "stopped",
+      "citation": "Source {n}: {title}",
+      "thinking": "Thinking"
+    },
+    "actions": {
+      "insert": "Insert",
+      "replace": "Replace selection",
+      "replaceNeedsSelection": "Select text in a note first",
+      "copy": "Copy",
+      "saveAsNote": "Save as new note",
+      "retry": "Retry",
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "diffLabel": "Replacement preview"
+    },
+    "error": {
+      "offlineTitle": "Model not responding",
+      "offlineBody": "No response from {host}. Start the model server or choose another model.",
+      "privacyTitle": "Cloud model blocked",
+      "privacyBody": "Private mode only allows models on this computer, so the request to {host} was not sent.",
+      "otherTitle": "Something went wrong",
+      "retry": "Retry",
+      "openSettings": "AI settings",
+      "chooseLocal": "Choose local model"
+    },
+    "composer": {
+      "label": "Message",
+      "placeholder": "Ask about your notes",
+      "send": "Send",
+      "stop": "Stop",
+      "modelAria": "Model: {model}, {where}",
+      "local": "local"
+    },
+    "toast": {
+      "selectionChanged": "The selected text changed. Select it again and retry.",
+      "emptyAnswer": "The answer is empty.",
+      "editorUnavailable": "Open a note in the editor first.",
+      "createFailed": "Could not create the note.",
+      "noteCreated": "Saved as a new note",
+      "copyFailed": "Could not copy the answer.",
+      "actionFailed": "The action could not be completed."
+    },
+    "untitled": "Untitled"
   }
 }

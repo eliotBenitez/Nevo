@@ -1917,6 +1917,7 @@
         "findInNote": "Rechercher dans la note",
         "replaceInNote": "Rechercher et remplacer",
         "toggleDictation": "Activer ou désactiver la dictée",
+        "toggleAiChat": "Afficher ou masquer le chat IA",
         "newNote": "Créer une note",
         "newFolder": "Créer un dossier",
         "saveNote": "Enregistrer la note",
@@ -3194,5 +3195,91 @@
     "errors": { "pageLimit": "Le nombre maximal de pages est atteint.", "objectLimit": "Le nombre maximal de traits est atteint.", "pointLimit": "La limite de détails du dessin est atteinte.", "serializedLimit": "La taille maximale du carnet est atteinte.", "unsupported": "Ce carnet ne peut pas être modifié dans cette version.", "invalid": "Les données du carnet n'ont pas pu être ouvertes sans risque de perte.", "export": "L'export PDF a échoué.", "imageType": "Seules les images PNG, JPEG, WebP et GIF sont prises en charge.", "imageImport": "Impossible d'insérer l'image." },
     "deletePage": { "title": "Supprimer cette page ?", "message": "Cette page contient de l'encre. Vous pourrez la restaurer avec Annuler.", "confirm": "Supprimer la page", "cancel": "Garder la page" },
     "palette": {"open": "Palette de couleurs", "builtin": "Palette", "custom": "Mes couleurs", "recent": "Récentes", "addCurrent": "Ajouter la couleur actuelle", "edit": "Modifier", "done": "Terminé", "remove": "Supprimer la couleur {color}", "quick": "Choix rapide de couleur", "colors": {"black": "Noir", "graphite": "Graphite", "blue": "Bleu", "sky": "Bleu ciel", "red": "Rouge", "orange": "Orange", "yellow": "Jaune", "green": "Vert", "teal": "Turquoise", "purple": "Violet", "pink": "Rose", "brown": "Marron"}}
+  },
+  "aiChat": {
+    "launcher": {
+      "label": "Demander à l'IA",
+      "busy": "Répond en arrière-plan",
+      "unread": "Réponse prête",
+      "offline": "Modèle indisponible"
+    },
+    "dialogLabel": "Chat IA",
+    "header": {
+      "newChatTitle": "Nouveau chat",
+      "newChat": "Nouveau chat",
+      "dock": "Ancrer à droite",
+      "undock": "Détacher",
+      "collapse": "Réduire",
+      "close": "Fermer le chat"
+    },
+    "scope": {
+      "searchingIn": "Recherche dans",
+      "menuLabel": "Portée de la recherche",
+      "workspace": "Tout le workspace",
+      "note": "Cette note uniquement",
+      "removeNote": "Retirer la note du contexte"
+    },
+    "log": {
+      "label": "Conversation"
+    },
+    "empty": {
+      "heading": "Que voulez-vous demander à vos notes ?",
+      "description": "Les réponses s'appuient sur vos notes et indiquent d'où vient chaque information.",
+      "forNote": "Pour cette note",
+      "forWorkspace": "Essayez de demander",
+      "suggestions": {
+        "summarizeNote": "Résume cette note",
+        "relatedNotes": "Trouve les notes liées à celle-ci",
+        "openTasks": "Liste les tâches ouvertes dans cette note",
+        "workspaceRecent": "Sur quoi ai-je travaillé récemment ?",
+        "workspaceTasks": "Liste les tâches ouvertes dans toutes mes notes",
+        "workspaceThemes": "Quels sont les grands thèmes de mes notes ?"
+      }
+    },
+    "message": {
+      "sources": "Sources",
+      "stopped": "arrêté",
+      "citation": "Source {n} : {title}",
+      "thinking": "Réflexion en cours"
+    },
+    "actions": {
+      "insert": "Insérer",
+      "replace": "Remplacer la sélection",
+      "replaceNeedsSelection": "Sélectionnez d'abord du texte dans une note",
+      "copy": "Copier",
+      "saveAsNote": "Enregistrer comme nouvelle note",
+      "retry": "Réessayer",
+      "apply": "Appliquer",
+      "cancel": "Annuler",
+      "diffLabel": "Aperçu du remplacement"
+    },
+    "error": {
+      "offlineTitle": "Le modèle ne répond pas",
+      "offlineBody": "Aucune réponse de {host}. Démarrez le serveur du modèle ou choisissez un autre modèle.",
+      "privacyTitle": "Modèle cloud bloqué",
+      "privacyBody": "Le mode privé n'autorise que les modèles de cet ordinateur ; la requête vers {host} n'a donc pas été envoyée.",
+      "otherTitle": "Une erreur s'est produite",
+      "retry": "Réessayer",
+      "openSettings": "Paramètres de l'IA",
+      "chooseLocal": "Choisir un modèle local"
+    },
+    "composer": {
+      "label": "Message",
+      "placeholder": "Posez une question sur vos notes",
+      "send": "Envoyer",
+      "stop": "Arrêter",
+      "modelAria": "Modèle : {model}, {where}",
+      "local": "local"
+    },
+    "toast": {
+      "selectionChanged": "Le texte sélectionné a changé. Sélectionnez-le à nouveau et réessayez.",
+      "emptyAnswer": "La réponse est vide.",
+      "editorUnavailable": "Ouvrez d'abord une note dans l'éditeur.",
+      "createFailed": "Impossible de créer la note.",
+      "noteCreated": "Enregistré comme nouvelle note",
+      "copyFailed": "Impossible de copier la réponse.",
+      "actionFailed": "L'action n'a pas pu être effectuée."
+    },
+    "untitled": "Sans titre"
   }
 }

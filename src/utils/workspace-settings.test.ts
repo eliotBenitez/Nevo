@@ -148,6 +148,7 @@ describe('normalizeWorkspaceSettings', () => {
     expect(settings.hotkeys.bindings.find(binding => binding.commandId === 'workspace.open-graph')?.defaultChord).toBe('Ctrl+Alt+G')
     expect(settings.hotkeys.bindings.find(binding => binding.commandId === 'workspace.open-history')?.defaultChord).toBe('Ctrl+Alt+H')
     expect(settings.hotkeys.bindings.find(binding => binding.commandId === 'workspace.open-trash')?.defaultChord).toBe('Ctrl+Alt+T')
+    expect(settings.hotkeys.bindings.find(binding => binding.commandId === 'ai.chat.toggle')?.defaultChord).toBe('Ctrl+J')
   })
 
   it('normalizes dictationLanguage and adds the dictation hotkey to older settings', () => {

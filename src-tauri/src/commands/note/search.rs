@@ -135,7 +135,7 @@ fn flatten_block_text(node: &Value) -> String {
     }
 }
 
-fn flatten_note_blocks(content: &Value) -> Vec<String> {
+pub(super) fn flatten_note_blocks(content: &Value) -> Vec<String> {
     let blocks = content
         .get("content")
         .and_then(|value| value.as_array())

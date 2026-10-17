@@ -309,6 +309,18 @@ change stored note icons.
   DOM; the shared stored-preview sanitizer remains unchanged. Presentation rules
   follow source order with inline declarations applied last, rather than implementing
   the full CSS specificity cascade. The source stays in the existing node attributes.
+- **AI chat** — `src/app/components/ai-chat/AiChatHost.vue`, mounted once in
+  `.workspace-body`, renders the corner launcher and the floating, docked, or phone-sheet
+  panel. Session state (messages, open/docked, scope, generation counter for Stop) lives
+  in `src/stores/aiChat.ts` and resets when the workspace path changes; it holds no
+  ProseMirror objects and is not persisted. `useAiChatSession` captures the active
+  note and selection through `activeEditorRegistry`, retrieves workspace context with
+  the `search_note_context` command (`src-tauri/src/commands/note/context_search.rs`:
+  on-demand lexical ranking over the same flattened blocks as `search_workspace_blocks`,
+  no index on disk), builds the prompt in `src/core/ai-chat/`, and streams through
+  `useAiCompletion`. Insert and replace-selection are single transactions on the live
+  `EditorView` (`aiChatEditorActions.ts`); "save as note" reuses the MCP bridge path
+  (`waitForActiveEditor` + `writeEditorMarkdown`). Design: `docs/superpowers/specs/2026-10-17-ai-chat-design.md`.
 - **Voice recording** — `src-tauri/src/commands/voice_recording/` captures microphone input
   on desktop with `cpal` and writes mono WAV with `hound`. The Rust commands return
   `unsupported` on Android and iOS, where the editor action is hidden. Recordings start

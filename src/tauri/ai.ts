@@ -23,9 +23,21 @@ export const aiCommands = {
   complete: (req: AiCompleteRequest): Promise<string> =>
     invoke('ai_complete', { req }),
 
+  searchNoteContext: (workspacePath: string, query: string, limit?: number): Promise<NoteContextHit[]> =>
+    invoke('search_note_context', { workspacePath, query, limit }),
+
   completeStream: (req: AiCompleteRequest, onEvent: (e: AiStreamEvent) => void): Promise<void> => {
     const ch = new Channel<AiStreamEvent>()
     ch.onmessage = onEvent
     return invoke('ai_complete_stream', { req, onEvent: ch })
   },
+}
+
+export interface NoteContextHit {
+  noteId: string
+  noteTitle: string
+  folderId: string | null
+  blockIndex: number
+  text: string
+  score: number
 }

@@ -1917,6 +1917,7 @@
         "findInNote": "In Notiz suchen",
         "replaceInNote": "Suchen und Ersetzen",
         "toggleDictation": "Diktat ein- oder ausschalten",
+        "toggleAiChat": "KI-Chat ein- oder ausblenden",
         "newNote": "Notiz erstellen",
         "newFolder": "Ordner erstellen",
         "saveNote": "Notiz speichern",
@@ -3194,5 +3195,91 @@
     "errors": { "pageLimit": "Das Notizbuch hat die maximale Seitenzahl erreicht.", "objectLimit": "Das Notizbuch hat die maximale Anzahl an Strichen erreicht.", "pointLimit": "Das Notizbuch hat die maximale Zeichendetailgrenze erreicht.", "serializedLimit": "Das Notizbuch hat die maximale Speichergröße erreicht.", "unsupported": "Dieses Notizbuch kann mit dieser Version nicht bearbeitet werden.", "invalid": "Die Notizbuchdaten konnten nicht sicher zum Bearbeiten geöffnet werden.", "export": "Das PDF konnte nicht exportiert werden.", "imageType": "Es werden nur PNG-, JPEG-, WebP- und GIF-Bilder unterstützt.", "imageImport": "Das Bild konnte nicht eingefügt werden." },
     "deletePage": { "title": "Diese Seite löschen?", "message": "Diese Seite enthält Tinte. Mit Rückgängig kannst du sie wiederherstellen.", "confirm": "Seite löschen", "cancel": "Seite behalten" },
     "palette": {"open": "Farbpalette", "builtin": "Palette", "custom": "Meine Farben", "recent": "Zuletzt verwendet", "addCurrent": "Aktuelle Farbe hinzufügen", "edit": "Bearbeiten", "done": "Fertig", "remove": "Farbe {color} entfernen", "quick": "Schnelle Farbauswahl", "colors": {"black": "Schwarz", "graphite": "Graphit", "blue": "Blau", "sky": "Himmelblau", "red": "Rot", "orange": "Orange", "yellow": "Gelb", "green": "Grün", "teal": "Türkis", "purple": "Violett", "pink": "Rosa", "brown": "Braun"}}
+  },
+  "aiChat": {
+    "launcher": {
+      "label": "KI fragen",
+      "busy": "Antwortet im Hintergrund",
+      "unread": "Antwort bereit",
+      "offline": "Modell nicht erreichbar"
+    },
+    "dialogLabel": "KI-Chat",
+    "header": {
+      "newChatTitle": "Neuer Chat",
+      "newChat": "Neuer Chat",
+      "dock": "Rechts andocken",
+      "undock": "Lösen",
+      "collapse": "Einklappen",
+      "close": "Chat schließen"
+    },
+    "scope": {
+      "searchingIn": "Suche in",
+      "menuLabel": "Suchbereich",
+      "workspace": "Gesamter Workspace",
+      "note": "Nur diese Notiz",
+      "removeNote": "Notiz aus dem Kontext entfernen"
+    },
+    "log": {
+      "label": "Unterhaltung"
+    },
+    "empty": {
+      "heading": "Was möchtest du deine Notizen fragen?",
+      "description": "Antworten stützen sich auf deine Notizen und zeigen, woher jede Angabe stammt.",
+      "forNote": "Für diese Notiz",
+      "forWorkspace": "Frag zum Beispiel",
+      "suggestions": {
+        "summarizeNote": "Fasse diese Notiz zusammen",
+        "relatedNotes": "Finde Notizen, die zu dieser passen",
+        "openTasks": "Liste die offenen Aufgaben dieser Notiz auf",
+        "workspaceRecent": "Woran habe ich zuletzt gearbeitet?",
+        "workspaceTasks": "Liste die offenen Aufgaben aus allen Notizen auf",
+        "workspaceThemes": "Was sind die Hauptthemen meiner Notizen?"
+      }
+    },
+    "message": {
+      "sources": "Quellen",
+      "stopped": "angehalten",
+      "citation": "Quelle {n}: {title}",
+      "thinking": "Denkt nach"
+    },
+    "actions": {
+      "insert": "Einfügen",
+      "replace": "Auswahl ersetzen",
+      "replaceNeedsSelection": "Markiere zuerst Text in einer Notiz",
+      "copy": "Kopieren",
+      "saveAsNote": "Als neue Notiz speichern",
+      "retry": "Erneut versuchen",
+      "apply": "Anwenden",
+      "cancel": "Abbrechen",
+      "diffLabel": "Vorschau der Ersetzung"
+    },
+    "error": {
+      "offlineTitle": "Modell antwortet nicht",
+      "offlineBody": "Keine Antwort von {host}. Starte den Modellserver oder wähle ein anderes Modell.",
+      "privacyTitle": "Cloud-Modell blockiert",
+      "privacyBody": "Der private Modus erlaubt nur Modelle auf diesem Computer, daher wurde die Anfrage an {host} nicht gesendet.",
+      "otherTitle": "Etwas ist schiefgelaufen",
+      "retry": "Erneut versuchen",
+      "openSettings": "KI-Einstellungen",
+      "chooseLocal": "Lokales Modell wählen"
+    },
+    "composer": {
+      "label": "Nachricht",
+      "placeholder": "Frag etwas zu deinen Notizen",
+      "send": "Senden",
+      "stop": "Stoppen",
+      "modelAria": "Modell: {model}, {where}",
+      "local": "lokal"
+    },
+    "toast": {
+      "selectionChanged": "Der markierte Text hat sich geändert. Markiere ihn erneut und versuche es noch einmal.",
+      "emptyAnswer": "Die Antwort ist leer.",
+      "editorUnavailable": "Öffne zuerst eine Notiz im Editor.",
+      "createFailed": "Die Notiz konnte nicht erstellt werden.",
+      "noteCreated": "Als neue Notiz gespeichert",
+      "copyFailed": "Die Antwort konnte nicht kopiert werden.",
+      "actionFailed": "Die Aktion konnte nicht ausgeführt werden."
+    },
+    "untitled": "Unbenannt"
   }
 }

@@ -17,6 +17,7 @@ interface KeymapHandlers {
   findInNote: () => void
   replaceInNote: () => void
   toggleDictation: () => void
+  toggleAiChat: () => void
 }
 
 export function useWorkspaceKeymap(settings: Ref<WorkspaceSettings>, handlers: KeymapHandlers) {
@@ -34,6 +35,7 @@ export function useWorkspaceKeymap(settings: Ref<WorkspaceSettings>, handlers: K
       case 'app.open-settings': handlers.openSettings(); break
       case 'editor.find-in-note': handlers.findInNote(); break
       case 'editor.replace-in-note': handlers.replaceInNote(); break
+      case 'ai.chat.toggle': handlers.toggleAiChat(); break
       case 'editor.dictation.toggle': handlers.toggleDictation(); break
     }
   }

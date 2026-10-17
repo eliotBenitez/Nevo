@@ -6,6 +6,7 @@ import { History, Menu, PanelLeft, Settings2, X } from '../ui/icons'
 import { useI18n } from 'vue-i18n'
 import WindowControls from '../ui/primitives/WindowControls.vue'
 import WorkspaceRightPanel from './components/WorkspaceRightPanel.vue'
+import AiChatHost from './components/ai-chat/AiChatHost.vue'
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
 import WorkspaceDrawer from './components/WorkspaceDrawer.vue'
 import WorkspaceHome from './components/WorkspaceHome.vue'
@@ -40,6 +41,7 @@ const DrawView = defineAsyncComponent(() => import('../features/draw/DrawView.vu
 const HistoryView = defineAsyncComponent(() => import('../features/history/HistoryView.vue'))
 const HistoryNotePicker = defineAsyncComponent(() => import('../features/history/HistoryNotePicker.vue'))
 import { useUiStore } from '../stores/ui'
+import { useAiChatStore } from '../stores/aiChat'
 import { useKanbanStore } from '../stores/kanban'
 import { useWorkspaceStore } from '../stores/workspace'
 import { useTreeStore } from '../stores/tree'
@@ -62,6 +64,7 @@ import type {
   NevoSandboxUiContributionSnapshot,
   NevoSandboxWorkspaceView,
 } from '../types/editor-plugin'
+import type { ChatSource } from '../core/ai-chat/prompt'
 import type { TitleBarSearchResult, WorkspaceBlockNavigationTarget } from '../types/search'
 import { ACCENT_PRESETS, resolveBindingChord } from '../utils/workspace-settings'
 import { isPluginEnabled } from '../utils/system-plugins'
@@ -92,6 +95,7 @@ const { t, locale } = useI18n()
 const { showToast } = useToast()
 
 const uiStore = useUiStore()
+const aiChatStore = useAiChatStore()
 const { sidebarOpen, rightPanelOpen } = storeToRefs(uiStore)
 const workspaceStore = useWorkspaceStore()
 const treeStore = useTreeStore()
@@ -323,6 +327,7 @@ const isHistoryView = computed(() => /^\/workspace\/note\/[^/]+\/history$/.test(
 const isHistoryIndex = computed(() => route.path === '/workspace/history')
 const historyRouteReady = ref(true)
 const noteViewMode = computed<NoteViewMode>(() => isCanvasView.value ? 'canvas' : 'document')
+const rightPanelVisible = computed(() => rightPanelOpen.value && !isMobilePrimaryView.value && !isPhone.value && !isHistoryView.value && !isHistoryIndex.value && !isSettingsView.value && !isArchiveView.value)
 const showMobileBottomNav = computed(() => isPhone.value && isMobilePrimaryView.value)
 const showMobileEditorHeader = computed(() =>
   isPhone.value
@@ -863,7 +868,7 @@ const { renameModal, onTreeAction, handleRequestExport, submitRename, closeRenam
   { openHistory, runSearch: async (seed) => { await runWorkspaceSearch(seed) }, navigateToNote: async (noteId) => { await router.push(`/workspace/note/${noteId}`) }, navigateToWorkspaceRoot: async () => { await router.push('/workspace') }, exportAsMarkdown, exportAsHtml, exportAsDocx: async (note, path) => { exportAsDocx(note, path) }, exportAsTypst, exportAsPdf },
 )
 
-useWorkspaceKeymap(settings, { createNote, createFolder, saveNote: flushSave, runSearch: () => toggleSearch(), toggleSidebar: () => toggleSidebarOrPin(), toggleRightPanel: () => uiStore.toggleRightPanel(), openGraph: () => openGraph(), openHistory: () => toggleHistory(), openTrash: () => toggleTrash(), openSettings: () => toggleSettings(), findInNote: () => { editorPaneRef.value?.openFindInNote?.(false) }, replaceInNote: () => { editorPaneRef.value?.openFindInNote?.(true) }, toggleDictation: () => { editorPaneRef.value?.toggleDictation?.() } })
+useWorkspaceKeymap(settings, { createNote, createFolder, saveNote: flushSave, runSearch: () => toggleSearch(), toggleSidebar: () => toggleSidebarOrPin(), toggleRightPanel: () => uiStore.toggleRightPanel(), openGraph: () => openGraph(), openHistory: () => toggleHistory(), openTrash: () => toggleTrash(), openSettings: () => toggleSettings(), findInNote: () => { editorPaneRef.value?.openFindInNote?.(false) }, replaceInNote: () => { editorPaneRef.value?.openFindInNote?.(true) }, toggleDictation: () => { editorPaneRef.value?.toggleDictation?.() }, toggleAiChat: () => aiChatStore.toggle() })
 
 watch(manifest, (workspace) => {
   if (!workspace) { router.replace('/onboarding'); return }
@@ -1033,6 +1038,10 @@ function handleTitleBarSearchSelect(result: TitleBarSearchResult) {
   openNote(result.noteId)
 }
 function consumePendingBlockTarget() { pendingBlockTarget.value = null }
+function openAiChatSource(source: ChatSource) {
+  if (source.blockIndex !== null) pendingBlockTarget.value = { noteId: source.noteId, blockIndex: source.blockIndex, query: source.text, snippet: source.text.slice(0, 160) }
+  openNote(source.noteId)
+}
 </script>
 
 <template>
@@ -1282,6 +1291,15 @@ function consumePendingBlockTarget() { pendingBlockTarget.value = null }
           @open-graph="openGraph"
         />
       </div>
+      <AiChatHost
+        :active-note-id="activeNoteId"
+        :right-panel-visible="rightPanelVisible"
+        :bottom-nav-visible="showMobileBottomNav"
+        :suppressed="isSettingsView"
+        @open-note="openNote"
+        @open-source="openAiChatSource"
+        @open-settings="openSettings('ai')"
+      />
     </div>
     <MobileBottomNav
       v-if="showMobileBottomNav"
