@@ -11,11 +11,10 @@ import SettingsGroup from './ui/SettingsGroup.vue'
 import SettingsRow from './ui/SettingsRow.vue'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import type { AIApiKind, WorkspaceSettings } from '../../../types/workspace'
-import { useAiCompletion } from '../../../composables/useAiCompletion'
+import { useAiModels } from '../../../composables/useAiModels'
 import SettingsAiApiKeyRow from './SettingsAiApiKeyRow.vue'
-import { freeOpenRouterModels, isOpenRouterUrl, OPENROUTER_BASE_URL } from '../../../core/ai/openrouter'
+import { isOpenRouterUrl, OPENROUTER_BASE_URL } from '../../../core/ai/openrouter'
 
-type ConnectionStatus = 'idle' | 'checking' | 'ok' | 'error'
 type ProviderPreset = AIApiKind | 'openrouter'
 
 const OLLAMA_DEFAULT_URL = 'http://localhost:11434'
@@ -28,7 +27,7 @@ const PROVIDER_DEFAULTS: Record<ProviderPreset, string> = {
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
-const ai = useAiCompletion()
+const { models, status: connectionStatus, load, reset } = useAiModels()
 const { settings } = storeToRefs(workspaceStore)
 const u = (fn: (draft: WorkspaceSettings) => void) => workspaceStore.updateSettings(fn)
 
@@ -53,9 +52,6 @@ const aiModelOptions = computed(() => [
   { value: 'cloud-gpt', label: t('settings.ai.models.cloudGpt.label'), description: t('settings.ai.models.cloudGpt.description') },
 ])
 
-const models = ref<string[]>([])
-const connectionStatus = ref<ConnectionStatus>('idle')
-
 const modelSelectOptions = computed(() => {
   if (models.value.length > 0) {
     return models.value.map(m => ({ value: m, label: m }))
@@ -71,8 +67,7 @@ async function onApiKindChange(v: string) {
   // OpenRouter preset is its URL, so choosing it always sets it.
   const shouldAutoFill = next === 'openrouter' || !currentUrl
     || Object.values(PROVIDER_DEFAULTS).includes(currentUrl)
-  models.value = []
-  connectionStatus.value = 'idle'
+  reset()
   if (shouldAutoFill) {
     endpointInput.value = newDefault
   }
@@ -85,24 +80,10 @@ async function onApiKindChange(v: string) {
   if (next === 'openrouter') await testConnection()
 }
 
-async function testConnection() {
-  connectionStatus.value = 'checking'
-  try {
-    const result = await ai.testConnection()
-    models.value = preset.value === 'openrouter' ? freeOpenRouterModels(result) : result
-    const first = models.value[0]
-    if (preset.value === 'openrouter' && first && !models.value.includes(settings.value.ai.defaultModel)) {
-      await u(d => { d.ai.defaultModel = first })
-    }
-    connectionStatus.value = 'ok'
-  } catch {
-    models.value = []
-    connectionStatus.value = 'error'
-  }
-}
+const testConnection = () => load(true)
 
 onMounted(() => {
-  if (settings.value.ai.enabled && preset.value === 'openrouter') void testConnection()
+  if (settings.value.ai.enabled && preset.value === 'openrouter') void load()
 })
 
 function onEndpointChange(e: Event) {

@@ -7,6 +7,7 @@ import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import en from '../../../locales/en.json'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import type { WorkspaceSettings } from '../../../types/workspace'
+import { useAiModels } from '../../../composables/useAiModels'
 
 const listModels = vi.fn()
 
@@ -37,6 +38,7 @@ const selects = (w: ReturnType<typeof setup>['wrapper']) => w.findAllComponents(
 describe('SettingsAiPanel OpenRouter preset', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    useAiModels().reset()
     listModels.mockReset().mockResolvedValue([
       'openai/gpt-4o',
       'meta-llama/llama-3.3-70b-instruct:free',

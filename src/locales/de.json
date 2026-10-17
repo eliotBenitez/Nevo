@@ -3283,6 +3283,9 @@
       "send": "Senden",
       "stop": "Stoppen",
       "modelAria": "Modell: {model}, {where}",
+      "modelsLoading": "Modelle werden geladen…",
+      "modelsError": "Modelle konnten nicht geladen werden – prüfen Sie die KI-Einstellungen",
+      "modelsEmpty": "Keine Modelle gefunden",
       "local": "lokal"
     },
     "toast": {

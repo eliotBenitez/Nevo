@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowUp, ChevronDown, Cloud, HardDrive, Square } from '../../../ui/icons'
+import { ArrowUp, Square } from '../../../ui/icons'
 import NvButton from '../../../ui/primitives/NvButton.vue'
+import AiChatModelPicker from './AiChatModelPicker.vue'
 
 const props = defineProps<{
   streaming: boolean
@@ -55,19 +56,12 @@ defineExpose({ focus: () => input.value?.focus({ preventScroll: true }) })
       @keydown="onKeydown"
     />
     <div class="ai-cbar">
-      <button
-        type="button"
-        class="ai-model"
-        :aria-label="t('aiChat.composer.modelAria', { model, where: local ? t('aiChat.composer.local') : host })"
-        @click="emit('open-settings')"
-      >
-        <span class="ai-model__name">{{ model }}</span>
-        <span class="ai-model__where" :class="{ 'ai-model__where--cloud': !local }">
-          <component :is="local ? HardDrive : Cloud" :size="14" aria-hidden="true" />
-          {{ local ? t('aiChat.composer.local') : host }}
-        </span>
-        <ChevronDown :size="14" aria-hidden="true" />
-      </button>
+      <AiChatModelPicker
+        :model="model"
+        :local="local"
+        :host="host"
+        @open-settings="emit('open-settings')"
+      />
       <NvButton
         class="ai-send"
         variant="primary"

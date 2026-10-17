@@ -3283,6 +3283,9 @@
       "send": "Enviar",
       "stop": "Detener",
       "modelAria": "Modelo: {model}, {where}",
+      "modelsLoading": "Cargando modelos…",
+      "modelsError": "No se pudieron cargar los modelos: revisa los ajustes de IA",
+      "modelsEmpty": "No se encontraron modelos",
       "local": "local"
     },
     "toast": {
