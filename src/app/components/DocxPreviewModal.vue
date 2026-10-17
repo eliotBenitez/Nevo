@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, toRef } from 'vue'
+import { computed, onBeforeUnmount, onMounted, provide, ref, toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { FileDown } from '../../ui/icons'
 import type { NoteDocument } from '../../types/note'
@@ -12,6 +12,7 @@ import {
   type DocxPaperFormat,
 } from '../../utils/noteExport/docxOptions'
 import { useDocxPagination } from '../composables/useDocxPagination'
+import { DOCX_PREVIEW_RELAYOUT } from '../composables/useDocxPreviewSvg'
 import DocxExportSettings from './DocxExportSettings.vue'
 import DocxPreviewContent from './DocxPreviewContent.vue'
 
@@ -78,6 +79,7 @@ const {
   paginatedContentNodes,
   contentPages,
   pages,
+  updatePagination,
 } = useDocxPagination({
   note: toRef(props, 'note'),
   paperFormat,
@@ -98,6 +100,16 @@ const {
   zoom,
   fitWidth,
   hiddenContainerRef,
+})
+
+let relayoutPending = false
+provide(DOCX_PREVIEW_RELAYOUT, () => {
+  if (relayoutPending) return
+  relayoutPending = true
+  setTimeout(() => {
+    relayoutPending = false
+    void updatePagination()
+  }, 50)
 })
 
 async function onSave() {

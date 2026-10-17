@@ -3,6 +3,11 @@ import { computed } from 'vue'
 import { sanitizeSvg } from '../../utils/sanitizeSvg'
 import { workspaceAssetUrl } from '../../utils/workspaceAssetUrl'
 import type { ProcessedNode } from '../../utils/noteExport/docxPagination'
+import DocxPreviewDiagram from './DocxPreviewDiagram.vue'
+import DocxPreviewEmbedNode from './DocxPreviewEmbedNode.vue'
+
+const EMBED_TYPES = new Set(['file_block', 'media_block', 'embed_block', 'note_embed', 'block_embed', 'query_block', 'database_block'])
+const DIAGRAM_TYPES = new Set(['mermaid_block', 'markmap_block', 'vega_block', 'math_block'])
 
 interface Props {
   node: ProcessedNode
@@ -37,6 +42,8 @@ const markClasses = computed(() => {
     if (mark.type === 'code') classes.push('docx-mark-code')
     if (mark.type === 'strike') classes.push('docx-mark-strike')
     if (mark.type === 'underline') classes.push('docx-mark-underline')
+    if (mark.type === 'superscript') classes.push('docx-mark-superscript')
+    if (mark.type === 'subscript') classes.push('docx-mark-subscript')
   }
   return classes
 })
@@ -172,6 +179,14 @@ export default {
 
   <!-- Drawings -->
   <div v-else-if="node.type === 'draw_block'" class="docx-page__draw-block" v-html="safeSvgPreview"></div>
+
+  <DocxPreviewDiagram v-else-if="node.type === 'math_inline'" :node="node" inline />
+  <DocxPreviewDiagram v-else-if="DIAGRAM_TYPES.has(node.type)" :node="node" />
+  <DocxPreviewEmbedNode v-else-if="EMBED_TYPES.has(node.type)" :node="node" />
+
+  <p v-else-if="node.type === 'toggle_title'" class="docx-page__paragraph docx-mark-strong">
+    <DocxPreviewNode v-for="(child, idx) in node.content" :key="idx" :node="child" />
+  </p>
 
   <!-- Fallback for other node types -->
   <div v-else-if="node.content && node.content.length">

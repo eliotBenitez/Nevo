@@ -269,6 +269,56 @@
   text-decoration: underline;
 }
 
+.docx-mark-superscript {
+  vertical-align: super;
+  font-size: 0.75em;
+}
+
+.docx-mark-subscript {
+  vertical-align: sub;
+  font-size: 0.75em;
+}
+
+.docx-page__embed-link {
+  color: #0563c1;
+  text-decoration: underline;
+}
+
+.docx-page__diagram-block {
+  display: flex;
+  justify-content: center;
+  max-width: 100%;
+  max-height: var(--docx-content-height);
+  margin: 0 0 var(--docx-paragraph-spacing, 8pt);
+}
+
+.docx-page__diagram {
+  display: block;
+  max-width: 100%;
+  max-height: var(--docx-content-height);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.docx-page__diagram--inline {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.docx-page__math-fallback {
+  text-align: center;
+}
+
+.docx-page__callout--plain {
+  border-left-color: #cbd5e1;
+  background: #f5f7fb;
+}
+
+.docx-page__callout--plain .docx-page__paragraph {
+  margin-bottom: 4px;
+}
+
 .docx-mark-code {
   font-family: Consolas, "Courier New", monospace;
 }

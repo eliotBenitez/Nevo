@@ -44,13 +44,11 @@ import {
 } from './docxTypography'
 import type { BlockNode, NoteDocument } from '../../types/note'
 import { computeBlockTableValues } from '../../editor-core/tableFormula'
-import { renderMermaidToSvg } from './mermaidToSvg'
-import { renderMarkmapToSvg } from './markmapToSvg'
-import { renderVegaToSvg } from './vegaToSvg'
+import { mathBlockLatex, renderBlockSvg } from './blockSvg'
 import { renderMathToSvg } from './mathToSvg'
 import type { RasterPng } from './svgRaster'
-import { normalizeDatabaseData, type DatabaseBlockData, type DbCellValue, type DbField } from '../../types/database-block'
-import { visibleRecords } from '../../editor-core/databaseFilterSort'
+import { normalizeDatabaseData, type DatabaseBlockData } from '../../types/database-block'
+import { databaseBlockRecords, formatDbCellValue } from './databaseBlockExport'
 import { normalizeQueryBlockData } from '../../features/query/queryBlockData'
 import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSummary'
 import { formatAudioTime, readAudioBookmarks } from '../../core/media/audioBookmarks'
@@ -382,29 +380,6 @@ async function tableCell(cell: BlockNode, ctx: Ctx, header: boolean): Promise<Ta
   })
 }
 
-function formatDbCellValue(value: DbCellValue, field: DbField): string {
-  if (value === null || value === undefined) return ''
-  if (field.type === 'select') {
-    const id = typeof value === 'string' ? value : ''
-    if (!id) return ''
-    return field.options?.find(o => o.id === id)?.name ?? id
-  }
-  if (field.type === 'multi_select') {
-    const ids = Array.isArray(value) ? value : []
-    return ids.map(id => field.options?.find(o => o.id === id)?.name ?? id).join(', ')
-  }
-  if (Array.isArray(value)) return value.join(', ')
-  if (typeof value === 'number') return String(value)
-  if (typeof value === 'boolean') return value ? '✓' : ''
-  return String(value)
-}
-
-function databaseBlockRecords(data: DatabaseBlockData) {
-  if (data.version !== 1) return []
-  const view = data.views.find(v => v.id === data.activeView) ?? data.views[0]
-  return view ? visibleRecords(data.records, view.filters, view.sorts, data.fields) : data.records
-}
-
 function databaseBlockTable(data: DatabaseBlockData): Table | null {
   if (!data.fields.length) return null
   const records = databaseBlockRecords(data)
@@ -589,13 +564,13 @@ async function blocksFor(node: BlockNode, ctx: Ctx): Promise<(Paragraph | Table)
       return paragraphs
     }
     case 'math_block': {
-      const latex = String(node.attrs?.latex ?? (node.content ?? []).map(c => c.text ?? '').join(''))
-      const blocks = await rasterBlock(await renderMathToSvg(latex, true), ctx)
+      const latex = mathBlockLatex(node)
+      const blocks = await rasterBlock(await renderBlockSvg(node), ctx)
       if (blocks.length) return blocks
       return [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: latex, italics: true })] })]
     }
     case 'mermaid_block':
-      return rasterBlock(await renderMermaidToSvg(String(node.attrs?.code ?? '')), ctx)
+      return rasterBlock(await renderBlockSvg(node), ctx)
     case 'query_block': {
       // Query results are dynamic (live cross-note search) and are never
       // materialized into export output — only a static summary of the filters.
@@ -603,9 +578,9 @@ async function blocksFor(node: BlockNode, ctx: Ctx): Promise<(Paragraph | Table)
       return [new Paragraph({ children: textRuns(`Query: ${summarizeQueryBlockFilters(data)}`, { italics: true }), ...calloutShade('F5F7FB') })]
     }
     case 'markmap_block':
-      return rasterBlock(await renderMarkmapToSvg(String(node.attrs?.markdown ?? '')), ctx)
+      return rasterBlock(await renderBlockSvg(node), ctx)
     case 'vega_block':
-      return rasterBlock(await renderVegaToSvg(String(node.attrs?.spec ?? '')), ctx)
+      return rasterBlock(await renderBlockSvg(node), ctx)
     case 'draw_block':
       return rasterBlock(String(node.attrs?.svgPreview ?? ''), ctx, String(node.attrs?.title ?? ''))
     case 'note_embed': {
