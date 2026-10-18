@@ -25,8 +25,8 @@ export function useAiCompletion() {
   }
 
   async function testConnection(): Promise<string[]> {
-    const { baseUrl, apiKind } = workspaceStore.settings.ai
-    return aiCommands.listModels(baseUrl, apiKind, await readApiKey())
+    const { baseUrl, apiKind, privacyMode } = workspaceStore.settings.ai
+    return aiCommands.listModels(baseUrl, apiKind, await readApiKey(), privacyMode)
   }
 
   async function generate(opts: AiGenerateOptions): Promise<void> {

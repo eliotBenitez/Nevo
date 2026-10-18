@@ -56,7 +56,7 @@ describe('SettingsAiPanel OpenRouter preset', () => {
 
     expect(store.settings.ai.apiKind).toBe('openai')
     expect(store.settings.ai.baseUrl).toBe('https://openrouter.ai/api/v1')
-    expect(listModels).toHaveBeenCalledWith('https://openrouter.ai/api/v1', 'openai', 'sk-or')
+    expect(listModels).toHaveBeenCalledWith('https://openrouter.ai/api/v1', 'openai', 'sk-or', expect.any(Boolean))
     const modelOptions = selects(wrapper)[1].props('options') as readonly { value: string }[]
     expect(modelOptions.map(o => o.value)).toEqual(['deepseek/deepseek-r1:free', 'meta-llama/llama-3.3-70b-instruct:free'])
     expect(store.settings.ai.defaultModel).toBe('deepseek/deepseek-r1:free')

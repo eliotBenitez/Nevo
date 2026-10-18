@@ -51,7 +51,14 @@ describe('useAiCompletion API key', () => {
   it('passes the key to the model listing', async () => {
     configure('openai')
     await useAiCompletion().testConnection()
-    expect(listModels).toHaveBeenCalledWith('https://openrouter.ai/api/v1', 'openai', 'sk-test')
+    expect(listModels).toHaveBeenCalledWith('https://openrouter.ai/api/v1', 'openai', 'sk-test', expect.any(Boolean))
+  })
+
+  it('passes privacy mode to the model listing so Rust can block remote endpoints', async () => {
+    const store = configure('openai')
+    store.settings.ai.privacyMode = true
+    await useAiCompletion().testConnection()
+    expect(listModels).toHaveBeenCalledWith('https://openrouter.ai/api/v1', 'openai', 'sk-test', true)
   })
 
   it('does not send a key saved for another endpoint', async () => {

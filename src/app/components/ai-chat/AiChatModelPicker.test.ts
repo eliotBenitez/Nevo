@@ -54,7 +54,7 @@ describe('AiChatModelPicker', () => {
     await wrapper.find('.ai-model').trigger('click')
     await flushPromises()
 
-    expect(listModels).toHaveBeenCalledWith('https://openrouter.ai/api/v1', 'openai', 'sk-or')
+    expect(listModels).toHaveBeenCalledWith('https://openrouter.ai/api/v1', 'openai', 'sk-or', expect.any(Boolean))
     const labels = menuItems().map(b => b.textContent?.trim())
     expect(labels).toEqual(['a/model:free', 'b/model:free', en.aiChat.error.openSettings])
 

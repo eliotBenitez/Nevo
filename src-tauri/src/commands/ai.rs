@@ -126,8 +126,12 @@ pub fn is_loopback_host(base_url: &str) -> bool {
 }
 
 pub fn enforce_privacy(req: &AiCompleteRequest) -> Result<(), String> {
-    let url = validated_base_url(&req.base_url)?;
-    if req.privacy_mode && !url_is_loopback(&url) {
+    enforce_privacy_for(&req.base_url, req.privacy_mode)
+}
+
+fn enforce_privacy_for(base_url: &str, privacy_mode: bool) -> Result<(), String> {
+    let url = validated_base_url(base_url)?;
+    if privacy_mode && !url_is_loopback(&url) {
         Err("AI privacy mode blocks non-local endpoints".to_string())
     } else {
         Ok(())
@@ -283,8 +287,12 @@ pub async fn ai_list_models(
     base_url: String,
     provider_kind: String,
     api_key: Option<String>,
+    privacy_mode: Option<bool>,
 ) -> Result<Vec<String>, String> {
-    let client = build_ai_client(false)?;
+    // Same gate as completions: in privacy mode neither the listing nor the key leaves the machine.
+    let privacy_mode = privacy_mode.unwrap_or(false);
+    enforce_privacy_for(&base_url, privacy_mode)?;
+    let client = build_ai_client(privacy_mode)?;
 
     if provider_kind == "openai" {
         let url = endpoint_url(&base_url, "models")?;
@@ -764,6 +772,13 @@ mod tests {
             api_key: None,
         };
         assert!(enforce_privacy(&req).is_err());
+    }
+
+    #[test]
+    fn model_listing_respects_privacy_mode() {
+        assert!(enforce_privacy_for("https://openrouter.ai/api/v1", true).is_err());
+        assert!(enforce_privacy_for("http://localhost:11434", true).is_ok());
+        assert!(enforce_privacy_for("https://openrouter.ai/api/v1", false).is_ok());
     }
 
     #[test]
