@@ -167,8 +167,40 @@ fn legacy_ref(stores: &Stores) -> Option<&dyn SecretStore> {
     stores.legacy.as_ref().map(|f| f as &dyn SecretStore)
 }
 
+/// Host-owned secrets (such as the AI API key) live under this prefix. Only Rust
+/// commands read or write them; the generic commands the webview calls refuse them,
+/// so such a secret never has to be handed to the frontend.
+const HOST_SECRET_PREFIX: &str = "nevo:";
+
+fn reject_host_secret(key: &str) -> Result<(), String> {
+    if key.starts_with(HOST_SECRET_PREFIX) {
+        Err("host_secret".to_string())
+    } else {
+        Ok(())
+    }
+}
+
+/// Blocking read of a host-owned secret; call from a blocking thread.
+pub(crate) fn read_host_secret(app: &AppHandle, key: &str) -> Result<Option<String>, String> {
+    let stores = resolve(app)?;
+    get_migrating(stores.primary.as_ref(), legacy_ref(&stores), key)
+}
+
+/// Blocking write of a host-owned secret; call from a blocking thread.
+pub(crate) fn write_host_secret(app: &AppHandle, key: &str, value: &str) -> Result<(), String> {
+    let stores = resolve(app)?;
+    set_migrating(stores.primary.as_ref(), legacy_ref(&stores), key, value)
+}
+
+/// Blocking delete of a host-owned secret; call from a blocking thread.
+pub(crate) fn delete_host_secret(app: &AppHandle, key: &str) -> Result<(), String> {
+    let stores = resolve(app)?;
+    delete_migrating(stores.primary.as_ref(), legacy_ref(&stores), key)
+}
+
 #[tauri::command]
 pub async fn secure_store_set(app: AppHandle, key: String, value: String) -> Result<(), String> {
+    reject_host_secret(&key)?;
     run(move || {
         let stores = resolve(&app)?;
         set_migrating(stores.primary.as_ref(), legacy_ref(&stores), &key, &value)
@@ -178,6 +210,7 @@ pub async fn secure_store_set(app: AppHandle, key: String, value: String) -> Res
 
 #[tauri::command]
 pub async fn secure_store_get(app: AppHandle, key: String) -> Result<Option<String>, String> {
+    reject_host_secret(&key)?;
     run(move || {
         let stores = resolve(&app)?;
         get_migrating(stores.primary.as_ref(), legacy_ref(&stores), &key)
@@ -187,6 +220,7 @@ pub async fn secure_store_get(app: AppHandle, key: String) -> Result<Option<Stri
 
 #[tauri::command]
 pub async fn secure_store_delete(app: AppHandle, key: String) -> Result<(), String> {
+    reject_host_secret(&key)?;
     run(move || {
         let stores = resolve(&app)?;
         delete_migrating(stores.primary.as_ref(), legacy_ref(&stores), &key)
@@ -198,6 +232,13 @@ pub async fn secure_store_delete(app: AppHandle, key: String) -> Result<(), Stri
 mod tests {
     use super::*;
     use std::fs;
+
+    #[test]
+    fn generic_commands_refuse_host_owned_secrets() {
+        assert!(reject_host_secret("nevo:ai.apiKey").is_err());
+        assert!(reject_host_secret("e2e.privateKey").is_ok());
+        assert!(reject_host_secret("my-plugin.token").is_ok());
+    }
 
     /// Two independent file stores stand in for (keychain, legacy file): the
     /// policy only depends on the trait, not on which backend is behind it.

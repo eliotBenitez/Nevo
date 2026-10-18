@@ -19,7 +19,8 @@ use tauri::State;
 
 #[cfg(desktop)]
 use crate::commands::transcription::{
-    resolve_model_path, validate_language, whisper_context, BusyGuard, TranscriptionState,
+    acquire_with_model, resolve_model_path, validate_language, whisper_context, BusyGuard,
+    TranscriptionState,
 };
 #[cfg(desktop)]
 use crate::commands::voice_recording::{session::RecorderError, VoiceRecordingState};
@@ -206,21 +207,17 @@ pub async fn dictation_start(
     let started = if !voice.is_idle() {
         Err(RecorderError::AlreadyRecording.code())
     } else {
-        match BusyGuard::acquire(Arc::clone(transcription.inner())) {
-            None => Err("transcription_busy".to_string()),
-            // Resolved under the guard so a concurrent model select or delete cannot interleave.
-            Some(guard) => match resolve_model_path(&app) {
-                Err(error) => Err(error),
-                Ok(model) => {
-                    let transcription = Arc::clone(transcription.inner());
-                    tauri::async_runtime::spawn_blocking(move || {
-                        start_session(transcription, model, language, on_event, guard)
-                    })
-                    .await
-                    .map_err(|error| format!("recording_failed: {error}"))
-                    .and_then(|result| result)
-                }
-            },
+        match acquire_with_model(transcription.inner(), || resolve_model_path(&app)) {
+            Err(error) => Err(error),
+            Ok((guard, model)) => {
+                let transcription = Arc::clone(transcription.inner());
+                tauri::async_runtime::spawn_blocking(move || {
+                    start_session(transcription, model, language, on_event, guard)
+                })
+                .await
+                .map_err(|error| format!("recording_failed: {error}"))
+                .and_then(|result| result)
+            }
         }
     };
     let mut slot = state.lock()?;

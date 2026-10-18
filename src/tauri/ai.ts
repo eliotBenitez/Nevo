@@ -8,7 +8,6 @@ export interface AiCompleteRequest {
   maxTokens: number
   privacyMode: boolean
   providerKind: 'ollama' | 'openai'
-  apiKey?: string
 }
 
 export type AiStreamEvent =
@@ -17,8 +16,9 @@ export type AiStreamEvent =
   | { type: 'error'; message: string }
 
 export const aiCommands = {
-  listModels: (baseUrl: string, providerKind: string, apiKey: string | undefined, privacyMode: boolean): Promise<string[]> =>
-    invoke('ai_list_models', { baseUrl, providerKind, apiKey, privacyMode }),
+  // Rust adds the endpoint-bound API key and applies the workspace privacy setting.
+  listModels: (baseUrl: string, providerKind: string, privacyMode: boolean): Promise<string[]> =>
+    invoke('ai_list_models', { baseUrl, providerKind, privacyMode }),
 
   complete: (req: AiCompleteRequest): Promise<string> =>
     invoke('ai_complete', { req }),

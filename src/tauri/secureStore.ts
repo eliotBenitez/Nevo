@@ -7,8 +7,6 @@ import { invoke } from '@tauri-apps/api/core'
 
 export const SECRET_PRIVATE_KEY = 'e2e.privateKey'
 export const SECRET_REFRESH_TOKEN = 'auth.refreshToken'
-// The ':' keeps host secrets out of reach of pluginSecretKey, which rejects it.
-export const SECRET_AI_API_KEY = 'nevo:ai.apiKey'
 
 export const secureStore = {
   set: (key: string, value: string) =>

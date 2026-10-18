@@ -7,10 +7,6 @@ import { useAiModels } from './useAiModels'
 const listModels = vi.fn()
 
 vi.mock('../tauri/ai', () => ({ aiCommands: { listModels: (...a: unknown[]) => listModels(...a) } }))
-vi.mock('../tauri/secureStore', () => ({
-  SECRET_AI_API_KEY: 'nevo:ai.apiKey',
-  secureStore: { get: vi.fn().mockResolvedValue(null) },
-}))
 
 function setup(ai: Partial<WorkspaceSettings['ai']>) {
   const store = useWorkspaceStore()

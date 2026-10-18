@@ -1,59 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { deleteAiApiKey, endpointOrigin, hasAiApiKey, readAiApiKey, saveAiApiKey } from './aiApiKey'
 
-const secrets = new Map<string, string>()
-const get = vi.fn(async (key: string) => secrets.get(key) ?? null)
+const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }))
+vi.mock('@tauri-apps/api/core', () => ({ invoke }))
 
-vi.mock('./secureStore', () => ({
-  SECRET_AI_API_KEY: 'nevo:ai.apiKey',
-  secureStore: {
-    get: (key: string) => get(key),
-    set: async (key: string, value: string) => { secrets.set(key, value) },
-    delete: async (key: string) => { secrets.delete(key) },
-  },
-}))
-
-const OPENROUTER = 'https://openrouter.ai/api/v1'
+import { deleteAiApiKey, hasAiApiKey, saveAiApiKey } from './aiApiKey'
 
 describe('aiApiKey', () => {
-  beforeEach(() => {
-    secrets.clear()
-    get.mockClear()
-  })
+  beforeEach(() => invoke.mockReset().mockResolvedValue(undefined))
 
-  it('reads the key only for the origin it was saved for', async () => {
-    await saveAiApiKey(OPENROUTER, 'sk-or')
-    expect(await readAiApiKey('https://openrouter.ai/api/v2')).toBe('sk-or')
-    expect(await readAiApiKey('https://evil.example/v1')).toBeUndefined()
-    expect(await readAiApiKey('http://openrouter.ai/api/v1')).toBeUndefined()
-    expect(await hasAiApiKey('https://evil.example/v1')).toBe(false)
-    expect(await hasAiApiKey(OPENROUTER)).toBe(true)
-  })
+  it('saves, checks and deletes the key through Rust commands with camelCase payloads', async () => {
+    await saveAiApiKey('https://openrouter.ai/api/v1', 'sk-or')
+    expect(invoke).toHaveBeenCalledWith('ai_api_key_save', { baseUrl: 'https://openrouter.ai/api/v1', key: 'sk-or' })
 
-  it('reads the key and its origin in one secure-store lookup', async () => {
-    await saveAiApiKey(OPENROUTER, 'sk-or')
-    get.mockClear()
-    await readAiApiKey(OPENROUTER)
-    expect(get).toHaveBeenCalledTimes(1)
-  })
+    invoke.mockResolvedValue(true)
+    await expect(hasAiApiKey('https://openrouter.ai/api/v1')).resolves.toBe(true)
+    expect(invoke).toHaveBeenCalledWith('ai_api_key_status', { baseUrl: 'https://openrouter.ai/api/v1' })
 
-  it('never sends or reports a legacy key saved without an endpoint', async () => {
-    secrets.set('nevo:ai.apiKey', 'sk-legacy')
-    expect(await hasAiApiKey(OPENROUTER)).toBe(false)
-    expect(await readAiApiKey(OPENROUTER)).toBeUndefined()
-    expect(secrets.get('nevo:ai.apiKey')).toBe('sk-legacy')
-  })
-
-  it('does not send a key to an unparseable endpoint and refuses to save for one', async () => {
-    await saveAiApiKey(OPENROUTER, 'sk-or')
-    expect(await readAiApiKey('not a url')).toBeUndefined()
-    await expect(saveAiApiKey('not a url', 'sk')).rejects.toThrow()
-    expect(endpointOrigin('not a url')).toBeNull()
-  })
-
-  it('deletes the key', async () => {
-    await saveAiApiKey(OPENROUTER, 'sk-or')
     await deleteAiApiKey()
-    expect(secrets.size).toBe(0)
+    expect(invoke).toHaveBeenCalledWith('ai_api_key_delete')
+  })
+
+  it('never reads the key back through the generic secure store', async () => {
+    await hasAiApiKey('https://openrouter.ai/api/v1')
+    expect(invoke).not.toHaveBeenCalledWith('secure_store_get', expect.anything())
   })
 })

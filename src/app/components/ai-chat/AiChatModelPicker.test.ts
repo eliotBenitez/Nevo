@@ -11,10 +11,6 @@ import AiChatModelPicker from './AiChatModelPicker.vue'
 const listModels = vi.fn()
 
 vi.mock('../../../tauri/ai', () => ({ aiCommands: { listModels: (...a: unknown[]) => listModels(...a) } }))
-vi.mock('../../../tauri/secureStore', () => ({
-  SECRET_AI_API_KEY: 'nevo:ai.apiKey',
-  secureStore: { get: vi.fn().mockResolvedValue(JSON.stringify({ origin: 'https://openrouter.ai', key: 'sk-or' })) },
-}))
 
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
@@ -54,7 +50,7 @@ describe('AiChatModelPicker', () => {
     await wrapper.find('.ai-model').trigger('click')
     await flushPromises()
 
-    expect(listModels).toHaveBeenCalledWith('https://openrouter.ai/api/v1', 'openai', 'sk-or', expect.any(Boolean))
+    expect(listModels).toHaveBeenCalledWith('https://openrouter.ai/api/v1', 'openai', expect.any(Boolean))
     const labels = menuItems().map(b => b.textContent?.trim())
     expect(labels).toEqual(['a/model:free', 'b/model:free', en.aiChat.error.openSettings])
 

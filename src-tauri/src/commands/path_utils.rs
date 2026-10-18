@@ -203,6 +203,11 @@ pub fn normalize_workspace_path(workspace_path: &str) -> Result<PathBuf, String>
     Ok(resolved)
 }
 
+/// The workspace the user has open, if any.
+pub(crate) fn active_workspace_root() -> Option<PathBuf> {
+    ACTIVE_WORKSPACE_ROOT.read().ok()?.clone()
+}
+
 pub fn activate_workspace_root(workspace_path: &Path) -> Result<(), String> {
     let canonical = workspace_path
         .canonicalize()

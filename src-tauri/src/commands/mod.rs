@@ -1,4 +1,5 @@
 pub mod ai;
+pub mod ai_credentials;
 pub mod auth;
 pub mod config;
 pub mod database;

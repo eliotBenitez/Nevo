@@ -7,9 +7,9 @@ mod media_server;
 mod mobile_lifecycle;
 
 use commands::{
-    ai, auth, config, database, dictation, folder, fonts, github_sync, graph, kanban, kanban_ops,
-    mcp, note, note_index, notebook_export, notion_import, system, templates, typst_export,
-    voice_recording, workspace, workspace_transfer,
+    ai, ai_credentials, auth, config, database, dictation, folder, fonts, github_sync, graph,
+    kanban, kanban_ops, mcp, note, note_index, notebook_export, notion_import, system, templates,
+    typst_export, voice_recording, workspace, workspace_transfer,
 };
 #[cfg(desktop)]
 use commands::{speech_models, transcription};
@@ -253,6 +253,9 @@ pub fn run() {
             ai::ai_list_models,
             ai::ai_complete,
             ai::ai_complete_stream,
+            ai_credentials::ai_api_key_save,
+            ai_credentials::ai_api_key_status,
+            ai_credentials::ai_api_key_delete,
             auth::secure_store::secure_store_set,
             auth::secure_store::secure_store_get,
             auth::secure_store::secure_store_delete,

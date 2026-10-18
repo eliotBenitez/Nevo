@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 use std::time::Duration;
 
+use super::ai_credentials::resolve_access;
+
 const AI_CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const AI_REQUEST_TIMEOUT: Duration = Duration::from_secs(90);
 const MAX_AI_RESPONSE_BYTES: usize = 8 * 1024 * 1024;
@@ -28,7 +30,8 @@ pub struct AiCompleteRequest {
     pub privacy_mode: bool,
     #[serde(rename = "providerKind", default = "default_provider_kind")]
     pub provider_kind: String,
-    #[serde(rename = "apiKey", default)]
+    /// Filled in Rust from the secret store; never accepted from the webview.
+    #[serde(skip)]
     pub api_key: Option<String>,
 }
 
@@ -282,14 +285,28 @@ pub fn parse_sse_line(line: &str) -> SseParsed {
 
 // ── Tauri commands ────────────────────────────────────────────────────────────
 
+/// Applies the Rust-resolved privacy mode and endpoint-bound key to a webview request.
+async fn with_access(
+    app: &tauri::AppHandle,
+    mut req: AiCompleteRequest,
+) -> Result<AiCompleteRequest, String> {
+    let (privacy_mode, api_key) =
+        resolve_access(app, &req.base_url, &req.provider_kind, req.privacy_mode).await?;
+    req.privacy_mode = privacy_mode;
+    req.api_key = api_key;
+    Ok(req)
+}
+
 #[tauri::command]
 pub async fn ai_list_models(
+    app: tauri::AppHandle,
     base_url: String,
     provider_kind: String,
-    api_key: Option<String>,
     // Required, not defaulted: a caller that omits it is rejected instead of bypassing privacy mode.
     privacy_mode: bool,
 ) -> Result<Vec<String>, String> {
+    let (privacy_mode, api_key) =
+        resolve_access(&app, &base_url, &provider_kind, privacy_mode).await?;
     // Same gate as completions: in privacy mode neither the listing nor the key leaves the machine.
     enforce_privacy_for(&base_url, privacy_mode)?;
     let client = build_ai_client(privacy_mode)?;
@@ -316,7 +333,8 @@ pub async fn ai_list_models(
 }
 
 #[tauri::command]
-pub async fn ai_complete(req: AiCompleteRequest) -> Result<String, String> {
+pub async fn ai_complete(app: tauri::AppHandle, req: AiCompleteRequest) -> Result<String, String> {
+    let req = with_access(&app, req).await?;
     enforce_privacy(&req)?;
 
     let client = build_ai_client(req.privacy_mode)?;
@@ -401,9 +419,17 @@ fn drain_complete_lines(buf: &mut Vec<u8>) -> Vec<String> {
 
 #[tauri::command]
 pub async fn ai_complete_stream(
+    app: tauri::AppHandle,
     req: AiCompleteRequest,
     on_event: tauri::ipc::Channel<AiStreamEvent>,
 ) -> Result<(), String> {
+    let req = match with_access(&app, req).await {
+        Ok(req) => req,
+        Err(e) => {
+            let _ = on_event.send(AiStreamEvent::Error { message: e.clone() });
+            return Err(e);
+        }
+    };
     if let Err(e) = enforce_privacy(&req) {
         let _ = on_event.send(AiStreamEvent::Error { message: e.clone() });
         return Err(e);
