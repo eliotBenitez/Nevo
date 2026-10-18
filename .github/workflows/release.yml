@@ -179,7 +179,7 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+          targets: aarch64-linux-android
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
@@ -188,7 +188,7 @@ jobs:
         run: pnpm tauri android init --ci
 
       - name: Build APK
-        run: pnpm tauri:android:build --apk --ci
+        run: pnpm tauri:android:build --apk --target aarch64 --ci
 
       - name: Align and sign APK
         env:
