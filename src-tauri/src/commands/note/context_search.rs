@@ -1,12 +1,15 @@
+mod stopwords;
+
 use std::collections::{HashMap, HashSet};
 
 use serde::Serialize;
 
-use super::search::flatten_note_blocks;
-use super::{note_context, note_error_context, notes_dir_path, NoteDocument};
+use super::search::{flatten_note_blocks, load_workspace_notes};
+use super::{note_context, NoteDocument};
 use crate::commands::path_utils::normalize_workspace_path;
 use crate::commands::workspace;
 use crate::logging::{LogContext, LogError};
+use stopwords::STOPWORDS;
 
 const DEFAULT_LIMIT: usize = 8;
 const MAX_LIMIT: usize = 20;
@@ -15,177 +18,6 @@ const MIN_TERM_CHARS: usize = 3;
 const PREFIX_CHARS: usize = 5;
 const MAX_HITS_PER_NOTE: usize = 3;
 const MAX_TEXT_CHARS: usize = 800;
-
-// Small en/ru/fr/es/de lists; terms under 3 chars are dropped before this check.
-const STOPWORDS: &[&str] = &[
-    // en
-    "the",
-    "and",
-    "for",
-    "are",
-    "but",
-    "not",
-    "you",
-    "all",
-    "any",
-    "can",
-    "was",
-    "were",
-    "with",
-    "what",
-    "when",
-    "where",
-    "which",
-    "who",
-    "how",
-    "why",
-    "this",
-    "that",
-    "these",
-    "those",
-    "from",
-    "have",
-    "has",
-    "had",
-    "does",
-    "did",
-    "about",
-    "into",
-    "than",
-    "then",
-    "there",
-    "their",
-    "they",
-    "them",
-    "your",
-    "our",
-    "its",
-    "tell",
-    "show",
-    "find",
-    // ru
-    "что",
-    "как",
-    "это",
-    "для",
-    "или",
-    "его",
-    "ней",
-    "она",
-    "они",
-    "оно",
-    "все",
-    "всё",
-    "при",
-    "про",
-    "над",
-    "под",
-    "без",
-    "где",
-    "когда",
-    "какой",
-    "какая",
-    "какие",
-    "каков",
-    "кто",
-    "чем",
-    "так",
-    "там",
-    "тут",
-    "был",
-    "была",
-    "были",
-    "есть",
-    "быть",
-    "мне",
-    "мой",
-    "наш",
-    "ваш",
-    "тебя",
-    "меня",
-    "если",
-    "чтобы",
-    "надо",
-    "нужно",
-    "можно",
-    "расскажи",
-    // fr
-    "les",
-    "des",
-    "une",
-    "est",
-    "que",
-    "qui",
-    "pas",
-    "pour",
-    "dans",
-    "sur",
-    "avec",
-    "par",
-    "sont",
-    "mais",
-    "vous",
-    "nous",
-    "elle",
-    "ils",
-    "quoi",
-    "quel",
-    "quelle",
-    "comment",
-    "pourquoi",
-    "cette",
-    "ces",
-    // es
-    "los",
-    "las",
-    "una",
-    "unos",
-    "unas",
-    "por",
-    "con",
-    "para",
-    "que",
-    "como",
-    "pero",
-    "sus",
-    "del",
-    "qué",
-    "cómo",
-    "cuál",
-    "dónde",
-    "cuando",
-    "esta",
-    "este",
-    "esto",
-    "son",
-    // de
-    "der",
-    "die",
-    "das",
-    "und",
-    "ist",
-    "ein",
-    "eine",
-    "nicht",
-    "mit",
-    "von",
-    "für",
-    "auf",
-    "den",
-    "dem",
-    "des",
-    "wie",
-    "was",
-    "wer",
-    "wo",
-    "warum",
-    "sind",
-    "aber",
-    "auch",
-    "sich",
-    "dass",
-    "wird",
-];
 
 #[derive(Debug, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -362,36 +194,7 @@ pub(crate) fn search_note_context_sync(
         return Ok(vec![]);
     }
 
-    let notes_dir = notes_dir_path(&workspace_path);
-    if !notes_dir.exists() {
-        return Ok(vec![]);
-    }
-
-    let entries = std::fs::read_dir(notes_dir).map_err(|error| {
-        let message = error.to_string();
-        let _ = logger.error(
-            "tauri.note",
-            "search_note_context",
-            "Failed to read notes directory",
-            note_error_context(&workspace_path, "io", message.clone()),
-        );
-        message
-    })?;
-
-    let mut notes = Vec::<NoteDocument>::new();
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.extension().and_then(|value| value.to_str()) != Some("nevo") {
-            continue;
-        }
-        let Ok(content) = std::fs::read_to_string(&path) else {
-            continue;
-        };
-        if let Ok(note) = serde_json::from_str::<NoteDocument>(&content) {
-            notes.push(note);
-        }
-    }
-
+    let notes = load_workspace_notes(&workspace_path, "search_note_context")?;
     let hits = rank_notes(&notes, &query, limit);
     let _ = logger.debug(
         "tauri.note",

@@ -21,6 +21,17 @@ pub struct TranscriptionState {
     context: Mutex<Option<(PathBuf, Arc<WhisperContext>)>>,
 }
 
+impl TranscriptionState {
+    /// Drops the cached context when it was loaded from `model`, freeing its memory.
+    pub(crate) fn forget_model(&self, model: &Path) {
+        if let Ok(mut cached) = self.context.lock() {
+            if cached.as_ref().is_some_and(|(path, _)| path == model) {
+                *cached = None;
+            }
+        }
+    }
+}
+
 pub(crate) struct BusyGuard(Arc<TranscriptionState>);
 
 impl BusyGuard {
@@ -220,9 +231,10 @@ pub async fn transcribe_audio(
     let language = validate_language(language)?;
     // Only a currently open workspace asset may be read. No filesystem path is accepted via IPC.
     let audio = crate::commands::path_utils::active_workspace_audio_asset(&src)?;
-    let model = resolve_model_path(&app)?;
     let guard = BusyGuard::acquire(Arc::clone(state.inner()))
         .ok_or_else(|| "transcription_busy".to_string())?;
+    // Resolved under the guard so a concurrent model select or delete cannot interleave.
+    let model = resolve_model_path(&app)?;
     tauri::async_runtime::spawn_blocking(move || {
         transcribe(&guard.0, &model, &audio, language.as_deref())
     })

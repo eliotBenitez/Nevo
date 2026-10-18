@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import { useTreeContextMenu, type TreeMenuTarget } from './useTreeContextMenu'
 import { useToast } from '../../ui/composables/useToast'
 import type { WorkspaceSettings } from '../../types/workspace'
@@ -10,7 +10,7 @@ afterEach(() => {
   toast.toastState.items.map(item => item.id).forEach(toast.dismissToast)
 })
 
-function setup(activeNoteId: string | null) {
+function setup(activeNoteId: string | null, workspacePath = ref<string | null>('/ws')) {
   const treeOps = {
     deleteNote: vi.fn(async () => {}),
     restoreFromTrash: vi.fn(async () => {}),
@@ -36,7 +36,7 @@ function setup(activeNoteId: string | null) {
     activeNoteId: ref(activeNoteId),
     activeFolderId: ref(null),
     activeNote: ref(null),
-    workspacePath: ref('/ws'),
+    workspacePath,
     treeOps,
     clearNote: vi.fn(),
     closeNoteTab: vi.fn(() => null),
@@ -73,6 +73,18 @@ describe('useTreeContextMenu delete undo', () => {
     await toast.runToastAction(toast.toastState.items[0].id)
     expect(treeOps.restoreFromTrash).toHaveBeenCalledWith('n1')
     expect(handlers.navigateToNote).not.toHaveBeenCalled()
+  })
+
+  it('drops the undo when the workspace changes before it is clicked', async () => {
+    const workspacePath = ref<string | null>('/ws')
+    const { menu, treeOps } = setup('other', workspacePath)
+    await menu.onTreeAction({ action: 'delete', target: note })
+    const [item] = toast.toastState.items
+    workspacePath.value = '/other'
+    await toast.runToastAction(item.id)
+    expect(treeOps.restoreFromTrash).not.toHaveBeenCalled()
+    await nextTick()
+    expect(toast.toastState.items).toHaveLength(0)
   })
 
   it('does not offer undo for folder deletion', async () => {
