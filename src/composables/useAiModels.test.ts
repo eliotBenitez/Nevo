@@ -66,6 +66,19 @@ describe('useAiModels', () => {
     expect(models.status.value).toBe('error')
   })
 
+  it('keeps a paid OpenRouter model the endpoint serves and replaces an unknown one', async () => {
+    listModels.mockResolvedValue(['anthropic/claude', 'b:free', 'a:free'])
+    const store = setup({ apiKind: 'openai', baseUrl: 'https://openrouter.ai/api/v1', defaultModel: 'anthropic/claude' })
+    const models = useAiModels()
+    await models.load()
+    expect(models.models.value).toEqual(['a:free', 'b:free'])
+    expect(store.settings.ai.defaultModel).toBe('anthropic/claude')
+
+    store.settings = { ...store.settings, ai: { ...store.settings.ai, defaultModel: 'llama3' } }
+    await models.load(true)
+    expect(store.settings.ai.defaultModel).toBe('a:free')
+  })
+
   it('selects a model in settings', async () => {
     const store = setup({ apiKind: 'ollama', defaultModel: 'llama3' })
     await useAiModels().select('qwen3:8b')

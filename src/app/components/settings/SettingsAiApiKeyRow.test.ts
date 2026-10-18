@@ -20,7 +20,7 @@ vi.mock('../../../tauri/secureStore', () => ({
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
 async function mountRow() {
-  const wrapper = mount(SettingsAiApiKeyRow, { props: { disabled: false }, global: { plugins: [i18n] } })
+  const wrapper = mount(SettingsAiApiKeyRow, { props: { disabled: false, baseUrl: 'https://openrouter.ai/api/v1' }, global: { plugins: [i18n] } })
   await flushPromises()
   return wrapper
 }
@@ -42,12 +42,13 @@ describe('SettingsAiApiKeyRow', () => {
     await buttons(wrapper)[0].trigger('click')
     await flushPromises()
     expect(set).toHaveBeenCalledWith('nevo:ai.apiKey', 'sk-secret')
+    expect(set).toHaveBeenCalledWith('nevo:ai.apiKeyOrigin', 'https://openrouter.ai')
     expect((input.element as HTMLInputElement).value).toBe('')
     expect(wrapper.text()).toContain(en.settings.ai.apiKey.saved)
   })
 
   it('never shows a saved key and can clear it', async () => {
-    get.mockResolvedValue('sk-stored')
+    get.mockImplementation(async (key: string) => key === 'nevo:ai.apiKey' ? 'sk-stored' : 'https://openrouter.ai')
     const wrapper = await mountRow()
     expect((wrapper.find('input').element as HTMLInputElement).value).toBe('')
     expect(wrapper.html()).not.toContain('sk-stored')
@@ -55,6 +56,13 @@ describe('SettingsAiApiKeyRow', () => {
     await clear.trigger('click')
     await flushPromises()
     expect(del).toHaveBeenCalledWith('nevo:ai.apiKey')
+    expect(del).toHaveBeenCalledWith('nevo:ai.apiKeyOrigin')
+    expect(wrapper.text()).toContain(en.settings.ai.apiKey.description)
+  })
+
+  it('does not report a key saved for another endpoint as saved', async () => {
+    get.mockImplementation(async (key: string) => key === 'nevo:ai.apiKey' ? 'sk-stored' : 'https://other.example')
+    const wrapper = await mountRow()
     expect(wrapper.text()).toContain(en.settings.ai.apiKey.description)
   })
 

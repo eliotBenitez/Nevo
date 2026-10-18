@@ -1,4 +1,4 @@
-import { Selection, TextSelection } from 'prosemirror-state'
+import { Selection, TextSelection, type EditorState } from 'prosemirror-state'
 import type { EditorView } from 'prosemirror-view'
 
 /** Where the reader was in a note: the doc position at the top of the viewport and the caret. */
@@ -58,6 +58,23 @@ export function applyNoteViewState(view: EditorView, scrollEl: HTMLElement, stat
   } catch {
     scrollEl.scrollTop = state.scrollTop
   }
+}
+
+/** What a restore produced, so a later re-anchor can tell whether the user has since acted. */
+export interface RestoredViewMark {
+  scrollTop: number
+  state: EditorState
+}
+
+export function markRestoredView(view: EditorView, scrollEl: HTMLElement): RestoredViewMark {
+  return { scrollTop: scrollEl.scrollTop, state: view.state }
+}
+
+/** True while the user has not scrolled, moved the caret or edited since the mark. */
+export function isViewUntouched(view: EditorView, scrollEl: HTMLElement, mark: RestoredViewMark): boolean {
+  return scrollEl.scrollTop === mark.scrollTop
+    && view.state.doc === mark.state.doc
+    && view.state.selection.eq(mark.state.selection)
 }
 
 export function rememberNoteView(noteId: string, state: NoteViewState): void {

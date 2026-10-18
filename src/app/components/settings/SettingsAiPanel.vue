@@ -154,7 +154,7 @@ function onEndpointChange(e: Event) {
         </SettingsRow>
 
         <!-- API key (OpenAI-compatible only; stored in the OS keychain) -->
-        <SettingsAiApiKeyRow :disabled="!settings.ai.enabled || settings.ai.apiKind !== 'openai'" />
+        <SettingsAiApiKeyRow :disabled="!settings.ai.enabled || settings.ai.apiKind !== 'openai'" :base-url="settings.ai.baseUrl" />
 
         <!-- Test connection -->
         <SettingsRow

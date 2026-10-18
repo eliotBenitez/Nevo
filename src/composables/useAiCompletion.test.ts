@@ -16,7 +16,7 @@ vi.mock('../tauri/ai', () => ({
 }))
 vi.mock('../tauri/secureStore', () => ({
   SECRET_AI_API_KEY: 'nevo:ai.apiKey',
-  secureStore: { get: (...a: unknown[]) => secretGet(...a) },
+  secureStore: { get: (...a: unknown[]) => secretGet(...a), set: vi.fn() },
 }))
 
 function configure(apiKind: 'ollama' | 'openai') {
@@ -36,7 +36,8 @@ describe('useAiCompletion API key', () => {
     setActivePinia(createPinia())
     complete.mockReset().mockResolvedValue('ok')
     listModels.mockReset().mockResolvedValue([])
-    secretGet.mockReset().mockResolvedValue('sk-test')
+    secretGet.mockReset().mockImplementation(async (key: string) =>
+      key === 'nevo:ai.apiKey' ? 'sk-test' : 'https://openrouter.ai')
   })
 
   it('reads the key from the secure store and sends it to OpenAI-compatible endpoints', async () => {
@@ -51,6 +52,13 @@ describe('useAiCompletion API key', () => {
     configure('openai')
     await useAiCompletion().testConnection()
     expect(listModels).toHaveBeenCalledWith('https://openrouter.ai/api/v1', 'openai', 'sk-test')
+  })
+
+  it('does not send a key saved for another endpoint', async () => {
+    const store = configure('openai')
+    store.settings.ai.baseUrl = 'https://other.example/v1'
+    await useAiCompletion().generate({ prompt: 'hi', onToken: vi.fn() })
+    expect(complete).toHaveBeenCalledWith(expect.objectContaining({ apiKey: undefined }))
   })
 
   it('does not read or send a key for Ollama', async () => {

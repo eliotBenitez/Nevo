@@ -1,7 +1,7 @@
 import { nextTick, onBeforeUnmount, onMounted, toRaw, watch, type Ref } from 'vue'
 import type { EditorCore } from './useEditorCore'
 import { applyCaretAnimation } from './caretAnimation'
-import { applyNoteViewState, captureNoteViewState, recallNoteView, rememberNoteView } from './noteViewMemory'
+import { applyNoteViewState, captureNoteViewState, isViewUntouched, markRestoredView, recallNoteView, rememberNoteView } from './noteViewMemory'
 import type { SaveStatus } from '../../../stores/note'
 import type { NoteDocument } from '../../../types/note'
 import type { WorkspaceSettings } from '../../../types/workspace'
@@ -87,12 +87,13 @@ export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOpt
     } catch {
       return
     }
-    // Images above the anchor can change height once decoded; re-anchor unless the user already scrolled.
-    const restoredTop = scrollEl.scrollTop
+    // Images above the anchor can change height once decoded; re-anchor unless the user already
+    // scrolled, moved the caret or typed — the second restore would reset their selection.
+    const restored = markRestoredView(view, scrollEl)
     if (lateRestoreTimer) clearTimeout(lateRestoreTimer)
     lateRestoreTimer = setTimeout(() => {
       lateRestoreTimer = null
-      if (options.core.editorView === view && !view.isDestroyed && displayedNoteId === noteId && scrollEl.scrollTop === restoredTop) {
+      if (options.core.editorView === view && !view.isDestroyed && displayedNoteId === noteId && isViewUntouched(view, scrollEl, restored)) {
         try {
           applyNoteViewState(view, scrollEl, remembered)
         } catch {

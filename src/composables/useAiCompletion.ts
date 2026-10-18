@@ -1,6 +1,6 @@
 import { useWorkspaceStore } from '../stores/workspace'
 import { aiCommands } from '../tauri/ai'
-import { secureStore, SECRET_AI_API_KEY } from '../tauri/secureStore'
+import { readAiApiKey } from '../tauri/aiApiKey'
 
 export interface AiGenerateOptions {
   system?: string
@@ -19,8 +19,9 @@ export function useAiCompletion() {
 
   // Read per request so the key never sits in a store or settings snapshot.
   async function readApiKey(): Promise<string | undefined> {
-    if (workspaceStore.settings.ai.apiKind !== 'openai') return undefined
-    return (await secureStore.get(SECRET_AI_API_KEY)) ?? undefined
+    const { apiKind, baseUrl } = workspaceStore.settings.ai
+    if (apiKind !== 'openai') return undefined
+    return readAiApiKey(baseUrl)
   }
 
   async function testConnection(): Promise<string[]> {

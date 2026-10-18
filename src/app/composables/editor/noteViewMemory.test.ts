@@ -6,6 +6,8 @@ import {
   applyNoteViewState,
   captureNoteViewState,
   forgetAllNoteViews,
+  isViewUntouched,
+  markRestoredView,
   recallNoteView,
   rememberNoteView,
   type NoteViewState,
@@ -62,5 +64,18 @@ describe('noteViewMemory', () => {
     rememberNoteView('note-101', state({}))
     expect(recallNoteView('note-1')?.scrollTop).toBe(7)
     expect(recallNoteView('note-2')).toBeUndefined()
+  })
+  it('treats a caret move or an edit after a restore as user input, but not an unchanged view', () => {
+    const view = createView(['hello', 'world'])
+    const scrollEl = document.createElement('div')
+    const mark = markRestoredView(view, scrollEl)
+    expect(isViewUntouched(view, scrollEl, mark)).toBe(true)
+
+    view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 4)))
+    expect(isViewUntouched(view, scrollEl, mark)).toBe(false)
+
+    const typed = markRestoredView(view, scrollEl)
+    view.dispatch(view.state.tr.insertText('x', 1))
+    expect(isViewUntouched(view, scrollEl, typed)).toBe(false)
   })
 })

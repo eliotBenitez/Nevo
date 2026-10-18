@@ -16,7 +16,7 @@ vi.mock('../../../tauri/ai', () => ({
 }))
 vi.mock('../../../tauri/secureStore', () => ({
   SECRET_AI_API_KEY: 'nevo:ai.apiKey',
-  secureStore: { get: vi.fn().mockResolvedValue('sk-or'), set: vi.fn(), delete: vi.fn() },
+  secureStore: { get: vi.fn(async (key: string) => key === 'nevo:ai.apiKey' ? 'sk-or' : 'https://openrouter.ai'), set: vi.fn(), delete: vi.fn() },
 }))
 
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
