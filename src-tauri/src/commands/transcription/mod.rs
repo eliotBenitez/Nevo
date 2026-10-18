@@ -7,7 +7,9 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tauri::{AppHandle, State};
-use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
+use whisper_rs::{
+    FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters, WhisperState,
+};
 
 #[derive(serde::Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -127,14 +129,14 @@ const UTTERANCE_AUDIO_CTX: i32 = 768;
 
 /// Recognizes one short utterance (at most 15 s) as a single segment of plain text.
 /// `precise` trades CPU time for accuracy with beam search; meant for final text.
+/// `whisper` is reused across calls so its buffers are allocated once per session.
 pub(crate) fn recognize_text(
-    ctx: &WhisperContext,
+    whisper: &mut WhisperState,
     pcm: &[f32],
     language: Option<&str>,
     prompt: Option<&str>,
     precise: bool,
 ) -> Result<String, String> {
-    let mut whisper = ctx.create_state().map_err(|_| "inference_failed")?;
     let strategy = if precise {
         SamplingStrategy::BeamSearch {
             beam_size: 5,
@@ -151,20 +153,29 @@ pub(crate) fn recognize_text(
         params.set_initial_prompt(prompt);
     }
     whisper.full(params, pcm).map_err(|_| "inference_failed")?;
-    // A whole dictated phrase may legitimately be "Thank you."; only short bursts are suspect.
+    // A whole dictated phrase may legitimately be "Thank you."; only short bursts that
+    // Whisper itself doubts are treated as a silence hallucination.
     let short = pcm.len() < SHORT_SEGMENT_SAMPLES;
     let text = (0..whisper.full_n_segments())
         .filter_map(|index| whisper.get_segment(index))
-        // Whisper invents text for noise ("you", "Thank you."); trust its own no-speech estimate.
-        .filter(|segment| segment.no_speech_probability() <= NO_SPEECH_MAX_PROBABILITY)
-        .filter_map(|segment| segment.to_str().ok().map(|text| text.trim().to_string()))
-        .filter(|text| !text.is_empty() && !(short && is_silence_hallucination(text)))
+        .filter_map(|segment| {
+            let no_speech = segment.no_speech_probability();
+            // Whisper invents text for noise ("you", "Thank you."); trust its own no-speech estimate.
+            if no_speech > NO_SPEECH_MAX_PROBABILITY {
+                return None;
+            }
+            let text = segment.to_str().ok()?.trim().to_string();
+            let doubtful = short && no_speech > HALLUCINATION_NO_SPEECH_PROBABILITY;
+            (!text.is_empty() && !(doubtful && is_silence_hallucination(&text))).then_some(text)
+        })
         .collect::<Vec<_>>()
         .join(" ");
     Ok(text.trim().to_string())
 }
 
 const NO_SPEECH_MAX_PROBABILITY: f32 = 0.6;
+/// A short known-hallucination phrase is dropped only when Whisper rates it at least this likely to be silence.
+const HALLUCINATION_NO_SPEECH_PROBABILITY: f32 = 0.2;
 const SHORT_SEGMENT_SAMPLES: usize = 16_000 * 5 / 2;
 
 /// Phrases Whisper is known to produce for silence or room noise (subtitle credits

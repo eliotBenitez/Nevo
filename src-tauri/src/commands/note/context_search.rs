@@ -6,6 +6,7 @@ use serde::Serialize;
 
 use super::search::{flatten_note_blocks, load_workspace_notes};
 use super::{note_context, NoteDocument};
+use crate::commands::folder::load_manifest;
 use crate::commands::path_utils::normalize_workspace_path;
 use crate::commands::workspace;
 use crate::logging::{LogContext, LogError};
@@ -199,6 +200,11 @@ pub(crate) fn search_note_context_sync(
     let mut notes = load_workspace_notes(&workspace_path, "search_note_context")?;
     // The caller already sends the open note itself; its blocks must not take result slots.
     notes.retain(|note| Some(&note.id) != exclude_note_id.as_ref());
+    // A trashed note keeps its file in notes/; it must not take result slots from live notes.
+    if let Ok(manifest) = load_manifest(&workspace_path) {
+        let trashed: HashSet<&str> = manifest.trash.iter().map(|item| item.id.as_str()).collect();
+        notes.retain(|note| !trashed.contains(note.id.as_str()));
+    }
     let hits = rank_notes(&notes, &query, limit);
     let _ = logger.debug(
         "tauri.note",

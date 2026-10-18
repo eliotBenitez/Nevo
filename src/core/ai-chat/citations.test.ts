@@ -22,6 +22,11 @@ describe('citations', () => {
     expect(stripCitations('list[1]\nnext')).toBe('list\nnext')
   })
 
+  it('leaves bracketed numbers inside code untouched', () => {
+    expect(stripCitations('Use `items[0]` [1]\n```js\nm[1][2]\n```')).toBe('Use `items[0]`\n```js\nm[1][2]\n```')
+    expect(splitCitations('`a[1]` b')).toEqual([{ kind: 'text', value: '`a[1]` b' }])
+  })
+
   it('keeps markdown links intact', () => {
     expect(stripCitations('[text](http://x) [1]')).toBe('[text](http://x)')
   })

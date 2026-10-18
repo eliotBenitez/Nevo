@@ -5,7 +5,7 @@ use std::sync::{mpsc, Arc};
 use std::time::{Duration, Instant};
 
 use tauri::ipc::Channel;
-use whisper_rs::WhisperContext;
+use whisper_rs::{WhisperContext, WhisperState};
 
 use super::segmenter::{Segmenter, SegmenterEvent};
 use super::DictationEvent;
@@ -42,34 +42,35 @@ pub(super) struct WorkerConfig {
     pub cancelled: Arc<AtomicBool>,
 }
 
-struct Worker<'a> {
-    ctx: &'a WhisperContext,
+struct Worker {
+    /// One whisper state for the whole session, so its buffers are not reallocated per phrase.
+    whisper: WhisperState,
     language: Option<String>,
     events: Channel<DictationEvent>,
     finalized: String,
 }
 
-impl Worker<'_> {
-    fn prompt(&self) -> Option<&str> {
-        let total = self.finalized.chars().count();
-        if total == 0 {
-            return None;
-        }
-        let skip = total.saturating_sub(PROMPT_CHARS);
-        let start = self
-            .finalized
-            .char_indices()
-            .nth(skip)
-            .map_or(0, |(index, _)| index);
-        Some(&self.finalized[start..])
+/// The last `PROMPT_CHARS` characters of the dictated text, used as the decoding prompt.
+fn prompt_tail(finalized: &str) -> Option<&str> {
+    let total = finalized.chars().count();
+    if total == 0 {
+        return None;
     }
+    let skip = total.saturating_sub(PROMPT_CHARS);
+    let start = finalized
+        .char_indices()
+        .nth(skip)
+        .map_or(0, |(index, _)| index);
+    Some(&finalized[start..])
+}
 
-    fn recognize(&self, pcm: &[f32], precise: bool) -> Result<String, String> {
+impl Worker {
+    fn recognize(&mut self, pcm: &[f32], precise: bool) -> Result<String, String> {
         recognize_text(
-            self.ctx,
+            &mut self.whisper,
             pcm,
             self.language.as_deref(),
-            self.prompt(),
+            prompt_tail(&self.finalized),
             precise,
         )
     }
@@ -89,7 +90,7 @@ impl Worker<'_> {
         Ok(())
     }
 
-    fn partial(&self, pcm: &[f32]) -> Result<(), String> {
+    fn partial(&mut self, pcm: &[f32]) -> Result<(), String> {
         if !is_audible(pcm) {
             return Ok(());
         }
@@ -156,7 +157,9 @@ fn process(
         .ok_or_else(|| "recording_failed: invalid sample rate".to_string())?;
     let mut segmenter = Segmenter::new();
     let mut worker = Worker {
-        ctx,
+        whisper: ctx
+            .create_state()
+            .map_err(|_| "inference_failed".to_string())?,
         language: config.language.clone(),
         events: events.clone(),
         finalized: String::new(),

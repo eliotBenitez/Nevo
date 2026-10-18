@@ -139,7 +139,8 @@ export function useAiChatSession() {
     if (index < 1 || store.streaming) return Promise.resolve()
     const question = store.messages[index - 1]
     if (question.role !== 'user') return Promise.resolve()
-    store.messages.splice(index - 1)
+    // Only the latest answer is replaced; retrying an older one asks again at the end and keeps later turns.
+    if (index === store.messages.length - 1) store.messages.splice(index - 1)
     return send(question.text)
   }
 

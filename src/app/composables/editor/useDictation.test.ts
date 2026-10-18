@@ -75,6 +75,22 @@ describe('useDictation', () => {
     expect(d.isActive.value).toBe(false)
   })
 
+  it('keeps a final that arrives after the stop command resolves', async () => {
+    const { emit } = mockStart()
+    const { core, view } = makeCore()
+    const d = useDictation(core, () => 'auto')
+    await d.toggle()
+
+    const stopping = d.toggle()
+    await Promise.resolve()
+    await Promise.resolve()
+    emit()({ kind: 'final', text: 'late' })
+    emit()({ kind: 'stopped' })
+    await stopping
+    expect(view.state.doc.textContent).toBe('late')
+    expect(getDictationState(view.state).active).toBe(false)
+  })
+
   it('maps start errors to toasts and cleans up', async () => {
     vi.mocked(api.startDictation).mockRejectedValue('no_device')
     const { core, view } = makeCore()

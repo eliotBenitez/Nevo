@@ -195,8 +195,7 @@ export function createMediaNodeView(
     update(nextNode) {
       if (nextNode.type !== currentNode.type) return false
       currentNode = nextNode
-      audioUi.updateBookmarks(nextNode)
-      transcriptUi.update(nextNode)
+      // sync() updates the audio and transcript views; an offscreen block syncs when it is revealed.
       controller?.requestRender()
       return true
     },

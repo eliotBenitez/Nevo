@@ -285,7 +285,8 @@ fn workspace_audio_asset(root: &Path, src: &str) -> Result<PathBuf, String> {
         .is_some_and(|extension| {
             matches!(
                 extension.to_ascii_lowercase().as_str(),
-                "wav" | "mp3" | "m4a" | "mp4" | "aac" | "flac" | "ogg" | "webm"
+                // No "webm": its audio is Opus, which the bundled decoders cannot read.
+                "wav" | "mp3" | "m4a" | "mp4" | "aac" | "flac" | "ogg"
             )
         });
     if !supported {
@@ -488,6 +489,7 @@ mod tests {
         std::fs::create_dir_all(dir.join(".nevo/assets/sub")).unwrap();
         std::fs::create_dir_all(dir.join(".nevo/plugins")).unwrap();
         std::fs::write(dir.join(".nevo/assets/speech.MP3"), b"audio").unwrap();
+        std::fs::write(dir.join(".nevo/assets/speech.webm"), b"opus").unwrap();
         std::fs::write(dir.join(".nevo/assets/sub/speech.mp3"), b"nested").unwrap();
         std::fs::write(dir.join(".nevo/assets/script.txt"), b"secret").unwrap();
         std::fs::write(dir.join(".nevo/plugins/speech.mp3"), b"plugin").unwrap();
@@ -495,6 +497,7 @@ mod tests {
         assert!(workspace_audio_asset(&root, ".nevo/assets/speech.MP3").is_ok());
         for src in [
             ".nevo/assets/script.txt",
+            ".nevo/assets/speech.webm",
             ".nevo/plugins/speech.mp3",
             "secret.mp3",
             ".nevo/assets/../plugins/speech.mp3",

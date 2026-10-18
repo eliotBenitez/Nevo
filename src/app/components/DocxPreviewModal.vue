@@ -102,12 +102,11 @@ const {
   hiddenContainerRef,
 })
 
-let relayoutPending = false
+let relayoutTimer: ReturnType<typeof setTimeout> | null = null
 provide(DOCX_PREVIEW_RELAYOUT, () => {
-  if (relayoutPending) return
-  relayoutPending = true
-  setTimeout(() => {
-    relayoutPending = false
+  if (relayoutTimer) return
+  relayoutTimer = setTimeout(() => {
+    relayoutTimer = null
     void updatePagination()
   }, 50)
 })
@@ -146,6 +145,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  if (relayoutTimer) clearTimeout(relayoutTimer)
   if (resizeObserver) {
     resizeObserver.disconnect()
   }

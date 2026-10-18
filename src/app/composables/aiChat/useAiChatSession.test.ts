@@ -132,4 +132,15 @@ describe('useAiChatSession', () => {
     expect(store.messages.map(m => m.role)).toEqual(['user', 'assistant'])
     expect(store.messages[1].role === 'assistant' && store.messages[1].text).toBe('ok')
   })
+
+  it('retrying an older answer keeps the later turns', async () => {
+    search.mockResolvedValue([])
+    generateImpl = async (o) => { o.onToken('a'); o.onDone?.() }
+    const store = useAiChatStore()
+    const session = useAiChatSession()
+    await session.send('q1')
+    await session.send('q2')
+    await session.retry(store.messages[1].id)
+    expect(store.messages.map(m => m.text)).toEqual(['q1', 'a', 'q2', 'a', 'q1', 'a'])
+  })
 })

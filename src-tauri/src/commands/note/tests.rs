@@ -842,11 +842,22 @@ fn search_note_context_skips_malformed_notes_and_returns_hits() {
 
     // The open note is sent separately, so it is excluded from ranking.
     let excluded = crate::commands::note::context_search::search_note_context_sync(
-        workspace_path,
+        workspace_path.clone(),
         "sensors".to_string(),
         None,
-        Some(note_id),
+        Some(note_id.clone()),
     )
     .expect("search context");
     assert!(excluded.is_empty());
+
+    // A trashed note keeps its file but must not be ranked.
+    delete_note_impl(workspace_path.clone(), note_id).expect("trash note");
+    let trashed = crate::commands::note::context_search::search_note_context_sync(
+        workspace_path,
+        "sensors".to_string(),
+        None,
+        None,
+    )
+    .expect("search context");
+    assert!(trashed.is_empty());
 }

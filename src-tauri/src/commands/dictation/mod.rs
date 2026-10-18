@@ -358,6 +358,7 @@ mod tests {
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/models/ggml-base.bin");
         let state = TranscriptionState::default();
         let ctx = whisper_context(&state, &model).unwrap();
+        let mut whisper = ctx.create_state().unwrap();
 
         let mut segmenter = Segmenter::new();
         let mut segments = Vec::new();
@@ -371,7 +372,9 @@ mod tests {
         segments.extend(segmenter.finish());
         let text = segments
             .iter()
-            .map(|pcm| crate::commands::transcription::recognize_text(&ctx, pcm, None, None, true))
+            .map(|pcm| {
+                crate::commands::transcription::recognize_text(&mut whisper, pcm, None, None, true)
+            })
             .collect::<Result<Vec<_>, _>>()
             .unwrap()
             .join(" ")
