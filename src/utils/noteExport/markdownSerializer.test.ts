@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { serializeNoteToMarkdown } from './markdownSerializer'
+import { parseMarkdownToBlockNode } from '../noteImport/markdownParser'
 import type { NoteDocument } from '../../types/note'
 
 function noteWith(content: unknown): NoteDocument {
@@ -165,12 +166,16 @@ describe('serializeNoteToMarkdown — block types', () => {
 })
 
 describe('serializeNoteToMarkdown — html_block', () => {
-  it('emits the raw HTML as its own block', () => {
+  it('round-trips through the Markdown importer, blank lines and backticks included', () => {
+    const code = '<div style="color:red">Hi</div>\n\n<p>```x```</p>'
     const note = noteWith([
       { type: 'paragraph', content: [{ type: 'text', text: 'before' }] },
-      { type: 'html_block', attrs: { code: '<div style="color:red">Hi</div>', height: 200 } },
+      { type: 'html_block', attrs: { code, height: 300 } },
       { type: 'paragraph', content: [{ type: 'text', text: 'after' }] },
     ])
-    expect(serializeNoteToMarkdown(note, 'assets').markdown).toContain('before\n\n<div style="color:red">Hi</div>\n\nafter')
+    const { markdown } = serializeNoteToMarkdown(note, 'assets')
+    expect(markdown).toContain('````html nevo-html-block height=300\n')
+    const parsed = parseMarkdownToBlockNode(markdown, 'Test')
+    expect(parsed.content.content).toContainEqual({ type: 'html_block', attrs: { code, height: 300 } })
   })
 })

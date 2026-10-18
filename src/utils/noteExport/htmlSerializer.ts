@@ -12,7 +12,7 @@ import { normalizeQueryBlockData } from '../../features/query/queryBlockData'
 import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSummary'
 import { formatAudioTime, readAudioBookmarks } from '../../core/media/audioBookmarks'
 import { readAudioTranscript } from '../../core/media/audioTranscript'
-import { clampHtmlBlockHeight } from '../../editor-core/schema/htmlBlock'
+import { clampHtmlBlockHeight, HTML_BLOCK_CSP_META } from '../../editor-core/schema/htmlBlock'
 
 export interface HtmlSerializeResult {
   html: string
@@ -395,7 +395,7 @@ export async function blockNode(node: BlockNode, ctx: SerializeCtx): Promise<str
     case 'html_block': {
       // Never inline the user's markup: it stays a sandboxed, script-less srcdoc.
       const height = clampHtmlBlockHeight(node.attrs?.height)
-      return `<iframe class="html-block" sandbox="" referrerpolicy="no-referrer" srcdoc="${escapeAttr(String(node.attrs?.code ?? ''))}" style="height:${height}px"></iframe>`
+      return `<iframe class="html-block" sandbox="" referrerpolicy="no-referrer" srcdoc="${escapeAttr(HTML_BLOCK_CSP_META + String(node.attrs?.code ?? ''))}" style="height:${height}px"></iframe>`
     }
     case 'mermaid_block': {
       const code = String(node.attrs?.code ?? '')

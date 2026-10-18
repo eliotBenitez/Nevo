@@ -151,7 +151,12 @@ export function useTreeContextMenu(deps: ContextMenuDeps, handlers: ContextMenuH
             run: async () => {
               undoToastIds.delete(toastId)
               if (deps.workspacePath.value !== deletedIn) return
-              await deps.treeOps.restoreFromTrash(target.id)
+              try {
+                await deps.treeOps.restoreFromTrash(target.id)
+              } catch {
+                showToast({ message: deps.t('workspace.context.noteRestoreFailed'), variant: 'error' })
+                return
+              }
               if (wasActive) await handlers.navigateToNote(target.id)
             },
           },

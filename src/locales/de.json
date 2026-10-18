@@ -775,6 +775,7 @@
     "mathRemove": "Formel entfernen",
     "context": {
       "noteArchived": "Notiz ins Archiv verschoben",
+      "noteRestoreFailed": "Die Notiz konnte nicht wiederhergestellt werden. Sie liegt im Archiv.",
       "rename": "Umbenennen",
       "delete": "Löschen",
       "search": "Suchen",

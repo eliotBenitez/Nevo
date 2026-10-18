@@ -81,6 +81,7 @@ import { useMcpBridge } from './composables/useMcpBridge'
 import { useMcpBridgeHost } from './composables/useMcpBridgeHost'
 import { useNotebookCreation } from './composables/useNotebookCreation'
 import { createEditorLayoutScrollStabilizer } from './composables/editor/editorLayoutScrollStabilizer'
+import { forgetAllNoteViews } from './composables/editor/noteViewMemory'
 import { workspaceHomeFavoriteKey } from '../utils/workspace-settings'
 import { finalizeActiveRecording } from '../core/voice-recording/activeRecording'
 import {
@@ -877,7 +878,7 @@ watch(manifest, (workspace) => {
 watch(kanbanEnabled, (enabled) => {
   if (enabled) kanbanStore.loadBoards()
 })
-watch(() => workspaceStore.activePath, () => { restoredRouteForWorkspace.value = null; tabsStore.clear() })
+watch(() => workspaceStore.activePath, () => { restoredRouteForWorkspace.value = null; tabsStore.clear(); forgetAllNoteViews() })
 watch(() => useDrawerNavigation.value, (drawerMode) => { if (!drawerMode) mobileSidebarOpen.value = false }, { immediate: true })
 watch(
   () => [isPhone.value, route.path] as const,

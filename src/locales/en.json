@@ -775,6 +775,7 @@
     "mathRemove": "Remove formula",
     "context": {
       "noteArchived": "Note moved to archive",
+      "noteRestoreFailed": "Could not restore the note. Find it in the archive.",
       "rename": "Rename",
       "delete": "Delete",
       "search": "Search",

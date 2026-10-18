@@ -775,6 +775,7 @@
     "mathRemove": "Quitar fórmula",
     "context": {
       "noteArchived": "Nota movida al archivo",
+      "noteRestoreFailed": "No se pudo restaurar la nota. Búscala en el archivo.",
       "rename": "Renombrar",
       "delete": "Eliminar",
       "search": "Buscar",

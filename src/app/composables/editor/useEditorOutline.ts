@@ -22,7 +22,7 @@ export function useEditorOutline(options: EditorOutlineOptions) {
     return el instanceof HTMLElement ? el : null
   }
 
-  function updateActive() {
+  function measureActive() {
     const scrollEl = options.getScrollEl()
     if (!scrollEl || !items.value.length) { activeIndex.value = -1; return }
     const originTop = scrollEl.getBoundingClientRect().top
@@ -37,7 +37,21 @@ export function useEditorOutline(options: EditorOutlineOptions) {
     items.value = doc
       ? collectHeadingOutline(doc).filter((item) => (headingEl(item.pos)?.getClientRects().length ?? 0) > 0)
       : []
-    updateActive()
+    measureActive()
+  }
+
+  // Items hold positions from the last refresh, so they are stale once the doc has moved on.
+  const isStale = () => (options.getView()?.state?.doc ?? null) !== lastDoc
+
+  // Scroll events fire many times per frame; measure every heading at most once per frame.
+  let activeFrame: number | null = null
+  function updateActive() {
+    if (activeFrame !== null) return
+    activeFrame = requestAnimationFrame(() => {
+      activeFrame = null
+      if (isStale()) refreshNow()
+      else measureActive()
+    })
   }
 
   const refreshTask = createIdleTaskScheduler(refreshNow, { delayMs: 150, idleTimeoutMs: 600 })
@@ -47,13 +61,23 @@ export function useEditorOutline(options: EditorOutlineOptions) {
   }
 
   function scrollToHeading(index: number) {
-    const el = headingEl(items.value[index]?.pos ?? -1)
+    const clicked = items.value[index]
+    if (!clicked) return
+    if (isStale()) refreshNow()
+    // After an edit the clicked heading may have moved; pick the same heading nearest its old position.
+    const target = items.value
+      .filter((item) => item.level === clicked.level && item.text === clicked.text)
+      .sort((a, b) => Math.abs(a.pos - clicked.pos) - Math.abs(b.pos - clicked.pos))[0] ?? items.value[index]
+    const el = target ? headingEl(target.pos) : null
     if (!el) return
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
     el.scrollIntoView({ block: 'start', behavior: reducedMotion ? 'auto' : 'smooth' })
   }
 
-  onBeforeUnmount(() => refreshTask.cancel())
+  onBeforeUnmount(() => {
+    refreshTask.cancel()
+    if (activeFrame !== null) cancelAnimationFrame(activeFrame)
+  })
 
   return { items, activeIndex, refreshNow, onTransactionDoc, updateActive, scrollToHeading }
 }

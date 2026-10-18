@@ -24,6 +24,7 @@ import {
   DOCX_TITLE_PAGE_FONT_SIZE_PT,
   DOCX_TITLE_STYLE,
 } from '../../utils/noteExport/docxTypography'
+import { htmlBlockAsCodeNode } from '../../utils/noteExport/htmlBlockCode'
 
 export type { ProcessedNode } from '../../utils/noteExport/docxPagination'
 
@@ -74,6 +75,8 @@ interface TextMeasurement {
 }
 
 function processNodes(node: BlockNode, headingCounters: number[], headingNumbers: boolean): ProcessedNode {
+  // Same substitution as the DOCX serializer, so the preview shows what the export contains.
+  if (node.type === 'html_block') return processNodes(htmlBlockAsCodeNode(node), headingCounters, headingNumbers)
   const result: ProcessedNode = {
     type: node.type,
     text: node.text,

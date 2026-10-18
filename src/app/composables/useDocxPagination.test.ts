@@ -85,6 +85,18 @@ describe('useDocxPagination', () => {
     }
   })
 
+  it('previews an html_block as the html code block the export writes', async () => {
+    const note = noteWithParagraphs(0)
+    note.content = { type: 'doc', content: [{ type: 'html_block', attrs: { code: '<p>Hi</p>' } }] }
+    const { pagination } = createPagination(1, [50], note)
+    await pagination.updatePagination()
+
+    const [node] = pagination.contentPages.value[0].nodes
+    expect(node.type).toBe('code_block')
+    expect(node.attrs?.language).toBe('html')
+    expect(processedNodeText(node)).toBe('<p>Hi</p>')
+  })
+
   it('repaginates against a larger bottom margin', async () => {
     const heights = Array.from({ length: 8 }, () => 100)
     const { marginBottom, pagination } = createPagination(heights.length, heights)

@@ -23,7 +23,7 @@ import { getLinkRange, createLinkSetCommand, createUnsetLinkCommand } from './li
 import { getInternalLinkRange, createSetInternalLinkCommand, createUnsetInternalLinkCommand } from './internal-link'
 import { createInsertMathInlineCommand, createInsertMathBlockCommand, createUpdateMathCommand, createRemoveMathCommand } from './math'
 import { createInsertMermaidCommand, createUpdateMermaidCommand, createRemoveMermaidCommand } from './mermaid'
-import { createInsertHtmlCommand, createUpdateHtmlCommand } from './html'
+import { createInsertHtmlCommand } from './html'
 import { createInsertQueryCommand, createUpdateQueryCommand, createRemoveQueryCommand } from './query'
 import { createInsertDrawCommand, createUpdateDrawByIdCommand, createRemoveDrawCommand } from './draw'
 import { createInsertMarkmapCommand, createUpdateMarkmapCommand, createRemoveMarkmapCommand } from './markmap'
@@ -236,10 +236,7 @@ export function createCoreCommands(schema: Schema) {
   commands.set('core.mermaid.insert', insertMermaid())
   commands.set('core.mermaid.update', updateMermaidAtSelection(''))
 
-  if (htmlBlock) {
-    commands.set('core.html.insert', createInsertHtmlCommand(htmlBlock))
-    commands.set('core.html.update', createUpdateHtmlCommand(htmlBlock, ''))
-  }
+  if (htmlBlock) commands.set('core.html.insert', createInsertHtmlCommand(htmlBlock))
 
   const insertQuery = queryBlock ? () => createInsertQueryCommand(queryBlock) : () => () => false
   const updateQueryAtSelection = queryBlock ? (data: QueryBlockData) => createUpdateQueryCommand(queryBlock, data) : () => () => false

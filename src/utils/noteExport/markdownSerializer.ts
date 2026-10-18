@@ -8,6 +8,7 @@ import { normalizeQueryBlockData } from '../../features/query/queryBlockData'
 import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSummary'
 import { formatAudioTime, readAudioBookmarks } from '../../core/media/audioBookmarks'
 import { readAudioTranscript } from '../../core/media/audioTranscript'
+import { clampHtmlBlockHeight, HTML_BLOCK_MD_META } from '../../editor-core/schema/htmlBlock'
 
 export interface MarkdownSerializeResult {
   markdown: string
@@ -236,8 +237,12 @@ function nodeToMd(node: BlockNode, ctx: SerializeCtx): string {
       const latex = String(node.attrs?.latex ?? (node.content ?? []).map(c => c.text ?? '').join(''))
       return `$$\n${latex}\n$$`
     }
-    case 'html_block':
-      return String(node.attrs?.code ?? '')
+    case 'html_block': {
+      // A tagged fence round-trips through markdownParser; raw HTML would be dropped on import.
+      const code = String(node.attrs?.code ?? '')
+      const fence = '`'.repeat(Math.max(3, ...(code.match(/`+/g) ?? []).map(run => run.length + 1)))
+      return `${fence}html ${HTML_BLOCK_MD_META} height=${clampHtmlBlockHeight(node.attrs?.height)}\n${code}\n${fence}`
+    }
     case 'mermaid_block': {
       const code = String(node.attrs?.code ?? '')
       return `\`\`\`mermaid\n${code}\n\`\`\``

@@ -8,7 +8,7 @@ import {
   type NodeViewPosition,
 } from './utils'
 import { MAX_EMBED_SOURCE_CHARS } from './embedLimits'
-import { clampHtmlBlockHeight } from '../schema/htmlBlock'
+import { clampHtmlBlockHeight, HTML_BLOCK_CSP_META } from '../schema/htmlBlock'
 
 const FALLBACK_COLOR = 'CanvasText'
 const FALLBACK_FONT = 'system-ui, sans-serif'
@@ -23,7 +23,7 @@ function buildSrcdoc(code: string, view: EditorView): string {
   const computed = typeof getComputedStyle === 'function' ? getComputedStyle(view.dom) : null
   const color = safeCssValue(computed?.color ?? '', FALLBACK_COLOR)
   const font = safeCssValue(computed?.fontFamily ?? '', FALLBACK_FONT)
-  return `<!doctype html><meta charset="utf-8"><style>html{color-scheme:light dark;color:${color};font-family:${font}}body{margin:12px}</style>${code}`
+  return `<!doctype html><meta charset="utf-8">${HTML_BLOCK_CSP_META}<style>html{color-scheme:light dark;color:${color};font-family:${font}}body{margin:12px}</style>${code}`
 }
 
 export function createHtmlNodeView(node: PMNode, view: EditorView, getPos: NodeViewPosition, options?: CoreNodeViewOptions): NodeView {
@@ -33,7 +33,7 @@ export function createHtmlNodeView(node: PMNode, view: EditorView, getPos: NodeV
   let currentNode = node
   let iframe: HTMLIFrameElement | null = null
   let placeholder: HTMLElement | null = null
-  let renderedCode: string | null = null
+  let renderedSrcdoc: string | null = null
 
   const applyHeight = () => {
     if (iframe) iframe.style.height = `${clampHtmlBlockHeight(currentNode.attrs.height)}px`
@@ -44,7 +44,7 @@ export function createHtmlNodeView(node: PMNode, view: EditorView, getPos: NodeV
     if (code.length > MAX_EMBED_SOURCE_CHARS) {
       iframe?.remove()
       iframe = null
-      renderedCode = null
+      renderedSrcdoc = null
       if (!placeholder) {
         placeholder = document.createElement('div')
         placeholder.className = 'nv-html-block-placeholder'
@@ -63,16 +63,18 @@ export function createHtmlNodeView(node: PMNode, view: EditorView, getPos: NodeV
       iframe.setAttribute('sandbox', '')
       iframe.setAttribute('referrerpolicy', 'no-referrer')
       iframe.setAttribute('loading', 'lazy')
-      iframe.title = 'HTML block'
+      iframe.title = options?.t?.('editor.html.label') ?? 'HTML block'
       // Clicks fall through to the wrapper so the node gets selected.
       iframe.style.cssText = 'width:100%;border:0;display:block;pointer-events:none'
       dom.append(iframe)
-      renderedCode = null
+      renderedSrcdoc = null
     }
     applyHeight()
-    if (code !== renderedCode) {
-      iframe.srcdoc = buildSrcdoc(code, view)
-      renderedCode = code
+    // Compare the built document, not the code: a theme change alters the baked-in colours.
+    const srcdoc = buildSrcdoc(code, view)
+    if (srcdoc !== renderedSrcdoc) {
+      iframe.srcdoc = srcdoc
+      renderedSrcdoc = srcdoc
     }
   }
 
@@ -94,13 +96,8 @@ export function createHtmlNodeView(node: PMNode, view: EditorView, getPos: NodeV
   dom.addEventListener('click', onClick)
   sync()
 
-  // The srcdoc bakes in the editor text colour, so re-render it when the theme class changes.
-  const themeObserver = typeof MutationObserver === 'undefined'
-    ? null
-    : new MutationObserver(() => {
-      renderedCode = null
-      sync()
-    })
+  // The srcdoc bakes in the editor text colour; sync() reloads only when it actually changed.
+  const themeObserver = typeof MutationObserver === 'undefined' ? null : new MutationObserver(sync)
   themeObserver?.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
 
   return {
