@@ -756,6 +756,10 @@
       }
     },
     "titlePlaceholder": "Untitled",
+    "outline": {
+      "label": "Outline",
+      "emptyHeading": "Untitled heading"
+    },
     "contentPlaceholder": "Write your thoughts here…",
     "linkUrlLabel": "Link URL",
     "linkPlaceholder": "https://example.com",

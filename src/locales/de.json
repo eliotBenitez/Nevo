@@ -756,6 +756,10 @@
       }
     },
     "titlePlaceholder": "Unbenannt",
+    "outline": {
+      "label": "Gliederung",
+      "emptyHeading": "Unbenannte Überschrift"
+    },
     "contentPlaceholder": "Schreiben Sie hier Ihre Gedanken…",
     "linkUrlLabel": "Link-URL",
     "linkPlaceholder": "https://beispiel.com",

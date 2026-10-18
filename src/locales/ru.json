@@ -756,6 +756,10 @@
       }
     },
     "titlePlaceholder": "Без названия",
+    "outline": {
+      "label": "Оглавление",
+      "emptyHeading": "Заголовок без названия"
+    },
     "contentPlaceholder": "Запишите ваши мысли…",
     "linkUrlLabel": "URL ссылки",
     "linkPlaceholder": "https://example.com",

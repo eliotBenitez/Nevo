@@ -756,6 +756,10 @@
       }
     },
     "titlePlaceholder": "Sin título",
+    "outline": {
+      "label": "Esquema",
+      "emptyHeading": "Encabezado sin título"
+    },
     "contentPlaceholder": "Escribe tus pensamientos aquí…",
     "linkUrlLabel": "URL del enlace",
     "linkPlaceholder": "https://ejemplo.com",
