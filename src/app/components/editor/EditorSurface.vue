@@ -580,6 +580,7 @@ const overlayHandlers: OverlayHandlers = {
   removeFormula: formulaEditor.removeFormulaFromPopover,
   onFormulaInputKeyDown: formulaEditor.onFormulaInputKeyDown,
   updateCode: (v) => { mermaidPopover.code = v },
+  updateHeight: (v) => { mermaidPopover.height = v },
   applyMermaid: mermaidEditor.applyMermaidFromPopover,
   removeMermaid: mermaidEditor.removeMermaidFromPopover,
   onMermaidInputKeyDown: mermaidEditor.onMermaidInputKeyDown,

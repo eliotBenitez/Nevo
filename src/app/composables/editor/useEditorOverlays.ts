@@ -9,6 +9,7 @@ import {
   placeEditorPopoverNearAnchor,
   type ClampOverlayPosition,
 } from './editorPopoverPosition'
+import { HTML_BLOCK_DEFAULT_HEIGHT } from '../../../editor-core/schema/htmlBlock'
 import type { EditorCore } from './useEditorCore'
 import { emptyQueryBlockData, type QueryBlockData } from '../../../features/query/queryBlockData'
 
@@ -63,7 +64,9 @@ export interface FormulaPopoverState {
 
 export interface MermaidPopoverState {
   open: boolean
+  nodeType: 'mermaid_block' | 'html_block'
   code: string
+  height: number
   position: OverlayPosition
   nodePos: number | null
 }
@@ -177,7 +180,9 @@ export function useEditorOverlays(
 
   const mermaidPopover = reactive<MermaidPopoverState>({
     open: false,
+    nodeType: 'mermaid_block',
     code: '',
+    height: HTML_BLOCK_DEFAULT_HEIGHT,
     position: { top: 0, left: 0 },
     nodePos: null,
   })

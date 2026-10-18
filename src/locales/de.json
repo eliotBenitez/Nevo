@@ -2152,6 +2152,14 @@
       "apply": "Anwenden",
       "delete": "Löschen"
     },
+    "html": {
+      "label": "HTML-Block",
+      "placeholder": "HTML und CSS hier schreiben",
+      "applyHint": "zum Anwenden",
+      "apply": "Anwenden",
+      "delete": "Löschen",
+      "height": "Höhe (px)"
+    },
     "queryBlock": {
       "title": "Abfrage",
       "edit": "Abfrage bearbeiten",
@@ -2580,6 +2588,7 @@
       "file": "Dateianhang",
       "table": "Tabelle",
       "mermaid": "Mermaid-Diagramm",
+      "html": "HTML",
       "query": "Abfrage",
       "draw": "Zeichnung",
       "markmap": "Mindmap",

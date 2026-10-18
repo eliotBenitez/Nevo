@@ -15,6 +15,7 @@ const PARAGRAPH_AFTER_SELECTED_BLOCK_TYPES = new Set([
   'note_embed',
   'block_embed',
   'mermaid_block',
+  'html_block',
   'draw_block',
   'markmap_block',
   'vega_block',

@@ -17,6 +17,7 @@ interface ValueState {
   latex?: string
   formula?: string
   code?: string
+  height?: number
   markdown?: string
   spec?: string
   data?: QueryBlockData
@@ -111,6 +112,7 @@ export function createWorkspaceEditorOverlayHandlers(
     removeFormula: formulaEditor.removeFormulaFromPopover,
     onFormulaInputKeyDown: formulaEditor.onFormulaInputKeyDown,
     updateCode: (value) => { options.mermaidPopover.code = value },
+    updateHeight: (value) => { options.mermaidPopover.height = value },
     applyMermaid: mermaidEditor.applyMermaidFromPopover,
     removeMermaid: mermaidEditor.removeMermaidFromPopover,
     onMermaidInputKeyDown: mermaidEditor.onMermaidInputKeyDown,

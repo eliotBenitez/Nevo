@@ -12,6 +12,7 @@ import { normalizeQueryBlockData } from '../../features/query/queryBlockData'
 import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSummary'
 import { formatAudioTime, readAudioBookmarks } from '../../core/media/audioBookmarks'
 import { readAudioTranscript } from '../../core/media/audioTranscript'
+import { clampHtmlBlockHeight } from '../../editor-core/schema/htmlBlock'
 
 export interface HtmlSerializeResult {
   html: string
@@ -391,6 +392,11 @@ export async function blockNode(node: BlockNode, ctx: SerializeCtx): Promise<str
       const latex = String(node.attrs?.latex ?? codeText(node))
       return `<div class="math-block" data-latex="${escapeAttr(latex)}"><div class="math-render">${renderMath(latex, true)}</div></div>`
     }
+    case 'html_block': {
+      // Never inline the user's markup: it stays a sandboxed, script-less srcdoc.
+      const height = clampHtmlBlockHeight(node.attrs?.height)
+      return `<iframe class="html-block" sandbox="" referrerpolicy="no-referrer" srcdoc="${escapeAttr(String(node.attrs?.code ?? ''))}" style="height:${height}px"></iframe>`
+    }
     case 'mermaid_block': {
       const code = String(node.attrs?.code ?? '')
       const svg = await renderMermaidToSvg(code)
@@ -722,6 +728,10 @@ figcaption {
 .math-error {
   background: #fef2f2;
   color: #991b1b;
+}
+.html-block {
+  width: 100%;
+  border: 0;
 }
 .mermaid-block {
   border: 1px solid #d8dee8;

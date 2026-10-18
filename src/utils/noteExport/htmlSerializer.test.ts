@@ -227,3 +227,16 @@ describe('serializeNoteToHtml', () => {
     expect(assetSrcs).toEqual([])
   })
 })
+
+describe('serializeNoteToHtml — html_block', () => {
+  it('exports a sandboxed iframe and never inlines the markup', async () => {
+    const { html } = await serializeNoteToHtml(note({
+      type: 'doc',
+      content: [{ type: 'html_block', attrs: { code: '<script>alert(1)</script><b>"x"</b>', height: 9999 } }],
+    }), 'Doc_assets')
+    expect(html).toContain('<iframe class="html-block" sandbox="" referrerpolicy="no-referrer"')
+    expect(html).toContain('style="height:2000px"')
+    expect(html).toContain('srcdoc="&lt;script&gt;alert(1)&lt;/script&gt;&lt;b&gt;&quot;x&quot;&lt;/b&gt;"')
+    expect(html).not.toContain('<script>alert(1)')
+  })
+})

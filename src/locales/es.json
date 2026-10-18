@@ -2152,6 +2152,14 @@
       "apply": "Aplicar",
       "delete": "Eliminar"
     },
+    "html": {
+      "label": "Bloque HTML",
+      "placeholder": "Escribe aquí HTML y CSS",
+      "applyHint": "para aplicar",
+      "apply": "Aplicar",
+      "delete": "Eliminar",
+      "height": "Altura (px)"
+    },
     "queryBlock": {
       "title": "Consulta",
       "edit": "Editar consulta",
@@ -2580,6 +2588,7 @@
       "file": "Archivo adjunto",
       "table": "Tabla",
       "mermaid": "Diagrama Mermaid",
+      "html": "HTML",
       "query": "Consulta",
       "draw": "Dibujo",
       "markmap": "Mapa mental",

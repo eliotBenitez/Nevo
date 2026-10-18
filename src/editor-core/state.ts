@@ -147,6 +147,7 @@ export function createCoreSlashItems(commands: Map<string, Command>): NevoSlashI
     { id: 'database', title: 'Database', category: 'media', keywords: ['database', 'db', 'table', 'grid', 'chart', 'cards', 'list', 'csv', 'база', 'таблица'], ...listBlockCommand('core.database.insert') },
     { id: 'query', title: 'Query', category: 'media', keywords: ['query', 'dataview', 'notes', 'list', 'filter'], ...listBlockCommand('core.query.insert') },
     { id: 'mermaid', title: 'Mermaid Diagram', category: 'media', keywords: ['diagram', 'flowchart', 'chart', 'graph', 'sequence'], ...listBlockCommand('core.mermaid.insert') },
+    { id: 'html', title: 'HTML', category: 'media', keywords: ['html', 'css', 'markup', 'web', 'embed'], ...listBlockCommand('core.html.insert') },
     { id: 'draw', title: 'Drawing', category: 'media', keywords: ['sketch', 'draw', 'excalidraw', 'canvas', 'hand', 'paint', 'whiteboard'], ...listBlockCommand('core.draw.insert') },
     { id: 'markmap', title: 'Mind Map', category: 'media', keywords: ['mindmap', 'markmap', 'map', 'outline', 'tree', 'brainstorm'], ...listBlockCommand('core.markmap.insert') },
     { id: 'chart', title: 'Chart', category: 'media', keywords: ['vega', 'vega-lite', 'chart', 'graph', 'visualization', 'plot', 'bar', 'line', 'pie'], ...listBlockCommand('core.vega.insert') },

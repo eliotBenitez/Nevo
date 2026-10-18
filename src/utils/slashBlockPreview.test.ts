@@ -10,7 +10,7 @@ describe('slashPreviewKind', () => {
     ['table', 'table'], ['database', 'database'], ['query', 'query'], ['image', 'image'],
     ['divider', 'divider'], ['embed', 'embed'], ['note-embed', 'note-embed'], ['emoji', 'emoji'], ['draw', 'draw'],
     ['audio', 'audio'], ['video', 'video'], ['file', 'file'], ['chart', 'chart'],
-    ['mermaid', 'mermaid'], ['markmap', 'markmap'], ['insert-template', 'template'],
+    ['html', 'code'], ['mermaid', 'mermaid'], ['markmap', 'markmap'], ['insert-template', 'template'],
   ])('maps %s to %s', (id, kind) => {
     expect(slashPreviewKind(id)).toBe(kind)
   })

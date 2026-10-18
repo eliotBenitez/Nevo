@@ -53,6 +53,7 @@ import { normalizeQueryBlockData } from '../../features/query/queryBlockData'
 import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSummary'
 import { formatAudioTime, readAudioBookmarks } from '../../core/media/audioBookmarks'
 import { readAudioTranscript } from '../../core/media/audioTranscript'
+import { htmlBlockAsCodeNode } from './htmlBlockCode'
 
 /** Raster image type accepted by docx's ImageRun (excludes SVG; we rasterize). */
 export type DocxImageType = 'png' | 'jpg' | 'gif' | 'bmp'
@@ -569,6 +570,8 @@ async function blocksFor(node: BlockNode, ctx: Ctx): Promise<(Paragraph | Table)
       if (blocks.length) return blocks
       return [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: latex, italics: true })] })]
     }
+    case 'html_block':
+      return blocksFor(htmlBlockAsCodeNode(node), ctx)
     case 'mermaid_block':
       return rasterBlock(await renderBlockSvg(node), ctx)
     case 'query_block': {

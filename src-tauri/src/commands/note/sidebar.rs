@@ -224,6 +224,7 @@ fn is_skipped_block(node_type: &str) -> bool {
             | "file"
             | "draw_block"
             | "mermaid_block"
+            | "html_block"
             | "vega_block"
             | "math_display"
     )
@@ -253,6 +254,7 @@ mod tests {
             "content": [
                 { "type": "paragraph" },
                 { "type": "image", "attrs": { "src": "x.png" } },
+                { "type": "html_block", "attrs": { "code": "<p>hidden</p>" } },
                 { "type": "paragraph", "content": [{ "type": "text", "text": "First line" }] },
                 { "type": "heading", "content": [{ "type": "text", "text": "Second line" }] }
             ]

@@ -2152,6 +2152,14 @@
       "apply": "Применить",
       "delete": "Удалить"
     },
+    "html": {
+      "label": "HTML-блок",
+      "placeholder": "Напишите HTML и CSS здесь",
+      "applyHint": "применить",
+      "apply": "Применить",
+      "delete": "Удалить",
+      "height": "Высота (px)"
+    },
     "queryBlock": {
       "title": "Запрос",
       "edit": "Редактировать запрос",
@@ -2580,6 +2588,7 @@
       "file": "Файл",
       "table": "Таблица",
       "mermaid": "Диаграмма Mermaid",
+      "html": "HTML",
       "query": "Запрос",
       "draw": "Рисунок",
       "markmap": "Интеллект-карта",

@@ -2,7 +2,7 @@ import { Schema } from 'prosemirror-model'
 import { schema as basicSchema } from 'prosemirror-schema-basic'
 import { addListNodes } from 'prosemirror-schema-list'
 import { blockquoteNodeSpec, calloutNodeSpec, checklistItemNodeSpec, dividerNodeSpec, headingNodeSpec, paragraphNodeSpec, toggleNodeSpec, toggleTitleNodeSpec } from './nodes-block'
-import { codeBlockNodeSpec, drawBlockNodeSpec, fileBlockNodeSpec, imageBlockNodeSpec, mathBlockNodeSpec, mathInlineNodeSpec, markmapBlockNodeSpec, mermaidBlockNodeSpec, queryBlockNodeSpec, vegaBlockNodeSpec } from './nodes-content'
+import { codeBlockNodeSpec, drawBlockNodeSpec, fileBlockNodeSpec, htmlBlockNodeSpec, imageBlockNodeSpec, mathBlockNodeSpec, mathInlineNodeSpec, markmapBlockNodeSpec, mermaidBlockNodeSpec, queryBlockNodeSpec, vegaBlockNodeSpec } from './nodes-content'
 import { mediaBlockNodeSpec, noteEmbedNodeSpec, embedBlockNodeSpec, blockEmbedNodeSpec } from './nodes-embeds'
 import { databaseNodeSpec } from './nodes-database'
 import { columnListNodeSpec, columnNodeSpec } from './nodes-columns'
@@ -35,6 +35,7 @@ let nodes = addListNodes(basicSchema.spec.nodes, 'paragraph block*', 'block')
   .addToEnd('image_block', imageBlockNodeSpec)
   .addToEnd('file_block', fileBlockNodeSpec)
   .addToEnd('mermaid_block', mermaidBlockNodeSpec)
+  .addToEnd('html_block', htmlBlockNodeSpec)
   .addToEnd('draw_block', drawBlockNodeSpec)
   .addToEnd('markmap_block', markmapBlockNodeSpec)
   .addToEnd('vega_block', vegaBlockNodeSpec)

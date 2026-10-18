@@ -236,6 +236,8 @@ function nodeToMd(node: BlockNode, ctx: SerializeCtx): string {
       const latex = String(node.attrs?.latex ?? (node.content ?? []).map(c => c.text ?? '').join(''))
       return `$$\n${latex}\n$$`
     }
+    case 'html_block':
+      return String(node.attrs?.code ?? '')
     case 'mermaid_block': {
       const code = String(node.attrs?.code ?? '')
       return `\`\`\`mermaid\n${code}\n\`\`\``

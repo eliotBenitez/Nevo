@@ -2152,6 +2152,14 @@
       "apply": "Apply",
       "delete": "Delete"
     },
+    "html": {
+      "label": "HTML block",
+      "placeholder": "Write HTML and CSS here",
+      "applyHint": "to apply",
+      "apply": "Apply",
+      "delete": "Delete",
+      "height": "Height (px)"
+    },
     "queryBlock": {
       "title": "Query",
       "edit": "Edit query",
@@ -2580,6 +2588,7 @@
       "file": "File Attachment",
       "table": "Table",
       "mermaid": "Mermaid Diagram",
+      "html": "HTML",
       "query": "Query",
       "draw": "Drawing",
       "markmap": "Mind Map",

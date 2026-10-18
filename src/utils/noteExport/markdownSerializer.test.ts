@@ -163,3 +163,14 @@ describe('serializeNoteToMarkdown — block types', () => {
     expect(md).toContain('Hidden body')
   })
 })
+
+describe('serializeNoteToMarkdown — html_block', () => {
+  it('emits the raw HTML as its own block', () => {
+    const note = noteWith([
+      { type: 'paragraph', content: [{ type: 'text', text: 'before' }] },
+      { type: 'html_block', attrs: { code: '<div style="color:red">Hi</div>', height: 200 } },
+      { type: 'paragraph', content: [{ type: 'text', text: 'after' }] },
+    ])
+    expect(serializeNoteToMarkdown(note, 'assets').markdown).toContain('before\n\n<div style="color:red">Hi</div>\n\nafter')
+  })
+})

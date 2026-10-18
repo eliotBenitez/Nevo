@@ -71,6 +71,7 @@ export interface OverlayHandlers {
   removeMath: () => void
   onMathInputKeyDown: (e: KeyboardEvent) => void
   updateCode: (v: string) => void
+  updateHeight: (v: number) => void
   applyMermaid: () => void
   removeMermaid: () => void
   onMermaidInputKeyDown: (e: KeyboardEvent) => void
@@ -340,9 +341,12 @@ defineExpose({
       <EditorMermaidPopover
         ref="mermaidPopoverCompRef"
         :open="mermaidPopover.open"
+        :kind="mermaidPopover.nodeType === 'html_block' ? 'html' : 'mermaid'"
         :code="mermaidPopover.code"
+        :height="mermaidPopover.height"
         :popover-style="mermaidPopoverStyle"
         @update:code="handlers.updateCode"
+        @update:height="handlers.updateHeight"
         @apply="handlers.applyMermaid"
         @remove="handlers.removeMermaid"
         @keydown="handlers.onMermaidInputKeyDown"

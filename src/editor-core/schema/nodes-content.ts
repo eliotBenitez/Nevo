@@ -1,6 +1,7 @@
 import type { NodeSpec } from 'prosemirror-model'
 import { normalizeQueryBlockData, readQueryBlockDataAttr, serializeQueryBlockData } from '../../features/query/queryBlockData'
 import { readBlockIdAttr, withBlockIdAttr } from './blockIdAttr'
+import { clampHtmlBlockHeight, HTML_BLOCK_DEFAULT_CODE, HTML_BLOCK_DEFAULT_HEIGHT } from './htmlBlock'
 
 export const mathInlineNodeSpec: NodeSpec = {
   group: 'inline',
@@ -196,6 +197,42 @@ export const mermaidBlockNodeSpec: NodeSpec = {
     const code = typeof node.attrs.code === 'string' ? node.attrs.code : ''
     const attrs = withBlockIdAttr({ 'data-nevo-mermaid-block': 'true', 'data-code': code }, node.attrs.id)
     return ['div', attrs, code]
+  },
+}
+
+export const htmlBlockNodeSpec: NodeSpec = {
+  group: 'block',
+  atom: true,
+  selectable: true,
+  draggable: true,
+  defining: true,
+  attrs: {
+    code: { default: HTML_BLOCK_DEFAULT_CODE },
+    height: { default: HTML_BLOCK_DEFAULT_HEIGHT },
+    id: { default: null },
+  },
+  parseDOM: [
+    {
+      tag: 'div[data-nevo-html-block]',
+      getAttrs(dom) {
+        if (!(dom instanceof HTMLElement)) return false
+        return {
+          code: dom.dataset.code ?? '',
+          height: clampHtmlBlockHeight(Number.parseFloat(dom.dataset.height ?? '')),
+          id: readBlockIdAttr(dom),
+        }
+      },
+    },
+  ],
+  toDOM(node) {
+    const code = typeof node.attrs.code === 'string' ? node.attrs.code : ''
+    // The source stays in an attribute: it must never become live DOM.
+    const attrs = withBlockIdAttr({
+      'data-nevo-html-block': 'true',
+      'data-code': code,
+      'data-height': String(clampHtmlBlockHeight(node.attrs.height)),
+    }, node.attrs.id)
+    return ['div', attrs, '']
   },
 }
 
