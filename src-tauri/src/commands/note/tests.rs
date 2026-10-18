@@ -827,14 +827,26 @@ fn search_note_context_skips_malformed_notes_and_returns_hits() {
         "type": "doc",
         "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Calibrated sensor readings" }] }]
     });
+    let note_id = note.id.clone();
     save_note_impl(workspace_path.clone(), note).expect("save note");
 
     let hits = crate::commands::note::context_search::search_note_context_sync(
-        workspace_path,
+        workspace_path.clone(),
         "sensors".to_string(),
+        None,
         None,
     )
     .expect("search context");
     assert_eq!(hits.len(), 1);
     assert_eq!(hits[0].note_title, "Sensors");
+
+    // The open note is sent separately, so it is excluded from ranking.
+    let excluded = crate::commands::note::context_search::search_note_context_sync(
+        workspace_path,
+        "sensors".to_string(),
+        None,
+        Some(note_id),
+    )
+    .expect("search context");
+    assert!(excluded.is_empty());
 }

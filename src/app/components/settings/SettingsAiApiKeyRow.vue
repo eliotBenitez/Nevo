@@ -18,7 +18,9 @@ const failed = ref(false)
 watch(() => props.baseUrl, async (baseUrl) => {
   try {
     const has = await hasAiApiKey(baseUrl)
-    if (baseUrl === props.baseUrl) saved.value = has
+    if (baseUrl !== props.baseUrl) return
+    saved.value = has
+    failed.value = false
   } catch {
     failed.value = true
   }

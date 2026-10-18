@@ -66,6 +66,12 @@ export function useTreeContextMenu(deps: ContextMenuDeps, handlers: ContextMenuH
   const renameModal = reactive<{ open: boolean; target: TreeMenuTarget | null; title: string }>({ open: false, target: null, title: '' })
   const { confirm } = useConfirmDialog()
   const { showToast, dismissToast } = useToast()
+  // Undo restores into the active workspace, so pending undo toasts close when it changes.
+  const undoToastIds = new Set<number>()
+  watch(deps.workspacePath, () => {
+    undoToastIds.forEach(dismissToast)
+    undoToastIds.clear()
+  })
 
   function closeRenameModal() {
     renameModal.open = false; renameModal.target = null; renameModal.title = ''
@@ -136,7 +142,6 @@ export function useTreeContextMenu(deps: ContextMenuDeps, handlers: ContextMenuH
           else await handlers.navigateToWorkspaceRoot()
         }
         // Folders are not offered an undo: deleting one removes the folder itself and only its notes reach the archive.
-        // The restore runs against the active workspace, so the undo only applies while it is unchanged.
         const deletedIn = deps.workspacePath.value
         const toastId = showToast({
           message: deps.t('workspace.context.noteArchived'),
@@ -144,13 +149,14 @@ export function useTreeContextMenu(deps: ContextMenuDeps, handlers: ContextMenuH
           action: {
             label: deps.t('common.undo'),
             run: async () => {
+              undoToastIds.delete(toastId)
               if (deps.workspacePath.value !== deletedIn) return
               await deps.treeOps.restoreFromTrash(target.id)
               if (wasActive) await handlers.navigateToNote(target.id)
             },
           },
         })
-        watch(deps.workspacePath, () => dismissToast(toastId), { once: true })
+        undoToastIds.add(toastId)
         return
       }
       const folder = deps.manifest.value ? findFolderById(deps.manifest.value.tree, target.id) : null

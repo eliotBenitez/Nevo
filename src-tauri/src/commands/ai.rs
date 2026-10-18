@@ -287,10 +287,10 @@ pub async fn ai_list_models(
     base_url: String,
     provider_kind: String,
     api_key: Option<String>,
-    privacy_mode: Option<bool>,
+    // Required, not defaulted: a caller that omits it is rejected instead of bypassing privacy mode.
+    privacy_mode: bool,
 ) -> Result<Vec<String>, String> {
     // Same gate as completions: in privacy mode neither the listing nor the key leaves the machine.
-    let privacy_mode = privacy_mode.unwrap_or(false);
     enforce_privacy_for(&base_url, privacy_mode)?;
     let client = build_ai_client(privacy_mode)?;
 

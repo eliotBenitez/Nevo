@@ -41,14 +41,13 @@ describe('SettingsAiApiKeyRow', () => {
     await input.setValue('  sk-secret  ')
     await buttons(wrapper)[0].trigger('click')
     await flushPromises()
-    expect(set).toHaveBeenCalledWith('nevo:ai.apiKey', 'sk-secret')
-    expect(set).toHaveBeenCalledWith('nevo:ai.apiKeyOrigin', 'https://openrouter.ai')
+    expect(set).toHaveBeenCalledWith('nevo:ai.apiKey', JSON.stringify({ origin: 'https://openrouter.ai', key: 'sk-secret' }))
     expect((input.element as HTMLInputElement).value).toBe('')
     expect(wrapper.text()).toContain(en.settings.ai.apiKey.saved)
   })
 
   it('never shows a saved key and can clear it', async () => {
-    get.mockImplementation(async (key: string) => key === 'nevo:ai.apiKey' ? 'sk-stored' : 'https://openrouter.ai')
+    get.mockResolvedValue(JSON.stringify({ origin: 'https://openrouter.ai', key: 'sk-stored' }))
     const wrapper = await mountRow()
     expect((wrapper.find('input').element as HTMLInputElement).value).toBe('')
     expect(wrapper.html()).not.toContain('sk-stored')
@@ -56,12 +55,11 @@ describe('SettingsAiApiKeyRow', () => {
     await clear.trigger('click')
     await flushPromises()
     expect(del).toHaveBeenCalledWith('nevo:ai.apiKey')
-    expect(del).toHaveBeenCalledWith('nevo:ai.apiKeyOrigin')
     expect(wrapper.text()).toContain(en.settings.ai.apiKey.description)
   })
 
   it('does not report a key saved for another endpoint as saved', async () => {
-    get.mockImplementation(async (key: string) => key === 'nevo:ai.apiKey' ? 'sk-stored' : 'https://other.example')
+    get.mockResolvedValue(JSON.stringify({ origin: 'https://other.example', key: 'sk-stored' }))
     const wrapper = await mountRow()
     expect(wrapper.text()).toContain(en.settings.ai.apiKey.description)
   })

@@ -1,8 +1,11 @@
 import { secureStore, SECRET_AI_API_KEY } from './secureStore'
 
-// The origin the key was saved for, stored beside it so a key for one provider
-// is never sent to a different endpoint after the base URL changes.
-const SECRET_AI_API_KEY_ORIGIN = 'nevo:ai.apiKeyOrigin'
+// The key is stored together with the origin it was saved for, in one secret, so a
+// key for one provider is never sent to a different endpoint after the base URL changes.
+interface BoundKey {
+  origin: string
+  key: string
+}
 
 export function endpointOrigin(baseUrl: string): string | null {
   try {
@@ -13,44 +16,38 @@ export function endpointOrigin(baseUrl: string): string | null {
   }
 }
 
-async function boundOrigin(): Promise<string | null> {
-  return secureStore.get(SECRET_AI_API_KEY_ORIGIN)
+/** The stored key, or null when none is saved or it predates endpoint binding (a bare string). */
+async function readBoundKey(): Promise<BoundKey | null> {
+  const raw = await secureStore.get(SECRET_AI_API_KEY)
+  if (raw === null) return null
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (parsed && typeof parsed === 'object') {
+      const { origin, key } = parsed as Partial<BoundKey>
+      if (typeof origin === 'string' && typeof key === 'string') return { origin, key }
+    }
+  } catch {
+    // A legacy bare key: its endpoint is unknown, so it is never sent and must be saved again.
+  }
+  return null
 }
 
 /** The key, only when it was saved for `baseUrl`'s origin. */
 export async function readAiApiKey(baseUrl: string): Promise<string | undefined> {
-  const key = await secureStore.get(SECRET_AI_API_KEY)
-  const origin = endpointOrigin(baseUrl)
-  if (key === null || !origin) return undefined
-  const bound = await boundOrigin()
-  if (bound === null) {
-    // Keys saved before endpoint binding belong to the endpoint in use when first read.
-    await secureStore.set(SECRET_AI_API_KEY_ORIGIN, origin)
-    return key
-  }
-  return bound === origin ? key : undefined
+  const bound = await readBoundKey()
+  return bound && bound.origin === endpointOrigin(baseUrl) ? bound.key : undefined
 }
 
 export async function hasAiApiKey(baseUrl: string): Promise<boolean> {
-  if (await secureStore.get(SECRET_AI_API_KEY) === null) return false
-  const bound = await boundOrigin()
-  return bound === null || bound === endpointOrigin(baseUrl)
+  return (await readAiApiKey(baseUrl)) !== undefined
 }
 
 export async function saveAiApiKey(baseUrl: string, key: string): Promise<void> {
   const origin = endpointOrigin(baseUrl)
   if (!origin) throw new Error('Invalid AI endpoint URL')
-  await secureStore.set(SECRET_AI_API_KEY, key)
-  try {
-    await secureStore.set(SECRET_AI_API_KEY_ORIGIN, origin)
-  } catch (error) {
-    // A new key left bound to the old origin would be sent there; drop it instead.
-    await secureStore.delete(SECRET_AI_API_KEY).catch(() => {})
-    throw error
-  }
+  await secureStore.set(SECRET_AI_API_KEY, JSON.stringify({ origin, key } satisfies BoundKey))
 }
 
 export async function deleteAiApiKey(): Promise<void> {
   await secureStore.delete(SECRET_AI_API_KEY)
-  await secureStore.delete(SECRET_AI_API_KEY_ORIGIN)
 }

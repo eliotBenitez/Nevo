@@ -13,8 +13,6 @@ type AssistantMessage = Extract<AiChatMessage, { role: 'assistant' }>
 
 const NOTE_TEXT_LIMIT = 6000
 const SEARCH_LIMIT = 8
-// Mirrors MAX_HITS_PER_NOTE in src-tauri/src/commands/note/context_search.rs.
-const MAX_HITS_PER_NOTE = 3
 
 export function useAiChatSession() {
   const store = useAiChatStore()
@@ -50,12 +48,9 @@ export function useAiChatSession() {
     const path = workspace.activePath
     if (store.scope !== 'workspace' || !path) return sources
     const currentId = getActiveEditor()?.noteId
-    // The open note's hits are dropped below, so ask for enough to still fill the limit.
-    const limit = currentId ? SEARCH_LIMIT + MAX_HITS_PER_NOTE : SEARCH_LIMIT
-    const hits = await aiCommands.searchNoteContext(path, question, limit)
+    const hits = await aiCommands.searchNoteContext(path, question, SEARCH_LIMIT, currentId)
     for (const hit of hits) {
-      if (sources.length - (current ? 1 : 0) >= SEARCH_LIMIT) break
-      if (hit.noteId === currentId || !tree.noteById.has(hit.noteId)) continue
+      if (!tree.noteById.has(hit.noteId)) continue
       sources.push({
         n: sources.length + 1,
         noteId: hit.noteId,

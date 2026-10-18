@@ -13,7 +13,7 @@ const listModels = vi.fn()
 vi.mock('../../../tauri/ai', () => ({ aiCommands: { listModels: (...a: unknown[]) => listModels(...a) } }))
 vi.mock('../../../tauri/secureStore', () => ({
   SECRET_AI_API_KEY: 'nevo:ai.apiKey',
-  secureStore: { get: vi.fn(async (key: string) => key === 'nevo:ai.apiKey' ? 'sk-or' : 'https://openrouter.ai') },
+  secureStore: { get: vi.fn().mockResolvedValue(JSON.stringify({ origin: 'https://openrouter.ai', key: 'sk-or' })) },
 }))
 
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })

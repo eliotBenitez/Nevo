@@ -17,14 +17,14 @@ export type AiStreamEvent =
   | { type: 'error'; message: string }
 
 export const aiCommands = {
-  listModels: (baseUrl: string, providerKind: string, apiKey?: string, privacyMode = false): Promise<string[]> =>
+  listModels: (baseUrl: string, providerKind: string, apiKey: string | undefined, privacyMode: boolean): Promise<string[]> =>
     invoke('ai_list_models', { baseUrl, providerKind, apiKey, privacyMode }),
 
   complete: (req: AiCompleteRequest): Promise<string> =>
     invoke('ai_complete', { req }),
 
-  searchNoteContext: (workspacePath: string, query: string, limit?: number): Promise<NoteContextHit[]> =>
-    invoke('search_note_context', { workspacePath, query, limit }),
+  searchNoteContext: (workspacePath: string, query: string, limit?: number, excludeNoteId?: string): Promise<NoteContextHit[]> =>
+    invoke('search_note_context', { workspacePath, query, limit, excludeNoteId }),
 
   completeStream: (req: AiCompleteRequest, onEvent: (e: AiStreamEvent) => void): Promise<void> => {
     const ch = new Channel<AiStreamEvent>()

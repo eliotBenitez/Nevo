@@ -36,8 +36,7 @@ describe('useAiCompletion API key', () => {
     setActivePinia(createPinia())
     complete.mockReset().mockResolvedValue('ok')
     listModels.mockReset().mockResolvedValue([])
-    secretGet.mockReset().mockImplementation(async (key: string) =>
-      key === 'nevo:ai.apiKey' ? 'sk-test' : 'https://openrouter.ai')
+    secretGet.mockReset().mockResolvedValue(JSON.stringify({ origin: 'https://openrouter.ai', key: 'sk-test' }))
   })
 
   it('reads the key from the secure store and sends it to OpenAI-compatible endpoints', async () => {

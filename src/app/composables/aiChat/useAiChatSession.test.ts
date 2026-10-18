@@ -45,32 +45,19 @@ describe('useAiChatSession', () => {
     generateImpl = async (o) => { o.onToken('Answer [1]'); o.onDone?.() }
   })
 
-  it('workspace scope searches, filters unknown/current notes, current note is source 1', async () => {
+  it('workspace scope searches without the open note, filters unknown notes, current note is source 1', async () => {
     openEditor('my note body')
-    search.mockResolvedValue([hit('cur'), hit('ghost'), hit('a')])
+    search.mockResolvedValue([hit('ghost'), hit('a')])
     const store = useAiChatStore()
     await useAiChatSession().send('question?')
 
-    expect(search).toHaveBeenCalledWith('/ws', 'question?', 11)
+    expect(search).toHaveBeenCalledWith('/ws', 'question?', 8, 'cur')
     const msg = store.messages[1]
     if (msg.role !== 'assistant') throw new Error('expected assistant')
     expect(msg.sources.map(s => [s.n, s.noteId, s.blockIndex])).toEqual([[1, 'cur', null], [2, 'a', 2]])
     expect(msg.text).toBe('Answer [1]')
     expect(msg.status).toBe('done')
     expect(generate.mock.calls[0][0].prompt).toContain('my note body')
-  })
-
-  it('fills the source limit with other notes when the open note takes hits', async () => {
-    openEditor('body')
-    const others = Array.from({ length: 10 }, (_, i) => `n${i}`)
-    for (const id of others) notes.set(id, { id, title: id })
-    search.mockResolvedValue([hit('cur'), hit('cur'), hit('cur'), ...others.map(hit)])
-    const store = useAiChatStore()
-    await useAiChatSession().send('q')
-    const msg = store.messages[1]
-    if (msg.role !== 'assistant') throw new Error('expected assistant')
-    expect(msg.sources.filter(s => !s.current).map(s => s.noteId)).toEqual(others.slice(0, 8))
-    for (const id of others) notes.delete(id)
   })
 
   it('note scope does not search', async () => {

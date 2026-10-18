@@ -161,9 +161,10 @@ pub async fn search_note_context(
     workspace_path: String,
     query: String,
     limit: Option<usize>,
+    exclude_note_id: Option<String>,
 ) -> Result<Vec<NoteContextHit>, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        search_note_context_sync(workspace_path, query, limit)
+        search_note_context_sync(workspace_path, query, limit, exclude_note_id)
     })
     .await
     .map_err(|e| e.to_string())?
@@ -173,6 +174,7 @@ pub(crate) fn search_note_context_sync(
     workspace_path: String,
     query: String,
     limit: Option<usize>,
+    exclude_note_id: Option<String>,
 ) -> Result<Vec<NoteContextHit>, String> {
     let logger = crate::logging::logger();
     let workspace_path = normalize_workspace_path(&workspace_path).inspect_err(|message| {
@@ -194,7 +196,9 @@ pub(crate) fn search_note_context_sync(
         return Ok(vec![]);
     }
 
-    let notes = load_workspace_notes(&workspace_path, "search_note_context")?;
+    let mut notes = load_workspace_notes(&workspace_path, "search_note_context")?;
+    // The caller already sends the open note itself; its blocks must not take result slots.
+    notes.retain(|note| Some(&note.id) != exclude_note_id.as_ref());
     let hits = rank_notes(&notes, &query, limit);
     let _ = logger.debug(
         "tauri.note",

@@ -70,10 +70,12 @@ export function markRestoredView(view: EditorView, scrollEl: HTMLElement): Resto
   return { scrollTop: scrollEl.scrollTop, state: view.state }
 }
 
-/** True while the user has not scrolled, moved the caret or edited since the mark. */
+/**
+ * True while the user has not scrolled, clicked or typed since the mark. Compares the caret
+ * position rather than the doc, so programmatic attribute writes after open do not count.
+ */
 export function isViewUntouched(view: EditorView, scrollEl: HTMLElement, mark: RestoredViewMark): boolean {
   return scrollEl.scrollTop === mark.scrollTop
-    && view.state.doc === mark.state.doc
     && view.state.selection.eq(mark.state.selection)
 }
 

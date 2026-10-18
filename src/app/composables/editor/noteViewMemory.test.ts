@@ -78,4 +78,13 @@ describe('noteViewMemory', () => {
     view.dispatch(view.state.tr.insertText('x', 1))
     expect(isViewUntouched(view, scrollEl, typed)).toBe(false)
   })
+
+  it('does not treat a programmatic change that keeps the caret in place as user input', () => {
+    const view = createView(['hello', 'world'])
+    view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 9)))
+    const scrollEl = document.createElement('div')
+    const mark = markRestoredView(view, scrollEl)
+    view.dispatch(view.state.tr.addMark(1, 3, schema.marks.strong.create()))
+    expect(isViewUntouched(view, scrollEl, mark)).toBe(true)
+  })
 })
