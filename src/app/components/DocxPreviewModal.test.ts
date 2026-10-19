@@ -118,6 +118,7 @@ describe('DocxPreviewModal', () => {
       lineSpacing: 1.15,
       paragraphSpacing: 8,
       pageNumbers: false,
+      headingNumbers: false,
       tableOfContents: false,
       tocTitle: expect.any(String),
       titlePage: false,
