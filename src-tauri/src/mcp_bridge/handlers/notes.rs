@@ -10,7 +10,7 @@ use super::{parse_params, RpcError};
 use crate::commands::folder::load_manifest;
 use crate::commands::note::{load_note_impl, search_workspace_blocks_sync};
 use crate::commands::path_utils::validate_id;
-use crate::commands::workspace::{FolderMeta, NoteMeta};
+use crate::commands::workspace::{count_folders, FolderMeta, NoteMeta};
 
 /// Caps every list-shaped response. An agent that asks for "all notes" in a
 /// large vault would otherwise blow through its own context window.
@@ -164,13 +164,6 @@ fn collect_notes(folders: &[FolderMeta], prefix: &str, out: &mut Vec<Value>) {
         out.extend(folder.notes.iter().map(|note| note_entry(note, &path)));
         collect_notes(&folder.children, &path, out);
     }
-}
-
-fn count_folders(folders: &[FolderMeta]) -> usize {
-    folders
-        .iter()
-        .map(|folder| 1 + count_folders(&folder.children))
-        .sum()
 }
 
 #[cfg(test)]

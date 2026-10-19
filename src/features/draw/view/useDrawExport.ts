@@ -4,6 +4,7 @@ import {
   renderStrokesToSvgInner,
   type DrawStroke,
 } from '../../../utils/draw/drawEngine'
+import { downloadBlob } from '../../../utils/downloadBlob'
 import { svgToPngBlob } from '../../../utils/noteExport/svgRaster'
 
 export interface UseDrawExportOptions {
@@ -22,44 +23,13 @@ export type ExportScope = 'all' | 'viewport' | 'selection'
 
 export function useDrawExport(options: UseDrawExportOptions) {
   const { strokes, bgColor, camera, viewport, selection, drawId, resolveHref, downloadBlob: customDownload } = options
+  const save = customDownload ?? downloadBlob
 
   const format = ref<ExportFormat>('png')
   const scope = ref<ExportScope>('all')
   const transparent = ref<boolean>(false)
   const exporting = ref<boolean>(false)
   const errorMessage = ref<string>('')
-
-  async function downloadBlob(blob: Blob, filename: string) {
-    if (customDownload) {
-      customDownload(blob, filename)
-      return
-    }
-
-    const isTauri = typeof window !== 'undefined'
-      && (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ !== undefined
-
-    if (isTauri) {
-      try {
-        const arrayBuffer = await blob.arrayBuffer()
-        const bytes = Array.from(new Uint8Array(arrayBuffer))
-
-        const { noteCommands } = await import('../../../tauri/commands')
-        await noteCommands.exportDrawFile(filename, bytes)
-        return
-      } catch (err) {
-        console.error('[DrawExport] Tauri native save failed, falling back to browser download', err)
-      }
-    }
-
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
 
   async function performExport() {
     exporting.value = true
@@ -123,10 +93,10 @@ export function useDrawExport(options: UseDrawExportOptions) {
 
       if (format.value === 'svg') {
         const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
-        await downloadBlob(blob, `${filename}.svg`)
+        await save(blob, `${filename}.svg`)
       } else {
         const blob = await svgToPngBlob(svgString, w, h)
-        await downloadBlob(blob, `${filename}.png`)
+        await save(blob, `${filename}.png`)
       }
     } catch (err) {
       console.error('[DrawExport] Export failed', err)

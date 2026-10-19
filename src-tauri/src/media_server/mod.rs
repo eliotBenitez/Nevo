@@ -25,7 +25,7 @@ static SERVER: OnceLock<MediaServerInfo> = OnceLock::new();
 
 const CHUNK: usize = 64 * 1024;
 
-fn random_token() -> String {
+pub(crate) fn random_token() -> String {
     // 128-bit random token derived from two UUIDs (uuid crate already a dependency).
     format!(
         "{}{}",

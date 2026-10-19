@@ -3,7 +3,7 @@ import { TextSelection } from 'prosemirror-state'
 import type { Node } from 'prosemirror-model'
 import type { WorkspaceSettings } from '../../../types/workspace'
 import { useWorkspaceStore } from '../../../stores/workspace'
-import { blockNode } from '../../../utils/noteExport/htmlSerializer'
+import { loadNoteEmbedHtml } from './noteEmbedHtml'
 import {
   useEditorCore,
   type EditorCore,
@@ -75,29 +75,6 @@ export interface WorkspaceEditorCoreOptions {
   openSlashEmojiPicker: RequiredCallback<'onSlashEmojiPickRequest'>
   openCalloutIconPicker: RequiredCallback<'onCalloutIconPickRequest'>
   openTemplatePicker: () => void
-}
-
-async function loadNoteEmbedContent(
-  options: WorkspaceEditorCoreOptions,
-  noteId: string,
-): Promise<string> {
-  // Through the backend, not the workspace path: a cloud workspace has none,
-  // and its note bodies are not part of `loadNote` (see loadNoteWithContent).
-  const backend = useWorkspaceStore().backend
-  if (!backend) throw new Error('No workspace')
-
-  const doc = await backend.loadNoteWithContent(noteId)
-  const context = { assetSrcs: [] as string[], assetsSubfolderName: '__EMBED__' }
-  const rawHtml = await blockNode(doc.content, context)
-  if (context.assetSrcs.length === 0) return rawHtml
-
-  return rawHtml.replace(
-    /\bsrc="__EMBED__\/([^"]+)"/g,
-    (_, filename: string) => {
-      const original = context.assetSrcs.find(src => src.endsWith(filename)) ?? filename
-      return `src="${options.resolveAssetSrc(original)}"`
-    },
-  )
 }
 
 export function useWorkspaceEditorCore(options: WorkspaceEditorCoreOptions) {
@@ -189,7 +166,7 @@ export function useWorkspaceEditorCore(options: WorkspaceEditorCoreOptions) {
     onNoteEmbedContentLoad: async ({ noteId, setHtml, setLoading }) => {
       setLoading(true)
       try {
-        setHtml((await loadNoteEmbedContent(options, noteId)) || '')
+        setHtml((await loadNoteEmbedHtml(useWorkspaceStore().backend, noteId, options.resolveAssetSrc)) || '')
       } catch {
         setHtml('<p class="nv-embed-error">Failed to load preview</p>')
       } finally {

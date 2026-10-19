@@ -1,6 +1,9 @@
 use std::path::{Path, PathBuf};
 
+use tauri::ipc::Request;
+
 use super::naming::{hash_bytes, normalize_workspace_asset_src, sanitize_file_stem};
+use crate::commands::ipc_request::{decoded_header, raw_body};
 use crate::commands::note::{assets_dir_path, note_context, note_error_context};
 use crate::commands::path_utils::normalize_workspace_path;
 use crate::commands::workspace;
@@ -19,11 +22,10 @@ use crate::logging::{LogContext, LogError};
 /// The blocking I/O (hash + write) runs on the blocking thread pool via
 /// `spawn_blocking` so the WebKitGTK main thread is never stalled.
 #[tauri::command]
-pub async fn save_draw_asset(
-    workspace_path: String,
-    draw_id: String,
-    bytes: Vec<u8>,
-) -> Result<String, String> {
+pub async fn save_draw_asset(request: Request<'_>) -> Result<String, String> {
+    let workspace_path = decoded_header(&request, "nv-workspace-path")?;
+    let draw_id = decoded_header(&request, "nv-draw-id")?;
+    let bytes = raw_body(&request, "save_draw_asset")?;
     tauri::async_runtime::spawn_blocking(move || {
         save_draw_asset_inner(workspace_path, draw_id, bytes)
     })

@@ -1,3 +1,4 @@
+import { assetBasename } from './assetBasename'
 import type { BlockNode, NoteDocument } from '../../types/note'
 import { getPluginNodeSerializer } from '../../editor-core/plugin-host/active-serialization'
 import { computeBlockTableValues } from '../../editor-core/tableFormula'
@@ -150,10 +151,6 @@ function safeColor(value: unknown): string | null {
   return null
 }
 
-function basename(src: string): string {
-  return src.split(/[\\/]/).filter(Boolean).pop() ?? src
-}
-
 function isLocalAssetSrc(src: string): boolean {
   if (!src || src.startsWith('#') || src.startsWith('//')) return false
   if (VOID_SCHEME_RE.test(src)) return false
@@ -163,7 +160,7 @@ function isLocalAssetSrc(src: string): boolean {
 function registerAsset(src: string, ctx: SerializeCtx): string {
   if (!isLocalAssetSrc(src)) return src
   if (!ctx.assetSrcs.includes(src)) ctx.assetSrcs.push(src)
-  return `${ctx.assetsSubfolderName}/${basename(src)}`
+  return `${ctx.assetsSubfolderName}/${assetBasename(src)}`
 }
 
 function attr(name: string, value: string | null | undefined): string {
@@ -402,7 +399,7 @@ export async function blockNode(node: BlockNode, ctx: SerializeCtx): Promise<str
       const src = String(node.attrs?.src ?? '')
       if (!src) return ''
       const localSrc = registerAsset(src, ctx)
-      const filename = String(node.attrs?.filename ?? (basename(src) || 'file'))
+      const filename = String(node.attrs?.filename ?? (assetBasename(src) || 'file'))
       const href = safeLinkHref(localSrc)
       return `<figure class="file-block">${href ? `<a href="${escapeAttr(href)}" download>${escapeHtml(filename)}</a>` : escapeHtml(filename)}</figure>`
     }

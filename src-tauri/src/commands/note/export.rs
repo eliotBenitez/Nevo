@@ -1,9 +1,11 @@
 use std::path::{Path, PathBuf};
 
+use tauri::ipc::Request;
 use tauri::AppHandle;
 use tauri_plugin_dialog::DialogExt;
 
 use super::{note_context, note_error_context};
+use crate::commands::ipc_request::{decoded_header, raw_body};
 use crate::commands::path_utils::{normalize_workspace_path, write_atomic};
 use crate::commands::workspace;
 use crate::logging::{LogContext, LogError};
@@ -263,11 +265,9 @@ fn export_note_with_assets(
 }
 
 #[tauri::command]
-pub async fn export_draw_file(
-    app: AppHandle,
-    default_file_name: String,
-    bytes: Vec<u8>,
-) -> Result<bool, String> {
+pub async fn export_draw_file(app: AppHandle, request: Request<'_>) -> Result<bool, String> {
+    let default_file_name = decoded_header(&request, "nv-file-name")?;
+    let bytes = raw_body(&request, "export_draw_file")?;
     if bytes.len() > MAX_EXPORT_CONTENT_BYTES {
         return Err("Drawing export exceeds the size limit".to_string());
     }
@@ -293,11 +293,9 @@ pub async fn export_draw_file(
 }
 
 #[tauri::command]
-pub async fn export_note_docx(
-    app: AppHandle,
-    default_file_name: String,
-    bytes: Vec<u8>,
-) -> Result<bool, String> {
+pub async fn export_note_docx(app: AppHandle, request: Request<'_>) -> Result<bool, String> {
+    let default_file_name = decoded_header(&request, "nv-file-name")?;
+    let bytes = raw_body(&request, "export_note_docx")?;
     if bytes.len() > MAX_EXPORT_CONTENT_BYTES {
         return Err("DOCX export exceeds the size limit".to_string());
     }

@@ -42,14 +42,6 @@ impl McpBridgeState {
     }
 }
 
-fn random_token() -> String {
-    format!(
-        "{}{}",
-        uuid::Uuid::new_v4().simple(),
-        uuid::Uuid::new_v4().simple()
-    )
-}
-
 /// Starts the bridge for `workspace_path`, or returns the existing instance if
 /// it is already serving that workspace. Switching workspaces restarts it so a
 /// stale endpoint file can never point an agent at the previous vault.
@@ -92,7 +84,7 @@ pub async fn start(
         .map_err(|e| e.to_string())?;
     let port = std_listener.local_addr().map_err(|e| e.to_string())?.port();
 
-    let token = random_token();
+    let token = crate::media_server::random_token();
     let info = McpBridgeInfo {
         port,
         token: token.clone(),

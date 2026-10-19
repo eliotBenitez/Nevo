@@ -159,7 +159,7 @@ export class LocalBackend implements WorkspaceBackend {
   deleteUnreferencedAsset(assetSrc: string): Promise<boolean> {
     return noteCommands.deleteUnreferencedAsset(this.path, assetSrc)
   }
-  saveDrawAsset(drawId: string, bytes: number[]): Promise<string> {
+  saveDrawAsset(drawId: string, bytes: Uint8Array): Promise<string> {
     return noteCommands.saveDrawAsset(this.path, drawId, bytes)
   }
   readDrawAsset(src: string): Promise<number[]> {

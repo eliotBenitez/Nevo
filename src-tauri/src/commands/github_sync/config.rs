@@ -1,9 +1,8 @@
 //! `nevo.github-sync` plugin settings: reading `.nevo/settings.json` and
 //! validating the repository and branch before they reach API URLs.
 
-use std::path::{Path, PathBuf};
-
 use crate::commands::path_utils::normalize_workspace_path;
+use crate::commands::workspace::settings_path;
 
 pub(super) const PLUGIN_ID: &str = "nevo.github-sync";
 
@@ -12,10 +11,6 @@ pub(super) struct GithubSyncConfig {
     pub(super) repo: String,
     pub(super) branch: String,
     pub(super) commit_message: String,
-}
-
-fn settings_path(workspace_path: &str) -> PathBuf {
-    Path::new(workspace_path).join(".nevo/settings.json")
 }
 
 pub(super) fn load_config(workspace_path: &str) -> Result<GithubSyncConfig, String> {

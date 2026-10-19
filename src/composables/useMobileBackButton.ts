@@ -1,5 +1,6 @@
 import type { ComputedRef, Ref } from 'vue'
 import { onBeforeUnmount, watch } from 'vue'
+import { isTauri } from '@tauri-apps/api/core'
 
 type MobileBackHandler = () => void | Promise<void>
 type ReactiveBoolean = Ref<boolean> | ComputedRef<boolean>
@@ -29,7 +30,7 @@ async function syncNativeListener() {
     return
   }
 
-  if (removeNativeListener || typeof window === 'undefined' || !('__TAURI_INTERNALS__' in window)) return
+  if (removeNativeListener || !isTauri()) return
 
   try {
     const { onBackButtonPress } = await import('@tauri-apps/api/app')

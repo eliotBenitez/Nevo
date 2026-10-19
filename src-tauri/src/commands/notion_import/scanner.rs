@@ -6,6 +6,8 @@ use std::path::{Path, PathBuf};
 use uuid::Uuid;
 use zip::ZipArchive;
 
+use crate::commands::zip_paths::{is_symlink, normalized_entry_path};
+
 use super::session::{NotionArchiveSession, NotionImportState};
 use super::types::{
     NotionDocumentKind, NotionExportAsset, NotionExportDocument, NotionExportManifest,
@@ -18,35 +20,6 @@ const MAX_DOCUMENT_BYTES: u64 = 10 * 1024 * 1024;
 const MAX_ASSET_BYTES: u64 = 100 * 1024 * 1024;
 const MAX_TOTAL_UNCOMPRESSED_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 const MAX_TOTAL_DOCUMENT_BYTES: u64 = 200 * 1024 * 1024;
-
-fn normalized_entry_path<R: Read>(entry: &zip::read::ZipFile<'_, R>) -> Result<String, String> {
-    let name = entry
-        .name()
-        .map_err(|error| format!("ZIP entry has an invalid name: {error}"))?;
-    if name.contains('\\') {
-        return Err("ZIP entries with backslash paths are not supported".to_string());
-    }
-    // zip >= 9 strips a leading root from `enclosed_name` instead of rejecting it.
-    let enclosed = entry
-        .enclosed_name()
-        .filter(|_| !name.starts_with('/'))
-        .ok_or_else(|| format!("ZIP entry has an unsafe path: {name}"))?;
-    let depth = enclosed.components().count();
-    if depth == 0 || depth > MAX_ENTRY_DEPTH {
-        return Err(format!("ZIP entry exceeds the path depth limit: {name}"));
-    }
-    Ok(enclosed
-        .components()
-        .map(|part| part.as_os_str().to_string_lossy())
-        .collect::<Vec<_>>()
-        .join("/"))
-}
-
-fn is_symlink<R: Read>(entry: &zip::read::ZipFile<'_, R>) -> bool {
-    entry
-        .unix_mode()
-        .is_some_and(|mode| mode & 0o170000 == 0o120000)
-}
 
 fn document_kind(path: &str) -> Option<NotionDocumentKind> {
     match Path::new(path)
@@ -100,7 +73,7 @@ pub(super) fn scan_archive(
 
     for index in 0..archive.len() {
         let mut entry = archive.by_index(index).map_err(|error| error.to_string())?;
-        let relative_path = normalized_entry_path(&entry)?;
+        let relative_path = normalized_entry_path(&entry, MAX_ENTRY_DEPTH, "ZIP")?;
         if !seen.insert(relative_path.clone()) {
             return Err(format!("ZIP contains a duplicate entry: {relative_path}"));
         }

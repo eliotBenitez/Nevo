@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { isTauri } from '@tauri-apps/api/core'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { isWorkspaceSchemaTooNewError } from '../../../utils/workspaceSchemaError'
 
@@ -14,8 +15,7 @@ export function useOpenRecentWorkspace(onOpened: () => void) {
   const openingId = ref<string | null>(null)
 
   async function alertDialog(message: string): Promise<void> {
-    const isTauriRuntime = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
-    if (!isTauriRuntime) {
+    if (!isTauri()) {
       window.alert(message)
       return
     }

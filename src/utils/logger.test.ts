@@ -5,13 +5,14 @@ const invokeMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: invokeMock,
+  isTauri: () => !!(globalThis as { isTauri?: boolean }).isTauri,
 }))
 
 describe('appLogger', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useRealTimers()
-    delete (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__
+    delete (globalThis as { isTauri?: boolean }).isTauri
   })
 
   afterEach(() => {
@@ -40,7 +41,7 @@ describe('appLogger', () => {
   })
 
   it('sends structured logs to tauri on desktop runtime', async () => {
-    ;(window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {}
+    (globalThis as { isTauri?: boolean }).isTauri = true
     invokeMock.mockResolvedValue(undefined)
 
     await appLogger.error({

@@ -86,6 +86,13 @@ describe('serializeNoteToMarkdown — block types', () => {
     expect(serializeNoteToMarkdown(note, 'assets').markdown).toContain('```vega-lite\n{"mark":"bar"}\n```')
   })
 
+  it('uses the basename of a backslash asset src', () => {
+    const note = noteWith([{ type: 'image_block', attrs: { src: 'C:\\ws\\assets\\a.png', alt: 'A' } }])
+    const { markdown, assetSrcs } = serializeNoteToMarkdown(note, 'assets')
+    expect(markdown).toContain('![A](assets/a.png)')
+    expect(assetSrcs).toEqual(['C:\\ws\\assets\\a.png'])
+  })
+
   it('links media assets through the assets folder', () => {
     const note = noteWith([{ type: 'media_block', attrs: { kind: 'audio', src: '.nevo/assets/a.mp3', name: 'Track' } }])
     const { markdown, assetSrcs } = serializeNoteToMarkdown(note, 'assets')

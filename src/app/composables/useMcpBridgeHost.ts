@@ -1,4 +1,5 @@
 import { onMounted, onUnmounted } from 'vue'
+import { isTauri } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { useI18n } from 'vue-i18n'
 import { respondToMcpRequest } from '../../tauri/mcp'
@@ -31,10 +32,6 @@ export interface McpBridgeHostOptions {
 interface McpWorkspaceChangedEvent {
   method: string
   workspacePath: string
-}
-
-function isTauriRuntime(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 }
 
 function errorMessage(error: unknown): string {
@@ -120,7 +117,7 @@ export function useMcpBridgeHost(options: McpBridgeHostOptions): void {
   }
 
   onMounted(async () => {
-    if (!isTauriRuntime()) return
+    if (!isTauri()) return
     unlistenRequests = await listen<McpBridgeRequest>('mcp-bridge-request', ({ payload }) => {
       void handle(payload)
     })

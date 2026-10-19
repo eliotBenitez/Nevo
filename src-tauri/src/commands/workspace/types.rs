@@ -1018,3 +1018,14 @@ pub(crate) fn default_hotkey_bindings() -> Vec<HotkeyBinding> {
         },
     ]
 }
+
+pub fn count_folders(tree: &[FolderMeta]) -> usize {
+    tree.iter()
+        .map(|folder| 1 + count_folders(&folder.children))
+        .sum()
+}
+
+pub fn folder_exists(tree: &[FolderMeta], folder_id: &str) -> bool {
+    tree.iter()
+        .any(|folder| folder.id == folder_id || folder_exists(&folder.children, folder_id))
+}

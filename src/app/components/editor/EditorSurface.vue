@@ -7,7 +7,7 @@ import { noteCommands } from '../../../tauri/commands'
 import { mediaHttpUrl } from '../../../tauri/mediaServer'
 import { appLogger } from '../../../utils/logger'
 import { safeWorkspaceAssetUrl } from '../../../utils/workspaceAssetUrl'
-import { blockNode } from '../../../utils/noteExport/htmlSerializer'
+import { loadNoteEmbedHtml } from '../../composables/editor/noteEmbedHtml'
 import { createDefaultWorkspaceSettings, EDITOR_LINE_WIDTHS, resolveEditorFontFamilyCss } from '../../../utils/workspace-settings'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { useTreeStore } from '../../../stores/tree'
@@ -374,20 +374,7 @@ const editorSetup = useEditorCore(core, {
   onNoteEmbedContentLoad: async ({ noteId, setHtml, setLoading }) => {
     setLoading(true)
     try {
-      // Through the backend: a note's body is not part of `loadNote` (see
-      // loadNoteWithContent).
-      const backend = workspaceStore.backend
-      if (!backend) throw new Error('No workspace')
-      const doc = await backend.loadNoteWithContent(noteId)
-      const ctx = { assetSrcs: [] as string[], assetsSubfolderName: '__EMBED__' }
-      const rawHtml = await blockNode(doc.content, ctx)
-      const html = ctx.assetSrcs.length === 0 ? rawHtml : rawHtml.replace(
-        /\bsrc="__EMBED__\/([^"]+)"/g,
-        (_, filename: string) => {
-          const original = ctx.assetSrcs.find(s => s.endsWith(filename)) ?? filename
-          return `src="${resolveAssetSrc(original)}"`
-        },
-      )
+      const html = await loadNoteEmbedHtml(workspaceStore.backend, noteId, resolveAssetSrc)
       setHtml(html || '')
     } catch {
       setHtml('<p class="nv-embed-error">Failed to load preview</p>')
