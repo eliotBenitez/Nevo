@@ -43,9 +43,9 @@ const depthOf = (item: HeadingOutlineItem) => item.level - minLevel.value
         <li v-for="(item, index) in items" :key="item.pos">
           <button
             type="button"
-            class="tw:block tw:w-full tw:cursor-pointer tw:truncate tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:py-1.5 tw:pr-2.5 tw:text-left tw:font-nv-ui tw:text-[13px] tw:leading-[1.35] tw:outline-none tw:transition-colors tw:duration-120 tw:hover:bg-surface-subtle tw:hover:text-content-primary tw:focus-visible:shadow-[0_0_0_2px_var(--input-ring)] tw:motion-reduce:transition-none"
+            class="tw:block tw:w-full tw:cursor-pointer tw:truncate tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border-0 tw:py-1.5 tw:pr-2.5 tw:text-left tw:font-nv-ui tw:text-[13px] tw:leading-[1.35] tw:outline-none tw:transition-colors tw:duration-120 tw:hover:bg-surface-subtle tw:hover:text-content-primary tw:focus-visible:shadow-[0_0_0_2px_var(--input-ring)] tw:motion-reduce:transition-none"
             :class="[
-              index === activeIndex ? 'tw:bg-surface-subtle tw:text-accent' : 'tw:text-content-secondary',
+              index === activeIndex ? 'tw:bg-surface-subtle tw:text-accent' : 'tw:bg-transparent tw:text-content-secondary',
               depthOf(item) === 0 ? 'tw:font-medium' : '',
             ]"
             :style="{ paddingLeft: `${10 + depthOf(item) * 14}px` }"

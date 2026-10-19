@@ -109,8 +109,8 @@ fn collect_workspace_files_skips_files_over_the_blob_limit() {
 #[cfg(unix)]
 #[test]
 fn collect_workspace_files_skips_symlinks() {
-    let workspace = workspace("symlink");
     let outside = workspace("symlink-outside");
+    let workspace = workspace("symlink");
     std::fs::write(outside.join("secret.txt"), b"secret").expect("outside file");
     std::fs::create_dir_all(workspace.join(".nevo/assets")).expect("assets dir");
     std::os::unix::fs::symlink(
