@@ -13,7 +13,7 @@ const kinds: Record<string, SlashPreviewKind> = {
   table: 'table', database: 'database', query: 'query', image: 'image',
   divider: 'divider', embed: 'embed', map: 'embed', 'note-embed': 'note-embed', emoji: 'emoji', draw: 'draw',
   audio: 'audio', 'voice-recording': 'audio', dictation: 'audio', video: 'video', file: 'file', chart: 'chart',
-  mermaid: 'mermaid', markmap: 'markmap', 'insert-template': 'template',
+  html: 'code', mermaid: 'mermaid', markmap: 'markmap', 'insert-template': 'template',
 }
 
 export function slashPreviewKind(itemId: string): SlashPreviewKind | null {

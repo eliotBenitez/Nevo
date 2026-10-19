@@ -5,7 +5,6 @@ import { useAiCompletion } from './useAiCompletion'
 
 const complete = vi.fn()
 const listModels = vi.fn()
-const secretGet = vi.fn()
 
 vi.mock('../tauri/ai', () => ({
   aiCommands: {
@@ -13,10 +12,6 @@ vi.mock('../tauri/ai', () => ({
     completeStream: vi.fn(),
     listModels: (...a: unknown[]) => listModels(...a),
   },
-}))
-vi.mock('../tauri/secureStore', () => ({
-  SECRET_AI_API_KEY: 'nevo:ai.apiKey',
-  secureStore: { get: (...a: unknown[]) => secretGet(...a) },
 }))
 
 function configure(apiKind: 'ollama' | 'openai') {
@@ -31,41 +26,24 @@ function configure(apiKind: 'ollama' | 'openai') {
   return store
 }
 
-describe('useAiCompletion API key', () => {
+describe('useAiCompletion', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     complete.mockReset().mockResolvedValue('ok')
     listModels.mockReset().mockResolvedValue([])
-    secretGet.mockReset().mockResolvedValue('sk-test')
   })
 
-  it('reads the key from the secure store and sends it to OpenAI-compatible endpoints', async () => {
+  it('never puts an API key in the request; Rust adds the endpoint-bound key', async () => {
+    configure('openai')
+    await useAiCompletion().generate({ prompt: 'hi', onToken: vi.fn() })
+    expect(complete).toHaveBeenCalledTimes(1)
+    expect(complete.mock.calls[0][0]).not.toHaveProperty('apiKey')
+  })
+
+  it('passes privacy mode to the model listing so Rust can block remote endpoints', async () => {
     const store = configure('openai')
-    await useAiCompletion().generate({ prompt: 'hi', onToken: vi.fn() })
-    expect(secretGet).toHaveBeenCalledWith('nevo:ai.apiKey')
-    expect(complete).toHaveBeenCalledWith(expect.objectContaining({ apiKey: 'sk-test' }))
-    expect(JSON.stringify(store.settings)).not.toContain('sk-test')
-  })
-
-  it('passes the key to the model listing', async () => {
-    configure('openai')
+    store.settings.ai.privacyMode = true
     await useAiCompletion().testConnection()
-    expect(listModels).toHaveBeenCalledWith('https://openrouter.ai/api/v1', 'openai', 'sk-test')
-  })
-
-  it('does not read or send a key for Ollama', async () => {
-    configure('ollama')
-    await useAiCompletion().generate({ prompt: 'hi', onToken: vi.fn() })
-    expect(secretGet).not.toHaveBeenCalled()
-    expect(complete).toHaveBeenCalledWith(expect.objectContaining({ apiKey: undefined }))
-  })
-
-  it('reports a keychain failure instead of sending an unauthenticated request', async () => {
-    configure('openai')
-    secretGet.mockRejectedValue(new Error('keychain locked'))
-    const onError = vi.fn()
-    await useAiCompletion().generate({ prompt: 'hi', onToken: vi.fn(), onError })
-    expect(onError).toHaveBeenCalledWith('keychain locked')
-    expect(complete).not.toHaveBeenCalled()
+    expect(listModels).toHaveBeenCalledWith('https://openrouter.ai/api/v1', 'openai', true)
   })
 })

@@ -1,6 +1,5 @@
 import { useWorkspaceStore } from '../stores/workspace'
 import { aiCommands } from '../tauri/ai'
-import { secureStore, SECRET_AI_API_KEY } from '../tauri/secureStore'
 
 export interface AiGenerateOptions {
   system?: string
@@ -17,29 +16,15 @@ export function useAiCompletion() {
     return workspaceStore.settings.ai.enabled
   }
 
-  // Read per request so the key never sits in a store or settings snapshot.
-  async function readApiKey(): Promise<string | undefined> {
-    if (workspaceStore.settings.ai.apiKind !== 'openai') return undefined
-    return (await secureStore.get(SECRET_AI_API_KEY)) ?? undefined
-  }
-
   async function testConnection(): Promise<string[]> {
-    const { baseUrl, apiKind } = workspaceStore.settings.ai
-    return aiCommands.listModels(baseUrl, apiKind, await readApiKey())
+    const { baseUrl, apiKind, privacyMode } = workspaceStore.settings.ai
+    return aiCommands.listModels(baseUrl, apiKind, privacyMode)
   }
 
   async function generate(opts: AiGenerateOptions): Promise<void> {
     const settings = workspaceStore.settings.ai
     if (!settings.enabled) {
       opts.onError?.('AI is disabled. Enable it in Settings → AI.')
-      return
-    }
-
-    let apiKey: string | undefined
-    try {
-      apiKey = await readApiKey()
-    } catch (err) {
-      opts.onError?.(err instanceof Error ? err.message : String(err))
       return
     }
 
@@ -51,7 +36,6 @@ export function useAiCompletion() {
       maxTokens: settings.maxTokensPerRequest,
       privacyMode: settings.privacyMode,
       providerKind: settings.apiKind,
-      apiKey,
     }
 
     if (settings.streamingOutput) {

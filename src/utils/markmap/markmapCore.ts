@@ -1,3 +1,5 @@
+import DOMPurify from 'dompurify'
+
 type ViewModule = typeof import('markmap-view')
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -67,7 +69,13 @@ function normalizeMarkmapKatexTree(node: unknown): void {
 
   const markmapNode = node as MarkmapNode
   if (typeof markmapNode.content === 'string') {
-    markmapNode.content = normalizeMarkmapKatexContent(markmapNode.content)
+    markmapNode.content = String(DOMPurify.sanitize(normalizeMarkmapKatexContent(markmapNode.content), {
+      USE_PROFILES: { html: true, mathMl: true },
+      FORBID_TAGS: ['style', 'svg', 'iframe', 'object', 'embed'],
+      FORBID_ATTR: ['style'],
+      // DOMPurify drops these KaTeX elements but keeps their text, which would show the raw TeX.
+      ADD_FORBID_CONTENTS: ['annotation', 'annotation-xml'],
+    }))
   }
 
   if (Array.isArray(markmapNode.children)) {

@@ -24,12 +24,33 @@ import {
   DOCX_TITLE_PAGE_FONT_SIZE_PT,
   DOCX_TITLE_STYLE,
 } from '../../utils/noteExport/docxTypography'
+import { htmlBlockAsCodeNode } from '../../utils/noteExport/htmlBlockCode'
 
 export type { ProcessedNode } from '../../utils/noteExport/docxPagination'
 
 export interface ContentPage {
   nodes: ProcessedNode[]
   hasTitle?: boolean
+}
+
+export interface DocxTocEntry {
+  level: number
+  text: string
+}
+
+// Containers the DOCX serializer renders as plain paragraphs, so their headings
+// never become TOC entries (decoratedBlocks / tableCell in docxSerializer).
+const TOC_OPAQUE_TYPES = new Set(['blockquote', 'callout', 'table'])
+
+/** Mirrors the DOCX serializer's TOC: H1-H3 reached through blocksFor, in document order. */
+function collectTocEntries(node: ProcessedNode, entries: DocxTocEntry[]) {
+  if (node.type === 'heading') {
+    const level = Math.min(6, Math.max(1, Number(node.attrs?.level ?? 1)))
+    if (level <= 3) entries.push({ level, text: (node.headingPrefix ?? '') + processedNodeText(node) })
+    return
+  }
+  if (TOC_OPAQUE_TYPES.has(node.type)) return
+  for (const child of node.content ?? []) collectTocEntries(child, entries)
 }
 
 export interface PreviewPage {
@@ -74,6 +95,8 @@ interface TextMeasurement {
 }
 
 function processNodes(node: BlockNode, headingCounters: number[], headingNumbers: boolean): ProcessedNode {
+  // Same substitution as the DOCX serializer, so the preview shows what the export contains.
+  if (node.type === 'html_block') return processNodes(htmlBlockAsCodeNode(node), headingCounters, headingNumbers)
   const result: ProcessedNode = {
     type: node.type,
     text: node.text,
@@ -303,6 +326,12 @@ export function useDocxPagination(input: DocxPaginationInput) {
     return prepareNodesForPagination(processedContent.value?.content ?? [])
   })
 
+  const tocEntries = computed<DocxTocEntry[]>(() => {
+    const entries: DocxTocEntry[] = []
+    if (processedContent.value) collectTocEntries(processedContent.value, entries)
+    return entries
+  })
+
   const pages = computed<PreviewPage[]>(() => {
     const list: PreviewPage[] = []
     let currentPage = 1
@@ -310,7 +339,8 @@ export function useDocxPagination(input: DocxPaginationInput) {
     if (input.exportNoteTitle.value && input.titlePage.value) {
       list.push({ id: 'title', type: 'title', pageNumber: currentPage++ })
     }
-    if (input.tableOfContents.value) {
+    // The export omits the TOC entirely when the note has no TOC-level headings.
+    if (input.tableOfContents.value && tocEntries.value.length) {
       list.push({ id: 'toc', type: 'toc', pageNumber: currentPage++ })
     }
 
@@ -489,6 +519,7 @@ export function useDocxPagination(input: DocxPaginationInput) {
     processedContent,
     paginatedContentNodes,
     pages,
+    tocEntries,
     usableHeightPx,
     updatePagination,
   }

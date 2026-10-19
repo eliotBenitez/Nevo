@@ -299,3 +299,13 @@ describe('serializeNoteToTypst', () => {
     expect(source).toContain('[two]')
   })
 })
+
+describe('serializeNoteToTypst — html_block', () => {
+  it('renders the source as an html code block', () => {
+    const { source } = serializeNoteToTypst(note({
+      type: 'doc',
+      content: [{ type: 'html_block', attrs: { code: '<p>Hi</p>' } }],
+    }))
+    expect(source).toContain('#raw(block: true, lang: "html", "<p>Hi</p>")')
+  })
+})

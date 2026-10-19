@@ -43,6 +43,7 @@ import { isDictationSupported } from '../../tauri/dictation'
 import { useBlockHandle } from '../composables/editor/useBlockHandle'
 import { useDeviceLayout } from '../../composables/useDeviceLayout'
 import { useEditorScrollbar } from '../composables/editor/useEditorScrollbar'
+import { useEditorOutline } from '../composables/editor/useEditorOutline'
 import { useNotePreload } from '../composables/editor/useNotePreload'
 import { useEditorAssetActions } from '../composables/editor/useEditorAssetActions'
 import { useEditorDocumentActions } from '../composables/editor/useEditorDocumentActions'
@@ -65,6 +66,7 @@ import NoteEmbedPicker from './editor/NoteEmbedPicker.vue'
 import ImageLightbox from './editor/ImageLightbox.vue'
 import EditorOverlayContainer from './editor/EditorOverlayContainer.vue'
 import EditorFindBar from './editor/EditorFindBar.vue'
+import EditorOutlineRail from './editor/EditorOutlineRail.vue'
 import MobileEditorTabBar from './editor/MobileEditorTabBar.vue'
 import type { WorkspaceBlockNavigationTarget } from '../../types/search'
 import LocalGraphPanel from '../../features/graph/LocalGraphPanel.vue'
@@ -206,6 +208,7 @@ const blockHandleComposable = useBlockHandle(core, {
 })
 const { blockHandle } = blockHandleComposable
 const { isPhone, isTouch, supportsHover } = useDeviceLayout()
+const outline = useEditorOutline({ getView: () => core.editorView, getScrollEl: () => editorScrollEl.value })
 const showMobileEditorTabBar = computed(() =>
   isPhone.value
   && props.viewMode === 'document'
@@ -435,6 +438,7 @@ const {
   emitContentDirty: () => emit('content-dirty'),
   onTransactionDoc: (doc) => {
     onTransactionDoc(doc)
+    outline.onTransactionDoc(doc)
     findInNote.onEditorTransaction()
   },
   scheduleGraphUpdate,
@@ -584,7 +588,10 @@ const {
   closeSlashEmojiPicker,
   closeNoteEmbedPicker,
   isEmbedOpeningClickIgnored,
-  onEditorScroll: originalOnEditorScroll,
+  onEditorScroll: () => {
+    originalOnEditorScroll()
+    outline.updateActive()
+  },
   resizeTarget: editorScrollEl,
   repositionOverlays: [
     {
@@ -719,7 +726,10 @@ const editorLifecycle = useWorkspaceEditorLifecycle({
   closeEditorUi,
   closeSlashEmojiPicker,
   isSlashOverlayOpen: () => slashOverlay.open,
-  updateEditorStatsNow,
+  updateEditorStatsNow: () => {
+    updateEditorStatsNow()
+    outline.refreshNow()
+  },
   resetStatsTracking,
   clearStatsTimers,
   refreshScrollbarMetrics,
@@ -945,6 +955,13 @@ defineExpose({ toggleDictation: () => { if (isDictationSupported()) dictation.to
             <span class="editor-stats-sep tw:opacity-50">·</span>
             <span>{{ editorWordCount.chars }} ch</span>
           </div>
+
+          <EditorOutlineRail
+            v-if="!isTouch && props.viewMode === 'document' && outline.items.value.length"
+            :items="outline.items.value"
+            :active-index="outline.activeIndex.value"
+            @select="outline.scrollToHeading"
+          />
 
           <div
             v-show="!isTouch && scrollbarScrollable"

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { serializeNoteToMarkdown } from './markdownSerializer'
+import { parseMarkdownToBlockNode } from '../noteImport/markdownParser'
 import type { NoteDocument } from '../../types/note'
 
 function noteWith(content: unknown): NoteDocument {
@@ -85,6 +86,13 @@ describe('serializeNoteToMarkdown — block types', () => {
     expect(serializeNoteToMarkdown(note, 'assets').markdown).toContain('```vega-lite\n{"mark":"bar"}\n```')
   })
 
+  it('uses the basename of a backslash asset src', () => {
+    const note = noteWith([{ type: 'image_block', attrs: { src: 'C:\\ws\\assets\\a.png', alt: 'A' } }])
+    const { markdown, assetSrcs } = serializeNoteToMarkdown(note, 'assets')
+    expect(markdown).toContain('![A](assets/a.png)')
+    expect(assetSrcs).toEqual(['C:\\ws\\assets\\a.png'])
+  })
+
   it('links media assets through the assets folder', () => {
     const note = noteWith([{ type: 'media_block', attrs: { kind: 'audio', src: '.nevo/assets/a.mp3', name: 'Track' } }])
     const { markdown, assetSrcs } = serializeNoteToMarkdown(note, 'assets')
@@ -161,5 +169,20 @@ describe('serializeNoteToMarkdown — block types', () => {
     expect(md).toContain('[Clip](https://youtu.be/x)')
     expect(md).toContain('<summary>Summary</summary>')
     expect(md).toContain('Hidden body')
+  })
+})
+
+describe('serializeNoteToMarkdown — html_block', () => {
+  it('round-trips through the Markdown importer, blank lines and backticks included', () => {
+    const code = '<div style="color:red">Hi</div>\n\n<p>```x```</p>'
+    const note = noteWith([
+      { type: 'paragraph', content: [{ type: 'text', text: 'before' }] },
+      { type: 'html_block', attrs: { code, height: 300 } },
+      { type: 'paragraph', content: [{ type: 'text', text: 'after' }] },
+    ])
+    const { markdown } = serializeNoteToMarkdown(note, 'assets')
+    expect(markdown).toContain('````html nevo-html-block height=300\n')
+    const parsed = parseMarkdownToBlockNode(markdown, 'Test')
+    expect(parsed.content.content).toContainEqual({ type: 'html_block', attrs: { code, height: 300 } })
   })
 })

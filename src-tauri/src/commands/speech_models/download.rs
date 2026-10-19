@@ -6,7 +6,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 use tokio::io::AsyncWriteExt;
 
-const PROGRESS_BYTES: u64 = 256 * 1024;
 const CANCEL_POLL: Duration = Duration::from_millis(250);
 const PROGRESS_INTERVAL: Duration = Duration::from_millis(100);
 
@@ -99,18 +98,25 @@ async fn stream_to_part(
     cancel: &AtomicBool,
     on_progress: &mut impl FnMut(u64, u64),
 ) -> Result<(), String> {
-    let response = client()?
-        .get(url)
-        .send()
-        .await
-        .and_then(reqwest::Response::error_for_status)
-        .map_err(|_| "download_failed".to_string())?;
+    let request = client()?.get(url).send();
+    tokio::pin!(request);
+    // Poll cancel while connecting and waiting for headers too, not only during the body.
+    let response = loop {
+        if cancel.load(Ordering::Acquire) {
+            return Err("download_cancelled".to_string());
+        }
+        if let Ok(result) = tokio::time::timeout(CANCEL_POLL, &mut request).await {
+            break result
+                .and_then(reqwest::Response::error_for_status)
+                .map_err(|_| "download_failed".to_string())?;
+        }
+    };
     let mut file = tokio::fs::File::create(part)
         .await
         .map_err(|_| "download_failed".to_string())?;
     let mut verifier = Verifier::new(entry);
     let mut stream = response.bytes_stream();
-    let mut last_report = (0u64, Instant::now());
+    let mut last_report = Instant::now();
     loop {
         if cancel.load(Ordering::Acquire) {
             return Err("download_cancelled".to_string());
@@ -127,11 +133,10 @@ async fn stream_to_part(
         file.write_all(&chunk)
             .await
             .map_err(|_| "download_failed".to_string())?;
-        if received - last_report.0 >= PROGRESS_BYTES
-            || last_report.1.elapsed() >= PROGRESS_INTERVAL
-        {
+        // Time-based only: on a fast link a byte threshold would fire on nearly every chunk.
+        if last_report.elapsed() >= PROGRESS_INTERVAL {
             on_progress(received, entry.bytes);
-            last_report = (received, Instant::now());
+            last_report = Instant::now();
         }
     }
     if cancel.load(Ordering::Acquire) {

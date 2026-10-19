@@ -8,6 +8,8 @@ import { normalizeQueryBlockData } from '../../features/query/queryBlockData'
 import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSummary'
 import { formatAudioTime, readAudioBookmarks } from '../../core/media/audioBookmarks'
 import { readAudioTranscript } from '../../core/media/audioTranscript'
+import { assetBasename } from './assetBasename'
+import { clampHtmlBlockHeight, HTML_BLOCK_MD_META } from '../../editor-core/schema/htmlBlock'
 
 export interface MarkdownSerializeResult {
   markdown: string
@@ -20,6 +22,11 @@ interface SerializeCtx {
   listDepth: number
   ordered: boolean
   orderedIndex: number
+}
+
+function registerAsset(src: string, ctx: SerializeCtx): string {
+  if (!ctx.assetSrcs.includes(src)) ctx.assetSrcs.push(src)
+  return `${ctx.assetsSubfolderName}/${assetBasename(src)}`
 }
 
 function textNodeToMd(node: BlockNode, _ctx: SerializeCtx): string {
@@ -220,21 +227,23 @@ function nodeToMd(node: BlockNode, ctx: SerializeCtx): string {
       const src = String(node.attrs?.src ?? '')
       const filename = String(node.attrs?.filename ?? 'file')
       if (!src) return ''
-      if (!ctx.assetSrcs.includes(src)) ctx.assetSrcs.push(src)
-      const basename = src.split('/').pop() ?? src
-      return `[${filename}](${ctx.assetsSubfolderName}/${basename})`
+      return `[${filename}](${registerAsset(src, ctx)})`
     }
     case 'image_block': {
       const src = String(node.attrs?.src ?? '')
       const alt = String(node.attrs?.alt ?? '')
       if (!src) return ''
-      if (!ctx.assetSrcs.includes(src)) ctx.assetSrcs.push(src)
-      const filename = src.split('/').pop() ?? src
-      return `![${alt}](${ctx.assetsSubfolderName}/${filename})`
+      return `![${alt}](${registerAsset(src, ctx)})`
     }
     case 'math_block': {
       const latex = String(node.attrs?.latex ?? (node.content ?? []).map(c => c.text ?? '').join(''))
       return `$$\n${latex}\n$$`
+    }
+    case 'html_block': {
+      // A tagged fence round-trips through markdownParser; raw HTML would be dropped on import.
+      const code = String(node.attrs?.code ?? '')
+      const fence = '`'.repeat(Math.max(3, ...(code.match(/`+/g) ?? []).map(run => run.length + 1)))
+      return `${fence}html ${HTML_BLOCK_MD_META} height=${clampHtmlBlockHeight(node.attrs?.height)}\n${code}\n${fence}`
     }
     case 'mermaid_block': {
       const code = String(node.attrs?.code ?? '')
@@ -266,9 +275,7 @@ function nodeToMd(node: BlockNode, ctx: SerializeCtx): string {
       const kind = node.attrs?.kind === 'video' ? 'video' : 'audio'
       const name = String(node.attrs?.name ?? (kind === 'video' ? 'Video' : 'Audio'))
       if (!src) return ''
-      if (!ctx.assetSrcs.includes(src)) ctx.assetSrcs.push(src)
-      const basename = src.split('/').pop() ?? src
-      const link = `[${name}](${ctx.assetsSubfolderName}/${basename})`
+      const link = `[${name}](${registerAsset(src, ctx)})`
       if (kind !== 'audio') return link
       const bookmarks = readAudioBookmarks(node.attrs?.bookmarks)
       const entries = bookmarks.map(bookmark => `- ${formatAudioTime(bookmark.time)} — ${escapeMarkdownText(bookmark.label)}`)

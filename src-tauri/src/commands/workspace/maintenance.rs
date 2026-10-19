@@ -7,15 +7,11 @@ use super::paths::{
 };
 use super::plugins::list_plugins;
 use super::settings::is_extended_diagnostics_enabled;
-use super::types::{FolderMeta, WorkspaceCleanupReport, WorkspaceDiagnostics, WorkspaceManifest};
+use super::types::{
+    count_folders, FolderMeta, WorkspaceCleanupReport, WorkspaceDiagnostics, WorkspaceManifest,
+};
 use crate::commands::path_utils::normalize_workspace_path;
 use crate::logging::{LogContext, LogError};
-
-fn count_folders(tree: &[FolderMeta]) -> usize {
-    tree.iter()
-        .map(|folder| 1 + count_folders(&folder.children))
-        .sum()
-}
 
 fn count_notes(tree: &[FolderMeta]) -> usize {
     tree.iter()

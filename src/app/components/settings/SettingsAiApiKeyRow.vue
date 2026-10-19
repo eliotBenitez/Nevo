@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { onMounted, ref, useId } from 'vue'
+import { ref, useId, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import SettingsRow from './ui/SettingsRow.vue'
-import { secureStore, SECRET_AI_API_KEY } from '../../../tauri/secureStore'
+import { deleteAiApiKey, hasAiApiKey, saveAiApiKey } from '../../../tauri/aiApiKey'
 
-defineProps<{ disabled: boolean }>()
+const props = defineProps<{ disabled: boolean; baseUrl: string }>()
 
 const { t } = useI18n()
 const inputId = useId()
@@ -14,13 +14,17 @@ const draft = ref('')
 const saved = ref(false)
 const failed = ref(false)
 
-onMounted(async () => {
+// A key saved for another endpoint is not sent here, so it does not count as saved.
+watch(() => props.baseUrl, async (baseUrl) => {
   try {
-    saved.value = (await secureStore.get(SECRET_AI_API_KEY)) !== null
+    const has = await hasAiApiKey(baseUrl)
+    if (baseUrl !== props.baseUrl) return
+    saved.value = has
+    failed.value = false
   } catch {
     failed.value = true
   }
-})
+}, { immediate: true })
 
 async function run(task: () => Promise<void>) {
   failed.value = false
@@ -35,7 +39,7 @@ function save() {
   const value = draft.value.trim()
   if (!value) return
   return run(async () => {
-    await secureStore.set(SECRET_AI_API_KEY, value)
+    await saveAiApiKey(props.baseUrl, value)
     draft.value = ''
     saved.value = true
   })
@@ -43,7 +47,7 @@ function save() {
 
 function clear() {
   return run(async () => {
-    await secureStore.delete(SECRET_AI_API_KEY)
+    await deleteAiApiKey()
     draft.value = ''
     saved.value = false
   })

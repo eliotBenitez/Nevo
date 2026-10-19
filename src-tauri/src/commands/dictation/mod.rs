@@ -19,7 +19,8 @@ use tauri::State;
 
 #[cfg(desktop)]
 use crate::commands::transcription::{
-    resolve_model_path, validate_language, whisper_context, BusyGuard, TranscriptionState,
+    acquire_with_model, resolve_model_path, validate_language, whisper_context, BusyGuard,
+    TranscriptionState,
 };
 #[cfg(desktop)]
 use crate::commands::voice_recording::{session::RecorderError, VoiceRecordingState};
@@ -197,7 +198,6 @@ pub async fn dictation_start(
     on_event: tauri::ipc::Channel<DictationEvent>,
 ) -> Result<(), String> {
     let language = validate_language(language)?;
-    let model = resolve_model_path(&app)?;
     {
         let mut slot = state.lock()?;
         start_is_allowed(slot.0.state()).map_err(str::to_string)?;
@@ -207,9 +207,9 @@ pub async fn dictation_start(
     let started = if !voice.is_idle() {
         Err(RecorderError::AlreadyRecording.code())
     } else {
-        match BusyGuard::acquire(Arc::clone(transcription.inner())) {
-            None => Err("transcription_busy".to_string()),
-            Some(guard) => {
+        match acquire_with_model(transcription.inner(), || resolve_model_path(&app)) {
+            Err(error) => Err(error),
+            Ok((guard, model)) => {
                 let transcription = Arc::clone(transcription.inner());
                 tauri::async_runtime::spawn_blocking(move || {
                     start_session(transcription, model, language, on_event, guard)
@@ -358,6 +358,7 @@ mod tests {
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/models/ggml-base.bin");
         let state = TranscriptionState::default();
         let ctx = whisper_context(&state, &model).unwrap();
+        let mut whisper = ctx.create_state().unwrap();
 
         let mut segmenter = Segmenter::new();
         let mut segments = Vec::new();
@@ -371,7 +372,9 @@ mod tests {
         segments.extend(segmenter.finish());
         let text = segments
             .iter()
-            .map(|pcm| crate::commands::transcription::recognize_text(&ctx, pcm, None, None, true))
+            .map(|pcm| {
+                crate::commands::transcription::recognize_text(&mut whisper, pcm, None, None, true)
+            })
             .collect::<Result<Vec<_>, _>>()
             .unwrap()
             .join(" ")

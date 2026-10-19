@@ -48,9 +48,9 @@ export function useAiChatSession() {
     const path = workspace.activePath
     if (store.scope !== 'workspace' || !path) return sources
     const currentId = getActiveEditor()?.noteId
-    const hits = await aiCommands.searchNoteContext(path, question, SEARCH_LIMIT)
+    const hits = await aiCommands.searchNoteContext(path, question, SEARCH_LIMIT, currentId)
     for (const hit of hits) {
-      if (hit.noteId === currentId || !tree.noteById.has(hit.noteId)) continue
+      if (!tree.noteById.has(hit.noteId)) continue
       sources.push({
         n: sources.length + 1,
         noteId: hit.noteId,
@@ -139,7 +139,8 @@ export function useAiChatSession() {
     if (index < 1 || store.streaming) return Promise.resolve()
     const question = store.messages[index - 1]
     if (question.role !== 'user') return Promise.resolve()
-    store.messages.splice(index - 1)
+    // Only the latest answer is replaced; retrying an older one asks again at the end and keeps later turns.
+    if (index === store.messages.length - 1) store.messages.splice(index - 1)
     return send(question.text)
   }
 

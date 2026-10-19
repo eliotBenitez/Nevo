@@ -45,13 +45,13 @@ describe('useAiChatSession', () => {
     generateImpl = async (o) => { o.onToken('Answer [1]'); o.onDone?.() }
   })
 
-  it('workspace scope searches, filters unknown/current notes, current note is source 1', async () => {
+  it('workspace scope searches without the open note, filters unknown notes, current note is source 1', async () => {
     openEditor('my note body')
-    search.mockResolvedValue([hit('cur'), hit('ghost'), hit('a')])
+    search.mockResolvedValue([hit('ghost'), hit('a')])
     const store = useAiChatStore()
     await useAiChatSession().send('question?')
 
-    expect(search).toHaveBeenCalledWith('/ws', 'question?', 8)
+    expect(search).toHaveBeenCalledWith('/ws', 'question?', 8, 'cur')
     const msg = store.messages[1]
     if (msg.role !== 'assistant') throw new Error('expected assistant')
     expect(msg.sources.map(s => [s.n, s.noteId, s.blockIndex])).toEqual([[1, 'cur', null], [2, 'a', 2]])
@@ -131,5 +131,16 @@ describe('useAiChatSession', () => {
     await session.retry(store.messages[1].id)
     expect(store.messages.map(m => m.role)).toEqual(['user', 'assistant'])
     expect(store.messages[1].role === 'assistant' && store.messages[1].text).toBe('ok')
+  })
+
+  it('retrying an older answer keeps the later turns', async () => {
+    search.mockResolvedValue([])
+    generateImpl = async (o) => { o.onToken('a'); o.onDone?.() }
+    const store = useAiChatStore()
+    const session = useAiChatSession()
+    await session.send('q1')
+    await session.send('q2')
+    await session.retry(store.messages[1].id)
+    expect(store.messages.map(m => m.text)).toEqual(['q1', 'a', 'q2', 'a', 'q1', 'a'])
   })
 })

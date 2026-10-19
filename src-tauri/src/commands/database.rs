@@ -140,6 +140,25 @@ pub(crate) fn checkpoint_database(workspace: &Path) -> Result<(), String> {
         .map_err(|error| error.to_string())
 }
 
+/// Writes a transactionally consistent copy of `databases.sqlite` to `dest`
+/// via `VACUUM INTO`, so a file-level upload never sees a half-written page
+/// while the app keeps writing. Returns `false` (and writes nothing) when the
+/// database file does not exist yet. `dest` must not already exist.
+pub(crate) fn snapshot_database(workspace: &Path, dest: &Path) -> Result<bool, String> {
+    let path = database_path(workspace);
+    if !path.is_file() {
+        return Ok(false);
+    }
+    let connection = Connection::open(&path).map_err(|error| error.to_string())?;
+    connection
+        .busy_timeout(Duration::from_secs(5))
+        .map_err(|error| error.to_string())?;
+    connection
+        .execute("VACUUM INTO ?1", params![dest.to_string_lossy()])
+        .map_err(|error| error.to_string())?;
+    Ok(true)
+}
+
 fn read_records(connection: &Connection, database_id: &str) -> Result<Vec<DbRecord>, String> {
     let mut statement = connection.prepare(
         "SELECT record_id, cells_json FROM database_records WHERE database_id = ?1 ORDER BY ordinal, record_id",

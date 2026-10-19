@@ -11,7 +11,7 @@
 
 mod archive_read;
 mod archive_write;
-mod collect;
+pub(crate) mod collect;
 mod header;
 mod merge;
 

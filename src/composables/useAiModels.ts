@@ -31,7 +31,8 @@ export function useAiModels() {
       loadedFor = key
       status.value = 'ok'
       const first = models.value[0]
-      if (openRouter && first && !models.value.includes(defaultModel)) await select(first)
+      // Only replace a model the endpoint does not serve; a paid model the user chose stays.
+      if (openRouter && first && !result.includes(defaultModel)) await select(first)
     } catch {
       if (sourceKey() !== key) return
       models.value = []

@@ -4,7 +4,7 @@ use serde_json::Value;
 use std::path::Path;
 use std::sync::{Arc, Mutex, OnceLock};
 
-use crate::commands::workspace::{FolderMeta, NoteMeta};
+use crate::commands::workspace::{folder_exists, notes_dir_path, FolderMeta, NoteMeta};
 use crate::logging::{LogContext, LogError};
 
 mod assets;
@@ -182,10 +182,6 @@ fn assets_dir_path(workspace_path: &str) -> std::path::PathBuf {
     Path::new(workspace_path).join(".nevo").join("assets")
 }
 
-fn notes_dir_path(workspace_path: &str) -> std::path::PathBuf {
-    Path::new(workspace_path).join("notes")
-}
-
 /// `pub(crate)` so sibling command modules whose operations also touch the
 /// note metadata index (e.g. `folder::delete_folder_sync`'s trash cascade)
 /// can log index failures with the same shape as the note module's own
@@ -213,11 +209,6 @@ fn insert_note_in_folder(tree: &mut [FolderMeta], folder_id: &str, note: NoteMet
         }
     }
     false
-}
-
-fn folder_exists(tree: &[FolderMeta], folder_id: &str) -> bool {
-    tree.iter()
-        .any(|folder| folder.id == folder_id || folder_exists(&folder.children, folder_id))
 }
 
 fn note_exists_in_tree(tree: &[FolderMeta], note_id: &str) -> bool {

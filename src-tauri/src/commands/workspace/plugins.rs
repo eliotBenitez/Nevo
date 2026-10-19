@@ -218,6 +218,7 @@ fn bundled_system_plugins() -> Vec<(PluginManifest, &'static str)> {
                         "key": "branch",
                         "type": "text",
                         "label": "settings.plugins.githubSync.fields.branch",
+                        "description": "settings.plugins.githubSync.fields.branchHint",
                         "default": "main",
                         "placeholder": "main",
                     }),
@@ -357,8 +358,9 @@ pub fn list_plugins(workspace_path: String) -> Result<Vec<PluginManifest>, Strin
 /// Reject plugin ids that could escape the plugins directory via path
 /// separators or traversal segments. Plugin ids are folder names, so only a
 /// conservative `[A-Za-z0-9._-]` set is allowed and `..`/empty is forbidden.
-pub(super) fn validate_plugin_id(plugin_id: &str) -> Result<(), String> {
+pub(crate) fn validate_plugin_id(plugin_id: &str) -> Result<(), String> {
     if plugin_id.is_empty()
+        || plugin_id.len() > 128
         || plugin_id == "."
         || plugin_id == ".."
         || !plugin_id

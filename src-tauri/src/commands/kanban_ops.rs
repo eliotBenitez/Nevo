@@ -4,7 +4,8 @@ use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
-use super::kanban::{touch_board_updated_at, KanbanBoard, KanbanCard};
+use super::kanban::{read_listed_card, touch_board_updated_at, KanbanBoard, KanbanCard};
+use super::kanban_paths::{validate_card_directory, validate_unlinked_file};
 use super::path_utils::{normalize_workspace_path, validate_id, write_atomic};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
@@ -50,6 +51,7 @@ fn col_value(card: &KanbanCard, status_id: &str) -> String {
 }
 
 fn read_cards(wp: &str, board_id: &str) -> Result<Vec<KanbanCard>, String> {
+    validate_card_directory(wp, board_id)?;
     let dir = cards_dir(wp, board_id);
     let mut out = Vec::new();
     if !dir.exists() {
@@ -63,18 +65,21 @@ fn read_cards(wp: &str, board_id: &str) -> Result<Vec<KanbanCard>, String> {
         if p.extension().and_then(|x| x.to_str()) != Some("json") {
             continue;
         }
-        if let Ok(s) = std::fs::read_to_string(&p) {
-            if let Ok(c) = serde_json::from_str::<KanbanCard>(&s) {
-                out.push(c);
-            }
+        if let Some(c) = read_listed_card(&p, board_id) {
+            out.push(c);
         }
     }
     Ok(out)
 }
 
 fn save_card(wp: &str, board_id: &str, card: &KanbanCard) -> Result<(), String> {
+    validate_card_directory(wp, board_id)?;
+    validate_id(&card.id)?;
+    if card.board_id != board_id {
+        return Err("Card identity does not match its board".to_string());
+    }
     let content = serde_json::to_string_pretty(card).map_err(|e| e.to_string())?;
-    std::fs::write(card_file(wp, board_id, &card.id), content).map_err(|e| e.to_string())
+    write_atomic(&card_file(wp, board_id, &card.id), content.as_bytes()).map_err(|e| e.to_string())
 }
 
 fn parse_defs(v: &Value) -> Vec<PropDef> {
@@ -117,10 +122,12 @@ fn kanban_move_card_sync(
         .to_string_lossy()
         .into_owned();
 
-    let board: KanbanBoard = serde_json::from_str(
-        &std::fs::read_to_string(board_file(&wp, &board_id)).map_err(|e| e.to_string())?,
-    )
-    .map_err(|e| e.to_string())?;
+    let board_path = board_file(&wp, &board_id);
+    validate_card_directory(&wp, &board_id)?;
+    validate_unlinked_file(&board_path)?;
+    let board: KanbanBoard =
+        serde_json::from_str(&std::fs::read_to_string(&board_path).map_err(|e| e.to_string())?)
+            .map_err(|e| e.to_string())?;
     let sid = &board.status_property_id;
 
     let mut all = read_cards(&wp, &board_id)?;
@@ -217,10 +224,12 @@ fn kanban_save_board_schema_sync(
         .to_string_lossy()
         .into_owned();
 
-    let mut board: KanbanBoard = serde_json::from_str(
-        &std::fs::read_to_string(board_file(&wp, &board_id)).map_err(|e| e.to_string())?,
-    )
-    .map_err(|e| e.to_string())?;
+    let board_path = board_file(&wp, &board_id);
+    validate_card_directory(&wp, &board_id)?;
+    validate_unlinked_file(&board_path)?;
+    let mut board: KanbanBoard =
+        serde_json::from_str(&std::fs::read_to_string(&board_path).map_err(|e| e.to_string())?)
+            .map_err(|e| e.to_string())?;
 
     let new_defs = parse_defs(&property_definitions);
 
@@ -392,6 +401,104 @@ fn kanban_save_board_schema_sync(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn move_rejects_card_whose_stored_id_escapes_its_file() {
+        let base =
+            std::env::temp_dir().join(format!("nevo-kanban-card-id-{}", uuid::Uuid::new_v4()));
+        let workspace = base.join("workspace");
+        let board_id = "board";
+        let board_dir = workspace.join(".nevo/boards");
+        let card_dir = board_dir.join(board_id);
+        std::fs::create_dir_all(&card_dir).unwrap();
+        let victim = base.join("victim.json");
+        std::fs::write(&victim, b"original").unwrap();
+        std::fs::write(
+            board_dir.join("board.json"),
+            serde_json::json!({
+                "id": board_id, "title": "Board", "icon": "", "folderId": null,
+                "statusPropertyId": "status", "propertyDefinitions": [],
+                "createdAt": "old", "updatedAt": "old"
+            })
+            .to_string(),
+        )
+        .unwrap();
+        let card = |id: &str, order| {
+            serde_json::json!({
+                "id": id, "boardId": board_id, "title": "Card", "icon": null,
+                "content": { "type": "doc", "content": [] },
+                "properties": { "status": "todo" }, "columnOrder": order,
+                "createdAt": "old", "updatedAt": "old"
+            })
+            .to_string()
+        };
+        std::fs::write(card_dir.join("valid.json"), card("valid", 1)).unwrap();
+        std::fs::write(card_dir.join("evil.json"), card("../../../../victim", 0)).unwrap();
+
+        let result = kanban_move_card_sync(
+            workspace.to_string_lossy().into_owned(),
+            board_id.into(),
+            "valid".into(),
+            "todo".into(),
+            1,
+        );
+        // The mismatched card is skipped: the move works and nothing outside the board is written.
+        result.unwrap();
+        assert_eq!(std::fs::read(&victim).unwrap(), b"original");
+        assert_eq!(
+            std::fs::read_to_string(card_dir.join("evil.json")).unwrap(),
+            card("../../../../victim", 0)
+        );
+        std::fs::remove_dir_all(base).unwrap();
+    }
+
+    #[test]
+    fn read_cards_rejects_a_card_from_another_board() {
+        let base =
+            std::env::temp_dir().join(format!("nevo-kanban-board-id-{}", uuid::Uuid::new_v4()));
+        let wp = base.to_string_lossy().into_owned();
+        let dir = cards_dir(&wp, "board");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("card.json"),
+            serde_json::json!({
+                "id": "card", "boardId": "other", "title": "Card", "icon": null,
+                "content": { "type": "doc", "content": [] },
+                "properties": {}, "columnOrder": 0,
+                "createdAt": "old", "updatedAt": "old"
+            })
+            .to_string(),
+        )
+        .unwrap();
+        assert!(read_cards(&wp, "board").unwrap().is_empty());
+        std::fs::remove_dir_all(base).unwrap();
+    }
+
+    #[test]
+    fn save_rejects_a_card_id_that_does_not_name_a_file() {
+        let base =
+            std::env::temp_dir().join(format!("nevo-kanban-save-id-{}", uuid::Uuid::new_v4()));
+        let wp = base.to_string_lossy().into_owned();
+        std::fs::create_dir_all(cards_dir(&wp, "board")).unwrap();
+        let card = KanbanCard {
+            id: "../../victim".into(),
+            board_id: "board".into(),
+            title: "".into(),
+            icon: None,
+            content: Value::Null,
+            properties: Value::Null,
+            fields: Value::Null,
+            column_order: 0,
+            progress: None,
+            priority: None,
+            links: Value::Null,
+            created_at: "".into(),
+            updated_at: "".into(),
+        };
+        assert!(save_card(&wp, "board", &card).is_err());
+        assert!(!base.join(".nevo/victim.json").exists());
+        std::fs::remove_dir_all(base).unwrap();
+    }
 
     #[test]
     fn kanban_ops_reject_path_traversal_ids() {

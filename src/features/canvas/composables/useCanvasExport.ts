@@ -8,6 +8,7 @@ import {
   type CanvasExportScope,
   type CanvasSnapshotV1,
 } from '../../../core/canvas'
+import { downloadBlob } from '../../../utils/downloadBlob'
 import { svgToPngBlob } from '../../../utils/noteExport/svgRaster'
 
 export type CanvasExportFormat = 'svg' | 'png'
@@ -57,31 +58,6 @@ function svgDimensions(svg: string): { width: number; height: number } {
   }
 }
 
-async function defaultDownload(blob: Blob, filename: string) {
-  const isTauri = typeof window !== 'undefined'
-    && (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ !== undefined
-
-  if (isTauri) {
-    try {
-      const bytes = Array.from(new Uint8Array(await blob.arrayBuffer()))
-      const { noteCommands } = await import('../../../tauri/commands')
-      await noteCommands.exportDrawFile(filename, bytes)
-      return
-    } catch (error) {
-      console.error('[CanvasExport] Native save failed, falling back to browser download', error)
-    }
-  }
-
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  document.body.appendChild(anchor)
-  anchor.click()
-  anchor.remove()
-  URL.revokeObjectURL(url)
-}
-
 export function useCanvasExport(options: UseCanvasExportOptions) {
   const open = ref(false)
   const format = ref<CanvasExportFormat>('png')
@@ -122,7 +98,7 @@ export function useCanvasExport(options: UseCanvasExportOptions) {
         resolveAssetSrc: options.resolveAssetSrc,
       })
       const filename = `canvas-${options.noteId}.${format.value}`
-      const download = options.downloadBlob ?? defaultDownload
+      const download = options.downloadBlob ?? downloadBlob
 
       if (format.value === 'svg') {
         await download(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }), filename)

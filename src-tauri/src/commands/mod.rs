@@ -1,4 +1,5 @@
 pub mod ai;
+pub mod ai_credentials;
 pub mod auth;
 pub mod config;
 pub mod database;
@@ -7,8 +8,10 @@ pub mod folder;
 pub mod fonts;
 pub mod github_sync;
 pub mod graph;
+pub(crate) mod ipc_request;
 pub mod kanban;
 pub mod kanban_ops;
+mod kanban_paths;
 pub mod mcp;
 #[cfg(desktop)]
 pub mod mcp_registration;
@@ -27,3 +30,4 @@ pub mod typst_export;
 pub mod voice_recording;
 pub mod workspace;
 pub mod workspace_transfer;
+pub(crate) mod zip_paths;

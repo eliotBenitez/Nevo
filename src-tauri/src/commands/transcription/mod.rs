@@ -1,11 +1,15 @@
 mod decode;
+mod model_cache;
 pub(crate) mod resample;
 
+use model_cache::ModelCache;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tauri::{AppHandle, State};
-use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
+use whisper_rs::{
+    FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters, WhisperState,
+};
 
 #[derive(serde::Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -18,7 +22,14 @@ pub struct TranscriptSegment {
 #[derive(Default)]
 pub struct TranscriptionState {
     busy: AtomicBool,
-    context: Mutex<Option<(PathBuf, Arc<WhisperContext>)>>,
+    context: ModelCache<WhisperContext>,
+}
+
+impl TranscriptionState {
+    /// Drops the cached context when it was loaded from `model`, freeing its memory.
+    pub(crate) fn forget_model(&self, model: &Path) {
+        self.context.forget(model);
+    }
 }
 
 pub(crate) struct BusyGuard(Arc<TranscriptionState>);
@@ -31,6 +42,18 @@ impl BusyGuard {
             .ok()
             .map(|_| Self(state))
     }
+}
+
+/// Takes the transcription guard, then resolves the model under it. Model select and
+/// delete take the same guard, so the model cannot change between the two steps.
+pub(crate) fn acquire_with_model(
+    state: &Arc<TranscriptionState>,
+    resolve: impl FnOnce() -> Result<PathBuf, String>,
+) -> Result<(BusyGuard, PathBuf), String> {
+    let guard =
+        BusyGuard::acquire(Arc::clone(state)).ok_or_else(|| "transcription_busy".to_string())?;
+    let model = resolve()?;
+    Ok((guard, model))
 }
 
 impl Drop for BusyGuard {
@@ -75,23 +98,10 @@ pub(crate) fn whisper_context(
 ) -> Result<Arc<WhisperContext>, String> {
     // whisper.cpp otherwise writes recognized words to stderr in debug output.
     whisper_rs::install_logging_hooks();
-    let mut cached = state
-        .context
-        .lock()
-        .map_err(|_| "model_unavailable".to_string())?;
-    if let Some((path, ctx)) = cached.as_ref() {
-        if path == model {
-            return Ok(Arc::clone(ctx));
-        }
-    }
-    // Free the previous model before loading the next one to cap peak memory.
-    *cached = None;
-    let ctx = Arc::new(
-        WhisperContext::new_with_params(model, WhisperContextParameters::default())
-            .map_err(|_| "model_unavailable".to_string())?,
-    );
-    *cached = Some((model.to_path_buf(), Arc::clone(&ctx)));
-    Ok(ctx)
+    state.context.get_or_load(model, |path| {
+        WhisperContext::new_with_params(path, WhisperContextParameters::default())
+            .map_err(|_| "model_unavailable".to_string())
+    })
 }
 
 pub(crate) fn resolve_model_path(app: &AppHandle) -> Result<PathBuf, String> {
@@ -119,14 +129,14 @@ const UTTERANCE_AUDIO_CTX: i32 = 768;
 
 /// Recognizes one short utterance (at most 15 s) as a single segment of plain text.
 /// `precise` trades CPU time for accuracy with beam search; meant for final text.
+/// `whisper` is reused across calls so its buffers are allocated once per session.
 pub(crate) fn recognize_text(
-    ctx: &WhisperContext,
+    whisper: &mut WhisperState,
     pcm: &[f32],
     language: Option<&str>,
     prompt: Option<&str>,
     precise: bool,
 ) -> Result<String, String> {
-    let mut whisper = ctx.create_state().map_err(|_| "inference_failed")?;
     let strategy = if precise {
         SamplingStrategy::BeamSearch {
             beam_size: 5,
@@ -143,20 +153,29 @@ pub(crate) fn recognize_text(
         params.set_initial_prompt(prompt);
     }
     whisper.full(params, pcm).map_err(|_| "inference_failed")?;
-    // A whole dictated phrase may legitimately be "Thank you."; only short bursts are suspect.
+    // A whole dictated phrase may legitimately be "Thank you."; only short bursts that
+    // Whisper itself doubts are treated as a silence hallucination.
     let short = pcm.len() < SHORT_SEGMENT_SAMPLES;
     let text = (0..whisper.full_n_segments())
         .filter_map(|index| whisper.get_segment(index))
-        // Whisper invents text for noise ("you", "Thank you."); trust its own no-speech estimate.
-        .filter(|segment| segment.no_speech_probability() <= NO_SPEECH_MAX_PROBABILITY)
-        .filter_map(|segment| segment.to_str().ok().map(|text| text.trim().to_string()))
-        .filter(|text| !text.is_empty() && !(short && is_silence_hallucination(text)))
+        .filter_map(|segment| {
+            let no_speech = segment.no_speech_probability();
+            // Whisper invents text for noise ("you", "Thank you."); trust its own no-speech estimate.
+            if no_speech > NO_SPEECH_MAX_PROBABILITY {
+                return None;
+            }
+            let text = segment.to_str().ok()?.trim().to_string();
+            let doubtful = short && no_speech > HALLUCINATION_NO_SPEECH_PROBABILITY;
+            (!text.is_empty() && !(doubtful && is_silence_hallucination(&text))).then_some(text)
+        })
         .collect::<Vec<_>>()
         .join(" ");
     Ok(text.trim().to_string())
 }
 
 const NO_SPEECH_MAX_PROBABILITY: f32 = 0.6;
+/// A short known-hallucination phrase is dropped only when Whisper rates it at least this likely to be silence.
+const HALLUCINATION_NO_SPEECH_PROBABILITY: f32 = 0.2;
 const SHORT_SEGMENT_SAMPLES: usize = 16_000 * 5 / 2;
 
 /// Phrases Whisper is known to produce for silence or room noise (subtitle credits
@@ -220,9 +239,7 @@ pub async fn transcribe_audio(
     let language = validate_language(language)?;
     // Only a currently open workspace asset may be read. No filesystem path is accepted via IPC.
     let audio = crate::commands::path_utils::active_workspace_audio_asset(&src)?;
-    let model = resolve_model_path(&app)?;
-    let guard = BusyGuard::acquire(Arc::clone(state.inner()))
-        .ok_or_else(|| "transcription_busy".to_string())?;
+    let (guard, model) = acquire_with_model(state.inner(), || resolve_model_path(&app))?;
     tauri::async_runtime::spawn_blocking(move || {
         transcribe(&guard.0, &model, &audio, language.as_deref())
     })
@@ -232,7 +249,47 @@ pub async fn transcribe_audio(
 
 #[cfg(test)]
 mod tests {
-    use super::{transcribe, transcript_segment, validate_language, BusyGuard, TranscriptionState};
+    use super::{
+        acquire_with_model, transcribe, transcript_segment, validate_language, BusyGuard,
+        TranscriptionState,
+    };
+    use std::sync::atomic::Ordering;
+    use std::sync::Arc;
+
+    #[test]
+    fn model_is_resolved_only_while_the_guard_is_held() {
+        let state = Arc::new(TranscriptionState::default());
+        let observed = std::cell::Cell::new(false);
+        let (guard, model) = acquire_with_model(&state, || {
+            observed.set(state.busy.load(Ordering::Acquire));
+            Ok("/models/turbo.bin".into())
+        })
+        .unwrap();
+        assert!(observed.get(), "resolve ran before the guard was taken");
+        assert_eq!(model, std::path::PathBuf::from("/models/turbo.bin"));
+        // A model select or delete in this window is refused.
+        assert!(BusyGuard::acquire(Arc::clone(&state)).is_none());
+        drop(guard);
+        assert!(BusyGuard::acquire(Arc::clone(&state)).is_some());
+    }
+
+    #[test]
+    fn busy_state_skips_resolving_and_a_failed_resolve_releases_the_guard() {
+        let state = Arc::new(TranscriptionState::default());
+        let held = BusyGuard::acquire(Arc::clone(&state)).unwrap();
+        let mut resolved = false;
+        let busy = acquire_with_model(&state, || {
+            resolved = true;
+            Ok("/m".into())
+        });
+        assert_eq!(busy.err().as_deref(), Some("transcription_busy"));
+        assert!(!resolved);
+        drop(held);
+
+        let failed = acquire_with_model(&state, || Err("model_unavailable".to_string()));
+        assert_eq!(failed.err().as_deref(), Some("model_unavailable"));
+        assert!(!state.busy.load(Ordering::Acquire));
+    }
 
     #[test]
     fn accepts_russian_and_auto_but_rejects_unknown_or_control_characters() {

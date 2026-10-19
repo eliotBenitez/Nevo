@@ -81,6 +81,7 @@ import { useMcpBridge } from './composables/useMcpBridge'
 import { useMcpBridgeHost } from './composables/useMcpBridgeHost'
 import { useNotebookCreation } from './composables/useNotebookCreation'
 import { createEditorLayoutScrollStabilizer } from './composables/editor/editorLayoutScrollStabilizer'
+import { forgetAllNoteViews } from './composables/editor/noteViewMemory'
 import { workspaceHomeFavoriteKey } from '../utils/workspace-settings'
 import { finalizeActiveRecording } from '../core/voice-recording/activeRecording'
 import {
@@ -868,7 +869,7 @@ const { renameModal, onTreeAction, handleRequestExport, submitRename, closeRenam
   { openHistory, runSearch: async (seed) => { await runWorkspaceSearch(seed) }, navigateToNote: async (noteId) => { await router.push(`/workspace/note/${noteId}`) }, navigateToWorkspaceRoot: async () => { await router.push('/workspace') }, exportAsMarkdown, exportAsHtml, exportAsDocx: async (note, path) => { exportAsDocx(note, path) }, exportAsTypst, exportAsPdf },
 )
 
-useWorkspaceKeymap(settings, { createNote, createFolder, saveNote: flushSave, runSearch: () => toggleSearch(), toggleSidebar: () => toggleSidebarOrPin(), toggleRightPanel: () => uiStore.toggleRightPanel(), openGraph: () => openGraph(), openHistory: () => toggleHistory(), openTrash: () => toggleTrash(), openSettings: () => toggleSettings(), findInNote: () => { editorPaneRef.value?.openFindInNote?.(false) }, replaceInNote: () => { editorPaneRef.value?.openFindInNote?.(true) }, toggleDictation: () => { editorPaneRef.value?.toggleDictation?.() }, toggleAiChat: () => aiChatStore.toggle() })
+useWorkspaceKeymap(settings, { createNote, createFolder, saveNote: flushSave, runSearch: () => toggleSearch(), toggleSidebar: () => toggleSidebarOrPin(), toggleRightPanel: () => uiStore.toggleRightPanel(), openGraph: () => openGraph(), openHistory: () => toggleHistory(), openTrash: () => toggleTrash(), openSettings: () => toggleSettings(), findInNote: () => { editorPaneRef.value?.openFindInNote?.(false) }, replaceInNote: () => { editorPaneRef.value?.openFindInNote?.(true) }, toggleDictation: () => { editorPaneRef.value?.toggleDictation?.() }, toggleAiChat: () => { if (settings.value.ai.enabled && !isSettingsView.value) aiChatStore.toggle() } })
 
 watch(manifest, (workspace) => {
   if (!workspace) { router.replace('/onboarding'); return }
@@ -877,7 +878,7 @@ watch(manifest, (workspace) => {
 watch(kanbanEnabled, (enabled) => {
   if (enabled) kanbanStore.loadBoards()
 })
-watch(() => workspaceStore.activePath, () => { restoredRouteForWorkspace.value = null; tabsStore.clear() })
+watch(() => workspaceStore.activePath, () => { restoredRouteForWorkspace.value = null; tabsStore.clear(); forgetAllNoteViews() })
 watch(() => useDrawerNavigation.value, (drawerMode) => { if (!drawerMode) mobileSidebarOpen.value = false }, { immediate: true })
 watch(
   () => [isPhone.value, route.path] as const,

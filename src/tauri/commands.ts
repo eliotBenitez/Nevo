@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core'
+import { invoke, type InvokeArgs, type InvokeOptions } from '@tauri-apps/api/core'
 import type {
   AppMetadata,
   AppConfig,
@@ -45,9 +45,9 @@ function extractWorkspacePath(args: unknown): string | undefined {
   return undefined
 }
 
-async function invokeCommand<T>(command: string, args?: Record<string, unknown>) {
+async function invokeCommand<T>(command: string, args?: InvokeArgs, options?: InvokeOptions) {
   try {
-    return await invoke<T>(command, args)
+    return await (options ? invoke<T>(command, args, options) : invoke<T>(command, args))
   } catch (error) {
     await appLogger.error({
       source: 'frontend.invoke',
@@ -423,10 +423,10 @@ export const noteCommands = {
   // travel via headers since `invoke` accepts either args OR a raw body, not
   // both; the file name is percent-encoded because header values must be ASCII.
   importImageAsset: (workspacePath: string, fileName: string, bytes: Uint8Array) =>
-    invoke<ImportedImageAsset>(
+    invokeCommand<ImportedImageAsset>(
       'import_image_asset',
       bytes,
-      { headers: { 'nv-workspace-path': workspacePath, 'nv-file-name': encodeURIComponent(fileName) } },
+      { headers: { 'nv-workspace-path': encodeURIComponent(workspacePath), 'nv-file-name': encodeURIComponent(fileName) } },
     ),
 
   pickAndImportAsset: (workspacePath: string, kind: 'image' | 'audio' | 'video' | 'file') =>
@@ -441,8 +441,10 @@ export const noteCommands = {
   deleteUnreferencedAsset: (workspacePath: string, assetSrc: string) =>
     invokeCommand<boolean>('delete_unreferenced_asset', { workspacePath, assetSrc }),
 
-  saveDrawAsset: (workspacePath: string, drawId: string, bytes: number[]) =>
-    invokeCommand<string>('save_draw_asset', { workspacePath, drawId, bytes }),
+  saveDrawAsset: (workspacePath: string, drawId: string, bytes: Uint8Array) =>
+    invokeCommand<string>('save_draw_asset', bytes, {
+      headers: { 'nv-workspace-path': encodeURIComponent(workspacePath), 'nv-draw-id': encodeURIComponent(drawId) },
+    }),
 
   readDrawAsset: (workspacePath: string, src: string) =>
     invokeCommand<number[]>('read_draw_asset', { workspacePath, src }),
@@ -488,8 +490,8 @@ export const noteCommands = {
     inlineAssets,
   }),
 
-  exportNoteDocx: (defaultFileName: string, bytes: number[]) =>
-    invokeCommand<boolean>('export_note_docx', { defaultFileName, bytes }),
+  exportNoteDocx: (defaultFileName: string, bytes: Uint8Array) =>
+    invokeCommand<boolean>('export_note_docx', bytes, { headers: { 'nv-file-name': encodeURIComponent(defaultFileName) } }),
 
   exportNotePdf: (workspacePath: string, defaultFileName: string, typstSource: string, assets: TypstAsset[]) =>
     invokeCommand<boolean>('export_note_pdf', { workspacePath, defaultFileName, typstSource, assets }),
@@ -497,8 +499,8 @@ export const noteCommands = {
   exportNoteTypstArchive: (workspacePath: string, defaultFileName: string, typstSource: string, assets: TypstAsset[]) =>
     invokeCommand<boolean>('export_note_typst_archive', { workspacePath, defaultFileName, typstSource, assets }),
 
-  exportDrawFile: (defaultFileName: string, bytes: number[]) =>
-    invokeCommand<boolean>('export_draw_file', { defaultFileName, bytes }),
+  exportDrawFile: (defaultFileName: string, bytes: Uint8Array) =>
+    invokeCommand<boolean>('export_draw_file', bytes, { headers: { 'nv-file-name': encodeURIComponent(defaultFileName) } }),
 
   prepareNotePdfPreview: (workspacePath: string, typstSource: string, assets: TypstAsset[]) =>
     invokeCommand<{ token: number; totalPages: number }>('prepare_note_pdf_preview', { workspacePath, typstSource, assets }),

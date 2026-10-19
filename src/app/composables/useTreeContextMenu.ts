@@ -1,4 +1,4 @@
-import { nextTick, reactive } from 'vue'
+import { nextTick, reactive, watch } from 'vue'
 import type { Ref } from 'vue'
 import type { FolderMeta, NoteDocument, NoteMeta } from '../../types/note'
 import type { WorkspaceManifest, WorkspaceSettings } from '../../types/workspace'
@@ -65,7 +65,13 @@ interface ContextMenuHandlers {
 export function useTreeContextMenu(deps: ContextMenuDeps, handlers: ContextMenuHandlers) {
   const renameModal = reactive<{ open: boolean; target: TreeMenuTarget | null; title: string }>({ open: false, target: null, title: '' })
   const { confirm } = useConfirmDialog()
-  const { showToast } = useToast()
+  const { showToast, dismissToast } = useToast()
+  // Undo restores into the active workspace, so pending undo toasts close when it changes.
+  const undoToastIds = new Set<number>()
+  watch(deps.workspacePath, () => {
+    undoToastIds.forEach(dismissToast)
+    undoToastIds.clear()
+  })
 
   function closeRenameModal() {
     renameModal.open = false; renameModal.target = null; renameModal.title = ''
@@ -136,17 +142,26 @@ export function useTreeContextMenu(deps: ContextMenuDeps, handlers: ContextMenuH
           else await handlers.navigateToWorkspaceRoot()
         }
         // Folders are not offered an undo: deleting one removes the folder itself and only its notes reach the archive.
-        showToast({
+        const deletedIn = deps.workspacePath.value
+        const toastId = showToast({
           message: deps.t('workspace.context.noteArchived'),
           variant: 'success',
           action: {
             label: deps.t('common.undo'),
             run: async () => {
-              await deps.treeOps.restoreFromTrash(target.id)
+              undoToastIds.delete(toastId)
+              if (deps.workspacePath.value !== deletedIn) return
+              try {
+                await deps.treeOps.restoreFromTrash(target.id)
+              } catch {
+                showToast({ message: deps.t('workspace.context.noteRestoreFailed'), variant: 'error' })
+                return
+              }
               if (wasActive) await handlers.navigateToNote(target.id)
             },
           },
         })
+        undoToastIds.add(toastId)
         return
       }
       const folder = deps.manifest.value ? findFolderById(deps.manifest.value.tree, target.id) : null

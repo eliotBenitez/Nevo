@@ -4,6 +4,10 @@ use serde_json::Value;
 use std::path::Path;
 use uuid::Uuid;
 
+use super::kanban_paths::{
+    create_card_directory, remove_card_directory, validate_boards_directory,
+    validate_card_directory, validate_card_identity, validate_unlinked_file,
+};
 use super::path_utils::{normalize_workspace_path, validate_id, write_atomic};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -65,6 +69,26 @@ fn card_path(workspace_path: &str, board_id: &str, card_id: &str) -> std::path::
     cards_dir(workspace_path, board_id).join(format!("{}.json", card_id))
 }
 
+/// Reads one card file of a board listing. A linked, unreadable or mismatched
+/// file (e.g. a sync-conflict copy) is skipped so it cannot make the whole board unusable.
+pub(crate) fn read_listed_card(path: &Path, board_id: &str) -> Option<KanbanCard> {
+    let card = validate_unlinked_file(path)
+        .and_then(|()| std::fs::read_to_string(path).map_err(|error| error.to_string()))
+        .and_then(|content| {
+            serde_json::from_str::<KanbanCard>(&content).map_err(|error| error.to_string())
+        })
+        .and_then(|card| {
+            validate_card_identity(path, board_id, &card.id, &card.board_id).map(|()| card)
+        });
+    match card {
+        Ok(card) => Some(card),
+        Err(error) => {
+            eprintln!("[kanban] skipping card file {}: {error}", path.display());
+            None
+        }
+    }
+}
+
 /// Bumps a board's `updated_at` so the workspace home "recently modified"
 /// list reflects activity on its cards, not just direct board edits.
 ///
@@ -74,7 +98,9 @@ fn card_path(workspace_path: &str, board_id: &str, card_id: &str) -> std::path::
 /// command or lose the card edit.
 pub(crate) fn touch_board_updated_at(wp: &Path, board_id: &str) -> Result<(), String> {
     let workspace_path = wp.to_string_lossy().into_owned();
+    validate_card_directory(&workspace_path, board_id)?;
     let path = board_path(&workspace_path, board_id);
+    validate_unlinked_file(&path)?;
     let content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
     let mut board: KanbanBoard = serde_json::from_str(&content).map_err(|e| e.to_string())?;
     board.updated_at = Utc::now().to_rfc3339();
@@ -104,6 +130,7 @@ pub async fn kanban_list_boards(workspace_path: String) -> Result<Vec<KanbanBoar
 fn kanban_list_boards_sync(workspace_path: String) -> Result<Vec<KanbanBoard>, String> {
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
+    validate_boards_directory(&workspace_path)?;
     let dir = boards_dir(&workspace_path);
     if !dir.exists() {
         return Ok(vec![]);
@@ -114,6 +141,11 @@ fn kanban_list_boards_sync(workspace_path: String) -> Result<Vec<KanbanBoard>, S
     for entry in entries.flatten() {
         let path = entry.path();
         if path.extension().and_then(|x| x.to_str()) != Some("json") {
+            continue;
+        }
+        // One bad entry must not hide every other board.
+        if let Err(error) = validate_unlinked_file(&path) {
+            eprintln!("[kanban] skipping {}: {error}", path.display());
             continue;
         }
         let content = match std::fs::read_to_string(&path) {
@@ -150,8 +182,10 @@ fn kanban_create_board_sync(
 ) -> Result<KanbanBoard, String> {
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
+    validate_boards_directory(&workspace_path)?;
     let dir = boards_dir(&workspace_path);
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    validate_boards_directory(&workspace_path)?;
 
     let now = Utc::now().to_rfc3339();
     let board_id = Uuid::new_v4().to_string();
@@ -235,7 +269,9 @@ fn kanban_update_board_sync(
     validate_id(&board_id)?;
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
+    validate_boards_directory(&workspace_path)?;
     let path = board_path(&workspace_path, &board_id);
+    validate_unlinked_file(&path)?;
     let content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
     let mut board: KanbanBoard = serde_json::from_str(&content).map_err(|e| e.to_string())?;
 
@@ -272,15 +308,13 @@ fn kanban_delete_board_sync(workspace_path: String, board_id: String) -> Result<
     validate_id(&board_id)?;
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
+    validate_boards_directory(&workspace_path)?;
     let path = board_path(&workspace_path, &board_id);
-    if path.exists() {
+    // symlink_metadata: a linked board file is removed as a link, never followed.
+    if std::fs::symlink_metadata(&path).is_ok() {
         std::fs::remove_file(&path).map_err(|e| e.to_string())?;
     }
-    let dir = cards_dir(&workspace_path, &board_id);
-    if dir.exists() {
-        std::fs::remove_dir_all(&dir).map_err(|e| e.to_string())?;
-    }
-    Ok(())
+    remove_card_directory(&workspace_path, &board_id)
 }
 
 #[tauri::command]
@@ -300,6 +334,7 @@ fn kanban_list_cards_sync(
     validate_id(&board_id)?;
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
+    validate_card_directory(&workspace_path, &board_id)?;
     let dir = cards_dir(&workspace_path, &board_id);
     if !dir.exists() {
         return Ok(vec![]);
@@ -312,11 +347,7 @@ fn kanban_list_cards_sync(
         if path.extension().and_then(|x| x.to_str()) != Some("json") {
             continue;
         }
-        let content = match std::fs::read_to_string(&path) {
-            Ok(c) => c,
-            Err(_) => continue,
-        };
-        if let Ok(card) = serde_json::from_str::<KanbanCard>(&content) {
+        if let Some(card) = read_listed_card(&path, &board_id) {
             cards.push(card);
         }
     }
@@ -358,8 +389,7 @@ fn kanban_create_card_sync(
     validate_id(&board_id)?;
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
-    let dir = cards_dir(&workspace_path, &board_id);
-    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    create_card_directory(&workspace_path, &board_id)?;
 
     let now = Utc::now().to_rfc3339();
     let card_id = Uuid::new_v4().to_string();
@@ -384,8 +414,11 @@ fn kanban_create_card_sync(
     };
 
     let content = serde_json::to_string_pretty(&card).map_err(|e| e.to_string())?;
-    std::fs::write(card_path(&workspace_path, &board_id, &card_id), content)
-        .map_err(|e| e.to_string())?;
+    write_atomic(
+        &card_path(&workspace_path, &board_id, &card_id),
+        content.as_bytes(),
+    )
+    .map_err(|e| e.to_string())?;
 
     if let Err(e) = touch_board_updated_at(Path::new(&workspace_path), &board_id) {
         eprintln!(
@@ -452,9 +485,12 @@ fn kanban_update_card_sync(
     validate_id(&card_id)?;
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
+    validate_card_directory(&workspace_path, &board_id)?;
     let path = card_path(&workspace_path, &board_id, &card_id);
+    validate_unlinked_file(&path)?;
     let file_content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
     let mut card: KanbanCard = serde_json::from_str(&file_content).map_err(|e| e.to_string())?;
+    validate_card_identity(&path, &board_id, &card.id, &card.board_id)?;
 
     if let Some(t) = title {
         card.title = t;
@@ -486,7 +522,7 @@ fn kanban_update_card_sync(
     card.updated_at = Utc::now().to_rfc3339();
 
     let new_content = serde_json::to_string_pretty(&card).map_err(|e| e.to_string())?;
-    std::fs::write(&path, new_content).map_err(|e| e.to_string())?;
+    write_atomic(&path, new_content.as_bytes()).map_err(|e| e.to_string())?;
 
     if let Err(e) = touch_board_updated_at(Path::new(&workspace_path), &board_id) {
         eprintln!(
@@ -520,6 +556,7 @@ fn kanban_delete_card_sync(
     validate_id(&card_id)?;
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
+    validate_card_directory(&workspace_path, &board_id)?;
     let path = card_path(&workspace_path, &board_id, &card_id);
     if path.exists() {
         std::fs::remove_file(&path).map_err(|e| e.to_string())?;
@@ -538,6 +575,161 @@ fn kanban_delete_card_sync(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// File symlinks need admin rights or Developer Mode on Windows; callers skip when unavailable.
+    fn link_file(target: &Path, link: &Path) -> bool {
+        #[cfg(unix)]
+        let result = std::os::unix::fs::symlink(target, link);
+        #[cfg(windows)]
+        let result = std::os::windows::fs::symlink_file(target, link);
+        match result {
+            Ok(()) => true,
+            Err(error) => {
+                eprintln!("skipping: cannot create a file symlink here: {error}");
+                false
+            }
+        }
+    }
+
+    #[cfg(any(unix, windows))]
+    #[test]
+    fn create_card_rejects_linked_board_directory() {
+        let base = std::env::temp_dir().join(format!("nevo-kanban-linked-{}", Uuid::new_v4()));
+        let workspace = base.join("workspace");
+        let external = base.join("external");
+        std::fs::create_dir_all(&workspace).unwrap();
+        std::fs::create_dir_all(&external).unwrap();
+        let ws = workspace.to_string_lossy().into_owned();
+        let board = kanban_create_board_sync(ws.clone(), "Board".into(), "".into(), None).unwrap();
+        let linked = cards_dir(&ws, &board.id);
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&external, &linked).unwrap();
+        #[cfg(windows)]
+        {
+            let output = std::process::Command::new("cmd")
+                .args(["/C", "mklink", "/J"])
+                .arg(&linked)
+                .arg(&external)
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "junction creation failed: {output:?}"
+            );
+        }
+        let result = kanban_create_card_sync(
+            ws,
+            board.id.clone(),
+            "Card".into(),
+            "todo".into(),
+            board.status_property_id,
+            0,
+        );
+        let external_files = std::fs::read_dir(&external).unwrap().count();
+        // Deleting the tampered board unlinks the directory without following it.
+        std::fs::write(external.join("keep.txt"), b"keep").unwrap();
+        let deleted = kanban_delete_board_sync(workspace.to_string_lossy().into_owned(), board.id);
+        let linked_left = std::fs::symlink_metadata(&linked).is_ok();
+        let external_kept = external.join("keep.txt").exists();
+        std::fs::remove_dir_all(base).unwrap();
+        assert!(result.is_err());
+        assert_eq!(external_files, 0);
+        deleted.unwrap();
+        assert!(!linked_left);
+        assert!(external_kept);
+    }
+
+    #[test]
+    fn list_boards_rejects_a_link_to_an_external_board_file() {
+        let base =
+            std::env::temp_dir().join(format!("nevo-kanban-linked-board-{}", Uuid::new_v4()));
+        let workspace = base.join("workspace");
+        std::fs::create_dir_all(&workspace).unwrap();
+        let ws = workspace.to_string_lossy().into_owned();
+        let board = kanban_create_board_sync(ws.clone(), "Board".into(), "".into(), None).unwrap();
+        let linked = board_path(&ws, &board.id);
+        let external = base.join("external.json");
+        std::fs::rename(&linked, &external).unwrap();
+        if !link_file(&external, &linked) {
+            std::fs::remove_dir_all(base).unwrap();
+            return;
+        }
+        let result = kanban_list_boards_sync(ws);
+        std::fs::remove_file(linked).unwrap();
+        std::fs::remove_dir_all(base).unwrap();
+        // The linked board is skipped; listing itself still works.
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn list_cards_rejects_a_link_to_an_external_card_file() {
+        let base = std::env::temp_dir().join(format!("nevo-kanban-linked-file-{}", Uuid::new_v4()));
+        let workspace = base.join("workspace");
+        std::fs::create_dir_all(&workspace).unwrap();
+        let ws = workspace.to_string_lossy().into_owned();
+        let board = kanban_create_board_sync(ws.clone(), "Board".into(), "".into(), None).unwrap();
+        let card = kanban_create_card_sync(
+            ws.clone(),
+            board.id.clone(),
+            "Card".into(),
+            "todo".into(),
+            board.status_property_id,
+            0,
+        )
+        .unwrap();
+        let linked = card_path(&ws, &board.id, &card.id);
+        let external = base.join("external.json");
+        std::fs::rename(&linked, &external).unwrap();
+        if !link_file(&external, &linked) {
+            std::fs::remove_dir_all(base).unwrap();
+            return;
+        }
+        let result = kanban_list_cards_sync(ws, board.id);
+        std::fs::remove_file(linked).unwrap();
+        std::fs::remove_dir_all(base).unwrap();
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn update_rejects_card_identity_mismatching_its_file() {
+        let base = std::env::temp_dir().join(format!("nevo-kanban-update-id-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&base).unwrap();
+        let ws = base.to_string_lossy().into_owned();
+        let board = kanban_create_board_sync(ws.clone(), "Board".into(), "".into(), None).unwrap();
+        let mut card = kanban_create_card_sync(
+            ws.clone(),
+            board.id.clone(),
+            "Card".into(),
+            "todo".into(),
+            board.status_property_id.clone(),
+            0,
+        )
+        .unwrap();
+        let path = card_path(&ws, &board.id, &card.id);
+        card.id = "../../victim".into();
+        let tampered = serde_json::to_string_pretty(&card).unwrap();
+        std::fs::write(&path, &tampered).unwrap();
+        assert!(kanban_list_cards_sync(ws.clone(), board.id.clone())
+            .unwrap()
+            .is_empty());
+        let result = kanban_update_card_sync(
+            ws.clone(),
+            board.id.clone(),
+            path.file_stem().unwrap().to_string_lossy().into_owned(),
+            Some("Updated".into()),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert!(result.is_err());
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), tampered);
+        std::fs::remove_dir_all(base).unwrap();
+    }
 
     /// A crafted `board_id`/`card_id` containing `..` must be rejected before
     /// any filesystem access, so it can never escape `.nevo/boards` and reach

@@ -65,6 +65,9 @@ const options = computed<DocxExportOptions>(() => ({
   pageNumbers: pageNumbers.value,
   headingNumbers: headingNumbers.value,
   tableOfContents: tableOfContents.value,
+  tocTitle: t('export.tableOfContents'),
+  pageLabel: t('export.pageLabel'),
+  pageOfLabel: t('export.pageOf'),
   titlePage: titlePage.value,
   runningHeader: runningHeader.value,
   exportNoteTitle: exportNoteTitle.value,
@@ -79,6 +82,7 @@ const {
   paginatedContentNodes,
   contentPages,
   pages,
+  tocEntries,
   updatePagination,
 } = useDocxPagination({
   note: toRef(props, 'note'),
@@ -102,12 +106,11 @@ const {
   hiddenContainerRef,
 })
 
-let relayoutPending = false
+let relayoutTimer: ReturnType<typeof setTimeout> | null = null
 provide(DOCX_PREVIEW_RELAYOUT, () => {
-  if (relayoutPending) return
-  relayoutPending = true
-  setTimeout(() => {
-    relayoutPending = false
+  if (relayoutTimer) return
+  relayoutTimer = setTimeout(() => {
+    relayoutTimer = null
     void updatePagination()
   }, 50)
 })
@@ -146,6 +149,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  if (relayoutTimer) clearTimeout(relayoutTimer)
   if (resizeObserver) {
     resizeObserver.disconnect()
   }
@@ -238,15 +242,13 @@ onBeforeUnmount(() => {
               <!-- Table of Contents -->
               <div v-else-if="page.type === 'toc'" class="docx-page__toc">
                 <h2 class="docx-page__toc-title">{{ t('export.tableOfContents') }}</h2>
-                <div class="docx-page__toc-item">
-                  <span>1. <span v-if="headingNumbers">1. </span>{{ note.title || 'Introduction' }}</span>
-                  <span class="dots"></span>
-                  <span>Page {{ titlePage ? 3 : 2 }}</span>
-                </div>
-                <div class="docx-page__toc-item">
-                  <span>2. Summary</span>
-                  <span class="dots"></span>
-                  <span>Page {{ titlePage ? 4 : 3 }}</span>
+                <div
+                  v-for="(entry, entryIndex) in tocEntries"
+                  :key="entryIndex"
+                  class="docx-page__toc-item"
+                  :style="{ paddingLeft: `${(entry.level - 1) * 1.2}em` }"
+                >
+                  <span>{{ entry.text }}</span>
                 </div>
               </div>
 
@@ -262,7 +264,7 @@ onBeforeUnmount(() => {
 
             <!-- Page Numbers -->
             <div v-if="pageNumbers && page.type !== 'title'" class="docx-page__footer">
-              <span class="docx-page__footer-page">Page {{ page.pageNumber }}</span>
+              <span class="docx-page__footer-page">{{ t('export.pageLabel') }} {{ page.pageNumber }}</span>
             </div>
           </div>
         </div>

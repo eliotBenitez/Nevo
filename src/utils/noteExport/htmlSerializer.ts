@@ -1,3 +1,4 @@
+import { assetBasename } from './assetBasename'
 import type { BlockNode, NoteDocument } from '../../types/note'
 import { getPluginNodeSerializer } from '../../editor-core/plugin-host/active-serialization'
 import { computeBlockTableValues } from '../../editor-core/tableFormula'
@@ -12,6 +13,7 @@ import { normalizeQueryBlockData } from '../../features/query/queryBlockData'
 import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSummary'
 import { formatAudioTime, readAudioBookmarks } from '../../core/media/audioBookmarks'
 import { readAudioTranscript } from '../../core/media/audioTranscript'
+import { clampHtmlBlockHeight, HTML_BLOCK_CSP_META } from '../../editor-core/schema/htmlBlock'
 
 export interface HtmlSerializeResult {
   html: string
@@ -24,6 +26,23 @@ export interface SerializeCtx {
 }
 
 const VOID_SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i
+// Schemes that run code or embed content; every other scheme (tel:, ftp:, app links) stays a link.
+const BLOCKED_LINK_PROTOCOLS = new Set(['javascript:', 'vbscript:', 'data:', 'blob:'])
+
+function safeLinkHref(value: unknown): string | null {
+  if (typeof value !== 'string' || !value.trim()) return null
+  for (const character of value) {
+    const code = character.charCodeAt(0)
+    if (code < 32 || code === 127) return null
+  }
+  // Scheme-relative URLs become UNC file shares when the exported page opens from disk.
+  if (/^[\\/]/.test(value.trim())) return null
+  try {
+    return BLOCKED_LINK_PROTOCOLS.has(new URL(value, 'https://nevo.invalid/').protocol) ? null : value
+  } catch {
+    return null
+  }
+}
 
 const KATEX_EXPORT_CSS = `.katex {
   font: normal 1.18em KaTeX_Main, "Times New Roman", serif;
@@ -132,10 +151,6 @@ function safeColor(value: unknown): string | null {
   return null
 }
 
-function basename(src: string): string {
-  return src.split(/[\\/]/).filter(Boolean).pop() ?? src
-}
-
 function isLocalAssetSrc(src: string): boolean {
   if (!src || src.startsWith('#') || src.startsWith('//')) return false
   if (VOID_SCHEME_RE.test(src)) return false
@@ -145,7 +160,7 @@ function isLocalAssetSrc(src: string): boolean {
 function registerAsset(src: string, ctx: SerializeCtx): string {
   if (!isLocalAssetSrc(src)) return src
   if (!ctx.assetSrcs.includes(src)) ctx.assetSrcs.push(src)
-  return `${ctx.assetsSubfolderName}/${basename(src)}`
+  return `${ctx.assetsSubfolderName}/${assetBasename(src)}`
 }
 
 function attr(name: string, value: string | null | undefined): string {
@@ -219,8 +234,8 @@ function wrapMarks(content: string, marks: BlockNode['marks']): string {
         out = `<sub>${out}</sub>`
         break
       case 'link': {
-        const href = String(mark.attrs?.href ?? '')
-        out = `<a href="${escapeAttr(href)}">${out}</a>`
+        const href = safeLinkHref(mark.attrs?.href)
+        if (href) out = `<a href="${escapeAttr(href)}">${out}</a>`
         break
       }
       case 'internal_link': {
@@ -384,12 +399,18 @@ export async function blockNode(node: BlockNode, ctx: SerializeCtx): Promise<str
       const src = String(node.attrs?.src ?? '')
       if (!src) return ''
       const localSrc = registerAsset(src, ctx)
-      const filename = String(node.attrs?.filename ?? (basename(src) || 'file'))
-      return `<figure class="file-block"><a href="${escapeAttr(localSrc)}" download>${escapeHtml(filename)}</a></figure>`
+      const filename = String(node.attrs?.filename ?? (assetBasename(src) || 'file'))
+      const href = safeLinkHref(localSrc)
+      return `<figure class="file-block">${href ? `<a href="${escapeAttr(href)}" download>${escapeHtml(filename)}</a>` : escapeHtml(filename)}</figure>`
     }
     case 'math_block': {
       const latex = String(node.attrs?.latex ?? codeText(node))
       return `<div class="math-block" data-latex="${escapeAttr(latex)}"><div class="math-render">${renderMath(latex, true)}</div></div>`
+    }
+    case 'html_block': {
+      // Never inline the user's markup: it stays a sandboxed, script-less srcdoc.
+      const height = clampHtmlBlockHeight(node.attrs?.height)
+      return `<iframe class="html-block" sandbox="" referrerpolicy="no-referrer" srcdoc="${escapeAttr(HTML_BLOCK_CSP_META + String(node.attrs?.code ?? ''))}" style="height:${height}px"></iframe>`
     }
     case 'mermaid_block': {
       const code = String(node.attrs?.code ?? '')
@@ -445,7 +466,8 @@ export async function blockNode(node: BlockNode, ctx: SerializeCtx): Promise<str
       if (!url) return ''
       const title = String(node.attrs?.title ?? '')
       const label = title.trim() || url
-      return `<figure class="embed-block"><a href="${escapeAttr(url)}">${escapeHtml(label)}</a></figure>`
+      const href = safeLinkHref(url)
+      return `<figure class="embed-block">${href ? `<a href="${escapeAttr(href)}">${escapeHtml(label)}</a>` : escapeHtml(label)}</figure>`
     }
     case 'toggle': {
       const children = node.content ?? []
@@ -471,10 +493,12 @@ export async function blockNode(node: BlockNode, ctx: SerializeCtx): Promise<str
         ? `<video controls${attr('poster', localPoster)}>${source}</video>`
         : `<audio controls>${source}</audio>`
       const bookmarks = kind === 'audio' ? readAudioBookmarks(node.attrs?.bookmarks) : []
+      const href = safeLinkHref(localSrc)
       const bookmarkList = bookmarks.length
         ? `<ol class="audio-bookmarks">${bookmarks.map(bookmark => {
           const time = formatAudioTime(bookmark.time)
-          return `<li><a href="${escapeAttr(`${localSrc}#t=${bookmark.time}`)}">${escapeHtml(time)} — ${escapeHtml(bookmark.label)}</a></li>`
+          const label = `${escapeHtml(time)} — ${escapeHtml(bookmark.label)}`
+          return `<li>${href ? `<a href="${escapeAttr(`${href}#t=${bookmark.time}`)}">${label}</a>` : label}</li>`
         }).join('')}</ol>`
         : ''
       const transcript = kind === 'audio' ? readAudioTranscript(node.attrs?.transcript) : []
@@ -722,6 +746,10 @@ figcaption {
 .math-error {
   background: #fef2f2;
   color: #991b1b;
+}
+.html-block {
+  width: 100%;
+  border: 0;
 }
 .mermaid-block {
   border: 1px solid #d8dee8;

@@ -296,3 +296,15 @@ describe('serializeNoteToDocx', () => {
     expect(extents[1].width / extents[1].height).toBeCloseTo(0.5, 5)
   })
 })
+
+describe('serializeNoteToDocx — html_block', () => {
+  it('renders the source as monospace code text', async () => {
+    const doc = await serializeNoteToDocx(note({ type: 'doc', content: [
+      { type: 'html_block', attrs: { code: '<p>Hello</p>\n<b>x</b>' } },
+    ] }), stubHelpers())
+    const xml = await documentXml(doc)
+    expect(xml).toContain('Consolas')
+    expect(xml).toContain('&lt;p&gt;Hello&lt;/p&gt;')
+    expect(xml).toContain('&lt;b&gt;x&lt;/b&gt;')
+  })
+})

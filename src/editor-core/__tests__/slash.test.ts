@@ -213,6 +213,7 @@ describe('slash plugin state', () => {
     ['image', 'image_block'],
     ['file', 'file_block'],
     ['mermaid', 'mermaid_block'],
+    ['html', 'html_block'],
     ['draw', 'draw_block'],
     ['markmap', 'markmap_block'],
     ['chart', 'vega_block'],

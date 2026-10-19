@@ -11,6 +11,7 @@ describe('sidebar note previews', () => {
       content: [
         { type: 'paragraph' },
         { type: 'image', attrs: { src: 'cover.png' } },
+        { type: 'html_block', attrs: { code: '<p>hidden</p>' } },
         { type: 'paragraph', content: [{ type: 'text', text: ' First   line ' }] },
         { type: 'heading', content: [{ type: 'text', text: 'Second line' }] },
       ],

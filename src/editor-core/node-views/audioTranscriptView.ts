@@ -105,18 +105,28 @@ export function createAudioTranscriptView(node: PMNode, options: AudioTranscript
     if (typeof src !== 'string' || !src) return
     const requestGeneration = ++generation
     const original = JSON.stringify(currentNode.attrs.transcript ?? [])
+    // The view is reused across notes; `plugins` stays the same array only within one editor state lineage.
+    const startPlugins = view.state.plugins
     busy = true
     status.textContent = ''
     render()
     try {
       const result = readAudioTranscript(await transcribe(src, language))
-      if (destroyed || view.isDestroyed || requestGeneration !== generation) return
+      if (view.isDestroyed || requestGeneration !== generation) return
+      const isTarget = (node: PMNode | null | undefined): node is PMNode => !!node && node.type === currentNode.type
+        && node.attrs.kind === 'audio' && node.attrs.src === src && JSON.stringify(node.attrs.transcript ?? []) === original
       let position: number | undefined
-      try { position = typeof getPos === 'function' ? getPos() : undefined } catch { return }
+      if (!destroyed) {
+        try { position = typeof getPos === 'function' ? getPos() : undefined } catch { return }
+      } else if (view.state.plugins === startPlugins) {
+        // ProseMirror recreated this view (drag, undo, re-render): find the same block in the live doc.
+        const matches: number[] = []
+        view.state.doc.descendants((node, pos) => { if (isTarget(node)) matches.push(pos) })
+        if (matches.length === 1) position = matches[0]
+      }
       if (typeof position !== 'number') return
       const live = view.state.doc.nodeAt(position)
-      if (!live || live.type !== currentNode.type || live.attrs.kind !== 'audio'
-        || live.attrs.src !== src || JSON.stringify(live.attrs.transcript ?? []) !== original || !view.editable) return
+      if (!isTarget(live) || !view.editable) return
       if (!result.length) {
         status.textContent = t('media.transcriptEmpty')
         return

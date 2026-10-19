@@ -11,7 +11,7 @@ mod types;
 // `settings_path` is re-exported so sibling command modules (e.g.
 // `commands::note::snapshots`) can locate the settings file without
 // duplicating its layout.
-pub(crate) use paths::settings_path;
+pub(crate) use paths::{notes_dir_path, settings_path};
 
 // Glob re-exports so each command's `#[tauri::command]`-generated helper items
 // are re-exported as siblings of `workspace::<command>` (Tauri's

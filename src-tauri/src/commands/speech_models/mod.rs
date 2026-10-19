@@ -222,12 +222,15 @@ pub async fn speech_model_delete(
         return Err("model_bundled".to_string());
     }
     let dir = models_dir(&app)?;
-    let guard = BusyGuard::acquire(Arc::clone(transcription.inner()))
-        .ok_or_else(|| "transcription_busy".to_string())?;
+    let state = Arc::clone(transcription.inner());
+    let guard =
+        BusyGuard::acquire(Arc::clone(&state)).ok_or_else(|| "transcription_busy".to_string())?;
     tauri::async_runtime::spawn_blocking(move || {
         let _guard = guard;
         let was_active = effective_active_id(&dir) == entry.id;
-        match std::fs::remove_file(dir.join(entry.file)) {
+        let path = dir.join(entry.file);
+        state.forget_model(&path);
+        match std::fs::remove_file(&path) {
             Ok(()) => {}
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
             Err(_) => return Err("model_unavailable".to_string()),

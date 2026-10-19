@@ -7,7 +7,7 @@ use serde_json::{json, Value};
 use super::{parse_params, RpcError};
 use crate::commands::folder::{create_folder_sync, load_manifest, rename_folder_sync};
 use crate::commands::path_utils::validate_id;
-use crate::commands::workspace::FolderMeta;
+use crate::commands::workspace::{folder_exists, FolderMeta};
 
 const MAX_TITLE_LEN: usize = 512;
 
@@ -34,11 +34,6 @@ fn collect_folders(tree: &[FolderMeta], prefix: &str, out: &mut Vec<Value>) {
         }));
         collect_folders(&folder.children, &path, out);
     }
-}
-
-fn folder_exists(tree: &[FolderMeta], folder_id: &str) -> bool {
-    tree.iter()
-        .any(|folder| folder.id == folder_id || folder_exists(&folder.children, folder_id))
 }
 
 fn require_folder(workspace_path: &str, folder_id: &str) -> Result<(), RpcError> {

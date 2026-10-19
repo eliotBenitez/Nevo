@@ -19,6 +19,11 @@ export interface DocxExportOptions {
   pageNumbers: boolean
   headingNumbers: boolean
   tableOfContents: boolean
+  /** Localized table-of-contents heading; omitted falls back to English. */
+  tocTitle?: string
+  /** Localized "Page" and "of" words for the page-number footer; default English. */
+  pageLabel?: string
+  pageOfLabel?: string
   titlePage: boolean
   runningHeader: boolean
   exportNoteTitle: boolean

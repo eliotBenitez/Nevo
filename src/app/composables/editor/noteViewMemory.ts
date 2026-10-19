@@ -1,4 +1,4 @@
-import { Selection, TextSelection } from 'prosemirror-state'
+import { Selection, TextSelection, type EditorState } from 'prosemirror-state'
 import type { EditorView } from 'prosemirror-view'
 
 /** Where the reader was in a note: the doc position at the top of the viewport and the caret. */
@@ -60,7 +60,35 @@ export function applyNoteViewState(view: EditorView, scrollEl: HTMLElement, stat
   }
 }
 
-export function rememberNoteView(noteId: string, state: NoteViewState): void {
+/** What a restore produced, so a later re-anchor can tell whether the user has since acted. */
+export interface RestoredViewMark {
+  scrollTop: number
+  state: EditorState
+}
+
+export function markRestoredView(view: EditorView, scrollEl: HTMLElement): RestoredViewMark {
+  return { scrollTop: scrollEl.scrollTop, state: view.state }
+}
+
+/**
+ * True while the user has not scrolled, clicked or typed since the mark. Compares the caret
+ * position rather than the doc, so programmatic attribute writes after open do not count.
+ */
+export function isViewUntouched(view: EditorView, scrollEl: HTMLElement, mark: RestoredViewMark): boolean {
+  return scrollEl.scrollTop === mark.scrollTop
+    && view.state.selection.eq(mark.state.selection)
+}
+
+// Bumped by forgetAllNoteViews, so a note displayed before a workspace switch cannot write back afterwards.
+let epoch = 0
+
+export function noteViewEpoch(): number {
+  return epoch
+}
+
+/** `displayedInEpoch` is noteViewEpoch() from when the note was shown; a stale capture is dropped. */
+export function rememberNoteView(noteId: string, state: NoteViewState, displayedInEpoch = epoch): void {
+  if (displayedInEpoch !== epoch) return
   memory.delete(noteId)
   memory.set(noteId, state)
   if (memory.size > MAX_REMEMBERED_NOTES) memory.delete(memory.keys().next().value!)
@@ -71,5 +99,6 @@ export function recallNoteView(noteId: string): NoteViewState | undefined {
 }
 
 export function forgetAllNoteViews(): void {
+  epoch += 1
   memory.clear()
 }

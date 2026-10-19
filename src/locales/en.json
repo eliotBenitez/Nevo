@@ -756,6 +756,10 @@
       }
     },
     "titlePlaceholder": "Untitled",
+    "outline": {
+      "label": "Outline",
+      "emptyHeading": "Untitled heading"
+    },
     "contentPlaceholder": "Write your thoughts here…",
     "linkUrlLabel": "Link URL",
     "linkPlaceholder": "https://example.com",
@@ -771,6 +775,7 @@
     "mathRemove": "Remove formula",
     "context": {
       "noteArchived": "Note moved to archive",
+      "noteRestoreFailed": "Could not restore the note. Find it in the archive.",
       "rename": "Rename",
       "delete": "Delete",
       "search": "Search",
@@ -1761,6 +1766,7 @@
         "fields": {
           "repo": "Repository",
           "branch": "Branch",
+          "branchHint": "The branch is replaced with a copy of the workspace: files that are not in the workspace are removed from it (history is kept). Use a dedicated branch or repository.",
           "token": "Access token",
           "tokenHint": "Personal access token with repo scope",
           "commitMessage": "Commit message",
@@ -2148,6 +2154,14 @@
       "apply": "Apply",
       "delete": "Delete"
     },
+    "html": {
+      "label": "HTML block",
+      "placeholder": "Write HTML and CSS here",
+      "applyHint": "to apply",
+      "apply": "Apply",
+      "delete": "Delete",
+      "height": "Height (px)"
+    },
     "queryBlock": {
       "title": "Query",
       "edit": "Edit query",
@@ -2447,6 +2461,8 @@
       "relaxed": "Relaxed"
     },
     "pageNumbers": "Page numbers",
+    "pageLabel": "Page",
+    "pageOf": "of",
     "headingNumbers": "Heading numbers",
     "tableOfContents": "Table of contents",
     "titlePage": "Title page",
@@ -2576,6 +2592,7 @@
       "file": "File Attachment",
       "table": "Table",
       "mermaid": "Mermaid Diagram",
+      "html": "HTML",
       "query": "Query",
       "draw": "Drawing",
       "markmap": "Mind Map",

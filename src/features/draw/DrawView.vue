@@ -75,7 +75,7 @@ const editor = useDrawEditor({
   async onSave(bytes: number[]) {
     const backend = workspaceStore.backend
     if (!backend) throw new Error('Workspace backend not available')
-    return backend.saveDrawAsset(props.drawId, bytes)
+    return backend.saveDrawAsset(props.drawId, Uint8Array.from(bytes))
   },
   onPersisted(payload) {
     errorMessage.value = ''

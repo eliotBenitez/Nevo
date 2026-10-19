@@ -5,13 +5,13 @@ use std::path::Path;
 
 use serde::de::{IgnoredAny, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
-use zip::read::ZipFile;
 use zip::result::ZipError;
 use zip::ZipArchive;
 
 use super::header::{validate_header, ExportHeader, NEVO_EXPORT_HEADER};
 use super::TransferProgress;
 use crate::commands::path_utils::write_atomic;
+use crate::commands::zip_paths::{is_symlink, normalized_entry_path};
 
 const MAX_ARCHIVE_ENTRIES: usize = 200_000;
 const MAX_ENTRY_DEPTH: usize = 64;
@@ -19,37 +19,6 @@ const MAX_ENTRY_DEPTH: usize = 64;
 /// this cap is generous; it only exists to stop a maliciously crafted archive
 /// (a "zip bomb") from exhausting disk space during extraction.
 const MAX_TOTAL_UNCOMPRESSED_BYTES: u64 = 20 * 1024 * 1024 * 1024;
-
-fn normalized_entry_path(entry: &ZipFile<'_, File>) -> Result<String, String> {
-    let name = entry
-        .name()
-        .map_err(|error| format!("Archive entry has an invalid name: {error}"))?;
-    if name.contains('\\') {
-        return Err("Archive entries with backslash paths are not supported".to_string());
-    }
-    // zip >= 9 strips a leading root from `enclosed_name` instead of rejecting it.
-    let enclosed = entry
-        .enclosed_name()
-        .filter(|_| !name.starts_with('/'))
-        .ok_or_else(|| format!("Archive entry has an unsafe path: {name}"))?;
-    let depth = enclosed.components().count();
-    if depth == 0 || depth > MAX_ENTRY_DEPTH {
-        return Err(format!(
-            "Archive entry exceeds the path depth limit: {name}"
-        ));
-    }
-    Ok(enclosed
-        .components()
-        .map(|part| part.as_os_str().to_string_lossy())
-        .collect::<Vec<_>>()
-        .join("/"))
-}
-
-fn is_symlink(entry: &ZipFile<'_, File>) -> bool {
-    entry
-        .unix_mode()
-        .is_some_and(|mode| mode & 0o170000 == 0o120000)
-}
 
 fn open_archive(path: &Path) -> Result<ZipArchive<File>, String> {
     let file = File::open(path).map_err(|error| format!("Unable to open archive: {error}"))?;
@@ -199,7 +168,10 @@ fn validate_archive_workspace(
             if entry.is_dir() {
                 None
             } else {
-                Some((normalized_entry_path(&entry)?, is_symlink(&entry)))
+                Some((
+                    normalized_entry_path(&entry, MAX_ENTRY_DEPTH, "Archive")?,
+                    is_symlink(&entry),
+                ))
             }
         };
         let Some((path, symlink)) = entry_info else {
@@ -307,7 +279,7 @@ pub(super) fn extract_archive(
                 None
             } else {
                 Some((
-                    normalized_entry_path(&entry)?,
+                    normalized_entry_path(&entry, MAX_ENTRY_DEPTH, "Archive")?,
                     is_symlink(&entry),
                     entry.size(),
                 ))

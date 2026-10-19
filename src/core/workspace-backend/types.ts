@@ -120,7 +120,7 @@ export interface WorkspaceBackend {
   importImageFromUrl(url: string): Promise<ImportedImageAsset>
   deleteUnreferencedAsset(assetSrc: string): Promise<boolean>
   /** Persist a draw_block payload (JSON bytes) and return the relative `src`. */
-  saveDrawAsset(drawId: string, bytes: number[]): Promise<string>
+  saveDrawAsset(drawId: string, bytes: Uint8Array): Promise<string>
   /** Read a draw_block payload back as JSON bytes. */
   readDrawAsset(src: string): Promise<number[]>
   /** Read the latest payload for a draw_block by its id, regardless of the

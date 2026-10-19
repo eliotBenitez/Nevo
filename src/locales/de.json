@@ -756,6 +756,10 @@
       }
     },
     "titlePlaceholder": "Unbenannt",
+    "outline": {
+      "label": "Gliederung",
+      "emptyHeading": "Unbenannte Überschrift"
+    },
     "contentPlaceholder": "Schreiben Sie hier Ihre Gedanken…",
     "linkUrlLabel": "Link-URL",
     "linkPlaceholder": "https://beispiel.com",
@@ -771,6 +775,7 @@
     "mathRemove": "Formel entfernen",
     "context": {
       "noteArchived": "Notiz ins Archiv verschoben",
+      "noteRestoreFailed": "Die Notiz konnte nicht wiederhergestellt werden. Sie liegt im Archiv.",
       "rename": "Umbenennen",
       "delete": "Löschen",
       "search": "Suchen",
@@ -1761,6 +1766,7 @@
         "fields": {
           "repo": "Repository",
           "branch": "Branch",
+          "branchHint": "Der Branch wird durch eine Kopie des Arbeitsbereichs ersetzt: Dateien, die nicht im Arbeitsbereich sind, werden daraus entfernt (der Verlauf bleibt erhalten). Verwende einen eigenen Branch oder ein eigenes Repository.",
           "token": "Zugriffstoken",
           "tokenHint": "Persönlicher Zugriffstoken mit Repo-Umfang",
           "commitMessage": "Commit-Nachricht",
@@ -2148,6 +2154,14 @@
       "apply": "Anwenden",
       "delete": "Löschen"
     },
+    "html": {
+      "label": "HTML-Block",
+      "placeholder": "HTML und CSS hier schreiben",
+      "applyHint": "zum Anwenden",
+      "apply": "Anwenden",
+      "delete": "Löschen",
+      "height": "Höhe (px)"
+    },
     "queryBlock": {
       "title": "Abfrage",
       "edit": "Abfrage bearbeiten",
@@ -2447,6 +2461,8 @@
       "relaxed": "Entspannt"
     },
     "pageNumbers": "Seitenzahlen",
+    "pageLabel": "Seite",
+    "pageOf": "von",
     "headingNumbers": "Überschriftsnummern",
     "tableOfContents": "Inhaltsverzeichnis",
     "titlePage": "Titelseite",
@@ -2576,6 +2592,7 @@
       "file": "Dateianhang",
       "table": "Tabelle",
       "mermaid": "Mermaid-Diagramm",
+      "html": "HTML",
       "query": "Abfrage",
       "draw": "Zeichnung",
       "markmap": "Mindmap",

@@ -6,20 +6,7 @@ use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
 
 use super::path_utils::normalize_workspace_path;
-
-fn validate_plugin_id(plugin_id: &str) -> Result<(), String> {
-    if plugin_id.is_empty()
-        || plugin_id.len() > 128
-        || !plugin_id
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
-        || plugin_id == "."
-        || plugin_id == ".."
-    {
-        return Err("Invalid plugin identifier".to_string());
-    }
-    Ok(())
-}
+use super::workspace::validate_plugin_id;
 
 fn canonical_workspace_root(workspace_path: &str) -> Result<PathBuf, String> {
     let root = normalize_workspace_path(workspace_path)?

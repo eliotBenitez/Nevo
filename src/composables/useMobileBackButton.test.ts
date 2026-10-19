@@ -32,14 +32,11 @@ describe('useMobileBackButton', () => {
   afterEach(() => {
     nativeBackHandler = null
     unregister.mockClear()
-    Reflect.deleteProperty(window, '__TAURI_INTERNALS__')
+    delete (globalThis as { isTauri?: boolean }).isTauri
   })
 
   it('handles Android back while enabled and restores native behavior after unmount', async () => {
-    Object.defineProperty(window, '__TAURI_INTERNALS__', {
-      configurable: true,
-      value: {},
-    })
+    ;(globalThis as { isTauri?: boolean }).isTauri = true
     const onBack = vi.fn()
     const wrapper = mount(Harness, { props: { onBack } })
 

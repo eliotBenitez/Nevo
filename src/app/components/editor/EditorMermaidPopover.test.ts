@@ -59,4 +59,23 @@ describe('EditorMermaidPopover', () => {
 
     wrapper.unmount()
   })
+
+  it('uses html copy and a height field for the html kind', async () => {
+    const i18n = createI18n({ legacy: false, locale: 'en', messages: { en, ru } })
+    const wrapper = mount(EditorMermaidPopover, {
+      attachTo: document.body,
+      global: { plugins: [i18n] },
+      props: { open: true, kind: 'html', code: '<p>x</p>', height: 240, popoverStyle: {} },
+    })
+
+    expect(wrapper.get('label').attributes('for')).toBe('html-input')
+    expect(wrapper.text()).toContain('HTML block')
+    const height = wrapper.get('input[type="number"]')
+    expect(height.attributes('min')).toBe('60')
+    expect(height.attributes('max')).toBe('2000')
+    await height.setValue('300')
+    expect(wrapper.emitted('update:height')?.[0]).toEqual([300])
+
+    wrapper.unmount()
+  })
 })

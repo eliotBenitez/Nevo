@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core'
+import { invoke, isTauri } from '@tauri-apps/api/core'
 
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug'
 
@@ -31,10 +31,6 @@ export interface FrontendLogEntry {
   error?: LoggerErrorPayload
   payload?: unknown
   diagnosticsEnabled?: boolean
-}
-
-function isTauriRuntime() {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 }
 
 function normalizeError(error: unknown): LoggerErrorPayload | undefined {
@@ -161,7 +157,7 @@ function writeConsole(level: LogLevel, options: LoggerOptions) {
 }
 
 async function dispatch(level: LogLevel, options: LoggerOptions) {
-  if (!isTauriRuntime()) {
+  if (!isTauri()) {
     writeConsole(level, options)
     return
   }

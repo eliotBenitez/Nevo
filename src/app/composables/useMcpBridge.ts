@@ -1,13 +1,10 @@
 import { watch, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
+import { isTauri } from '@tauri-apps/api/core'
 import { useWorkspaceStore } from '../../stores/workspace'
 import { applyMcpMode, stopMcpBridge } from '../../tauri/mcp'
 import type { McpMode } from '../../types/workspace'
 import { appLogger } from '../../utils/logger'
-
-function isTauriRuntime(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
-}
 
 /**
  * Keeps the loopback MCP bridge in sync with the active workspace and its
@@ -23,7 +20,7 @@ export function useMcpBridge(): void {
   const { activePath, settings } = storeToRefs(workspaceStore)
 
   async function sync(path: string | null, mode: McpMode): Promise<void> {
-    if (!isTauriRuntime()) return
+    if (!isTauri()) return
     try {
       if (path && mode !== 'off') {
         await applyMcpMode(path, mode)
@@ -48,7 +45,7 @@ export function useMcpBridge(): void {
   )
 
   onUnmounted(() => {
-    if (!isTauriRuntime()) return
+    if (!isTauri()) return
     void stopMcpBridge().catch(() => {})
   })
 }

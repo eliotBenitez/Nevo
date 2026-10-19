@@ -14,9 +14,10 @@ const listModels = vi.fn()
 vi.mock('../../../tauri/ai', () => ({
   aiCommands: { listModels: (...a: unknown[]) => listModels(...a) },
 }))
-vi.mock('../../../tauri/secureStore', () => ({
-  SECRET_AI_API_KEY: 'nevo:ai.apiKey',
-  secureStore: { get: vi.fn().mockResolvedValue('sk-or'), set: vi.fn(), delete: vi.fn() },
+vi.mock('../../../tauri/aiApiKey', () => ({
+  hasAiApiKey: vi.fn().mockResolvedValue(false),
+  saveAiApiKey: vi.fn(),
+  deleteAiApiKey: vi.fn(),
 }))
 
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
@@ -56,7 +57,7 @@ describe('SettingsAiPanel OpenRouter preset', () => {
 
     expect(store.settings.ai.apiKind).toBe('openai')
     expect(store.settings.ai.baseUrl).toBe('https://openrouter.ai/api/v1')
-    expect(listModels).toHaveBeenCalledWith('https://openrouter.ai/api/v1', 'openai', 'sk-or')
+    expect(listModels).toHaveBeenCalledWith('https://openrouter.ai/api/v1', 'openai', expect.any(Boolean))
     const modelOptions = selects(wrapper)[1].props('options') as readonly { value: string }[]
     expect(modelOptions.map(o => o.value)).toEqual(['deepseek/deepseek-r1:free', 'meta-llama/llama-3.3-70b-instruct:free'])
     expect(store.settings.ai.defaultModel).toBe('deepseek/deepseek-r1:free')

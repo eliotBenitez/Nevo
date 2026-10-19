@@ -57,6 +57,45 @@ describe('serializeNoteToHtml', () => {
     expect(html).toContain('<a href="nevo://note/abc%20123#Block%20One" data-note-id="abc 123" data-anchor="Block One"> note</a>')
   })
 
+  it('omits unsafe link and embed URLs while keeping safe links', async () => {
+    const { html } = await serializeNoteToHtml(note({
+      type: 'doc',
+      content: [
+        { type: 'paragraph', content: [
+          { type: 'text', text: 'unsafe', marks: [{ type: 'link', attrs: { href: 'javascript:alert(1)' } }] },
+          { type: 'text', text: ' obfuscated', marks: [{ type: 'link', attrs: { href: 'java\nscript:alert(1)' } }] },
+          { type: 'text', text: ' safe', marks: [{ type: 'link', attrs: { href: 'https://example.test' } }] },
+          { type: 'text', text: ' mail', marks: [{ type: 'link', attrs: { href: 'mailto:hello@example.test' } }] },
+          { type: 'text', text: ' call', marks: [{ type: 'link', attrs: { href: 'tel:+123' } }] },
+          { type: 'text', text: ' app', marks: [{ type: 'link', attrs: { href: 'obsidian://open?vault=v' } }] },
+          { type: 'text', text: ' upper', marks: [{ type: 'link', attrs: { href: 'JavaScript:alert(1)' } }] },
+        ] },
+        { type: 'embed_block', attrs: { url: 'data:text/html,<script>alert(1)</script>', title: 'Untrusted' } },
+        { type: 'file_block', attrs: { src: 'javascript:alert(2)', filename: 'Attachment' } },
+        { type: 'embed_block', attrs: { url: '//attacker.example/share', title: 'Network path' } },
+        { type: 'embed_block', attrs: { url: '\u0001//attacker.example/share', title: 'Control prefix' } },
+        { type: 'media_block', attrs: { kind: 'audio', src: 'javascript:alert(3)', bookmarks: [{ id: 'b1', time: 2, label: 'Play' }] } },
+      ],
+    }), 'Doc_assets')
+
+    expect(html).toContain('unsafe')
+    expect(html).toContain('<a href="https://example.test"> safe</a>')
+    expect(html).toContain('<a href="mailto:hello@example.test"> mail</a>')
+    expect(html).toContain('<a href="tel:+123"> call</a>')
+    expect(html).toContain('<a href="obsidian://open?vault=v"> app</a>')
+    expect(html).not.toContain('href="JavaScript:')
+    expect(html).toContain(' obfuscated')
+    expect(html).toContain('Untrusted')
+    expect(html).toContain('Attachment')
+    expect(html).toContain('Network path')
+    expect(html).toContain('Control prefix')
+    expect(html).toContain('Play')
+    expect(html).not.toContain('href="javascript:')
+    expect(html).not.toContain('href="//attacker.example')
+    expect(html).not.toContain('href="\u0001//attacker.example')
+    expect(html).not.toContain('href="data:')
+  })
+
   it('collects local images, files, media and posters and points at the export assets folder', async () => {
     const { html, assetSrcs } = await serializeNoteToHtml(note({
       type: 'doc',
@@ -225,5 +264,19 @@ describe('serializeNoteToHtml', () => {
     expect(withCover.html).toContain('class="note-cover"')
     expect(withCover.html).toContain('Cover doc_assets/cover.jpg')
     expect(assetSrcs).toEqual([])
+  })
+})
+
+describe('serializeNoteToHtml — html_block', () => {
+  it('exports a sandboxed iframe and never inlines the markup', async () => {
+    const { html } = await serializeNoteToHtml(note({
+      type: 'doc',
+      content: [{ type: 'html_block', attrs: { code: '<script>alert(1)</script><b>"x"</b>', height: 9999 } }],
+    }), 'Doc_assets')
+    expect(html).toContain('<iframe class="html-block" sandbox="" referrerpolicy="no-referrer"')
+    expect(html).toContain('style="height:2000px"')
+    expect(html).toContain('srcdoc="&lt;meta http-equiv=&quot;Content-Security-Policy&quot;')
+    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;&lt;b&gt;&quot;x&quot;&lt;/b&gt;"')
+    expect(html).not.toContain('<script>alert(1)')
   })
 })

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { isTauri } from '@tauri-apps/api/core'
 import { Archive, Folder, Plus, Search, Pin, Trash2, ArrowLeft, ArrowRight } from '../../../ui/icons'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import NevoMark from './NevoMark.vue'
@@ -130,8 +131,7 @@ function deleteWorkspaceLabel(): string {
 }
 
 async function alertDialog(message: string): Promise<void> {
-  const isTauriRuntime = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
-  if (!isTauriRuntime) {
+  if (!isTauri()) {
     window.alert(message)
     return
   }

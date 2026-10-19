@@ -756,6 +756,10 @@
       }
     },
     "titlePlaceholder": "Без названия",
+    "outline": {
+      "label": "Оглавление",
+      "emptyHeading": "Заголовок без названия"
+    },
     "contentPlaceholder": "Запишите ваши мысли…",
     "linkUrlLabel": "URL ссылки",
     "linkPlaceholder": "https://example.com",
@@ -771,6 +775,7 @@
     "mathRemove": "Удалить формулу",
     "context": {
       "noteArchived": "Заметка перемещена в архив",
+      "noteRestoreFailed": "Не удалось восстановить заметку. Её можно найти в архиве.",
       "rename": "Переименовать",
       "delete": "Удалить",
       "search": "Поиск",
@@ -1761,6 +1766,7 @@
         "fields": {
           "repo": "Репозиторий",
           "branch": "Ветка",
+          "branchHint": "Ветка заменяется копией рабочего пространства: файлы, которых нет в пространстве, из неё удаляются (история сохраняется). Используйте отдельную ветку или репозиторий.",
           "token": "Токен доступа",
           "tokenHint": "Personal access token с доступом к репозиторию",
           "commitMessage": "Сообщение коммита",
@@ -2148,6 +2154,14 @@
       "apply": "Применить",
       "delete": "Удалить"
     },
+    "html": {
+      "label": "HTML-блок",
+      "placeholder": "Напишите HTML и CSS здесь",
+      "applyHint": "применить",
+      "apply": "Применить",
+      "delete": "Удалить",
+      "height": "Высота (px)"
+    },
     "queryBlock": {
       "title": "Запрос",
       "edit": "Редактировать запрос",
@@ -2447,6 +2461,8 @@
       "relaxed": "Свободный"
     },
     "pageNumbers": "Номера страниц",
+    "pageLabel": "Страница",
+    "pageOf": "из",
     "headingNumbers": "Нумерация заголовков",
     "tableOfContents": "Оглавление",
     "titlePage": "Титульная страница",
@@ -2576,6 +2592,7 @@
       "file": "Файл",
       "table": "Таблица",
       "mermaid": "Диаграмма Mermaid",
+      "html": "HTML",
       "query": "Запрос",
       "draw": "Рисунок",
       "markmap": "Интеллект-карта",

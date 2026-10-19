@@ -1,4 +1,5 @@
 import { onMounted, onUnmounted } from 'vue'
+import { isTauri } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { useI18n } from 'vue-i18n'
 import { useToast } from '../../ui/composables/useToast'
@@ -9,10 +10,6 @@ interface GithubSyncResultEvent {
   commitSha?: string | null
   filesCount?: number | null
   error?: string | null
-}
-
-function isTauriRuntime(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 }
 
 /**
@@ -27,7 +24,7 @@ export function useGithubSyncNotifications(): void {
   let unlisten: UnlistenFn | null = null
 
   onMounted(async () => {
-    if (!isTauriRuntime()) return
+    if (!isTauri()) return
     try {
       unlisten = await listen<GithubSyncResultEvent>('github-sync-result', ({ payload }) => {
         if (payload.ok) {

@@ -10,11 +10,12 @@ describe('aiCommands.searchNoteContext', () => {
 
   it('invokes search_note_context with camelCase payload keys', async () => {
     invoke.mockResolvedValue([])
-    await aiCommands.searchNoteContext('/ws', 'sensors', 8)
+    await aiCommands.searchNoteContext('/ws', 'sensors', 8, 'note-1')
     expect(invoke).toHaveBeenCalledWith('search_note_context', {
       workspacePath: '/ws',
       query: 'sensors',
       limit: 8,
+      excludeNoteId: 'note-1',
     })
   })
 })

@@ -43,7 +43,13 @@ interface Session {
   stopping: boolean
   ended: boolean
   completion: Promise<void> | null
+  /** Resolves on the backend's `stopped`/`error` event, which follows the last `final`. */
+  backendDone: Promise<void>
+  resolveBackendDone: () => void
 }
+
+// The stop command can resolve before the channel delivers the trailing `final`; wait this long at most.
+const STOPPED_EVENT_TIMEOUT_MS = 3000
 
 /**
  * Owns one live-dictation session per editor instance. The backend keeps the
@@ -76,6 +82,7 @@ export function useDictation(core: EditorCore, getLanguage: () => TranscriptionL
   }
 
   function onEvent(s: Session, event: DictationEvent) {
+    if (event.kind === 'stopped' || event.kind === 'error') s.resolveBackendDone()
     if (s.ended) return
     const view = core.editorView === s.view ? s.view : null
     switch (event.kind) {
@@ -108,6 +115,7 @@ export function useDictation(core: EditorCore, getLanguage: () => TranscriptionL
       return
     }
     let resolveStarted!: (ok: boolean) => void
+    let resolveBackendDone!: () => void
     const s: Session = {
       id: crypto.randomUUID(),
       view,
@@ -115,6 +123,8 @@ export function useDictation(core: EditorCore, getLanguage: () => TranscriptionL
       stopping: false,
       ended: false,
       completion: null,
+      backendDone: new Promise<void>(resolve => { resolveBackendDone = resolve }),
+      resolveBackendDone: () => resolveBackendDone(),
     }
     session = s
     isActive.value = true
@@ -139,6 +149,9 @@ export function useDictation(core: EditorCore, getLanguage: () => TranscriptionL
       if (!await s.started) return
       try {
         await stopDictation()
+        let timer: ReturnType<typeof setTimeout> | undefined
+        await Promise.race([s.backendDone, new Promise<void>(resolve => { timer = setTimeout(resolve, STOPPED_EVENT_TIMEOUT_MS) })])
+        clearTimeout(timer)
       } catch {
         dropBackend()
       } finally {

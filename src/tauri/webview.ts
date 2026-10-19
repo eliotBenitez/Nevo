@@ -6,6 +6,7 @@
  * is the source of truth in Tauri; CSS `zoom` remains only as the web/dev
  * fallback (see src/styles/base.css).
  */
+import { isTauri } from '@tauri-apps/api/core'
 
 /**
  * Applies the given zoom factor via the Tauri webview API. Returns whether the
@@ -17,7 +18,7 @@ export async function applyWebviewZoom(factor: number): Promise<boolean> {
   if (typeof document === 'undefined') return false
   const platform = document.documentElement.dataset.platform
   if (platform === 'web' || platform === undefined) return false
-  if (!('__TAURI_INTERNALS__' in window)) return false
+  if (!isTauri()) return false
 
   try {
     const { getCurrentWebview } = await import('@tauri-apps/api/webview')

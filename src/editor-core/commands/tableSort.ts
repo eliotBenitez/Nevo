@@ -6,10 +6,15 @@ export type TableSortDirection = 'asc' | 'desc'
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
 
-/** Parses "1 234,5", "-3.25", "12%" as numbers; anything else is compared as text. */
+/** Parses "1 234,5", "1,234.5", "1.234,5", "-3.25", "12%" as numbers; anything else is compared as text. */
 function parseNumber(text: string): number | null {
   const compact = text.replace(/[\s%]/g, '')
-  const normalized = /^-?\d+,\d+$/.test(compact) ? compact.replace(',', '.') : compact
+  // Comma groups of exactly three digits are thousands ("1,234"); any other single comma is a decimal one ("1,5").
+  const normalized = /^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(compact)
+    ? compact.replace(/,/g, '')
+    : /^-?\d{1,3}(\.\d{3})+,\d+$/.test(compact)
+      ? compact.replace(/\./g, '').replace(',', '.')
+      : /^-?\d+,\d+$/.test(compact) ? compact.replace(',', '.') : compact
   if (!/^-?(\d+\.?\d*|\.\d+)$/.test(normalized)) return null
   return Number(normalized)
 }

@@ -756,6 +756,10 @@
       }
     },
     "titlePlaceholder": "Sin título",
+    "outline": {
+      "label": "Esquema",
+      "emptyHeading": "Encabezado sin título"
+    },
     "contentPlaceholder": "Escribe tus pensamientos aquí…",
     "linkUrlLabel": "URL del enlace",
     "linkPlaceholder": "https://ejemplo.com",
@@ -771,6 +775,7 @@
     "mathRemove": "Quitar fórmula",
     "context": {
       "noteArchived": "Nota movida al archivo",
+      "noteRestoreFailed": "No se pudo restaurar la nota. Búscala en el archivo.",
       "rename": "Renombrar",
       "delete": "Eliminar",
       "search": "Buscar",
@@ -1761,6 +1766,7 @@
         "fields": {
           "repo": "Repositorio",
           "branch": "Rama",
+          "branchHint": "La rama se sustituye por una copia del espacio de trabajo: los archivos que no están en el espacio se eliminan de ella (el historial se conserva). Usa una rama o un repositorio dedicado.",
           "token": "Token de acceso",
           "tokenHint": "Token de acceso personal con alcance repo",
           "commitMessage": "Mensaje de commit",
@@ -2148,6 +2154,14 @@
       "apply": "Aplicar",
       "delete": "Eliminar"
     },
+    "html": {
+      "label": "Bloque HTML",
+      "placeholder": "Escribe aquí HTML y CSS",
+      "applyHint": "para aplicar",
+      "apply": "Aplicar",
+      "delete": "Eliminar",
+      "height": "Altura (px)"
+    },
     "queryBlock": {
       "title": "Consulta",
       "edit": "Editar consulta",
@@ -2447,6 +2461,8 @@
       "relaxed": "Relajado"
     },
     "pageNumbers": "Números de página",
+    "pageLabel": "Página",
+    "pageOf": "de",
     "headingNumbers": "Números de encabezado",
     "tableOfContents": "Índice",
     "titlePage": "Portada",
@@ -2576,6 +2592,7 @@
       "file": "Archivo adjunto",
       "table": "Tabla",
       "mermaid": "Diagrama Mermaid",
+      "html": "HTML",
       "query": "Consulta",
       "draw": "Dibujo",
       "markmap": "Mapa mental",

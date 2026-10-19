@@ -198,6 +198,44 @@ fn collect_block_matches(
         .collect()
 }
 
+/// Parses every note file in the workspace, skipping unreadable or unparseable ones.
+/// `event` names the calling command in the error log.
+pub(super) fn load_workspace_notes(
+    workspace_path: &str,
+    event: &str,
+) -> Result<Vec<NoteDocument>, String> {
+    let notes_dir = notes_dir_path(workspace_path);
+    if !notes_dir.exists() {
+        return Ok(vec![]);
+    }
+
+    let entries = std::fs::read_dir(notes_dir).map_err(|error| {
+        let message = error.to_string();
+        let _ = crate::logging::logger().error(
+            "tauri.note",
+            event,
+            "Failed to read notes directory",
+            note_error_context(workspace_path, "io", message.clone()),
+        );
+        message
+    })?;
+
+    let mut notes = Vec::new();
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|value| value.to_str()) != Some("nevo") {
+            continue;
+        }
+        let Ok(content) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        if let Ok(note) = serde_json::from_str::<NoteDocument>(&content) {
+            notes.push(note);
+        }
+    }
+    Ok(notes)
+}
+
 // Offload to a blocking thread: this walks and parses every note file in the
 // workspace, which would otherwise freeze the WebKitGTK UI thread on large
 // workspaces (see AGENTS.md "Platform Gotchas").
@@ -238,39 +276,8 @@ pub(crate) fn search_workspace_blocks_sync(
         return Ok(vec![]);
     }
 
-    let notes_dir = notes_dir_path(&workspace_path);
-    if !notes_dir.exists() {
-        return Ok(vec![]);
-    }
-
-    let entries = std::fs::read_dir(notes_dir).map_err(|error| {
-        let message = error.to_string();
-        let _ = logger.error(
-            "tauri.note",
-            "search_workspace_blocks",
-            "Failed to read notes directory",
-            note_error_context(&workspace_path, "io", message.clone()),
-        );
-        message
-    })?;
     let mut matches = Vec::<(i64, WorkspaceBlockSearchResult)>::new();
-
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.extension().and_then(|value| value.to_str()) != Some("nevo") {
-            continue;
-        }
-
-        let content = match std::fs::read_to_string(&path) {
-            Ok(content) => content,
-            Err(_) => continue,
-        };
-
-        let note = match serde_json::from_str::<NoteDocument>(&content) {
-            Ok(note) => note,
-            Err(_) => continue,
-        };
-
+    for note in load_workspace_notes(&workspace_path, "search_workspace_blocks")? {
         matches.extend(collect_block_matches(&note, &normalized_query));
     }
 

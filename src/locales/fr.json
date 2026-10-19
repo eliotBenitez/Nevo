@@ -756,6 +756,10 @@
       }
     },
     "titlePlaceholder": "Sans titre",
+    "outline": {
+      "label": "Plan",
+      "emptyHeading": "Titre sans nom"
+    },
     "contentPlaceholder": "Écrivez vos pensées ici…",
     "linkUrlLabel": "URL du lien",
     "linkPlaceholder": "https://exemple.com",
@@ -771,6 +775,7 @@
     "mathRemove": "Retirer la formule",
     "context": {
       "noteArchived": "Note déplacée dans l’archive",
+      "noteRestoreFailed": "Impossible de restaurer la note. Retrouvez-la dans l’archive.",
       "rename": "Renommer",
       "delete": "Supprimer",
       "search": "Rechercher",
@@ -1761,6 +1766,7 @@
         "fields": {
           "repo": "Dépôt",
           "branch": "Branche",
+          "branchHint": "La branche est remplacée par une copie de l'espace de travail : les fichiers absents de l'espace en sont supprimés (l'historique est conservé). Utilisez une branche ou un dépôt dédié.",
           "token": "Jeton d'accès",
           "tokenHint": "Jeton d'accès personnel avec portée repo",
           "commitMessage": "Message de commit",
@@ -2148,6 +2154,14 @@
       "apply": "Appliquer",
       "delete": "Supprimer"
     },
+    "html": {
+      "label": "Bloc HTML",
+      "placeholder": "Écrivez ici du HTML et du CSS",
+      "applyHint": "pour appliquer",
+      "apply": "Appliquer",
+      "delete": "Supprimer",
+      "height": "Hauteur (px)"
+    },
     "queryBlock": {
       "title": "Requête",
       "edit": "Modifier la requête",
@@ -2447,6 +2461,8 @@
       "relaxed": "Détendu"
     },
     "pageNumbers": "Numéros de page",
+    "pageLabel": "Page",
+    "pageOf": "sur",
     "headingNumbers": "Numéros de titre",
     "tableOfContents": "Table des matières",
     "titlePage": "Page de titre",
@@ -2576,6 +2592,7 @@
       "file": "Fichier joint",
       "table": "Tableau",
       "mermaid": "Diagramme Mermaid",
+      "html": "HTML",
       "query": "Requête",
       "draw": "Dessin",
       "markmap": "Carte mentale",

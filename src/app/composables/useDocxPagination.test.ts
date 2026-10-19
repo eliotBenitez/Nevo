@@ -41,6 +41,7 @@ function createPagination(
   paragraphCount: number,
   heights: number[],
   noteDocument = noteWithParagraphs(paragraphCount),
+  tableOfContents = false,
 ) {
   const note = ref(noteDocument)
   const marginBottom = ref(25)
@@ -57,7 +58,7 @@ function createPagination(
     lineSpacing: ref(1.15),
     paragraphSpacing: ref(8),
     headingNumbers: ref(false),
-    tableOfContents: ref(false),
+    tableOfContents: ref(tableOfContents),
     titlePage: ref(false),
     exportNoteTitle: ref(false),
     surfaceWidth: ref(800),
@@ -83,6 +84,18 @@ describe('useDocxPagination', () => {
       const height = page.nodes.length * 100
       expect(height).toBeLessThanOrEqual(pagination.usableHeightPx.value + 0.5)
     }
+  })
+
+  it('previews an html_block as the html code block the export writes', async () => {
+    const note = noteWithParagraphs(0)
+    note.content = { type: 'doc', content: [{ type: 'html_block', attrs: { code: '<p>Hi</p>' } }] }
+    const { pagination } = createPagination(1, [50], note)
+    await pagination.updatePagination()
+
+    const [node] = pagination.contentPages.value[0].nodes
+    expect(node.type).toBe('code_block')
+    expect(node.attrs?.language).toBe('html')
+    expect(processedNodeText(node)).toBe('<p>Hi</p>')
   })
 
   it('repaginates against a larger bottom margin', async () => {
@@ -235,5 +248,33 @@ describe('useDocxPagination', () => {
     expect(fresh.contentPages.value[1].nodes).toHaveLength(1)
     expect(fresh.contentPages.value[1].nodes[0].content).toHaveLength(3)
     expect(processedNodeText(fresh.contentPages.value[1].nodes[0])).toBe('HeadTwoThree')
+  })
+
+  it('lists the same headings as the DOCX TOC and skips the TOC page without them', () => {
+    const heading = (level: number, text: string) => ({
+      type: 'heading',
+      attrs: { level },
+      content: [{ type: 'text', text }],
+    })
+    const note = noteWithParagraphs(0)
+    note.content.content = [
+      heading(1, 'Top'),
+      { type: 'column_list', content: [{ type: 'column', content: [heading(2, 'In column')] }] },
+      { type: 'toggle', content: [{ type: 'toggle_title', content: [] }, heading(3, 'In toggle')] },
+      { type: 'blockquote', content: [heading(2, 'In quote')] },
+      { type: 'callout', content: [heading(2, 'In callout')] },
+      heading(4, 'Too deep'),
+    ]
+    const { pagination } = createPagination(0, [], note, true)
+
+    expect(pagination.tocEntries.value).toEqual([
+      { level: 1, text: 'Top' },
+      { level: 2, text: 'In column' },
+      { level: 3, text: 'In toggle' },
+    ])
+    expect(pagination.pages.value[0].type).toBe('toc')
+
+    const { pagination: withoutHeadings } = createPagination(1, [100], undefined, true)
+    expect(withoutHeadings.pages.value.some(page => page.type === 'toc')).toBe(false)
   })
 })

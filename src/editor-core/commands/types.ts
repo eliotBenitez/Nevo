@@ -63,6 +63,7 @@ export type CoreCommandId =
   | 'core.code.language.clear'
   | 'core.mermaid.insert'
   | 'core.mermaid.update'
+  | 'core.html.insert'
   | 'core.query.insert'
   | 'core.query.update'
   | 'core.query.remove'

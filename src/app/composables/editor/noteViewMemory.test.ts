@@ -6,6 +6,9 @@ import {
   applyNoteViewState,
   captureNoteViewState,
   forgetAllNoteViews,
+  isViewUntouched,
+  markRestoredView,
+  noteViewEpoch,
   recallNoteView,
   rememberNoteView,
   type NoteViewState,
@@ -62,5 +65,36 @@ describe('noteViewMemory', () => {
     rememberNoteView('note-101', state({}))
     expect(recallNoteView('note-1')?.scrollTop).toBe(7)
     expect(recallNoteView('note-2')).toBeUndefined()
+  })
+  it('drops a capture of a note displayed before the memory was cleared', () => {
+    const shownIn = noteViewEpoch()
+    forgetAllNoteViews()
+    rememberNoteView('old-workspace-note', state({ scrollTop: 5 }), shownIn)
+    expect(recallNoteView('old-workspace-note')).toBeUndefined()
+    rememberNoteView('new-note', state({ scrollTop: 6 }), noteViewEpoch())
+    expect(recallNoteView('new-note')?.scrollTop).toBe(6)
+  })
+
+  it('treats a caret move or an edit after a restore as user input, but not an unchanged view', () => {
+    const view = createView(['hello', 'world'])
+    const scrollEl = document.createElement('div')
+    const mark = markRestoredView(view, scrollEl)
+    expect(isViewUntouched(view, scrollEl, mark)).toBe(true)
+
+    view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 4)))
+    expect(isViewUntouched(view, scrollEl, mark)).toBe(false)
+
+    const typed = markRestoredView(view, scrollEl)
+    view.dispatch(view.state.tr.insertText('x', 1))
+    expect(isViewUntouched(view, scrollEl, typed)).toBe(false)
+  })
+
+  it('does not treat a programmatic change that keeps the caret in place as user input', () => {
+    const view = createView(['hello', 'world'])
+    view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 9)))
+    const scrollEl = document.createElement('div')
+    const mark = markRestoredView(view, scrollEl)
+    view.dispatch(view.state.tr.addMark(1, 3, schema.marks.strong.create()))
+    expect(isViewUntouched(view, scrollEl, mark)).toBe(true)
   })
 })

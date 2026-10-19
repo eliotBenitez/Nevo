@@ -1,7 +1,7 @@
 import { nextTick, onBeforeUnmount, onMounted, toRaw, watch, type Ref } from 'vue'
 import type { EditorCore } from './useEditorCore'
 import { applyCaretAnimation } from './caretAnimation'
-import { applyNoteViewState, captureNoteViewState, recallNoteView, rememberNoteView } from './noteViewMemory'
+import { applyNoteViewState, captureNoteViewState, isViewUntouched, markRestoredView, noteViewEpoch, recallNoteView, rememberNoteView } from './noteViewMemory'
 import type { SaveStatus } from '../../../stores/note'
 import type { NoteDocument } from '../../../types/note'
 import type { WorkspaceSettings } from '../../../types/workspace'
@@ -63,6 +63,7 @@ const LATE_LAYOUT_RESTORE_MS = 250
 export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOptions) {
   // The note currently rendered in the view; the note prop already points at the next one when we rebuild.
   let displayedNoteId: string | null = null
+  let displayedEpoch = noteViewEpoch()
   let lateRestoreTimer: ReturnType<typeof setTimeout> | null = null
 
   function rememberDisplayedNoteView() {
@@ -71,7 +72,7 @@ export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOpt
     if (!view?.state || !scrollEl || !displayedNoteId) return
     // Best effort: a failed capture must never block a note switch or unmount.
     try {
-      rememberNoteView(displayedNoteId, captureNoteViewState(view, scrollEl))
+      rememberNoteView(displayedNoteId, captureNoteViewState(view, scrollEl), displayedEpoch)
     } catch {
       // Keep the previously remembered position.
     }
@@ -87,12 +88,13 @@ export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOpt
     } catch {
       return
     }
-    // Images above the anchor can change height once decoded; re-anchor unless the user already scrolled.
-    const restoredTop = scrollEl.scrollTop
+    // Images above the anchor can change height once decoded; re-anchor unless the user already
+    // scrolled, moved the caret or typed — the second restore would reset their selection.
+    const restored = markRestoredView(view, scrollEl)
     if (lateRestoreTimer) clearTimeout(lateRestoreTimer)
     lateRestoreTimer = setTimeout(() => {
       lateRestoreTimer = null
-      if (options.core.editorView === view && !view.isDestroyed && displayedNoteId === noteId && scrollEl.scrollTop === restoredTop) {
+      if (options.core.editorView === view && !view.isDestroyed && displayedNoteId === noteId && isViewUntouched(view, scrollEl, restored)) {
         try {
           applyNoteViewState(view, scrollEl, remembered)
         } catch {
@@ -115,6 +117,7 @@ export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOpt
     if (!root) return
     await options.editorSetup.setupEditorForNote(note, root, options.getSettings())
     displayedNoteId = note.id
+    displayedEpoch = noteViewEpoch()
     restoreNoteView(note.id)
     options.mountNotePreload(root)
     options.updateEditorStatsNow()

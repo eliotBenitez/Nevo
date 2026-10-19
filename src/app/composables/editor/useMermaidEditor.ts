@@ -1,5 +1,6 @@
 import { NodeSelection } from 'prosemirror-state'
 import { nextTick, watch } from 'vue'
+import { clampHtmlBlockHeight } from '../../../editor-core/schema/htmlBlock'
 import type { EditorCore } from './useEditorCore'
 import type { MermaidPopoverState } from './useEditorOverlays'
 import { getEditorOverlayBoundaryRect, placeEditorPopoverNearAnchor, type ClampOverlayPosition } from './editorPopoverPosition'
@@ -58,14 +59,16 @@ export function useMermaidEditor(
   function openMermaidPopoverForNode(position: number, anchorRect?: DOMRect) {
     if (!core.editorView) return
     const node = core.editorView.state.doc.nodeAt(position)
-    if (!node || node.type.name !== 'mermaid_block') return
+    if (!node || (node.type.name !== 'mermaid_block' && node.type.name !== 'html_block')) return
 
     const rect = getMermaidAnchorRect(position, anchorRect)
     if (!rect) return
 
     mermaidPopover.open = true
     mermaidPopover.nodePos = position
+    mermaidPopover.nodeType = node.type.name === 'html_block' ? 'html_block' : 'mermaid_block'
     mermaidPopover.code = typeof node.attrs.code === 'string' ? node.attrs.code : ''
+    mermaidPopover.height = clampHtmlBlockHeight(node.attrs.height)
     mermaidPopover.position = { top: rect.bottom + 12, left: rect.left + rect.width / 2 }
 
     nextTick(() => {
@@ -84,9 +87,12 @@ export function useMermaidEditor(
     const nodePos = mermaidPopover.nodePos
     if (typeof nodePos !== 'number') return
     const node = core.editorView.state.doc.nodeAt(nodePos)
-    if (!node || node.type.name !== 'mermaid_block') return
+    if (!node || node.type.name !== mermaidPopover.nodeType) return
 
-    const tr = core.editorView.state.tr.setNodeMarkup(nodePos, undefined, { ...node.attrs, code: mermaidPopover.code })
+    const attrs = node.type.name === 'html_block'
+      ? { ...node.attrs, code: mermaidPopover.code, height: clampHtmlBlockHeight(mermaidPopover.height) }
+      : { ...node.attrs, code: mermaidPopover.code }
+    const tr = core.editorView.state.tr.setNodeMarkup(nodePos, undefined, attrs)
     core.editorView.dispatch(tr.setSelection(NodeSelection.create(tr.doc, nodePos)).scrollIntoView())
     closeMermaidPopover()
     core.editorView.focus()
@@ -98,7 +104,7 @@ export function useMermaidEditor(
     const nodePos = mermaidPopover.nodePos
     if (typeof nodePos !== 'number') return
     const node = core.editorView.state.doc.nodeAt(nodePos)
-    if (!node || node.type.name !== 'mermaid_block') return
+    if (!node || node.type.name !== mermaidPopover.nodeType) return
 
     core.editorView.dispatch(core.editorView.state.tr.delete(nodePos, nodePos + node.nodeSize).scrollIntoView())
     closeMermaidPopover()

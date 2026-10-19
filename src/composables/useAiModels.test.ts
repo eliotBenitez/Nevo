@@ -7,10 +7,6 @@ import { useAiModels } from './useAiModels'
 const listModels = vi.fn()
 
 vi.mock('../tauri/ai', () => ({ aiCommands: { listModels: (...a: unknown[]) => listModels(...a) } }))
-vi.mock('../tauri/secureStore', () => ({
-  SECRET_AI_API_KEY: 'nevo:ai.apiKey',
-  secureStore: { get: vi.fn().mockResolvedValue(null) },
-}))
 
 function setup(ai: Partial<WorkspaceSettings['ai']>) {
   const store = useWorkspaceStore()
@@ -64,6 +60,19 @@ describe('useAiModels', () => {
     const models = useAiModels()
     await models.load()
     expect(models.status.value).toBe('error')
+  })
+
+  it('keeps a paid OpenRouter model the endpoint serves and replaces an unknown one', async () => {
+    listModels.mockResolvedValue(['anthropic/claude', 'b:free', 'a:free'])
+    const store = setup({ apiKind: 'openai', baseUrl: 'https://openrouter.ai/api/v1', defaultModel: 'anthropic/claude' })
+    const models = useAiModels()
+    await models.load()
+    expect(models.models.value).toEqual(['a:free', 'b:free'])
+    expect(store.settings.ai.defaultModel).toBe('anthropic/claude')
+
+    store.settings = { ...store.settings, ai: { ...store.settings.ai, defaultModel: 'llama3' } }
+    await models.load(true)
+    expect(store.settings.ai.defaultModel).toBe('a:free')
   })
 
   it('selects a model in settings', async () => {

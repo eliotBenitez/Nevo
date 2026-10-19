@@ -16,6 +16,7 @@ import { normalizeQueryBlockData } from '../../features/query/queryBlockData'
 import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSummary'
 import { formatAudioTime, readAudioBookmarks } from '../../core/media/audioBookmarks'
 import { readAudioTranscript } from '../../core/media/audioTranscript'
+import { htmlBlockAsCodeNode } from './htmlBlockCode'
 
 export interface TypstImageAsset {
   /** Filename referenced inside the Typst source via `image("name")`. */
@@ -254,6 +255,8 @@ function nodeToTypst(node: BlockNode, ctx: SerializeCtx): string {
       const latex = String(node.attrs?.latex ?? codeText(node))
       return `$ ${latexToTypstMath(latex)} $`
     }
+    case 'html_block':
+      return nodeToTypst(htmlBlockAsCodeNode(node), ctx)
     case 'mermaid_block': {
       const name = registerMermaid(String(node.attrs?.code ?? ''), ctx)
       return `#figure(image(${quote(name)}))`
@@ -443,7 +446,10 @@ function buildPreamble(title: string, options: PdfExportOptions): string {
   }
 
   // Separate the table of contents from the note body with a page break.
-  if (options.tableOfContents) lines.push('#outline()', '#pagebreak()')
+  if (options.tableOfContents) {
+    const outlineTitle = options.tocTitle ? `title: [${escapeText(options.tocTitle)}]` : ''
+    lines.push(`#outline(${outlineTitle})`, '#pagebreak()')
+  }
 
   return lines.join('\n')
 }

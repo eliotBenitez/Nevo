@@ -127,7 +127,7 @@ export function useNoteExport() {
     const helpers = createDocxExportHelpers(workspacePath)
     const doc = await serializeNoteToDocx(note, helpers, options)
     const blob = await Packer.toBlob(doc)
-    const bytes = Array.from(new Uint8Array(await blob.arrayBuffer()))
+    const bytes = new Uint8Array(await blob.arrayBuffer())
     await noteCommands.exportNoteDocx(`${safeName}.docx`, bytes)
   }
 

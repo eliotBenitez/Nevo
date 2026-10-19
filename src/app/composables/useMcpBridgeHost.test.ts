@@ -57,14 +57,11 @@ describe('useMcpBridgeHost', () => {
     setActivePinia(createPinia())
     eventMocks.listeners.clear()
     eventMocks.unlisten.mockClear()
-    Object.defineProperty(window, '__TAURI_INTERNALS__', {
-      configurable: true,
-      value: {},
-    })
+    ;(globalThis as { isTauri?: boolean }).isTauri = true
   })
 
   afterEach(() => {
-    Reflect.deleteProperty(window, '__TAURI_INTERNALS__')
+    delete (globalThis as { isTauri?: boolean }).isTauri
   })
 
   it('refreshes the live manifest after a structural MCP mutation', async () => {

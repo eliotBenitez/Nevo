@@ -6,6 +6,7 @@ import type { Root, Content, PhrasingContent, ListItem } from 'mdast'
 import type { BlockNode } from '../../types/note'
 import { getPluginNodeImporter } from '../../editor-core/plugin-host/active-serialization'
 import { normalizeDisplayMath } from './markdownMath'
+import { clampHtmlBlockHeight, HTML_BLOCK_MD_META } from '../../editor-core/schema/htmlBlock'
 
 export interface ParsedMarkdown {
   title: string
@@ -224,6 +225,10 @@ function blockToNodes(
     case 'code': {
       if (node.lang === 'mermaid') {
         return [{ type: 'mermaid_block', attrs: { code: node.value } }]
+      }
+      if (node.lang === 'html' && node.meta?.split(/\s+/).includes(HTML_BLOCK_MD_META)) {
+        const height = clampHtmlBlockHeight(Number(/(?:^|\s)height=(\d+)/.exec(node.meta)?.[1]))
+        return [{ type: 'html_block', attrs: { code: node.value, height } }]
       }
       if (asyncImports?.has(node)) {
         const imported = asyncImports.get(node)

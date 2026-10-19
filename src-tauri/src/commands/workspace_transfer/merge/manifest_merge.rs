@@ -2,7 +2,7 @@
 //! root folder appended to the current workspace's manifest.
 
 use crate::commands::folder::{load_manifest, manifest_lock, save_manifest};
-use crate::commands::workspace::{FolderMeta, NoteMeta, WorkspaceManifest};
+use crate::commands::workspace::{count_folders, FolderMeta, NoteMeta, WorkspaceManifest};
 
 use super::idmap::IdMaps;
 
@@ -49,13 +49,6 @@ fn remap_folder(folder: &FolderMeta, new_parent_id: Option<String>, maps: &IdMap
     }
 }
 
-fn count_folders(folders: &[FolderMeta]) -> u64 {
-    folders
-        .iter()
-        .map(|folder| 1 + count_folders(&folder.children))
-        .sum()
-}
-
 /// Merges the imported tree into the current workspace's `.nevo/workspace.json`
 /// under `manifest_lock`, via the same `load_manifest`/`save_manifest` pair
 /// every other mutating command uses for atomicity. `trash` is deliberately
@@ -93,7 +86,7 @@ pub(super) fn merge_manifest_tree(
             .push(remap_note_meta(note, Some(wrapper_id.clone()), maps));
     }
 
-    let imported_folder_count = 1 + count_folders(&imported.tree);
+    let imported_folder_count = 1 + count_folders(&imported.tree) as u64;
 
     manifest.root_order.push(wrapper_id);
     manifest.tree.push(wrapper);

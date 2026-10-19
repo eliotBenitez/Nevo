@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use tauri::ipc::{InvokeBody, Request};
+use tauri::ipc::Request;
 use tauri::AppHandle;
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_dialog::DialogExt;
@@ -8,6 +8,7 @@ use tauri_plugin_dialog::DialogExt;
 use super::naming::{
     find_existing_asset_path, hash_bytes, normalize_extension, sanitize_file_stem,
 };
+use crate::commands::ipc_request::{decoded_header, raw_body};
 use crate::commands::note::{
     assets_dir_path, note_context, note_error_context, ImportedImageAsset, PickedImportedAsset,
 };
@@ -26,31 +27,14 @@ pub(super) const MAX_LOCAL_ASSET_BYTES: u64 = 100 * 1024 * 1024;
 /// frontend as a raw IPC body (ArrayBuffer / Uint8Array) instead of a JSON
 /// number array — avoids the ~3-4x transport overhead of encoding every byte
 /// as a JSON number, and keeps the whole-file read/hash/write off the WebView
-/// main thread via `spawn_blocking`. `workspace_path` and the (percent-encoded)
-/// file name travel via headers since `invoke` accepts either args OR a raw
-/// body, not both.
+/// main thread via `spawn_blocking`. `workspace_path` and the file name
+/// travel percent-encoded via headers since `invoke` accepts either args OR a
+/// raw body, not both.
 #[tauri::command]
 pub async fn import_image_asset(request: Request<'_>) -> Result<ImportedImageAsset, String> {
-    let headers = request.headers();
-    let workspace_path = headers
-        .get("nv-workspace-path")
-        .and_then(|v| v.to_str().ok())
-        .ok_or_else(|| "missing nv-workspace-path header".to_string())?
-        .to_owned();
-    let file_name_header = headers
-        .get("nv-file-name")
-        .and_then(|v| v.to_str().ok())
-        .ok_or_else(|| "missing nv-file-name header".to_string())?
-        .to_owned();
-    let file_name = percent_encoding::percent_decode_str(&file_name_header)
-        .decode_utf8()
-        .map_err(|_| "nv-file-name header is not valid UTF-8".to_string())?
-        .into_owned();
-
-    let bytes = match request.body() {
-        InvokeBody::Raw(bytes) => bytes.clone(),
-        _ => return Err("import_image_asset expects a raw binary body".to_string()),
-    };
+    let workspace_path = decoded_header(&request, "nv-workspace-path")?;
+    let file_name = decoded_header(&request, "nv-file-name")?;
+    let bytes = raw_body(&request, "import_image_asset")?;
 
     tauri::async_runtime::spawn_blocking(move || {
         import_image_asset_impl(workspace_path, file_name, bytes)

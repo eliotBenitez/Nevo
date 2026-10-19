@@ -53,7 +53,12 @@ pub(super) fn decode_audio(path: &Path) -> Result<Vec<f32>, String> {
         if packet.track_id() != track_id {
             continue;
         }
-        let decoded = decoder.decode(&packet).map_err(|_| "audio_decode_failed")?;
+        let decoded = match decoder.decode(&packet) {
+            Ok(decoded) => decoded,
+            // A damaged packet is skipped, as symphonia recommends; the rest of the file still decodes.
+            Err(AudioError::DecodeError(_)) => continue,
+            Err(_) => return Err("audio_decode_failed".to_string()),
+        };
         let channels = decoded.spec().channels.count();
         if channels == 0 || decoded.spec().rate != sample_rate {
             return Err("audio_unsupported".to_string());

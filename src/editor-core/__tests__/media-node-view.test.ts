@@ -77,6 +77,42 @@ describe('media node view source lifecycle', () => {
     } finally { editor.destroy() }
   })
 
+  it('keeps a transcript that finishes after ProseMirror recreated the block view', async () => {
+    let resolve!: (segments: AudioTranscriptSegment[]) => void
+    const transcribe = vi.fn(() => new Promise<AudioTranscriptSegment[]>(done => { resolve = done }))
+    const editor = createMediaEditor({ kind: 'audio', src: '.nevo/assets/a.wav' }, () => null, transcribe)
+    try {
+      await tick()
+      editor.mount.querySelector<HTMLButtonElement>('.nv-audio-transcribe')!.click()
+      // A new nodeViews object forces every node view to be destroyed and rebuilt.
+      editor.view.setProps({ nodeViews: { ...editor.view.props.nodeViews } })
+      resolve([{ start: 0, end: 1, text: 'Kept' }])
+      await tick()
+      expect(editor.view.state.doc.firstChild?.attrs.transcript).toEqual([{ start: 0, end: 1, text: 'Kept' }])
+    } finally { editor.destroy() }
+  })
+
+  it('never writes a late transcript into another note loaded into the same view', async () => {
+    let resolve!: (segments: AudioTranscriptSegment[]) => void
+    const transcribe = vi.fn(() => new Promise<AudioTranscriptSegment[]>(done => { resolve = done }))
+    const attrs = { kind: 'audio', src: '.nevo/assets/shared.wav' }
+    const editor = createMediaEditor(attrs, () => null, transcribe)
+    try {
+      await tick()
+      editor.mount.querySelector<HTMLButtonElement>('.nv-audio-transcribe')!.click()
+      const other = createNevoEditorState({
+        schema: nevoBaseSchema,
+        content: { type: 'doc', content: [{ type: 'media_block', attrs }] } as BlockNode,
+        nodeViewOptions: { resolveMediaSrc: () => null, onTranscribeAudio: transcribe },
+      })
+      editor.view.updateState(other.state)
+      editor.view.setProps({ nodeViews: other.nodeViews })
+      resolve([{ start: 0, end: 1, text: 'Wrong note' }])
+      await tick()
+      expect(editor.view.state.doc.firstChild?.attrs.transcript).toEqual([])
+    } finally { editor.destroy() }
+  })
+
   it('does not attach a stale transcript after the audio source changes', async () => {
     let resolve!: (segments: AudioTranscriptSegment[]) => void
     const transcribe = vi.fn(() => new Promise<AudioTranscriptSegment[]>(done => { resolve = done }))
