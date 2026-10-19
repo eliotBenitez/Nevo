@@ -73,6 +73,7 @@ const options = computed<PdfExportOptions>(() => ({
   pageNumbers: pageNumbers.value,
   headingNumbers: headingNumbers.value,
   tableOfContents: tableOfContents.value,
+  tocTitle: t('export.tableOfContents'),
   titlePage: titlePage.value,
   runningHeader: runningHeader.value,
 }))

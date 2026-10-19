@@ -14,6 +14,8 @@ export interface PdfExportOptions {
   pageNumbers: boolean
   headingNumbers: boolean
   tableOfContents: boolean
+  /** Localized table-of-contents heading; omitted falls back to Typst's English default. */
+  tocTitle?: string
   titlePage: boolean
   runningHeader: boolean
 }

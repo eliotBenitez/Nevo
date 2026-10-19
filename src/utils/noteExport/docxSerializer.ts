@@ -694,7 +694,7 @@ export async function serializeNoteToDocx(
   if (opts.tableOfContents && ctx.tocEntries?.length) {
     children.push(new Paragraph({
       spacing: { after: 240 },
-      children: [new TextRun({ text: 'Table of Contents', bold: true, size: 32 })],
+      children: [new TextRun({ text: opts.tocTitle || 'Table of Contents', bold: true, size: 32 })],
     }))
     for (const entry of ctx.tocEntries) {
       children.push(new Paragraph({

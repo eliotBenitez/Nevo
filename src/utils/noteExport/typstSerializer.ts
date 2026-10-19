@@ -446,7 +446,10 @@ function buildPreamble(title: string, options: PdfExportOptions): string {
   }
 
   // Separate the table of contents from the note body with a page break.
-  if (options.tableOfContents) lines.push('#outline()', '#pagebreak()')
+  if (options.tableOfContents) {
+    const outlineTitle = options.tocTitle ? `title: [${escapeText(options.tocTitle)}]` : ''
+    lines.push(`#outline(${outlineTitle})`, '#pagebreak()')
+  }
 
   return lines.join('\n')
 }
