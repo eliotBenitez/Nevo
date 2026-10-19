@@ -1,6 +1,6 @@
 [package]
 name = "nevo"
-version = "0.2.3"
+version = "0.2.4"
 description = "Nevo editor"
 authors = ["eliotBenitez"]
 edition = "2021"
