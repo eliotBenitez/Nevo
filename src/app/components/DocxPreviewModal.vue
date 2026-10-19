@@ -80,6 +80,7 @@ const {
   paginatedContentNodes,
   contentPages,
   pages,
+  tocEntries,
   updatePagination,
 } = useDocxPagination({
   note: toRef(props, 'note'),
@@ -239,15 +240,15 @@ onBeforeUnmount(() => {
               <!-- Table of Contents -->
               <div v-else-if="page.type === 'toc'" class="docx-page__toc">
                 <h2 class="docx-page__toc-title">{{ t('export.tableOfContents') }}</h2>
-                <div class="docx-page__toc-item">
-                  <span>1. <span v-if="headingNumbers">1. </span>{{ note.title || 'Introduction' }}</span>
+                <div
+                  v-for="(entry, entryIndex) in tocEntries"
+                  :key="entryIndex"
+                  class="docx-page__toc-item"
+                  :style="{ paddingLeft: `${(entry.level - 1) * 1.2}em` }"
+                >
+                  <span>{{ entry.text }}</span>
                   <span class="dots"></span>
-                  <span>Page {{ titlePage ? 3 : 2 }}</span>
-                </div>
-                <div class="docx-page__toc-item">
-                  <span>2. Summary</span>
-                  <span class="dots"></span>
-                  <span>Page {{ titlePage ? 4 : 3 }}</span>
+                  <span>{{ entry.pageNumber }}</span>
                 </div>
               </div>
 

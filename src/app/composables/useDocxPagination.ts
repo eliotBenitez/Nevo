@@ -33,6 +33,12 @@ export interface ContentPage {
   hasTitle?: boolean
 }
 
+export interface DocxTocEntry {
+  level: number
+  text: string
+  pageNumber: number
+}
+
 export interface PreviewPage {
   id: string
   type: 'title' | 'toc' | 'content'
@@ -327,6 +333,28 @@ export function useDocxPagination(input: DocxPaginationInput) {
     return list
   })
 
+  // Real headings (levels 1-3, like the exported TOC) with the page they land on.
+  const tocEntries = computed<DocxTocEntry[]>(() => {
+    const firstContentPage = (input.exportNoteTitle.value && input.titlePage.value ? 1 : 0) + 2
+    const sourcePages = contentPages.value.length
+      ? contentPages.value
+      : [{ nodes: paginatedContentNodes.value }]
+    const entries: DocxTocEntry[] = []
+    sourcePages.forEach((page, pageIndex) => {
+      for (const node of page.nodes) {
+        if (node.type !== 'heading') continue
+        const level = Math.min(6, Math.max(1, Number(node.attrs?.level ?? 1)))
+        if (level > 3) continue
+        entries.push({
+          level,
+          text: (node.headingPrefix ?? '') + processedNodeText(node),
+          pageNumber: firstContentPage + pageIndex,
+        })
+      }
+    })
+    return entries
+  })
+
   async function updatePagination() {
     await nextTick()
     if (typeof window !== 'undefined' && !window.navigator.userAgent.includes('jsdom')) {
@@ -492,6 +520,7 @@ export function useDocxPagination(input: DocxPaginationInput) {
     processedContent,
     paginatedContentNodes,
     pages,
+    tocEntries,
     usableHeightPx,
     updatePagination,
   }
