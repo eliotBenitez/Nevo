@@ -77,6 +77,12 @@ function setView (view) {
 const stepSize = () => parseFloat(getComputedStyle(track).getPropertyValue('--step')) / 100 * innerHeight
 const trackTop = () => track.getBoundingClientRect().top + scrollY
 
+// A switcher click jumps straight to its view; the smooth scroll that follows must not
+// replay every view it passes, so scroll-driven switching waits until it arrives.
+let pinned = null
+let pinTimer = 0
+const unpin = () => { pinned = null; clearTimeout(pinTimer) }
+
 let ticking = false
 function onScroll () {
   if (ticking) return
@@ -84,14 +90,24 @@ function onScroll () {
   requestAnimationFrame(() => {
     ticking = false
     const i = Math.round((scrollY - trackTop()) / stepSize())
-    setView(VIEWS[Math.min(VIEWS.length - 1, Math.max(0, i))])
+    const view = VIEWS[Math.min(VIEWS.length - 1, Math.max(0, i))]
+    if (pinned) {
+      if (view === pinned) unpin()
+      return
+    }
+    setView(view)
   })
 }
 
 buttons.forEach((b, i) => b.addEventListener('click', () => {
+  pinned = b.dataset.view
+  clearTimeout(pinTimer)
+  pinTimer = setTimeout(unpin, 1500)
+  setView(pinned)
   scrollTo({ top: trackTop() + i * stepSize(), behavior: reduceMotion.matches ? 'auto' : 'smooth' })
-  setView(b.dataset.view)
 }))
+// The visitor taking the scroll back hands control back to the scroll position.
+for (const type of ['wheel', 'touchstart', 'keydown']) addEventListener(type, unpin, { passive: true })
 addEventListener('scroll', onScroll, { passive: true })
 addEventListener('resize', () => { drawLinks(); onScroll() })
 onScroll()
