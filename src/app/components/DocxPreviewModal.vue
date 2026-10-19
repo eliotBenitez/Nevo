@@ -249,8 +249,6 @@ onBeforeUnmount(() => {
                   :style="{ paddingLeft: `${(entry.level - 1) * 1.2}em` }"
                 >
                   <span>{{ entry.text }}</span>
-                  <span class="dots"></span>
-                  <span>{{ entry.pageNumber }}</span>
                 </div>
               </div>
 
