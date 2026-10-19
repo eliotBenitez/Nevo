@@ -10,6 +10,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use super::{parse_params, RpcError};
+use crate::commands::folder::load_manifest;
 use crate::commands::note::notebook::{validate_note_for_write, DocumentFormat};
 use crate::commands::note::{load_note_impl, NoteDocument};
 use crate::commands::path_utils::validate_id;
@@ -208,13 +209,25 @@ pub async fn rename_note(
     .await
 }
 
-async fn load_note(workspace_path: &str, note_id: &str) -> Result<NoteDocument, RpcError> {
+/// Loads a live note. A trashed note keeps its file in notes/, so the manifest
+/// trash is checked too: agents must not open, edit or rename it.
+pub(super) async fn load_note(
+    workspace_path: &str,
+    note_id: &str,
+) -> Result<NoteDocument, RpcError> {
     let workspace_path = workspace_path.to_string();
     let note_id = note_id.to_string();
-    tauri::async_runtime::spawn_blocking(move || load_note_impl(workspace_path, note_id))
-        .await
-        .map_err(|error| RpcError::internal(error.to_string()))?
-        .map_err(|error| RpcError::not_found(&error))
+    tauri::async_runtime::spawn_blocking(move || {
+        let manifest = load_manifest(&workspace_path).map_err(RpcError::internal)?;
+        if manifest.trash.iter().any(|item| item.id == note_id) {
+            return Err(RpcError::not_found(&format!(
+                "Note {note_id} is in the trash"
+            )));
+        }
+        load_note_impl(workspace_path, note_id).map_err(|error| RpcError::not_found(&error))
+    })
+    .await
+    .map_err(|error| RpcError::internal(error.to_string()))?
 }
 
 fn require_document_editor(note: &NoteDocument) -> Result<(), RpcError> {

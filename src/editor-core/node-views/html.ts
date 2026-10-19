@@ -34,12 +34,14 @@ export function createHtmlNodeView(node: PMNode, view: EditorView, getPos: NodeV
   let iframe: HTMLIFrameElement | null = null
   let placeholder: HTMLElement | null = null
   let renderedSrcdoc: string | null = null
+  let renderedCode: string | null = null
 
   const applyHeight = () => {
     if (iframe) iframe.style.height = `${clampHtmlBlockHeight(currentNode.attrs.height)}px`
   }
 
-  const sync = () => {
+  // `restyle` re-reads the editor colours (theme change); plain updates only rebuild when the code changed.
+  const sync = (restyle = false) => {
     const code = getStringAttr(currentNode, 'code')
     if (code.length > MAX_EMBED_SOURCE_CHARS) {
       iframe?.remove()
@@ -70,8 +72,10 @@ export function createHtmlNodeView(node: PMNode, view: EditorView, getPos: NodeV
       renderedSrcdoc = null
     }
     applyHeight()
-    // Compare the built document, not the code: a theme change alters the baked-in colours.
+    if (!restyle && renderedSrcdoc !== null && code === renderedCode) return
+    // Compare the built document so a theme switch that keeps the colours does not reload the frame.
     const srcdoc = buildSrcdoc(code, view)
+    renderedCode = code
     if (srcdoc !== renderedSrcdoc) {
       iframe.srcdoc = srcdoc
       renderedSrcdoc = srcdoc
@@ -97,7 +101,7 @@ export function createHtmlNodeView(node: PMNode, view: EditorView, getPos: NodeV
   sync()
 
   // The srcdoc bakes in the editor text colour; sync() reloads only when it actually changed.
-  const themeObserver = typeof MutationObserver === 'undefined' ? null : new MutationObserver(sync)
+  const themeObserver = typeof MutationObserver === 'undefined' ? null : new MutationObserver(() => sync(true))
   themeObserver?.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
 
   return {

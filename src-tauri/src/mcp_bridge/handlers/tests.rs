@@ -237,6 +237,24 @@ fn read_note_reports_notebook_format_and_raw_notebook_data() {
 }
 
 #[test]
+fn editor_tools_refuse_a_trashed_note() {
+    let root = temp_workspace("auto");
+    let path = root.to_string_lossy().into_owned();
+    let load = || tauri::async_runtime::block_on(super::editor::load_note(&path, "note-1"));
+    assert!(load().is_ok());
+
+    blocking(
+        &root,
+        "notes.delete",
+        serde_json::json!({ "noteId": "note-1" }),
+    )
+    .expect("delete");
+    // The file stays in notes/ for restore, but open/write/rename must not reach it.
+    assert_eq!(load().unwrap_err().code, "not_found");
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
 fn create_then_delete_updates_the_manifest_and_trash() {
     let root = temp_workspace("auto");
 

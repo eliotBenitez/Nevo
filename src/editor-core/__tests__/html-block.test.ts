@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { EditorState, NodeSelection } from 'prosemirror-state'
 import type { Command } from 'prosemirror-state'
 import { DOMParser as PMDOMParser, DOMSerializer } from 'prosemirror-model'
@@ -96,10 +96,14 @@ describe('html_block node view', () => {
     let writes = 0
     let value = iframe.srcdoc
     Object.defineProperty(iframe, 'srcdoc', { get: () => value, set: (v: string) => { writes++; value = v } })
+    const styleReads = vi.spyOn(window, 'getComputedStyle')
 
     const taller = nevoBaseSchema.nodes.html_block.create({ code: '<p>a</p>', height: 400 })
     expect(view.update!(taller, [], null as never)).toBe(true)
     expect(writes).toBe(0)
+    // Updates that keep the code must not force a style recalculation.
+    expect(styleReads).not.toHaveBeenCalled()
+    styleReads.mockRestore()
     expect(iframe.style.height).toBe('400px')
 
     const changed = nevoBaseSchema.nodes.html_block.create({ code: '<p>b</p>', height: 400 })

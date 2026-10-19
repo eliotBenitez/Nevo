@@ -1,7 +1,7 @@
 import { nextTick, onBeforeUnmount, onMounted, toRaw, watch, type Ref } from 'vue'
 import type { EditorCore } from './useEditorCore'
 import { applyCaretAnimation } from './caretAnimation'
-import { applyNoteViewState, captureNoteViewState, isViewUntouched, markRestoredView, recallNoteView, rememberNoteView } from './noteViewMemory'
+import { applyNoteViewState, captureNoteViewState, isViewUntouched, markRestoredView, noteViewEpoch, recallNoteView, rememberNoteView } from './noteViewMemory'
 import type { SaveStatus } from '../../../stores/note'
 import type { NoteDocument } from '../../../types/note'
 import type { WorkspaceSettings } from '../../../types/workspace'
@@ -63,6 +63,7 @@ const LATE_LAYOUT_RESTORE_MS = 250
 export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOptions) {
   // The note currently rendered in the view; the note prop already points at the next one when we rebuild.
   let displayedNoteId: string | null = null
+  let displayedEpoch = noteViewEpoch()
   let lateRestoreTimer: ReturnType<typeof setTimeout> | null = null
 
   function rememberDisplayedNoteView() {
@@ -71,7 +72,7 @@ export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOpt
     if (!view?.state || !scrollEl || !displayedNoteId) return
     // Best effort: a failed capture must never block a note switch or unmount.
     try {
-      rememberNoteView(displayedNoteId, captureNoteViewState(view, scrollEl))
+      rememberNoteView(displayedNoteId, captureNoteViewState(view, scrollEl), displayedEpoch)
     } catch {
       // Keep the previously remembered position.
     }
@@ -116,6 +117,7 @@ export function useWorkspaceEditorLifecycle(options: WorkspaceEditorLifecycleOpt
     if (!root) return
     await options.editorSetup.setupEditorForNote(note, root, options.getSettings())
     displayedNoteId = note.id
+    displayedEpoch = noteViewEpoch()
     restoreNoteView(note.id)
     options.mountNotePreload(root)
     options.updateEditorStatsNow()

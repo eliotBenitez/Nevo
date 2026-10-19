@@ -8,6 +8,7 @@ import {
   forgetAllNoteViews,
   isViewUntouched,
   markRestoredView,
+  noteViewEpoch,
   recallNoteView,
   rememberNoteView,
   type NoteViewState,
@@ -65,6 +66,15 @@ describe('noteViewMemory', () => {
     expect(recallNoteView('note-1')?.scrollTop).toBe(7)
     expect(recallNoteView('note-2')).toBeUndefined()
   })
+  it('drops a capture of a note displayed before the memory was cleared', () => {
+    const shownIn = noteViewEpoch()
+    forgetAllNoteViews()
+    rememberNoteView('old-workspace-note', state({ scrollTop: 5 }), shownIn)
+    expect(recallNoteView('old-workspace-note')).toBeUndefined()
+    rememberNoteView('new-note', state({ scrollTop: 6 }), noteViewEpoch())
+    expect(recallNoteView('new-note')?.scrollTop).toBe(6)
+  })
+
   it('treats a caret move or an edit after a restore as user input, but not an unchanged view', () => {
     const view = createView(['hello', 'world'])
     const scrollEl = document.createElement('div')

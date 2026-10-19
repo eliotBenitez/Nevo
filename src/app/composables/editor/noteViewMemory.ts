@@ -79,7 +79,16 @@ export function isViewUntouched(view: EditorView, scrollEl: HTMLElement, mark: R
     && view.state.selection.eq(mark.state.selection)
 }
 
-export function rememberNoteView(noteId: string, state: NoteViewState): void {
+// Bumped by forgetAllNoteViews, so a note displayed before a workspace switch cannot write back afterwards.
+let epoch = 0
+
+export function noteViewEpoch(): number {
+  return epoch
+}
+
+/** `displayedInEpoch` is noteViewEpoch() from when the note was shown; a stale capture is dropped. */
+export function rememberNoteView(noteId: string, state: NoteViewState, displayedInEpoch = epoch): void {
+  if (displayedInEpoch !== epoch) return
   memory.delete(noteId)
   memory.set(noteId, state)
   if (memory.size > MAX_REMEMBERED_NOTES) memory.delete(memory.keys().next().value!)
@@ -90,5 +99,6 @@ export function recallNoteView(noteId: string): NoteViewState | undefined {
 }
 
 export function forgetAllNoteViews(): void {
+  epoch += 1
   memory.clear()
 }

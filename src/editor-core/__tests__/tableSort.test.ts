@@ -59,6 +59,11 @@ describe('compareTableCellText', () => {
     expect([...values].sort((a, b) => compareTableCellText(a, b, 'asc'))).toEqual(['-3.25', '2,5', '9', '10', '1 234,5'])
   })
 
+  it('reads comma and dot thousands separators as numbers', () => {
+    const values = ['999', '1,234', '5', '1,234.50', '1.000,5']
+    expect([...values].sort((a, b) => compareTableCellText(a, b, 'asc'))).toEqual(['5', '999', '1.000,5', '1,234', '1,234.50'])
+  })
+
   it('keeps empty values last in both directions', () => {
     const values = ['b', '', 'a']
     expect([...values].sort((a, b) => compareTableCellText(a, b, 'asc'))).toEqual(['a', 'b', ''])
