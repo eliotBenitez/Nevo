@@ -121,6 +121,8 @@ describe('DocxPreviewModal', () => {
       headingNumbers: false,
       tableOfContents: false,
       tocTitle: expect.any(String),
+      pageLabel: expect.any(String),
+      pageOfLabel: expect.any(String),
       titlePage: false,
       runningHeader: false,
       exportNoteTitle: true,

@@ -761,7 +761,7 @@ export async function serializeNoteToDocx(
             alignment: AlignmentType.RIGHT,
             children: [
               new TextRun({
-                children: ['Page ', PageNumber.CURRENT, ' of ', PageNumber.TOTAL_PAGES],
+                children: [`${opts.pageLabel || 'Page'} `, PageNumber.CURRENT, ` ${opts.pageOfLabel || 'of'} `, PageNumber.TOTAL_PAGES],
                 size: 18,
                 color: '888888',
               })

@@ -66,6 +66,8 @@ const options = computed<DocxExportOptions>(() => ({
   headingNumbers: headingNumbers.value,
   tableOfContents: tableOfContents.value,
   tocTitle: t('export.tableOfContents'),
+  pageLabel: t('export.pageLabel'),
+  pageOfLabel: t('export.pageOf'),
   titlePage: titlePage.value,
   runningHeader: runningHeader.value,
   exportNoteTitle: exportNoteTitle.value,
@@ -264,7 +266,7 @@ onBeforeUnmount(() => {
 
             <!-- Page Numbers -->
             <div v-if="pageNumbers && page.type !== 'title'" class="docx-page__footer">
-              <span class="docx-page__footer-page">Page {{ page.pageNumber }}</span>
+              <span class="docx-page__footer-page">{{ t('export.pageLabel') }} {{ page.pageNumber }}</span>
             </div>
           </div>
         </div>

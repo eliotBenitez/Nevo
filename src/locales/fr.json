@@ -2460,6 +2460,8 @@
       "relaxed": "Détendu"
     },
     "pageNumbers": "Numéros de page",
+    "pageLabel": "Page",
+    "pageOf": "sur",
     "headingNumbers": "Numéros de titre",
     "tableOfContents": "Table des matières",
     "titlePage": "Page de titre",
