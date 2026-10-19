@@ -120,7 +120,6 @@ describe('DocxPreviewModal', () => {
       pageNumbers: false,
       tableOfContents: false,
       tocTitle: expect.any(String),
-      tableOfContents: false,
       titlePage: false,
       runningHeader: false,
       exportNoteTitle: true,
