@@ -218,6 +218,7 @@ fn bundled_system_plugins() -> Vec<(PluginManifest, &'static str)> {
                         "key": "branch",
                         "type": "text",
                         "label": "settings.plugins.githubSync.fields.branch",
+                        "description": "settings.plugins.githubSync.fields.branchHint",
                         "default": "main",
                         "placeholder": "main",
                     }),

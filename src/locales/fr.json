@@ -1766,6 +1766,7 @@
         "fields": {
           "repo": "Dépôt",
           "branch": "Branche",
+          "branchHint": "La branche est remplacée par une copie de l'espace de travail : les fichiers absents de l'espace en sont supprimés (l'historique est conservé). Utilisez une branche ou un dépôt dédié.",
           "token": "Jeton d'accès",
           "tokenHint": "Jeton d'accès personnel avec portée repo",
           "commitMessage": "Message de commit",

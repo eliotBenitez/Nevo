@@ -1766,6 +1766,7 @@
         "fields": {
           "repo": "Repository",
           "branch": "Branch",
+          "branchHint": "Der Branch wird durch eine Kopie des Arbeitsbereichs ersetzt: Dateien, die nicht im Arbeitsbereich sind, werden daraus entfernt (der Verlauf bleibt erhalten). Verwende einen eigenen Branch oder ein eigenes Repository.",
           "token": "Zugriffstoken",
           "tokenHint": "Persönlicher Zugriffstoken mit Repo-Umfang",
           "commitMessage": "Commit-Nachricht",

@@ -1766,6 +1766,7 @@
         "fields": {
           "repo": "Repositorio",
           "branch": "Rama",
+          "branchHint": "La rama se sustituye por una copia del espacio de trabajo: los archivos que no están en el espacio se eliminan de ella (el historial se conserva). Usa una rama o un repositorio dedicado.",
           "token": "Token de acceso",
           "tokenHint": "Token de acceso personal con alcance repo",
           "commitMessage": "Mensaje de commit",
