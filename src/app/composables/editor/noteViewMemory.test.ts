@@ -16,14 +16,21 @@ import {
 
 function createView(paragraphs: string[]): EditorView {
   const doc = schema.node('doc', null, paragraphs.map((text) => schema.node('paragraph', null, text ? [schema.text(text)] : [])))
-  return new EditorView(document.createElement('div'), { state: EditorState.create({ schema, doc }) })
+  const view = new EditorView(document.createElement('div'), { state: EditorState.create({ schema, doc }) })
+  views.push(view)
+  return view
 }
 
 function state(overrides: Partial<NoteViewState>): NoteViewState {
   return { topPos: null, topOffset: 0, scrollTop: 0, anchor: 1, head: 1, ...overrides }
 }
 
-afterEach(() => forgetAllNoteViews())
+// Undestroyed views leave DOMObserver timers that fire after jsdom teardown.
+const views: EditorView[] = []
+afterEach(() => {
+  forgetAllNoteViews()
+  views.splice(0).forEach(v => v.destroy())
+})
 
 describe('noteViewMemory', () => {
   it('captures the caret and treats a scroll at the top as "start of note"', () => {

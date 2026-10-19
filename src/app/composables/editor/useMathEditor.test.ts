@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { nextTick, reactive } from 'vue'
 import { EditorState } from 'prosemirror-state'
 import { EditorView } from 'prosemirror-view'
@@ -8,12 +8,17 @@ import { useMathEditor } from './useMathEditor'
 import type { EditorCore } from './useEditorCore'
 import type { MathPopoverState } from './useEditorOverlays'
 
+// Undestroyed views leave DOMObserver timers that fire after jsdom teardown.
+const views: EditorView[] = []
+afterEach(() => { views.splice(0).forEach(v => v.destroy()) })
+
 function setup(latex = 'a') {
   const state = EditorState.create({
     doc: nevoBaseSchema.node('doc', null, [nevoBaseSchema.node('math_block', { latex })]),
     plugins: [history()],
   })
   const view = new EditorView(document.createElement('div'), { state })
+  views.push(view)
   const core = { editorView: view, coreCommands: {} } as unknown as EditorCore
   const popover = reactive({ open: false, nodePos: null, latex: '', isInline: false, position: { top: 0, left: 0 } }) as MathPopoverState
   const editor = useMathEditor(core, popover, { getMathPopoverEl: () => null, onFocusInput: () => {} }, () => {}, (p) => p)

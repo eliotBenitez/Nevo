@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { afterEach, describe, expect, it, vi, beforeEach } from 'vitest'
 import { EditorState } from 'prosemirror-state'
 import { EditorView } from 'prosemirror-view'
 import { nevoBaseSchema } from '../../../editor-core/schema'
@@ -37,6 +37,10 @@ function flushAsync(): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, 0))
 }
 
+// Undestroyed views leave DOMObserver timers that fire after jsdom teardown.
+const views: EditorView[] = []
+afterEach(() => { views.splice(0).forEach(v => v.destroy()) })
+
 function makeCore(paragraphs: string[]): { core: EditorCore, view: EditorView } {
   const schema = nevoBaseSchema
   const doc = schema.node('doc', null, paragraphs.map(text =>
@@ -49,6 +53,7 @@ function makeCore(paragraphs: string[]): { core: EditorCore, view: EditorView } 
   }
   const state = EditorState.create({ doc, plugins: [createVoiceRecordingPlaceholderPlugin(options)] })
   const view = new EditorView(document.createElement('div'), { state })
+  views.push(view)
   const core = { editorView: view } as unknown as EditorCore
   return { core, view }
 }

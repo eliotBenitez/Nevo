@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { EditorState, TextSelection } from 'prosemirror-state'
 import { EditorView } from 'prosemirror-view'
 import { nevoBaseSchema } from '../../../editor-core/schema'
@@ -26,10 +26,15 @@ import * as api from '../../../tauri/dictation'
 
 type Emit = (e: api.DictationEvent) => void
 
+// Undestroyed views leave DOMObserver timers that fire after jsdom teardown.
+const views: EditorView[] = []
+afterEach(() => { views.splice(0).forEach(v => v.destroy()) })
+
 function makeCore(): { core: EditorCore, view: EditorView } {
   const doc = nevoBaseSchema.node('doc', null, [nevoBaseSchema.node('paragraph', null, [])])
   const state = EditorState.create({ doc, plugins: [createDictationPlugin({ onStop: vi.fn(), t: k => k })] })
   const view = new EditorView(document.createElement('div'), { state })
+  views.push(view)
   view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1)))
   return { core: { editorView: view } as unknown as EditorCore, view }
 }
