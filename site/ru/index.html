@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nevo — приложение для заметок, которые хранятся у вас на диске</title>
+<meta name="description" content="Nevo — бесплатное приложение для заметок с открытым кодом для Windows, macOS, Linux и Android. Каждая заметка — обычный файл на вашем диске: пишите в Markdown-редакторе и смотрите те же заметки как холст, граф, канбан или базу данных. Без аккаунта и облака.">
+<link rel="canonical" href="https://eliotbenitez.github.io/Nevo/ru/">
+<link rel="alternate" hreflang="en" href="https://eliotbenitez.github.io/Nevo/">
+<link rel="alternate" hreflang="ru" href="https://eliotbenitez.github.io/Nevo/ru/">
+<link rel="alternate" hreflang="x-default" href="https://eliotbenitez.github.io/Nevo/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Nevo — ваши заметки на вашем диске">
+<meta property="og:description" content="Бесплатное приложение для заметок: документ, холст, граф, канбан и база данных — всё хранится обычными файлами на вашем компьютере.">
+<meta property="og:url" content="https://eliotbenitez.github.io/Nevo/ru/">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:image" content="https://eliotbenitez.github.io/Nevo/assets/logo.png">
+<meta name="theme-color" content="#F6F4EF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161718" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/png" href="../assets/logo.png">
+<link rel="preload" href="../assets/fonts/geist-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../assets/site.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Nevo","applicationCategory":"ProductivityApplication","operatingSystem":"Windows, macOS, Linux, Android","description":"Бесплатное приложение для заметок с открытым кодом: Markdown-редактор, холст, граф, канбан-доски и базы данных. Заметки хранятся у вас на диске.","url":"https://eliotbenitez.github.io/Nevo/ru/","inLanguage":"ru","downloadUrl":"https://github.com/eliotBenitez/Nevo/releases/latest","license":"https://www.gnu.org/licenses/agpl-3.0.html","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
+</script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></symbol>
+<symbol id="i-file-text" viewBox="0 0 24 24"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
+<symbol id="i-shapes" viewBox="0 0 24 24"><path d="M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z"/><rect x="3" y="14" width="7" height="7" rx="1"/><circle cx="17.5" cy="17.5" r="3.5"/></symbol>
+<symbol id="i-waypoints" viewBox="0 0 24 24"><path d="m10.586 5.414-5.172 5.172"/><path d="m18.586 13.414-5.172 5.172"/><path d="M6 12h12"/><circle cx="12" cy="20" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="20" cy="12" r="2"/><circle cx="4" cy="12" r="2"/></symbol>
+<symbol id="i-square-kanban" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v9"/></symbol>
+<symbol id="i-table-2" viewBox="0 0 24 24"><path d="M3 9h18"/><path d="M9 3v18"/><rect x="3" y="3" width="18" height="18" rx="2"/></symbol>
+<symbol id="i-hard-drive" viewBox="0 0 24 24"><path d="M10 16h.01"/><path d="M2.212 11.577a2 2 0 0 0-.212.896V18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5.527a2 2 0 0 0-.212-.896L18.55 5.11A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><path d="M21.946 12.013H2.054"/><path d="M6 16h.01"/></symbol>
+<symbol id="i-folder-open" viewBox="0 0 24 24"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></symbol>
+<symbol id="i-file-braces" viewBox="0 0 24 24"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 12a1 1 0 0 0-1 1v1a1 1 0 0 1-1 1 1 1 0 0 1 1 1v1a1 1 0 0 0 1 1"/><path d="M14 18a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1 1 1 0 0 1-1-1v-1a1 1 0 0 0-1-1"/></symbol>
+<symbol id="i-monitor" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></symbol>
+<symbol id="i-laptop" viewBox="0 0 24 24"><path d="M18 5a2 2 0 0 1 2 2v8.526a2 2 0 0 0 .212.897l1.068 2.127a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45l1.068-2.127A2 2 0 0 0 4 15.526V7a2 2 0 0 1 2-2z"/><path d="M20.054 15.987H3.946"/></symbol>
+<symbol id="i-terminal" viewBox="0 0 24 24"><path d="M12 19h8"/><path d="m4 17 6-6-6-6"/></symbol>
+<symbol id="i-smartphone" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></symbol>
+<symbol id="i-languages" viewBox="0 0 24 24"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></symbol>
+<symbol id="i-github" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
+</svg>
+<a class="skip" href="#download">Перейти к загрузке</a>
+
+<main>
+  <section class="track" aria-label="Демонстрация Nevo">
+    <div class="stage">
+      <div class="win">
+        <header class="titlebar">
+          <a class="brand" href="./" aria-label="Nevo — главная"><img src="../assets/logo.png" alt="" width="24" height="24">Nevo</a>
+          <nav class="seg views" aria-label="Виды демонстрационной заметки">
+            <button type="button" data-view="doc" aria-pressed="true" data-caption="Пишите в спокойном редакторе — Markdown форматируется на лету."><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg><span>Документ</span></button>
+            <button type="button" data-view="canvas" aria-pressed="false" data-caption="Разложите те же идеи на холсте и свяжите их."><svg class="ic" aria-hidden="true"><use href="#i-shapes"/></svg><span>Холст</span></button>
+            <button type="button" data-view="graph" aria-pressed="false" data-caption="Идите по [[вики-ссылкам]] через граф заметок."><svg class="ic" aria-hidden="true"><use href="#i-waypoints"/></svg><span>Граф</span></button>
+            <button type="button" data-view="kanban" aria-pressed="false" data-caption="Двигайте задачи по канбан-доске прямо в заметке."><svg class="ic" aria-hidden="true"><use href="#i-square-kanban"/></svg><span>Канбан</span></button>
+            <button type="button" data-view="db" aria-pressed="false" data-caption="Сортируйте и фильтруйте заметки как базу данных со свойствами."><svg class="ic" aria-hidden="true"><use href="#i-table-2"/></svg><span>База</span></button>
+          </nav>
+          <div class="tb-end">
+            <a class="btn btn-ghost lang" href="../" hreflang="en" lang="en" aria-label="English"><svg class="ic" aria-hidden="true"><use href="#i-languages"/></svg><span class="lang-label">English</span></a>
+            <a class="btn btn-ghost" href="https://github.com/eliotBenitez/Nevo" aria-label="Исходный код на GitHub"><svg class="ic ic-fill" aria-hidden="true"><use href="#i-github"/></svg></a>
+            <a class="btn btn-primary" href="https://github.com/eliotBenitez/Nevo/releases/latest" data-dl-primary data-tpl="Скачать для {os}"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg><span class="dl-label">Скачать<span class="dl-label-long"> Nevo</span></span></a>
+          </div>
+        </header>
+
+        <div class="island" data-view="doc">
+          <div class="note-head">
+            <div class="crumbs"><svg class="ic" aria-hidden="true"><use href="#i-hard-drive"/></svg>~/Заметки<span aria-hidden="true">/</span>Добро пожаловать</div>
+            <h1 class="note-title">Ваши заметки. Ваш диск.<br>Пять способов их увидеть.</h1>
+            <p class="lead">Nevo — бесплатное приложение для заметок с открытым кодом для Windows, macOS, Linux и Android. Каждая заметка — обычный файл в папке, которую выбираете вы: без аккаунта, облака и сервера синхронизации.</p>
+          </div>
+          <div class="board">
+            <div class="cols" aria-hidden="true"><div>Пишу <span>2</span></div><div>Связываю <span>2</span></div><div>Храню <span>2</span></div></div>
+            <svg class="links" aria-hidden="true"></svg>
+            <div class="thead" aria-hidden="true"><span></span><span>Название</span><span class="c-desc">Описание</span><span>Раздел</span><span class="c-file">Файл</span></div>
+            <article class="blk" data-k="local" data-col="3" style="--hue: var(--hue-sage)"><span class="dot"></span><h2>Локально прежде всего</h2><p class="x">Заметки лежат файлами на вашем диске. Ничего не покидает устройство, пока вы сами этого не захотите.</p><span class="area">Хранение</span><span class="file">notes/note-4f1c.nevo</span></article>
+            <article class="blk" data-k="md" data-col="1" style="--hue: var(--hue-mist)"><span class="dot"></span><h2>Markdown на лету</h2><p class="x">Визуальный редактор со слеш-командами и форматированием, которое появляется по мере набора.</p><span class="area">Редактор</span><span class="file">notes/note-9a07.nevo</span></article>
+            <article class="blk" data-k="links" data-col="2" style="--hue: var(--hue-plum)"><span class="dot"></span><h2>Вики-ссылки</h2><p class="x">Связывайте заметки <span class="wl">[[двойными скобками]]</span> и смотрите связи на графе.</p><span class="area">Связи</span><span class="file">notes/note-b2e8.nevo</span></article>
+            <article class="blk" data-k="math" data-col="1" style="--hue: var(--hue-amber)"><span class="dot"></span><h2>Формулы, диаграммы, рисунки</h2><p class="x">Формулы KaTeX вроде <span class="math"><i>e</i><sup><i>i</i>π</sup> + 1 = 0</span>, диаграммы Mermaid и рисунки от руки прямо в заметке.</p><span class="area">Блоки</span><span class="file">notes/note-c41d.nevo</span></article>
+            <article class="blk" data-k="board" data-col="2" style="--hue: var(--hue-rose)"><span class="dot"></span><h2>Доски и базы данных</h2><p class="x">Канбан-доски и таблицы с формулами хранятся в тех же заметках.</p><span class="area">Структура</span><span class="file">notes/note-d5f0.nevo</span></article>
+            <article class="blk" data-k="ai" data-col="3" style="--hue: var(--accent)"><span class="dot"></span><h2>ИИ, который остаётся дома</h2><p class="x">По умолчанию — локальная модель Ollama или любой OpenAI-совместимый адрес на ваш выбор. Режим приватности блокирует всё нелокальное.</p><span class="area">ИИ</span><span class="file">notes/note-e6a3.nevo</span></article>
+          </div>
+        </div>
+      </div>
+      <p class="caption" aria-live="polite"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg><span class="caption-text">Пишите в спокойном редакторе — Markdown форматируется на лету.</span><span class="hint">· прокрутите, чтобы сменить вид</span></p>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="disk-h">
+    <h2 id="disk-h">Обычные файлы, которые откроет любой редактор.</h2>
+    <p class="sub">Рабочее пространство — обычная папка. Каждая заметка — читаемый JSON-файл: его можно сохранить в резервную копию, положить в Git или перенести куда угодно. Nevo ничего не запирает.</p>
+    <div class="disk">
+      <div class="tree" aria-label="Пример папки рабочего пространства">
+        <div class="row"><svg class="ic" aria-hidden="true"><use href="#i-folder-open"/></svg><span>Заметки</span></div>
+        <div class="row d1"><svg class="ic" aria-hidden="true"><use href="#i-folder-open"/></svg><span class="mono">.nevo/</span></div>
+        <div class="row d2"><svg class="ic" aria-hidden="true"><use href="#i-file-braces"/></svg><span class="mono">workspace.json</span></div>
+        <div class="row d2"><svg class="ic" aria-hidden="true"><use href="#i-folder-open"/></svg><span class="mono">assets/</span></div>
+        <div class="row d1"><svg class="ic" aria-hidden="true"><use href="#i-folder-open"/></svg><span class="mono">notes/</span></div>
+        <div class="row d2 on"><svg class="ic" aria-hidden="true"><use href="#i-file-braces"/></svg><span class="mono">note-4f1c.nevo</span></div>
+        <div class="row d2"><svg class="ic" aria-hidden="true"><use href="#i-file-braces"/></svg><span class="mono">note-9a07.nevo</span></div>
+        <div class="row d2"><svg class="ic" aria-hidden="true"><use href="#i-file-braces"/></svg><span class="mono">note-b2e8.nevo</span></div>
+      </div>
+<pre class="json" aria-label="Содержимое note-4f1c.nevo"><code>{
+  <span class="k">"id"</span>: <span class="s">"4f1c…"</span>,
+  <span class="k">"title"</span>: <span class="s">"Локально прежде всего"</span>,
+  <span class="k">"updatedAt"</span>: <span class="s">"2026-10-19T09:12:00Z"</span>,
+  <span class="k">"properties"</span>: { <span class="k">"tags"</span>: [<span class="s">"принцип"</span>] },
+  <span class="k">"content"</span>: {
+    <span class="k">"type"</span>: <span class="s">"doc"</span>,
+    <span class="k">"content"</span>: [ <span class="c">/* ваши абзацы, таблицы, формулы… */</span> ]
+  }
+}</code></pre>
+    </div>
+  </section>
+
+  <section class="sec dl" id="download" aria-labelledby="dl-h">
+    <div>
+      <h2 id="dl-h">Скачать Nevo</h2>
+      <p class="sub">Бесплатно и с открытым кодом под лицензией AGPL-3.0. Одно приложение для компьютера и Android.</p>
+      <div class="cta">
+        <a class="btn btn-primary btn-lg" href="https://github.com/eliotBenitez/Nevo/releases/latest" data-dl-primary data-tpl="Скачать для {os}"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg><span class="dl-label">Скачать последнюю версию</span></a>
+        <a class="btn btn-outline btn-lg" href="https://github.com/eliotBenitez/Nevo"><svg class="ic ic-fill" aria-hidden="true"><use href="#i-github"/></svg>Код на GitHub</a>
+      </div>
+      <p class="ver">Последняя версия: <span class="mono" data-version>см. GitHub</span> · <a href="https://github.com/eliotBenitez/Nevo/releases">Все версии</a></p>
+    </div>
+    <div class="plats">
+      <div class="plat" data-os="windows"><svg class="ic" aria-hidden="true"><use href="#i-monitor"/></svg><div><h3 data-os-name="windows">Windows</h3><span class="you">Ваша система</span></div><div class="files"><a class="btn btn-outline" data-asset="windows-exe" href="https://github.com/eliotBenitez/Nevo/releases/latest">Установщик <span class="ext">.exe</span></a><a class="btn btn-ghost" data-asset="windows-msi" href="https://github.com/eliotBenitez/Nevo/releases/latest">MSI <span class="ext">.msi</span></a></div></div>
+      <div class="plat" data-os="mac"><svg class="ic" aria-hidden="true"><use href="#i-laptop"/></svg><div><h3 data-os-name="mac">macOS</h3><span class="you">Ваша система</span></div><div class="files"><a class="btn btn-outline" data-asset="mac-arm" href="https://github.com/eliotBenitez/Nevo/releases/latest">Apple Silicon <span class="ext">.dmg</span></a><a class="btn btn-ghost" data-asset="mac-intel" href="https://github.com/eliotBenitez/Nevo/releases/latest">Intel <span class="ext">.dmg</span></a></div></div>
+      <div class="plat" data-os="linux"><svg class="ic" aria-hidden="true"><use href="#i-terminal"/></svg><div><h3 data-os-name="linux">Linux</h3><span class="you">Ваша система</span></div><div class="files"><a class="btn btn-outline" data-asset="linux-deb" href="https://github.com/eliotBenitez/Nevo/releases/latest">Debian/Ubuntu <span class="ext">.deb</span></a><a class="btn btn-ghost" data-asset="linux-rpm" href="https://github.com/eliotBenitez/Nevo/releases/latest">Fedora <span class="ext">.rpm</span></a><a class="btn btn-ghost" data-asset="linux-flatpak" href="https://github.com/eliotBenitez/Nevo/releases/latest">Flatpak</a></div></div>
+      <div class="plat" data-os="android"><svg class="ic" aria-hidden="true"><use href="#i-smartphone"/></svg><div><h3 data-os-name="android">Android</h3><span class="you">Ваша система</span></div><div class="files"><a class="btn btn-outline" data-asset="android" href="https://github.com/eliotBenitez/Nevo/releases/latest">APK <span class="ext">.apk</span></a></div></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>Nevo — локальное рабочее пространство для ваших знаний.</span>
+  <span class="grow"></span>
+  <a href="https://github.com/eliotBenitez/Nevo">GitHub</a>
+  <a href="https://github.com/eliotBenitez/Nevo/blob/main/LICENSE">Лицензия</a>
+  <a href="https://github.com/eliotBenitez/Nevo/releases">Версии</a>
+  <a href="../" hreflang="en" lang="en">English</a>
+</footer>
+<script src="../assets/site.js" defer></script>
+</body>
+</html>

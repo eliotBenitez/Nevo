@@ -32,6 +32,11 @@ export default tseslint.config(
     files: ['tools/**/*.mjs', 'build-tools/**/*.mjs'],
     languageOptions: { globals: globals.node },
   },
+  {
+    // Static GitHub Pages landing script, runs in the visitor's browser.
+    files: ['site/**/*.js'],
+    languageOptions: { globals: globals.browser },
+  },
   ...vue.configs['flat/recommended'],
   {
     files: ['**/*.{ts,vue}'],

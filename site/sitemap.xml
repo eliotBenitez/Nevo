@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://eliotbenitez.github.io/Nevo/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://eliotbenitez.github.io/Nevo/"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://eliotbenitez.github.io/Nevo/ru/"/>
+  </url>
+  <url>
+    <loc>https://eliotbenitez.github.io/Nevo/ru/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://eliotbenitez.github.io/Nevo/"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://eliotbenitez.github.io/Nevo/ru/"/>
+  </url>
+</urlset>
