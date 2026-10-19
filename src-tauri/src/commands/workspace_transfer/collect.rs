@@ -8,12 +8,11 @@ const MAX_TOTAL_SOURCE_BYTES: u64 = 20 * 1024 * 1024 * 1024;
 /// A workspace file staged for the archive: its forward-slash path inside the
 /// `.nevoz` container plus where to read its bytes from on disk.
 #[derive(Debug, Clone)]
-pub(super) struct CollectedFile {
+pub(crate) struct CollectedFile {
     pub archive_path: String,
     pub source_path: PathBuf,
-    /// Recorded for a possible future byte-level progress readout; the
-    /// current writer only reports file-count progress.
-    #[allow(dead_code)]
+    /// Unused by the archive writer (file-count progress only); GitHub sync
+    /// uses it to apply its per-blob and total size limits.
     pub size: u64,
 }
 
@@ -85,7 +84,7 @@ fn collect_dir_recursive(root: &Path, dir: &Path, collector: &mut Collector) -> 
 /// of truth, and any legacy Y.Doc state left over from before the workspace
 /// was migrated is neither needed by a restored copy nor safe to carry
 /// forward as if it were still authoritative.
-pub(super) fn collect_full_workspace_files(root: &Path) -> Result<Vec<CollectedFile>, String> {
+pub(crate) fn collect_full_workspace_files(root: &Path) -> Result<Vec<CollectedFile>, String> {
     // Fold the database WAL into the main file so its committed rows are
     // captured by the copy below. Best-effort: a checkpoint failure must not
     // abort the export of everything else.

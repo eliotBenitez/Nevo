@@ -1,6 +1,6 @@
-// Native GitHub sync: mirrors the local workspace (notes, assets, boards,
-// snapshots, and workspace/settings JSON) into a GitHub repository via a
-// single force-pushed commit built through the GitHub REST Git Data API.
+// Native GitHub sync: mirrors the local workspace (the `.nevoz` export file
+// set minus installed plugins) into a GitHub repository via a fast-forward
+// commit built through the GitHub REST Git Data API.
 // Upload-only (no pull/merge). See `docs` for the `nevo.github-sync` plugin.
 //
 // Style mirrors `commands::workspace::marketplace` for the GitHub REST calls
@@ -19,7 +19,9 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 
 use crate::commands::auth::secure_store::secure_store_get;
+use crate::commands::database::snapshot_database;
 use crate::commands::path_utils::{normalize_workspace_path, write_atomic};
+use crate::commands::workspace_transfer::collect::collect_full_workspace_files;
 
 const PLUGIN_ID: &str = "nevo.github-sync";
 const TOKEN_SECRET_KEY: &str = "nevo.github-sync.token";
@@ -63,7 +65,6 @@ struct GithubSyncConfig {
 struct RepoFile {
     path: String,
     source_path: PathBuf,
-    size: u64,
 }
 
 /// Outcome of walking the workspace: the files to upload plus the relative
@@ -72,7 +73,6 @@ struct RepoFile {
 struct CollectedFiles {
     files: Vec<RepoFile>,
     skipped: Vec<String>,
-    total_bytes: u64,
 }
 
 static ACTIVE_SYNCS: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
@@ -192,6 +192,9 @@ fn load_config(workspace_path: &str) -> Result<GithubSyncConfig, String> {
         .unwrap_or("Nevo backup")
         .to_string();
 
+    validate_repo(&repo)?;
+    validate_branch(&branch)?;
+
     Ok(GithubSyncConfig {
         repo,
         branch,
@@ -199,102 +202,114 @@ fn load_config(workspace_path: &str) -> Result<GithubSyncConfig, String> {
     })
 }
 
-/// Walk `dir` recursively and push every file found (skipping subdirectories
-/// entries only, no filtering) as a `RepoFile` with a path relative to
-/// `workspace_root`, using forward slashes regardless of platform.
-fn collect_dir_recursive(
-    workspace_root: &Path,
-    dir: &Path,
-    collected: &mut CollectedFiles,
-) -> Result<(), String> {
-    if !dir.exists() {
-        return Ok(());
-    }
-    let entries = std::fs::read_dir(dir).map_err(|error| error.to_string())?;
-    for entry in entries {
-        let entry = entry.map_err(|error| error.to_string())?;
-        let path = entry.path();
-        if path.is_dir() {
-            collect_dir_recursive(workspace_root, &path, collected)?;
-        } else if path.is_file() {
-            push_file(workspace_root, &path, collected)?;
-        }
-    }
-    Ok(())
-}
+/// Directories the full-workspace export walks but a GitHub backup leaves
+/// out: installed plugin code is reinstallable and can be large.
+const EXCLUDED_PREFIXES: &[&str] = &[".nevo/plugins/"];
 
-fn relative_path(workspace_root: &Path, path: &Path) -> Result<String, String> {
-    let relative = path
-        .strip_prefix(workspace_root)
-        .map_err(|error| error.to_string())?;
-    Ok(relative
-        .components()
-        .map(|component| component.as_os_str().to_string_lossy().into_owned())
-        .collect::<Vec<_>>()
-        .join("/"))
-}
+const DATABASE_PATH: &str = ".nevo/databases.sqlite";
 
-fn push_file(
-    workspace_root: &Path,
-    path: &Path,
-    collected: &mut CollectedFiles,
-) -> Result<(), String> {
-    let relative_str = relative_path(workspace_root, path)?;
-    let size = std::fs::metadata(path)
-        .map_err(|error| error.to_string())?
-        .len();
-    if size > MAX_BLOB_BYTES {
-        collected.skipped.push(relative_str);
-        return Ok(());
-    }
-    collected.total_bytes = collected.total_bytes.saturating_add(size);
-    if collected.total_bytes > MAX_SYNC_BYTES {
-        return Err("Workspace files exceed the 512 MiB GitHub Sync limit".to_string());
-    }
-    collected.files.push(RepoFile {
-        path: relative_str,
-        source_path: path.to_path_buf(),
-        size,
-    });
-    Ok(())
-}
-
+/// Reuses the `.nevoz` export collector (which skips symlinks, so nothing
+/// outside the workspace can be uploaded) and applies the GitHub size limits.
 fn collect_workspace_files(workspace_path: &str) -> Result<CollectedFiles, String> {
-    let root = Path::new(workspace_path);
     let mut collected = CollectedFiles::default();
-
-    let notes_dir = root.join("notes");
-    if notes_dir.exists() {
-        for entry in std::fs::read_dir(&notes_dir).map_err(|error| error.to_string())? {
-            let entry = entry.map_err(|error| error.to_string())?;
-            let path = entry.path();
-            if path.is_file() && path.extension().and_then(|ext| ext.to_str()) == Some("nevo") {
-                push_file(root, &path, &mut collected)?;
-            }
+    let mut total_bytes = 0u64;
+    for file in collect_full_workspace_files(Path::new(workspace_path))? {
+        if EXCLUDED_PREFIXES
+            .iter()
+            .any(|prefix| file.archive_path.starts_with(prefix))
+        {
+            continue;
         }
-    }
-
-    // Fold the database WAL into the main file so its committed rows are
-    // captured by the file-level upload below. Best-effort: a checkpoint
-    // failure must not abort the sync of everything else.
-    let _ = crate::commands::database::checkpoint_database(root);
-
-    for relative in [
-        ".nevo/workspace.json",
-        ".nevo/settings.json",
-        ".nevo/databases.sqlite",
-    ] {
-        let path = root.join(relative);
-        if path.is_file() {
-            push_file(root, &path, &mut collected)?;
+        if file.size > MAX_BLOB_BYTES {
+            collected.skipped.push(file.archive_path);
+            continue;
         }
+        total_bytes = total_bytes.saturating_add(file.size);
+        if total_bytes > MAX_SYNC_BYTES {
+            return Err("Workspace files exceed the 512 MiB GitHub Sync limit".to_string());
+        }
+        collected.files.push(RepoFile {
+            path: file.archive_path,
+            source_path: file.source_path,
+        });
     }
-
-    for relative in [".nevo/assets", ".nevo/boards", ".nevo/snapshots"] {
-        collect_dir_recursive(root, &root.join(relative), &mut collected)?;
-    }
-
     Ok(collected)
+}
+
+/// Temporary `VACUUM INTO` copy of `databases.sqlite`, deleted on drop.
+struct DatabaseSnapshot(PathBuf);
+
+impl Drop for DatabaseSnapshot {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.0);
+    }
+}
+
+/// Points the collected database entry at a consistent snapshot instead of
+/// the live file, which the app may be writing while it is uploaded.
+fn snapshot_collected_database(
+    workspace_path: &str,
+    collected: &mut CollectedFiles,
+) -> Result<Option<DatabaseSnapshot>, String> {
+    let Some(index) = collected
+        .files
+        .iter()
+        .position(|file| file.path == DATABASE_PATH)
+    else {
+        return Ok(None);
+    };
+    let snapshot = DatabaseSnapshot(
+        std::env::temp_dir().join(format!("nevo-github-sync-{}.sqlite", uuid::Uuid::new_v4())),
+    );
+    if !snapshot_database(Path::new(workspace_path), &snapshot.0)? {
+        collected.files.remove(index);
+        return Ok(None);
+    }
+    collected.files[index].source_path = snapshot.0.clone();
+    Ok(Some(snapshot))
+}
+
+fn is_repo_segment(segment: &str) -> bool {
+    !segment.is_empty()
+        && segment != "."
+        && segment != ".."
+        && segment
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+}
+
+/// `repo` is spliced into API URL paths, so only `owner/name` is accepted.
+fn validate_repo(repo: &str) -> Result<(), String> {
+    let mut parts = repo.split('/');
+    match (parts.next(), parts.next(), parts.next()) {
+        (Some(owner), Some(name), None) if is_repo_segment(owner) && is_repo_segment(name) => {
+            Ok(())
+        }
+        _ => Err(format!(
+            "Invalid GitHub repository \"{}\": expected owner/name",
+            repo
+        )),
+    }
+}
+
+/// shortcut: stricter than git's ref-name rules (ASCII letters, digits, `-`,
+/// `_`, `.` and `/` only) so the branch is safe in a URL path unescaped;
+/// relax with percent-encoding if users need other characters.
+fn validate_branch(branch: &str) -> Result<(), String> {
+    let valid = !branch.contains("..")
+        && branch.split('/').all(|segment| {
+            !segment.is_empty()
+                && !segment.starts_with('.')
+                && !segment.ends_with(".lock")
+                && segment
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+        });
+    if valid {
+        Ok(())
+    } else {
+        Err(format!("Invalid branch name \"{}\"", branch))
+    }
 }
 
 fn github_client(token: &str) -> Result<reqwest::Client, String> {
@@ -441,11 +456,52 @@ async fn get_base_commit_sha(
             .await
             .map_err(|error| error.to_string())?;
         Ok(Some(payload.object.sha))
-    } else if response.status().as_u16() == 404 || response.status().as_u16() == 409 {
+    } else if response.status().as_u16() == 404 {
         Ok(None)
+    } else if response.status().as_u16() == 409 {
+        bootstrap_empty_repo(client, repo, branch).await.map(Some)
     } else {
         Err(github_error(response, &url).await)
     }
+}
+
+/// Placeholder committed through the Contents API to give an empty repository
+/// its first commit: the Git Data API answers `409 Git Repository is empty`
+/// until one exists. The mirror tree committed right after does not contain
+/// it, so it disappears from the branch again.
+const BOOTSTRAP_PATH: &str = ".nevo-github-sync";
+
+#[derive(Debug, Deserialize)]
+struct ContentsResponse {
+    commit: GitCommitResponse,
+}
+
+async fn bootstrap_empty_repo(
+    client: &reqwest::Client,
+    repo: &str,
+    branch: &str,
+) -> Result<String, String> {
+    let url = format!("{}/repos/{}/contents/{}", GITHUB_API, repo, BOOTSTRAP_PATH);
+    let body = serde_json::json!({
+        "message": "Initialize Nevo backup",
+        "content": STANDARD.encode(b"Nevo GitHub Sync\n"),
+        "branch": branch,
+    });
+    // Not retried: a repeat of a PUT that already landed fails with 422.
+    let response = client
+        .put(&url)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err(github_error(response, &url).await);
+    }
+    let payload = response
+        .json::<ContentsResponse>()
+        .await
+        .map_err(|error| error.to_string())?;
+    Ok(payload.commit.sha)
 }
 
 #[derive(Debug, Deserialize)]
@@ -471,21 +527,22 @@ struct GitTreeListEntry {
     sha: String,
 }
 
-/// Fetch the recursive `path -> blob sha` map for `commit_sha`'s tree, so an
+/// `commit_sha`'s tree id plus its recursive `path -> blob sha` map, so an
 /// unchanged file can reuse its existing blob instead of re-uploading it.
-/// Returns an empty map if the commit/tree is missing (404/409): a missing
-/// path simply falls back to a normal upload, which is always correct. A
-/// truncated tree is likewise harmless — paths not in the map are re-uploaded.
-async fn get_base_tree_map(
+/// Returns `None` if the commit is missing and an empty map if the tree is
+/// (404/409): a missing path simply falls back to a normal upload, which is
+/// always correct. A truncated tree is likewise harmless — paths not in the
+/// map are re-uploaded.
+async fn get_base_tree(
     client: &reqwest::Client,
     repo: &str,
     commit_sha: &str,
-) -> Result<HashMap<String, String>, String> {
+) -> Result<Option<(String, HashMap<String, String>)>, String> {
     let commit_url = format!("{}/repos/{}/git/commits/{}", GITHUB_API, repo, commit_sha);
     let response = send_with_retry(client.get(&commit_url)).await?;
     if !response.status().is_success() {
         if matches!(response.status().as_u16(), 404 | 409) {
-            return Ok(HashMap::new());
+            return Ok(None);
         }
         return Err(github_error(response, &commit_url).await);
     }
@@ -501,7 +558,7 @@ async fn get_base_tree_map(
     let response = send_with_retry(client.get(&tree_url)).await?;
     if !response.status().is_success() {
         if matches!(response.status().as_u16(), 404 | 409) {
-            return Ok(HashMap::new());
+            return Ok(Some((commit.tree.sha, HashMap::new())));
         }
         return Err(github_error(response, &tree_url).await);
     }
@@ -510,12 +567,13 @@ async fn get_base_tree_map(
         .await
         .map_err(|error| error.to_string())?;
 
-    Ok(tree
+    let blobs = tree
         .tree
         .into_iter()
         .filter(|entry| entry.entry_type == "blob")
         .map(|entry| (entry.path, entry.sha))
-        .collect())
+        .collect();
+    Ok(Some((commit.tree.sha, blobs)))
 }
 
 async fn create_blob(client: &reqwest::Client, repo: &str, bytes: &[u8]) -> Result<String, String> {
@@ -539,6 +597,7 @@ async fn create_tree(
     client: &reqwest::Client,
     repo: &str,
     entries: &[(String, String)],
+    base_tree: Option<&str>,
 ) -> Result<String, String> {
     let url = format!("{}/repos/{}/git/trees", GITHUB_API, repo);
     let tree = entries
@@ -552,7 +611,10 @@ async fn create_tree(
             })
         })
         .collect::<Vec<_>>();
-    let body = serde_json::json!({ "tree": tree });
+    let mut body = serde_json::json!({ "tree": tree });
+    if let Some(base_tree) = base_tree {
+        body["base_tree"] = serde_json::Value::from(base_tree);
+    }
     let response = send_with_retry(client.post(&url).json(&body)).await?;
     if !response.status().is_success() {
         return Err(github_error(response, &url).await);
@@ -598,7 +660,9 @@ async fn update_ref(
 ) -> Result<(), String> {
     if had_base {
         let url = format!("{}/repos/{}/git/refs/heads/{}", GITHUB_API, repo, branch);
-        let body = serde_json::json!({ "sha": commit_sha, "force": true });
+        // Every new commit has the current head as parent, so this is a fast
+        // forward; refusing a force push keeps commits pushed concurrently.
+        let body = serde_json::json!({ "sha": commit_sha, "force": false });
         let response = send_with_retry(client.patch(&url).json(&body)).await?;
         if !response.status().is_success() {
             return Err(github_error(response, &url).await);
@@ -658,12 +722,17 @@ fn write_sync_state(
         .map_err(|error| error.to_string())
 }
 
-/// Build one force-pushed commit that mirrors the workspace's tracked files
-/// onto `config.branch`, then record the outcome in the sync-state file and
-/// emit a `github-sync-result` event for the UI. Split out from the
-/// `#[tauri::command]` wrapper so the background auto-sync task can call it
-/// directly. `auto` marks timer-driven runs so the UI can stay quiet on
-/// routine successes.
+/// Uploaded-blob count after which an additive checkpoint commit is pushed,
+/// so a first sync that hits GitHub's content-creation rate limits keeps its
+/// progress: the next run finds those blobs in the branch tree and skips them.
+const CHECKPOINT_BLOBS: usize = 100;
+
+/// Mirror the workspace's tracked files onto `config.branch` as one
+/// fast-forward commit (skipped when the tree is unchanged), then record the
+/// outcome in the sync-state file and emit a `github-sync-result` event for
+/// the UI. Split out from the `#[tauri::command]` wrapper so the background
+/// auto-sync task can call it directly. `auto` marks timer-driven runs so the
+/// UI can stay quiet on routine successes.
 async fn perform_sync(
     app: AppHandle,
     workspace_path: String,
@@ -676,66 +745,115 @@ async fn perform_sync(
         .ok_or_else(|| "GitHub token is not set".to_string())?;
 
     let workspace_for_collect = workspace_path.clone();
-    let collected = tauri::async_runtime::spawn_blocking(move || {
-        collect_workspace_files(&workspace_for_collect)
+    let (collected, _database_snapshot) = tauri::async_runtime::spawn_blocking(move || {
+        let mut collected = collect_workspace_files(&workspace_for_collect)?;
+        let snapshot = snapshot_collected_database(&workspace_for_collect, &mut collected)?;
+        Ok::<_, String>((collected, snapshot))
     })
     .await
     .map_err(|error| error.to_string())??;
-    let CollectedFiles {
-        files,
-        skipped,
-        total_bytes: _,
-    } = collected;
+    let CollectedFiles { files, mut skipped } = collected;
 
     let client = github_client(&token)?;
 
     let sync_outcome = async {
-        let base_commit = get_base_commit_sha(&client, &config.repo, &config.branch).await?;
-        let base_tree = match base_commit.as_deref() {
-            Some(sha) => get_base_tree_map(&client, &config.repo, sha).await?,
-            None => HashMap::new(),
+        let mut parent = get_base_commit_sha(&client, &config.repo, &config.branch).await?;
+        let (base_tree_sha, base_blobs) = match parent.as_deref() {
+            Some(sha) => match get_base_tree(&client, &config.repo, sha).await? {
+                Some((tree_sha, blobs)) => (Some(tree_sha), blobs),
+                None => (None, HashMap::new()),
+            },
+            None => (None, HashMap::new()),
         };
 
         let mut tree_entries = Vec::with_capacity(files.len());
+        let mut checkpoint_entries = Vec::new();
+        let mut checkpoint_tree = base_tree_sha.clone();
+        let mut checkpointed = false;
         for file in &files {
             let source_path = file.source_path.clone();
-            let expected_size = file.size;
             let bytes = tauri::async_runtime::spawn_blocking(move || std::fs::read(source_path))
                 .await
                 .map_err(|error| error.to_string())?
                 .map_err(|error| error.to_string())?;
-            if bytes.len() as u64 != expected_size || bytes.len() as u64 > MAX_BLOB_BYTES {
-                return Err(format!("Workspace file changed during sync: {}", file.path));
+            // The file may have been rewritten since collection (autosave):
+            // upload the bytes read now, re-checking only the size limit.
+            if bytes.len() as u64 > MAX_BLOB_BYTES {
+                skipped.push(file.path.clone());
+                continue;
             }
             let local_sha = git_blob_sha(&bytes);
-            let blob_sha = match base_tree.get(&file.path) {
-                Some(existing) if existing == &local_sha => local_sha,
-                _ => create_blob(&client, &config.repo, &bytes).await?,
+            let blob_sha = if base_blobs.get(&file.path) == Some(&local_sha) {
+                local_sha
+            } else {
+                let sha = create_blob(&client, &config.repo, &bytes).await?;
+                checkpoint_entries.push((file.path.clone(), sha.clone()));
+                sha
             };
             tree_entries.push((file.path.clone(), blob_sha));
+
+            if checkpoint_entries.len() >= CHECKPOINT_BLOBS {
+                let tree = create_tree(
+                    &client,
+                    &config.repo,
+                    &checkpoint_entries,
+                    checkpoint_tree.as_deref(),
+                )
+                .await?;
+                let commit = create_commit(
+                    &client,
+                    &config.repo,
+                    &format!("{} (partial)", config.commit_message),
+                    &tree,
+                    parent.as_deref(),
+                )
+                .await?;
+                update_ref(
+                    &client,
+                    &config.repo,
+                    &config.branch,
+                    &commit,
+                    parent.is_some(),
+                )
+                .await?;
+                parent = Some(commit);
+                checkpoint_tree = Some(tree);
+                checkpoint_entries.clear();
+                checkpointed = true;
+            }
         }
 
-        let tree_sha = create_tree(&client, &config.repo, &tree_entries).await?;
-        let commit_sha = create_commit(
-            &client,
-            &config.repo,
-            &config.commit_message,
-            &tree_sha,
-            base_commit.as_deref(),
-        )
-        .await?;
-        update_ref(
-            &client,
-            &config.repo,
-            &config.branch,
-            &commit_sha,
-            base_commit.is_some(),
-        )
-        .await?;
+        let tree_sha = create_tree(&client, &config.repo, &tree_entries, None).await?;
+        let commit_sha = match parent.as_deref() {
+            // Nothing changed since the last backup: keep the branch head
+            // instead of adding an empty commit on every auto-sync tick.
+            Some(head) if !checkpointed && base_tree_sha.as_deref() == Some(tree_sha.as_str()) => {
+                head.to_string()
+            }
+            _ => {
+                let commit_sha = create_commit(
+                    &client,
+                    &config.repo,
+                    &config.commit_message,
+                    &tree_sha,
+                    parent.as_deref(),
+                )
+                .await?;
+                update_ref(
+                    &client,
+                    &config.repo,
+                    &config.branch,
+                    &commit_sha,
+                    parent.is_some(),
+                )
+                .await?;
+                commit_sha
+            }
+        };
 
         Ok::<SyncResult, String>(SyncResult {
             commit_sha,
-            files_count: files.len(),
+            files_count: tree_entries.len(),
             synced_at: Utc::now().to_rfc3339(),
             skipped_files: skipped.clone(),
         })
@@ -773,6 +891,8 @@ async fn perform_sync(
 
 #[tauri::command]
 pub async fn github_sync_test_connection(app: AppHandle, repo: String) -> Result<bool, String> {
+    let repo = repo.trim();
+    validate_repo(repo)?;
     let token = secure_store_get(app, TOKEN_SECRET_KEY.to_string())
         .await?
         .ok_or_else(|| "GitHub token is not set".to_string())?;
@@ -885,7 +1005,11 @@ mod tests {
 
         std::fs::write(root.join(".nevo/workspace.json"), b"{}").expect("workspace.json");
         std::fs::write(root.join(".nevo/settings.json"), b"{}").expect("settings.json");
+        std::fs::write(root.join(".nevo/custom.css"), b"body{}").expect("custom.css");
         std::fs::write(root.join(".nevo/databases.sqlite"), b"sqlite").expect("databases.sqlite");
+
+        std::fs::create_dir_all(root.join(".nevo/templates")).expect("templates dir");
+        std::fs::write(root.join(".nevo/templates/t.json"), b"{}").expect("template");
 
         std::fs::create_dir_all(root.join(".nevo/assets")).expect("assets dir");
         std::fs::write(root.join(".nevo/assets/pic.png"), b"png-bytes").expect("asset");
@@ -917,9 +1041,11 @@ mod tests {
             vec![
                 ".nevo/assets/pic.png".to_string(),
                 ".nevo/boards/board-1.json".to_string(),
+                ".nevo/custom.css".to_string(),
                 ".nevo/databases.sqlite".to_string(),
                 ".nevo/settings.json".to_string(),
                 ".nevo/snapshots/note-a/2024.json".to_string(),
+                ".nevo/templates/t.json".to_string(),
                 ".nevo/workspace.json".to_string(),
                 "notes/note-a.nevo".to_string(),
             ]
@@ -954,6 +1080,116 @@ mod tests {
         assert_eq!(collected.skipped, vec![".nevo/assets/huge.bin".to_string()]);
 
         std::fs::remove_dir_all(workspace).expect("cleanup");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn collect_workspace_files_skips_symlinks() {
+        let workspace = workspace("symlink");
+        let outside = workspace("symlink-outside");
+        std::fs::write(outside.join("secret.txt"), b"secret").expect("outside file");
+        std::fs::create_dir_all(workspace.join(".nevo/assets")).expect("assets dir");
+        std::os::unix::fs::symlink(
+            outside.join("secret.txt"),
+            workspace.join(".nevo/assets/link.txt"),
+        )
+        .expect("file symlink");
+        std::os::unix::fs::symlink(&outside, workspace.join(".nevo/assets/dir"))
+            .expect("dir symlink");
+
+        let collected = collect_workspace_files(&workspace.to_string_lossy()).expect("collect");
+        assert!(collected.files.is_empty());
+
+        std::fs::remove_dir_all(workspace).expect("cleanup");
+        std::fs::remove_dir_all(outside).expect("cleanup");
+    }
+
+    #[test]
+    fn snapshot_collected_database_includes_wal_rows_and_cleans_up() {
+        let workspace = workspace("db-snapshot");
+        // Keep the connection open so the inserted row is still only in the WAL.
+        let connection =
+            crate::commands::database::open_database(&workspace).expect("open database");
+        connection
+            .execute(
+                "INSERT INTO database_records VALUES ('db', 'r1', 0, '{}')",
+                [],
+            )
+            .expect("insert row");
+
+        let workspace_path = workspace.to_string_lossy().into_owned();
+        let mut collected = collect_workspace_files(&workspace_path).expect("collect");
+        let snapshot = snapshot_collected_database(&workspace_path, &mut collected)
+            .expect("snapshot")
+            .expect("database present");
+        let entry = collected
+            .files
+            .iter()
+            .find(|file| file.path == DATABASE_PATH)
+            .expect("database entry");
+        assert_eq!(entry.source_path, snapshot.0);
+
+        let copy = rusqlite::Connection::open(&snapshot.0).expect("open snapshot");
+        let rows: i64 = copy
+            .query_row("SELECT COUNT(*) FROM database_records", [], |row| {
+                row.get(0)
+            })
+            .expect("count rows");
+        assert_eq!(rows, 1);
+        drop(copy);
+
+        let snapshot_path = snapshot.0.clone();
+        drop(snapshot);
+        assert!(!snapshot_path.exists());
+
+        drop(connection);
+        std::fs::remove_dir_all(workspace).expect("cleanup");
+    }
+
+    #[test]
+    fn validate_repo_accepts_owner_name_only() {
+        assert!(validate_repo("owner/name").is_ok());
+        assert!(validate_repo("my-org/repo.name_1").is_ok());
+        for invalid in [
+            "",
+            "owner",
+            "owner/",
+            "/name",
+            "owner/name/extra",
+            "owner/..",
+            "owner/na me",
+            "owner/name?x=1",
+            "owner/name#x",
+        ] {
+            assert!(validate_repo(invalid).is_err(), "{invalid}");
+        }
+    }
+
+    #[test]
+    fn validate_branch_rejects_url_unsafe_and_invalid_refs() {
+        for valid in ["main", "backup/nevo", "release-1.2"] {
+            assert!(validate_branch(valid).is_ok(), "{valid}");
+        }
+        for invalid in [
+            "", "/main", "main/", "a//b", "a..b", ".hidden", "x.lock", "a b", "a?b", "a#b", "a%20",
+        ] {
+            assert!(validate_branch(invalid).is_err(), "{invalid}");
+        }
+    }
+
+    #[test]
+    fn load_config_rejects_invalid_repo() {
+        let workspace = workspace("config-invalid-repo");
+        std::fs::write(
+            workspace.join(".nevo/settings.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "pluginSettings": { PLUGIN_ID: { "repo": "owner/name/../x" } }
+            }))
+            .expect("serialize settings"),
+        )
+        .expect("write settings");
+        assert!(load_config(&workspace.to_string_lossy()).is_err());
+        std::fs::remove_dir_all(&workspace).expect("cleanup");
     }
 
     #[test]
