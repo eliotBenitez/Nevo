@@ -10,6 +10,7 @@ pub mod github_sync;
 pub mod graph;
 pub mod kanban;
 pub mod kanban_ops;
+mod kanban_paths;
 pub mod mcp;
 #[cfg(desktop)]
 pub mod mcp_registration;
