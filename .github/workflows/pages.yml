@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'site/**'
+      - 'build-tools/inline-site-css.mjs'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -29,6 +30,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: actions/configure-pages@v5
+
+      - name: Inline landing CSS
+        run: node build-tools/inline-site-css.mjs site
 
       - uses: actions/upload-pages-artifact@v3
         with:
