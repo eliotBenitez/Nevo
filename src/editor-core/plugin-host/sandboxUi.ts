@@ -122,7 +122,7 @@ function bindingValue(binding: string, attrs: Record<string, unknown>): string {
   return value === undefined || value === null ? '' : String(value)
 }
 
-export function hostUiToDomSpec(node: HostUiNode, attrs: Record<string, unknown>): DOMOutputSpec | 0 {
+export function hostUiToDomSpec(node: HostUiNode, attrs: Record<string, unknown>): DOMOutputSpec | string | 0 {
   if (node.type === 'contentSlot') return 0
   if (node.type === 'text') return node.bind ? bindingValue(node.bind, attrs) : (node.value ?? '')
   const domAttrs: Record<string, string> = {}
