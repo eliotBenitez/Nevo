@@ -74,8 +74,16 @@ function setView (view) {
   Promise.all(settled).then(() => { if (island.dataset.view === view) drawLinks() }, () => {})
 }
 
-const stepSize = () => parseFloat(getComputedStyle(track).getPropertyValue('--step')) / 100 * innerHeight
-const trackTop = () => track.getBoundingClientRect().top + scrollY
+// Track geometry is read only after layout (ResizeObserver), never on the scroll path,
+// so scrolling and the first frame do not force a synchronous reflow.
+let trackY = 0
+let stepPx = 1
+const measure = () => {
+  trackY = track.offsetTop
+  stepPx = parseFloat(getComputedStyle(track).getPropertyValue('--step')) / 100 * innerHeight
+}
+const stepSize = () => stepPx
+const trackTop = () => trackY
 
 // A switcher click jumps straight to its view; the smooth scroll that follows must not
 // replay every view it passes, so scroll-driven switching waits until it arrives.
@@ -109,8 +117,8 @@ buttons.forEach((b, i) => b.addEventListener('click', () => {
 // The visitor taking the scroll back hands control back to the scroll position.
 for (const type of ['wheel', 'touchstart', 'keydown']) addEventListener(type, unpin, { passive: true })
 addEventListener('scroll', onScroll, { passive: true })
-addEventListener('resize', () => { drawLinks(); onScroll() })
-onScroll()
+// Fires once after the first layout and again on every resize.
+new ResizeObserver(() => { measure(); drawLinks(); onScroll() }).observe(document.documentElement)
 
 /* ───────── Downloads ───────── */
 function detectOs () {
