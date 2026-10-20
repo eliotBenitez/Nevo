@@ -30,7 +30,7 @@
 
 ---
 
-**Nevo** is a minimalist desktop app for organizing your knowledge — inspired by Notion, Obsidian, and SiYuan. It pairs a distraction-free writing experience with an elegant Glassmorphism interface, and everything you create stays on your own device.
+**Nevo** is a minimalist desktop app for organizing your knowledge — inspired by Notion, Obsidian, and SiYuan. It pairs a distraction-free writing experience with a calm, borderless interface, and everything you create stays on your own device.
 
 ## 📸 Screenshots
 
@@ -49,7 +49,7 @@
 - 🔒 **Local-first** — your notes live on your device, not in someone else's cloud.
 - ✍️ **WYSIWYG editor** — a powerful ProseMirror editor with Markdown that formats as you type.
 - 🧩 **Rich blocks** — tables with formulas, diagrams (Mermaid), math (KaTeX), drawings, graphs, and more.
-- ✨ **Glassmorphism design** — a modern, translucent interface with soft blur that keeps the focus on your content.
+- ✨ **Borderless design** — opaque surfaces, tone, and spacing instead of blur and dividers, in light and dark themes.
 - ⌨️ **Keyboard-first** — fly through everything with hotkeys and slash commands.
 - 🚀 **Fast & lightweight** — instant startup powered by Tauri and Vue 3.
 
