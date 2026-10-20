@@ -59,12 +59,12 @@ const KATEX_EXPORT_CSS = `.katex {
 .katex .katex-html {
   display: inline-block;
 }
-.katex .base {
+.katex .katex-base {
   display: inline-block;
   position: relative;
   white-space: nowrap;
 }
-.katex .strut {
+.katex .katex-strut {
   display: inline-block;
 }
 .katex .mord,
@@ -122,7 +122,7 @@ const KATEX_EXPORT_CSS = `.katex {
 .katex .mathnormal {
   font-style: italic;
 }
-.katex .sizing {
+.katex .katex-sizing {
   display: inline-block;
 }`
 

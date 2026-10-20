@@ -258,6 +258,11 @@ describe('serializeNoteToHtml', () => {
     expect(html).toContain('</span> after</p>')
     expect(html).toContain('katex-display')
     expect(html).toContain('.katex')
+    // KaTeX 0.18 prefixed some internal classes; the inline export CSS must target the rendered ones.
+    for (const cls of ['katex-base', 'katex-strut']) {
+      expect(html).toContain(`class="${cls}"`)
+      expect(html).toContain(`.katex .${cls} {`)
+    }
     expect(html).not.toContain('KaTeX_Main-Regular.woff2')
     expect(html).not.toContain('url(fonts/')
     expect(withCover.assetSrcs).toEqual(['.nevo/assets/cover.jpg'])
