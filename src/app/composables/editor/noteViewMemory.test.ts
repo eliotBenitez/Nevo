@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { EditorState, TextSelection } from 'prosemirror-state'
-import { EditorView } from 'prosemirror-view'
+import type { EditorView } from 'prosemirror-view'
 import { nevoBaseSchema as schema } from '../../../editor-core/schema'
 import {
   applyNoteViewState,
@@ -13,11 +13,11 @@ import {
   rememberNoteView,
   type NoteViewState,
 } from './noteViewMemory'
+import { createTestView } from '../../../test-utils/editorView'
 
 function createView(paragraphs: string[]): EditorView {
   const doc = schema.node('doc', null, paragraphs.map((text) => schema.node('paragraph', null, text ? [schema.text(text)] : [])))
-  const view = new EditorView(document.createElement('div'), { state: EditorState.create({ schema, doc }) })
-  views.push(view)
+  const view = createTestView(document.createElement('div'), { state: EditorState.create({ schema, doc }) })
   return view
 }
 
@@ -25,12 +25,7 @@ function state(overrides: Partial<NoteViewState>): NoteViewState {
   return { topPos: null, topOffset: 0, scrollTop: 0, anchor: 1, head: 1, ...overrides }
 }
 
-// Undestroyed views leave DOMObserver timers that fire after jsdom teardown.
-const views: EditorView[] = []
-afterEach(() => {
-  forgetAllNoteViews()
-  views.splice(0).forEach(v => v.destroy())
-})
+afterEach(() => forgetAllNoteViews())
 
 describe('noteViewMemory', () => {
   it('captures the caret and treats a scroll at the top as "start of note"', () => {

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { DOMParser, DOMSerializer, Schema } from 'prosemirror-model'
 import { EditorState } from 'prosemirror-state'
 import type { EditorView } from 'prosemirror-view'
 import { EditorPluginHost } from '../plugin-host'
@@ -632,11 +633,22 @@ describe('sandboxed plugin host', () => {
         props: { class: 'callout' },
         children: [
           { type: 'text', bind: 'attrs.variant' },
-          { type: 'contentSlot' },
+          { type: 'element', tag: 'div', children: [{ type: 'contentSlot' }] },
         ],
       },
     })
     expect(spec.content).toBe('block+')
+    const slotNextToText = {
+      type: 'element',
+      tag: 'aside',
+      children: [{ type: 'text', value: 'x' }, { type: 'contentSlot' }],
+    }
+    expect(() => schemaNodeFromDescriptor({ name: 'bad_block', content: 'block+', ui: slotNextToText }))
+      .toThrow('only child')
+    expect(() => schemaNodeFromDescriptor({ name: 'bad_block', content: 'block+', ui: { type: 'contentSlot' } }))
+      .toThrow('must be an element')
+    expect(() => schemaNodeFromDescriptor({ name: 'bad_block', ui: { type: 'text', value: 'x' } }))
+      .toThrow('must be an element')
     expect(() => sanitizeHostUi({
       type: 'element',
       tag: 'iframe',
@@ -646,6 +658,36 @@ describe('sandboxed plugin host', () => {
       .toContain('[data-nevo-plugin="plugin.sandbox"] .callout')
     expect(() => sanitizeScopedCss('plugin.sandbox', 'body { display: none }'))
       .toThrow('forbidden')
+  })
+
+  it('renders a UI node and parses it back with its tag and attrs', () => {
+    const { name, spec } = schemaNodeFromDescriptor({
+      name: 'callout_block',
+      group: 'block',
+      content: 'block+',
+      attrs: { variant: { default: 'info' } },
+      ui: {
+        type: 'element',
+        tag: 'aside',
+        children: [
+          { type: 'text', bind: 'attrs.variant' },
+          { type: 'element', tag: 'div', children: [{ type: 'contentSlot' }] },
+        ],
+      },
+    })
+    const schema = new Schema({
+      nodes: nevoBaseSchema.spec.nodes.addToEnd(name, spec),
+      marks: nevoBaseSchema.spec.marks,
+    })
+    const node = schema.nodes.callout_block.create({ variant: 'warning' }, schema.nodes.paragraph.create(null, schema.text('hi')))
+    const wrap = document.createElement('div')
+    wrap.appendChild(DOMSerializer.fromSchema(schema).serializeNode(node))
+    expect(wrap.querySelector('aside')?.textContent).toBe('warninghi')
+
+    const parsed = DOMParser.fromSchema(schema).parse(wrap).firstChild
+    expect(parsed?.type.name).toBe('callout_block')
+    expect(parsed?.attrs.variant).toBe('warning')
+    expect(parsed?.textContent).toBe('hi')
   })
 
   it('renders declarative decorations without exposing ProseMirror to the Worker', async () => {

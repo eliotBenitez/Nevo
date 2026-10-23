@@ -1,6 +1,6 @@
-import { afterEach, describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { EditorState } from 'prosemirror-state'
-import { EditorView } from 'prosemirror-view'
+import type { EditorView } from 'prosemirror-view'
 import { nevoBaseSchema } from '../../../editor-core/schema'
 import {
   createVoiceRecordingPlaceholderPlugin,
@@ -32,14 +32,11 @@ vi.mock('../../../tauri/voiceRecording', async (importOriginal) => {
 })
 
 import * as voice from '../../../tauri/voiceRecording'
+import { createTestView } from '../../../test-utils/editorView'
 
 function flushAsync(): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, 0))
 }
-
-// Undestroyed views leave DOMObserver timers that fire after jsdom teardown.
-const views: EditorView[] = []
-afterEach(() => { views.splice(0).forEach(v => v.destroy()) })
 
 function makeCore(paragraphs: string[]): { core: EditorCore, view: EditorView } {
   const schema = nevoBaseSchema
@@ -52,8 +49,7 @@ function makeCore(paragraphs: string[]): { core: EditorCore, view: EditorView } 
     getElapsedMs: () => 0,
   }
   const state = EditorState.create({ doc, plugins: [createVoiceRecordingPlaceholderPlugin(options)] })
-  const view = new EditorView(document.createElement('div'), { state })
-  views.push(view)
+  const view = createTestView(document.createElement('div'), { state })
   const core = { editorView: view } as unknown as EditorCore
   return { core, view }
 }

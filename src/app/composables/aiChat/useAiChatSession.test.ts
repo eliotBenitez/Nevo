@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { EditorState, TextSelection } from 'prosemirror-state'
-import { EditorView } from 'prosemirror-view'
 import { nevoBaseSchema } from '../../../editor-core/schema'
 import type { AiGenerateOptions } from '../../../composables/useAiCompletion'
 
@@ -24,6 +23,7 @@ vi.mock('../../../stores/tree', () => ({ useTreeStore: () => ({ noteById: notes 
 import { clearActiveEditor, registerActiveEditor } from '../editor/activeEditorRegistry'
 import { useAiChatStore } from '../../../stores/aiChat'
 import { useAiChatSession } from './useAiChatSession'
+import { createTestView } from '../../../test-utils/editorView'
 
 function openEditor(text: string, select?: [number, number]) {
   let state = EditorState.create({
@@ -31,7 +31,7 @@ function openEditor(text: string, select?: [number, number]) {
     schema: nevoBaseSchema,
   })
   if (select) state = state.apply(state.tr.setSelection(TextSelection.create(state.doc, select[0], select[1])))
-  registerActiveEditor(new EditorView(document.createElement('div'), { state }), 'cur')
+  registerActiveEditor(createTestView(document.createElement('div'), { state }), 'cur')
 }
 
 const hit = (noteId: string) => ({ noteId, noteTitle: noteId, folderId: null, blockIndex: 2, text: `text of ${noteId}`, score: 1 })

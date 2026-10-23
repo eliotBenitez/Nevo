@@ -98,7 +98,8 @@ Host UI DSL:
 
 - использует allow-list elements и attributes;
 - escaped attrs bindings;
-- допускает максимум один `contentSlot`;
+- допускает максимум один `contentSlot`, только как единственного ребёнка element,
+  и требует element в корне UI;
 - запрещает inline style, external URLs и DOM callbacks.
 
 Plugin CSS scope-ится по plugin ID и ограничен 64 KiB. Запрещены `@import`,

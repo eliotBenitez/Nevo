@@ -76,11 +76,14 @@ function setView (view) {
 
 // Track geometry is read only after layout (ResizeObserver), never on the scroll path,
 // so scrolling and the first frame do not force a synchronous reflow.
+// The step comes from the laid-out track (100svh stage + one step per extra view), so it matches the CSS
+// even when innerHeight differs from svh on mobile. Zero means "not measured yet".
+const stage = track.querySelector('.stage')
 let trackY = 0
-let stepPx = 1
+let stepPx = 0
 const measure = () => {
   trackY = track.offsetTop
-  stepPx = parseFloat(getComputedStyle(track).getPropertyValue('--step')) / 100 * innerHeight
+  stepPx = (track.offsetHeight - stage.offsetHeight) / (VIEWS.length - 1)
 }
 const stepSize = () => stepPx
 const trackTop = () => trackY
@@ -93,7 +96,7 @@ const unpin = () => { pinned = null; clearTimeout(pinTimer) }
 
 let ticking = false
 function onScroll () {
-  if (ticking) return
+  if (ticking || !stepPx) return
   ticking = true
   requestAnimationFrame(() => {
     ticking = false
@@ -110,7 +113,8 @@ function onScroll () {
 buttons.forEach((b, i) => b.addEventListener('click', () => {
   pinned = b.dataset.view
   clearTimeout(pinTimer)
-  pinTimer = setTimeout(unpin, 1500)
+  // If the scroll never arrives (e.g. a scrollbar drag), resync to wherever it stopped.
+  pinTimer = setTimeout(() => { unpin(); onScroll() }, 1500)
   setView(pinned)
   scrollTo({ top: trackTop() + i * stepSize(), behavior: reduceMotion.matches ? 'auto' : 'smooth' })
 }))

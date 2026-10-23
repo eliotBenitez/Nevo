@@ -46,7 +46,9 @@ Helpers:
 - `ui.contentSlot()` — место для ProseMirror content.
 
 Для content node должен быть ровно один `contentSlot`. Для content-less node
-slot не нужен.
+slot не нужен. Корень UI — всегда `ui.element(...)`, а `contentSlot` должен быть
+единственным ребёнком своего element (оберните его в отдельный `div`, как выше);
+иначе schema отклоняется при регистрации.
 
 ### Разрешённые elements
 
