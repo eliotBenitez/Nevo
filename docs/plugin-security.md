@@ -1,13 +1,13 @@
 # Plugin SDK V2: security model
 
-SDK V2 исходит из того, что marketplace plugin code, descriptors, network data,
-persisted attrs и iframe messages недоверенные. Capabilities — часть
-enforcement, а не только текст в диалоге установки.
+SDK V2 assumes that marketplace plugin code, descriptors, network data,
+persisted attrs, and iframe messages are untrusted. Capabilities are part of
+enforcement, not just text in the install dialog.
 
-Trusted SDK V1 исполняется в главном WebView и не имеет этой границы. Новые
-marketplace-плагины поэтому обязаны использовать V2.
+Trusted SDK V1 runs in the main WebView and has no such boundary. New
+marketplace plugins must therefore use V2.
 
-## Граница доверия
+## Trust boundary
 
 ```mermaid
 flowchart TB
@@ -34,109 +34,112 @@ flowchart TB
   P -->|"broker call"| B
 ```
 
-Host проверяет данные на каждом пересечении границы. Успешная проверка manifest
-не делает последующие messages доверенными.
+The host validates data at every boundary crossing. A successful manifest
+check does not make subsequent messages trusted.
 
 ## Worker isolation
 
-Worker не получает:
+The Worker does not get:
 
-- DOM и host page;
-- Tauri API и произвольные IPC commands;
-- filesystem;
-- direct `fetch`, XHR, WebSocket, WebTransport или EventSource;
-- IndexedDB, Cache Storage и cookie store;
-- nested Worker/SharedWorker и BroadcastChannel;
+- the DOM and host page;
+- the Tauri API and arbitrary IPC commands;
+- the filesystem;
+- direct `fetch`, XHR, WebSocket, WebTransport, or EventSource;
+- IndexedDB, Cache Storage, and the cookie store;
+- nested Worker/SharedWorker and BroadcastChannel;
 - direct `setTimeout`/`setInterval`;
-- navigation, notifications и WebRTC.
+- navigation, notifications, and WebRTC.
 
-Entry module загружается через opaque `nevoplugin` token, канонически
-привязанный к одному plugin directory. Relative imports остаются внутри этого
-каталога; absolute paths, `..` и cross-plugin access отклоняются. Каждый module
-или static file, отдаваемый code session, ограничен 5 MiB.
+The entry module is loaded via an opaque `nevoplugin` token, canonically bound
+to a single plugin directory. Relative imports stay inside that directory;
+absolute paths, `..`, and cross-plugin access are rejected. Each module or
+static file served by a code session is limited to 5 MiB.
 
 ## RPC validation
 
-Worker protocol проверяет:
+The Worker protocol checks:
 
 - protocol version `2.0`;
-- request ID и session token;
-- известный message type;
+- request ID and session token;
+- known message type;
 - plain JSON shape;
-- message size до 1 MiB;
-- handler timeout 5 секунд;
-- lifecycle/migration timeout 10 секунд;
-- liveness sandbox event loop.
+- message size up to 1 MiB;
+- handler timeout of 5 seconds;
+- lifecycle/migration timeout of 10 seconds;
+- liveness of the sandbox event loop.
 
-JSON values не могут содержать функции, class instances, cycles, `NaN` или
-infinite numbers. Contribution definition ограничен 200 registrations.
+JSON values cannot contain functions, class instances, cycles, `NaN`, or
+infinite numbers. A contribution definition is limited to 200 registrations.
 
-Timeout посылает cancel request и abort-ит handler signal. Worker, который
-падает или блокирует event loop, перезапускается один раз. Повторный fatal
-failure переводит plugin в session quarantine, не меняя persisted `enabled`.
+A timeout sends a cancel request and aborts the handler signal. A Worker that
+crashes or blocks the event loop is restarted once. A repeated fatal failure
+puts the plugin into session quarantine without changing the persisted
+`enabled`.
 
-Повтор invocation после restart означает, что handler должен быть идемпотентным
-до момента возврата результата.
+Retrying an invocation after a restart means the handler must be idempotent
+until the moment the result is returned.
 
 ## Editor isolation
 
-Плагин получает snapshot, а не ProseMirror objects. Host:
+The plugin receives a snapshot, not ProseMirror objects. The host:
 
-- включает full `doc` только с `editor.read`;
-- принимает mutations только с `editor.write`;
-- ограничивает intent 100 operations;
-- проверяет positions и schema types;
-- отклоняет absolute positions со stale revision;
-- применяет все operations одной transaction или не применяет ни одной.
+- includes the full `doc` only with `editor.read`;
+- accepts mutations only with `editor.write`;
+- limits an intent to 100 operations;
+- validates positions and schema types;
+- rejects absolute positions with a stale revision;
+- applies all operations in one transaction or none at all.
 
-Tier 2 `editor.write.self` ещё уже: frame может patch только attrs собственной
-live node. Patch ограничен 256 KiB и снова проходит JSON/schema validation.
+Tier 2 `editor.write.self` is narrower still: a frame can patch only the attrs
+of its own live node. The patch is limited to 256 KiB and goes through
+JSON/schema validation again.
 
 ## Declarative UI
 
-Host UI DSL:
+The host UI DSL:
 
-- использует allow-list elements и attributes;
-- escaped attrs bindings;
-- допускает максимум один `contentSlot`, только как единственного ребёнка element,
-  и требует element в корне UI;
-- запрещает inline style, external URLs и DOM callbacks.
+- uses an allow-list of elements and attributes;
+- escapes attrs bindings;
+- allows at most one `contentSlot`, only as the sole child of an element, and
+  requires an element at the UI root;
+- forbids inline style, external URLs, and DOM callbacks.
 
-Plugin CSS scope-ится по plugin ID и ограничен 64 KiB. Запрещены `@import`,
-`@font-face`, `url()`, global selectors и root element selectors.
+Plugin CSS is scoped by plugin ID and limited to 64 KiB. `@import`,
+`@font-face`, `url()`, global selectors, and root element selectors are
+forbidden.
 
-Tier 1 SVG проходит sanitizer, который удаляет:
+Tier 1 SVG goes through a sanitizer that removes:
 
 - `script`, `foreignObject`, `style`;
 - `on*` event attributes;
-- external `url()` и `href`;
-- другие active-content constructs.
+- external `url()` and `href`;
+- other active-content constructs.
 
-Static host UI остаётся fallback, если render handler недоступен.
+Static host UI remains the fallback if the render handler is unavailable.
 
 ## Iframe isolation
 
-Workspace view, modal и Tier 2 block запускаются с:
+A workspace view, modal, and Tier 2 block run with:
 
 ```html
 sandbox="allow-scripts"
 ```
 
-Без `allow-same-origin`, navigation, popup, form submission и direct network.
-`referrerpolicy="no-referrer"`. CSP запрещает connections, nested frames,
-objects и base navigation; scripts и static files загружаются только из
-plugin-scoped code session.
+Without `allow-same-origin`, navigation, popup, form submission, and direct
+network. `referrerpolicy="no-referrer"`. The CSP forbids connections, nested
+frames, objects, and base navigation; scripts and static files are loaded only
+from the plugin-scoped code session.
 
-Bridge:
+The bridge:
 
-- принимает messages только от конкретного iframe window;
-- проверяет protocol version и message type;
-- ограничивает payload 256 KiB;
-- передаёт только locale/theme/node attrs и versioned events;
-- не передаёт secrets или host objects.
+- accepts messages only from the specific iframe window;
+- checks the protocol version and message type;
+- limits the payload to 256 KiB;
+- passes only locale/theme/node attrs and versioned events;
+- does not pass secrets or host objects.
 
-Frame делегирует privileged work Worker через validated `invoke`. Handler ID
-opaque и действителен только в текущей plugin session.
+The frame delegates privileged work to the Worker via a validated `invoke`. The
+handler ID is opaque and valid only within the current plugin session.
 
 ## Storage and path isolation
 
@@ -152,126 +155,128 @@ Assets:
 .nevo/plugin-assets/<pluginId>/<sha256>
 ```
 
-Local storage получает app-data namespace с workspace fingerprint и plugin ID.
-Plugin ID, storage keys, asset IDs, upload IDs и relative paths валидируются как
-одиночные безопасные components. Canonical path checks предотвращают traversal,
-symlink escape и cross-plugin access.
+Local storage gets an app-data namespace with the workspace fingerprint and
+plugin ID. Plugin ID, storage keys, asset IDs, upload IDs, and relative paths
+are validated as single safe components. Canonical path checks prevent
+traversal, symlink escape, and cross-plugin access.
 
 Storage quotas:
 
-- 256 KiB на JSON value;
-- 5 MiB на storage scope;
-- 512 KiB на single-shot asset;
-- 8 MiB на chunked asset;
-- 64 MiB на asset scope;
-- до восьми concurrent uploads.
+- 256 KiB per JSON value;
+- 5 MiB per storage scope;
+- 512 KiB per single-shot asset;
+- 8 MiB per chunked asset;
+- 64 MiB per asset scope;
+- up to eight concurrent uploads.
 
-`nevoplugin-asset` token привязан к asset root одного plugin. Protocol отдаёт
-только изображения с распознанными magic bytes; SVG/HTML и arbitrary binary не
-становятся renderable content.
+The `nevoplugin-asset` token is bound to the asset root of a single plugin. The
+protocol serves only images with recognized magic bytes; SVG/HTML and arbitrary
+binary do not become renderable content.
 
 ## Secrets
 
-`settingsSchema` с `secret: true` сохраняет значение в secure store.
+`settingsSchema` with `secret: true` saves the value to the secure store.
 `api.secrets.get()`:
 
-- требует `secrets.read`;
-- доступен только Worker;
-- использует plugin namespace;
-- не передаёт значение iframe.
+- requires `secrets.read`;
+- is available only to the Worker;
+- uses the plugin namespace;
+- does not pass the value to the iframe.
 
-Плагин сам отвечает за то, чтобы не вернуть секрет как handler result, не
-записать его в attrs/storage и не включить в error message.
+The plugin itself is responsible for not returning the secret as a handler
+result, not writing it to attrs/storage, and not including it in an error
+message.
 
 ## Network security
 
-Rust broker повторно читает установленный manifest при запросе и проверяет:
+The Rust broker re-reads the installed manifest on each request and checks:
 
-- plugin ID и V2 execution mode;
-- capability `network.fetch`;
-- HTTPS без username/password;
+- plugin ID and V2 execution mode;
+- the `network.fetch` capability;
+- HTTPS without username/password;
 - exact/wildcard host policy;
 - method allow-list;
 - safe request headers;
-- DNS addresses до connect;
-- каждый redirect по тем же правилам;
-- response size во время streaming.
+- DNS addresses before connect;
+- every redirect against the same rules;
+- response size during streaming.
 
-Private, loopback, link-local, multicast, documentation и другие non-public
-addresses отклоняются, включая IPv4-mapped IPv6. Проверенные DNS addresses
-pin-ятся в HTTP client, закрывая DNS rebinding window.
+Private, loopback, link-local, multicast, documentation, and other non-public
+addresses are rejected, including IPv4-mapped IPv6. Verified DNS addresses are
+pinned in the HTTP client, closing the DNS rebinding window.
 
-Cookies и browser credentials не используются. `Authorization`,
-`Proxy-Authorization`, `Cookie`, `Host`, connection и `sec-*` headers запрещены.
-Лимит redirects — пять, timeout — 30 секунд, body — 5 MiB.
+Cookies and browser credentials are not used. `Authorization`,
+`Proxy-Authorization`, `Cookie`, `Host`, connection, and `sec-*` headers are
+forbidden. The redirect limit is five, the timeout is 30 seconds, and the body
+limit is 5 MiB.
 
-Network response всё равно недоверенный: plugin должен валидировать JSON shape,
-не вставлять raw HTML/SVG и не превращать server fields в command IDs.
+A network response is still untrusted: the plugin must validate the JSON shape,
+not insert raw HTML/SVG, and not turn server fields into command IDs.
 
 ## Marketplace transaction
 
-Install/update использует prepared transaction root:
+Install/update uses a prepared transaction root:
 
-1. пакет скачивается в отдельный staging directory;
-2. manifest, paths и permission fingerprint проверяются;
-3. staged Worker запускается только через временную code session;
-4. contributions и migrations проверяются до публикации;
-5. live editor сохраняет Y.Doc и освобождает старый Worker;
-6. plugin directory, storage, registry и затронутые Y.Doc journaled;
-7. новая версия публикуется атомарно.
+1. the package is downloaded into a separate staging directory;
+2. the manifest, paths, and permission fingerprint are verified;
+3. the staged Worker is started only via a temporary code session;
+4. contributions and migrations are verified before publication;
+5. the live editor saves the Y.Doc and releases the old Worker;
+6. the plugin directory, storage, registry, and affected Y.Docs are journaled;
+7. the new version is published atomically.
 
-Staged code не видит installed plugin directory. Commit повторно сверяет
-fingerprint и installed version, чтобы исключить race между confirmation и
+Staged code does not see the installed plugin directory. Commit re-checks the
+fingerprint and installed version to rule out a race between confirmation and
 publication.
 
-Незавершённый `committing` journal откатывается при следующем marketplace call.
-`committed` journal только очищается.
+An unfinished `committing` journal is rolled back on the next marketplace call.
+A `committed` journal is only cleaned up.
 
 ## Persisted schema fallback
 
-Последняя валидная schema сохраняется в:
+The last valid schema is saved in:
 
 ```text
 .nevo/plugin-registry.json
 ```
 
-Если plugin disabled, missing или broken, host загружает schema без исполнения
-кода. Это сохраняет attrs и rich children в Y.Doc. Export fallback добавляет
-безопасный JSON marker и не должен терять вложенный content.
+If a plugin is disabled, missing, or broken, the host loads the schema without
+executing code. This preserves attrs and rich children in the Y.Doc. The export
+fallback adds a safe JSON marker and must not lose nested content.
 
-Fallback не заменяет migration compatibility. Переименование node/mark/attrs без
-data migration по-прежнему ломает persisted contract.
+The fallback does not replace migration compatibility. Renaming a node/mark/attrs
+without a data migration still breaks the persisted contract.
 
 ## DOCX serializers
 
-DOCX serializer возвращает только данные: host проверяет фрагмент (лимиты на
-число блоков, строк, ячеек и размер текста, схемы ссылок http/https/mailto,
-относительные пути ассетов без `..`, SVG через `sanitizeSvg`) и сам собирает
-блоки Nevo. Плагин не получает доступа к сети или файловой системе через этот
-путь; невалидный фрагмент отбрасывается целиком.
+A DOCX serializer returns only data: the host validates the fragment (limits on
+the number of blocks, rows, cells, and text size, link schemes http/https/mailto,
+relative asset paths without `..`, SVG via `sanitizeSvg`) and assembles the
+Nevo blocks itself. The plugin gets no access to the network or filesystem
+through this path; an invalid fragment is discarded entirely.
 
-## Обязанности автора плагина
+## Plugin author responsibilities
 
-- Запрашивать минимальные capabilities.
-- Валидировать handler input и network response.
-- Escape-ить SVG/XML, даже если host дополнительно sanitizes result.
-- Не включать secrets в result, logs или persisted JSON.
-- Ограничивать собственные collections и recursion.
-- Реагировать на `AbortSignal`.
-- Делать handlers безопасными для одного retry.
-- Не хранить authoritative state только в iframe DOM.
-- Сохранять schema names/attrs или писать последовательные migrations.
-- Тестировать disabled/missing plugin и export fallback.
+- Request minimal capabilities.
+- Validate handler input and network responses.
+- Escape SVG/XML, even if the host additionally sanitizes the result.
+- Do not include secrets in results, logs, or persisted JSON.
+- Bound your own collections and recursion.
+- React to `AbortSignal`.
+- Make handlers safe for a single retry.
+- Do not keep authoritative state only in the iframe DOM.
+- Preserve schema names/attrs or write sequential migrations.
+- Test the disabled/missing plugin and the export fallback.
 
 ## Security review checklist
 
-- [ ] Каждая capability используется.
-- [ ] Network policy не шире необходимых hosts/methods.
-- [ ] Нет raw HTML/SVG из network без собственной validation/escaping.
-- [ ] Нет secret leakage в errors, attrs, storage или iframe.
-- [ ] Handler выдерживает повтор invocation.
-- [ ] Absolute editor positions используются только при необходимости.
-- [ ] Storage keys и collection sizes bounded.
-- [ ] Large binary data хранится через assets.
-- [ ] Frame работает read-only без `editor.write.self`.
-- [ ] Migration проверена на копии legacy Y.Doc.
+- [ ] Every capability is used.
+- [ ] The network policy is no wider than the necessary hosts/methods.
+- [ ] No raw HTML/SVG from the network without your own validation/escaping.
+- [ ] No secret leakage in errors, attrs, storage, or the iframe.
+- [ ] The handler survives a repeated invocation.
+- [ ] Absolute editor positions are used only when necessary.
+- [ ] Storage keys and collection sizes are bounded.
+- [ ] Large binary data is stored via assets.
+- [ ] The frame works read-only without `editor.write.self`.
+- [ ] The migration was checked on a copy of a legacy Y.Doc.

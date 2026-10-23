@@ -1,17 +1,17 @@
-# UI и пользовательские блоки
+# UI and custom blocks
 
-SDK V2 предлагает три уровня UI. Выбирайте минимальный уровень, который решает
-задачу: чем выше tier, тем больше кода, тестов и состояния нужно плагину.
+SDK V2 offers three UI tiers. Choose the lowest tier that solves the task: the
+higher the tier, the more code, tests and state the plugin needs.
 
-| Tier | Подходит для | Выполнение |
+| Tier | Suited for | Execution |
 | --- | --- | --- |
-| Host UI | Статичные schema nodes и forms | DOM полностью создаёт Nevo |
-| Tier 1 SVG | Вычисляемые diagrams, charts, badges | Worker возвращает sanitized SVG |
-| Tier 2 frame | Интерактивные canvas, grid, complex widgets | View работает в sandboxed iframe |
+| Host UI | Static schema nodes and forms | Nevo creates the DOM entirely |
+| Tier 1 SVG | Computed diagrams, charts, badges | The Worker returns sanitized SVG |
+| Tier 2 frame | Interactive canvas, grid, complex widgets | The view runs in a sandboxed iframe |
 
 ## Host UI DSL
 
-`ui` строит JSON tree, из которого host создаёт DOM:
+`ui` builds a JSON tree from which the host creates the DOM:
 
 ```ts
 import { ui } from '@nevo/plugin-sdk'
@@ -40,32 +40,32 @@ const calloutUi = ui.element('aside', {
 
 Helpers:
 
-- `ui.element(tag, props, children)` — allow-listed element;
-- `ui.text(value)` — статичный text node;
-- `ui.attr(name)` — escaped string из `attrs.<name>`;
-- `ui.contentSlot()` — место для ProseMirror content.
+- `ui.element(tag, props, children)` — an allow-listed element;
+- `ui.text(value)` — a static text node;
+- `ui.attr(name)` — an escaped string from `attrs.<name>`;
+- `ui.contentSlot()` — the place for ProseMirror content.
 
-Для content node должен быть ровно один `contentSlot`. Для content-less node
-slot не нужен. Корень UI — всегда `ui.element(...)`, а `contentSlot` должен быть
-единственным ребёнком своего element (оберните его в отдельный `div`, как выше);
-иначе schema отклоняется при регистрации.
+A content node must have exactly one `contentSlot`. A content-less node needs
+no slot. The UI root is always `ui.element(...)`, and `contentSlot` must be the
+only child of its element (wrap it in a separate `div`, as above); otherwise
+the schema is rejected at registration.
 
-### Разрешённые elements
+### Allowed elements
 
 `article`, `aside`, `button`, `code`, `div`, `em`, `header`, `label`, `li`, `ol`,
 `p`, `pre`, `section`, `small`, `span`, `strong`, `ul`.
 
-### Разрешённые attributes
+### Allowed attributes
 
 `aria-label`, `aria-live`, `aria-pressed`, `class`, `data-action`, `data-bind`,
-`role`, `tabindex`, `title`, а также безопасные `aria-*` и `data-*`.
+`role`, `tabindex`, `title`, plus safe `aria-*` and `data-*`.
 
-`style`, `src`, `href`, `on*` и функции запрещены. Attr binding имеет только
-форму `attrs.<name>`.
+`style`, `src`, `href`, `on*` and functions are forbidden. Attr binding only
+takes the form `attrs.<name>`.
 
 ## Scoped CSS
 
-`blockType` может добавить CSS:
+`blockType` can add CSS:
 
 ```ts
 api.blockType({
@@ -98,17 +98,17 @@ api.blockType({
 })
 ```
 
-Host добавляет plugin scope к selectors. В примере `.acme-callout` — дочерний
-элемент корня, на который host ставит scope attribute. CSS ограничен 64 KiB. Запрещены
-`@import`, `@font-face`, `url()`, `:global`, `html`, `body`, `:root` и внешние
-resources.
+The host adds the plugin scope to selectors. In the example, `.acme-callout` is
+a child of the root element on which the host sets the scope attribute. CSS is
+limited to 64 KiB. `@import`, `@font-face`, `url()`, `:global`, `html`, `body`,
+`:root` and external resources are forbidden.
 
-Не полагайтесь только на цвет. Добавляйте text/icon/ARIA semantics, проверяйте
-light/dark theme и keyboard focus.
+Do not rely on color alone. Add text/icon/ARIA semantics, and check the
+light/dark theme and keyboard focus.
 
 ## Tier 1: sanitized SVG
 
-Tier 1 подходит, если UI полностью вычисляется из attrs и не требует direct
+Tier 1 fits when the UI is fully computed from attrs and needs no direct
 interaction.
 
 ```ts
@@ -162,26 +162,26 @@ export default definePlugin({
 })
 ```
 
-Правила:
+Rules:
 
-- `render` поддерживает только `"svg"`;
-- render handler обязателен;
-- `schema.content` запрещён: block должен быть content-less;
-- input имеет форму `{ attrs }`;
-- result имеет форму `{ svg: string }`;
-- `render` и `frame` взаимно исключаются.
+- `render` only supports `"svg"`;
+- a render handler is required;
+- `schema.content` is forbidden: the block must be content-less;
+- the input has the form `{ attrs }`;
+- the result has the form `{ svg: string }`;
+- `render` and `frame` are mutually exclusive.
 
-Host удаляет `script`, `foreignObject`, `style`, `on*`, external `url()` и
-опасные `href`. Используйте SVG presentation attributes (`fill`, `stroke`,
-`font-size`), а не inline style.
+The host removes `script`, `foreignObject`, `style`, `on*`, external `url()` and
+dangerous `href`. Use SVG presentation attributes (`fill`, `stroke`,
+`font-size`) rather than inline style.
 
-Render асинхронный и debounced. Устаревший result не монтируется. Ошибка даёт
-пустую поверхность, не ломая editor. Статичный `ui` остаётся fallback для
-export/copy и disabled plugin.
+Rendering is asynchronous and debounced. A stale result is not mounted. An
+error produces an empty surface without breaking the editor. The static `ui`
+remains the fallback for export/copy and for a disabled plugin.
 
 ## Tier 2: interactive block frame
 
-Tier 2 разделяет privileged Worker и unprivileged iframe:
+Tier 2 separates a privileged Worker from an unprivileged iframe:
 
 ```text
 Worker handler <-> validated host bridge <-> iframe view
@@ -283,62 +283,64 @@ defineBlockView((api) => {
 })
 ```
 
-Handler ID передан frame через attrs при создании node. Не угадывайте его
-внутренний формат: он opaque, принадлежит текущей Worker session и может
-измениться после restart. Production view должен получать актуальный ID из
-host-delivered attrs и не сохранять его вне node/session state.
+The handler ID is passed to the frame through attrs when the node is created.
+Do not guess its internal format: it is opaque, belongs to the current Worker
+session and may change after a restart. A production view should get the
+current ID from host-delivered attrs and not keep it outside node/session
+state.
 
-`defineBlockView()` предоставляет:
+`defineBlockView()` provides:
 
-- `onNode(listener)` — attrs, editable flag, theme и locale;
-- `patchAttrs(attrs)` — node-scoped merge patch;
-- `invoke(handlerId, input?)` — вызов Worker handler.
+- `onNode(listener)` — attrs, editable flag, theme and locale;
+- `patchAttrs(attrs)` — a node-scoped merge patch;
+- `invoke(handlerId, input?)` — calls a Worker handler.
 
-Attrs — единственный источник истины. Frame не должен хранить независимую копию
-важного состояния только в DOM. `patchAttrs`:
+Attrs are the only source of truth. A frame must not keep an independent copy
+of important state only in the DOM. `patchAttrs`:
 
-- работает только с `editor.write.self`;
-- ограничен нодой, которой принадлежит frame;
-- принимает JSON до 256 KiB;
-- не может менять другой node или selection.
+- works only with `editor.write.self`;
+- is scoped to the node that owns the frame;
+- accepts JSON up to 256 KiB;
+- cannot change another node or the selection.
 
-Без `editor.write.self` frame остаётся read-only и получает
+Without `editor.write.self`, the frame stays read-only and receives
 `editable: false`.
 
 ### Iframe isolation
 
-Frame запускается с:
+The frame runs with:
 
 ```html
 <iframe sandbox="allow-scripts" referrerpolicy="no-referrer">
 ```
 
-Он не получает same-origin, host DOM, direct network, navigation, popups,
-secrets или Worker host services. CSP запрещает connections, nested frames,
-objects и forms. Для privileged work используйте `api.invoke()`.
+It gets no same-origin access, host DOM, direct network, navigation, popups,
+secrets or Worker host services. CSP forbids connections, nested frames,
+objects and forms. Use `api.invoke()` for privileged work.
 
-`source` всегда plugin-relative и загружается через opaque `nevoplugin` token.
-Payload postMessage ограничен 256 KiB и версионирован protocol `2.0`.
+`source` is always plugin-relative and is loaded through an opaque `nevoplugin`
+token. The postMessage payload is limited to 256 KiB and versioned by protocol
+`2.0`.
 
-## Binary images во frame
+## Binary images in a frame
 
-Worker сохраняет bytes:
+The Worker stores the bytes:
 
 ```ts
 const assetId = await api.assets.upload(dataBase64)
 const imageUrl = await api.assets.url(assetId)
 ```
 
-Frame может использовать полученный `nevoplugin-asset://` URL как `<img src>`.
-Protocol отдаёт только распознанные PNG, JPEG, GIF, WebP и AVIF. SVG, HTML и
-произвольный binary response не отображаются этим каналом.
+The frame can use the resulting `nevoplugin-asset://` URL as `<img src>`. The
+protocol serves only recognized PNG, JPEG, GIF, WebP and AVIF. SVG, HTML and
+arbitrary binary responses are not displayed through this channel.
 
-Tier 1 SVG sanitizer не разрешает такую внешнюю ссылку; рисуйте данные прямо в
-SVG или используйте Tier 2.
+The Tier 1 SVG sanitizer does not allow such an external reference; draw the
+data directly in the SVG or use Tier 2.
 
-## Workspace views и modals
+## Workspace views and modals
 
-Они используют тот же iframe security model, но монтируются host в route или
+They use the same iframe security model, but the host mounts them in a route or
 modal surface.
 
 ```ts
@@ -355,7 +357,7 @@ api.modal({
 })
 ```
 
-Sidebar item только открывает route внутри namespace своего plugin:
+A sidebar item only opens a route inside its own plugin's namespace:
 
 ```ts
 api.sidebarItem({
@@ -365,16 +367,16 @@ api.sidebarItem({
 })
 ```
 
-Desktop host поддерживает эти surfaces. Android/iOS возвращают explicit
-`unsupported`, пока для mobile не появился отдельный E2E contract.
+The desktop host supports these surfaces. Android/iOS return an explicit
+`unsupported` until a separate E2E contract exists for mobile.
 
 ## Accessibility checklist
 
-- Дайте iframe и SVG содержательное accessible name.
-- Сохраняйте keyboard order и видимый focus.
-- Не блокируйте zoom и text selection без необходимости.
-- Учитывайте `editable: false`.
-- Слушайте theme/locale updates, а не только первое сообщение.
-- Поддерживайте reduced motion внутри view.
-- Не используйте цвет как единственный сигнал.
-- Проверяйте WebKitGTK: не используйте `<foreignObject>` в SVG.
+- Give the iframe and SVG a meaningful accessible name.
+- Preserve keyboard order and visible focus.
+- Do not block zoom and text selection unnecessarily.
+- Honor `editable: false`.
+- Listen for theme/locale updates, not just the first message.
+- Support reduced motion inside the view.
+- Do not use color as the only signal.
+- Check WebKitGTK: do not use `<foreignObject>` in SVG.

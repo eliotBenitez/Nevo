@@ -1,16 +1,16 @@
-# Тестирование и отладка
+# Testing and debugging
 
-Надёжный plugin проверяется на трёх уровнях:
+A reliable plugin is verified on three levels:
 
-1. unit tests чистых helpers и handlers;
-2. SDK test host и conformance bundle check;
-3. реальный Nevo host, который проверяет capabilities, descriptors, sandbox,
-   editor transactions и platform UI.
+1. unit tests of pure helpers and handlers;
+2. the SDK test host and the conformance bundle check;
+3. the real Nevo host, which verifies capabilities, descriptors, the sandbox,
+   editor transactions and platform UI.
 
-## Unit test через test host
+## Unit test via the test host
 
-`createTestPluginHost()` запускает `setup`, собирает contributions и позволяет
-вызвать зарегистрированный handler.
+`createTestPluginHost()` runs `setup`, collects contributions and lets you call
+a registered handler.
 
 ```ts
 import { describe, expect, it } from 'vitest'
@@ -73,30 +73,30 @@ describe('acme.hello', () => {
 })
 ```
 
-## Что умеет test host
+## What the test host does
 
-- выполняет `setup`;
-- проверяет contribution namespace;
-- назначает handler IDs;
-- ограничивает registrations числом 200;
-- эмулирует workspace/local storage в памяти;
-- вызывает handler с editor snapshot и `AbortSignal`.
+- runs `setup`;
+- validates the contribution namespace;
+- assigns handler IDs;
+- limits registrations to 200;
+- emulates workspace/local storage in memory;
+- calls a handler with an editor snapshot and an `AbortSignal`.
 
-## Что test host не эмулирует
+## What the test host does not emulate
 
-- полный manifest validation и capability enforcement;
-- ProseMirror schema и применение transaction intent;
-- UI DSL/CSS/SVG sanitizer;
-- iframe bridge;
-- settings, secrets, assets, network и workspace command brokers;
-- lifecycle, timeout, restart, quarantine и migrations;
+- full manifest validation and capability enforcement;
+- the ProseMirror schema and applying a transaction intent;
+- the UI DSL/CSS/SVG sanitizer;
+- the iframe bridge;
+- the settings, secrets, assets, network and workspace command brokers;
+- lifecycle, timeout, restart, quarantine and migrations;
 - persisted storage quotas.
 
-Поэтому passing unit test не означает, что descriptor принят Nevo. Для
-критичного плагина добавляйте интеграционную fixture или проверяйте bundle в
+So a passing unit test does not mean Nevo accepts the descriptor. For a
+critical plugin, add an integration fixture or check the bundle in a
 development workspace.
 
-## Тестируйте чистую логику отдельно
+## Test pure logic separately
 
 ```ts
 export function buildGreeting(
@@ -121,26 +121,26 @@ it('uses the host time zone', () => {
 })
 ```
 
-Проверяйте разные locale/timezone, empty selection, missing schema types,
-missing settings, null storage, quota boundary inputs и aborted signal.
+Test different locales/timezones, an empty selection, missing schema types,
+missing settings, null storage, quota boundary inputs and an aborted signal.
 
 ## Conformance CLI
 
-После сборки:
+After the build:
 
 ```sh
 pnpm build
 pnpm exec nevo-plugin-conformance ./dist/index.js
 ```
 
-CLI импортирует bundle и проверяет, что default или named `plugin` export
-содержит `setup`.
+The CLI imports the bundle and checks that the default or named `plugin` export
+contains `setup`.
 
-Текущий conformance check намеренно минимален. Он не загружает manifest, не
-проверяет capability matrix и не исполняет handlers. Не называйте его
-«полной sandbox проверкой» в CI.
+The current conformance check is deliberately minimal. It does not load the
+manifest, does not verify the capability matrix and does not execute handlers.
+Do not call it a "full sandbox check" in CI.
 
-Рекомендуемый script:
+Recommended scripts:
 
 ```json
 {
@@ -153,139 +153,141 @@ CLI импортирует bundle и проверяет, что default или n
 }
 ```
 
-## Ручная установка development bundle
+## Manually installing a development bundle
 
-Скопируйте содержимое `dist/` в:
+Copy the contents of `dist/` into:
 
 ```text
 <workspace>/.nevo/plugins/<pluginId>/
 ```
 
-Проверьте:
+Check that:
 
-1. имя каталога совпадает с `manifest.id`;
-2. `manifest.entryPoint` существует внутри каталога;
-3. плагин enabled в Settings → Plugins;
-4. после изменения manifest или bundle workspace перезапущен;
-5. contribution появляется в ожидаемом surface;
-6. disable/re-enable не повреждает сохранённые nodes;
-7. export работает с enabled и disabled plugin.
+1. the directory name matches `manifest.id`;
+2. `manifest.entryPoint` exists inside the directory;
+3. the plugin is enabled in Settings → Plugins;
+4. the workspace was restarted after the manifest or bundle changed;
+5. the contribution appears in the expected surface;
+6. disable/re-enable does not corrupt saved nodes;
+7. export works with the plugin both enabled and disabled.
 
-Для schema/block plugin создайте отдельный disposable workspace и оставьте
-fixture note с каждой legacy data version.
+For a schema/block plugin, create a separate disposable workspace and keep a
+fixture note for each legacy data version.
 
 ## Manual UI matrix
 
-Для visual contribution:
+For a visual contribution:
 
-- light и dark theme;
-- 100% и увеличенный interface zoom;
+- light and dark theme;
+- 100% and increased interface zoom;
 - keyboard-only navigation;
 - visible focus;
-- empty, loading, error, readonly и large-data states;
-- narrow и wide workspace;
-- WebKitGTK/Linux и WebView2/Windows, если feature зависит от rendering;
-- reduce motion;
-- disable plugin с уже сохранённой node.
+- empty, loading, error, readonly and large-data states;
+- narrow and wide workspace;
+- WebKitGTK/Linux and WebView2/Windows, if the feature depends on rendering;
+- reduced motion;
+- disabling the plugin with an already saved node.
 
-Для Tier 2 frame дополнительно:
+Additionally for a Tier 2 frame:
 
-- отсутствие `editor.write.self`;
-- stale frame после node delete;
-- payload около 256 KiB;
-- Worker error во время `invoke`;
-- large image через `nevoplugin-asset://`.
+- absence of `editor.write.self`;
+- a stale frame after the node is deleted;
+- a payload near 256 KiB;
+- a Worker error during `invoke`;
+- a large image via `nevoplugin-asset://`.
 
-## Проверка persisted data
+## Verifying persisted data
 
-Schema names, attrs и content — часть stored document contract. Тестируйте:
+Schema names, attrs and content are part of the stored document contract. Test:
 
-- note, созданную предыдущей версией;
-- update без data migration;
-- последовательные migrations без пропуска версии;
-- rollback при exception;
-- missing/disabled plugin fallback;
+- a note created by a previous version;
+- an update without a data migration;
+- sequential migrations without skipping a version;
+- rollback on exception;
+- the missing/disabled plugin fallback;
 - Markdown/HTML/Typst export;
-- повторную установку после удаления кода.
+- reinstalling after the code was removed.
 
-Плагинная нода в local workspace хранится в disk-backed Y.Doc:
+A plugin node in a local workspace is stored in a disk-backed Y.Doc:
 
 ```text
 <workspace>/.nevo/collab/<noteId>.yjs
 ```
 
-`note.content` — только seed нового Y.Doc и не является источником истины для
-миграции существующего документа.
+`note.content` is only the seed of a new Y.Doc and is not the source of truth
+for migrating an existing document.
 
-## Типичные ошибки
+## Common errors
 
 ### `Contribution id must be namespaced`
 
-Используйте:
+Use:
 
 ```ts
 id: `${api.pluginId}.feature-name`
 ```
 
-Не хардкодьте чужой namespace и не используйте ID без точки после plugin ID.
+Do not hardcode someone else's namespace and do not use an ID without a dot
+after the plugin ID.
 
 ### `Plugin ... requires capability ...`
 
-Contribution или broker вызван без capability в `manifest.capabilities`.
-Смотрите [capability matrix](../plugin-capabilities.md).
+A contribution or broker was called without the capability in
+`manifest.capabilities`. See the [capability matrix](../plugin-capabilities.md).
 
 ### `descriptor.source must be a plugin-relative iframe entry`
 
-`source` должен быть вроде `views/panel.html`, без scheme, ведущего slash,
-backslash и `..`.
+`source` must look like `views/panel.html`, with no scheme, leading slash,
+backslash or `..`.
 
 ### `route must stay inside ...`
 
-Workspace route должен начинаться с:
+A workspace route must start with:
 
 ```text
 /workspace/plugin/<pluginId>
 ```
 
-Query и hash не поддерживаются.
+Query and hash are not supported.
 
 ### `Sandbox request timed out after 5000ms`
 
-Handler не уложился в 5 секунд или заблокировал event loop. Вынесите долгую
-работу из user action, уменьшите данные, используйте broker timeout и проверяйте
-`signal.aborted`.
+The handler did not finish within 5 seconds or blocked the event loop. Move
+long-running work out of the user action, reduce the data, use the broker
+timeout and check `signal.aborted`.
 
-### Плагин quarantined
+### Plugin quarantined
 
-Fatal invocation перезапускается один раз. Второй fatal error отключает Worker
-до конца session, но не меняет persisted `enabled`. Исправьте crash и
-перезапустите workspace.
+A fatal invocation is restarted once. A second fatal error disables the Worker
+until the end of the session, but does not change the persisted `enabled`. Fix
+the crash and restart the workspace.
 
-### SVG пустой
+### SVG is empty
 
-Sanitizer мог удалить `style`, `foreignObject`, external link или event handler.
-Используйте native SVG elements и presentation attributes.
+The sanitizer may have removed `style`, `foreignObject`, an external link or an
+event handler. Use native SVG elements and presentation attributes.
 
-### `assets.read()` возвращает ошибку для большого файла
+### `assets.read()` returns an error for a large file
 
-Read channel ограничен 512 KiB. Получите `api.assets.url()` и отображайте asset
-во frame.
+The read channel is limited to 512 KiB. Get `api.assets.url()` and display the
+asset in a frame.
 
-### Unit test проходит, а Nevo отклоняет плагин
+### The unit test passes, but Nevo rejects the plugin
 
-Test host не выполняет полный host validation. Запустите conformance, затем
-проверьте manifest, capability, descriptor и transaction в реальном Nevo.
+The test host does not perform full host validation. Run conformance, then
+check the manifest, capability, descriptor and transaction in the real Nevo.
 
 ## Release checklist
 
-- [ ] `pnpm test` проходит.
-- [ ] Production bundle собирается без bare imports за пределы plugin directory.
-- [ ] Conformance CLI принимает `dist/index.js`.
-- [ ] Manifest ID, directory и contribution namespaces совпадают.
-- [ ] Capabilities минимальны и соответствуют всем contributions/brokers.
-- [ ] Network hosts/methods перечислены полностью, без лишних wildcard.
-- [ ] Schema names и attrs не переименованы случайно.
-- [ ] Для нового `dataVersion` есть каждый последовательный migration.
-- [ ] Light/dark, keyboard и disabled fallback проверены.
-- [ ] Exporters/importers проверены на unsafe/large input.
-- [ ] Marketplace update проверен на legacy workspace copy.
+- [ ] `pnpm test` passes.
+- [ ] The production bundle builds with no bare imports outside the plugin
+  directory.
+- [ ] The conformance CLI accepts `dist/index.js`.
+- [ ] Manifest ID, directory and contribution namespaces match.
+- [ ] Capabilities are minimal and match all contributions/brokers.
+- [ ] Network hosts/methods are listed completely, with no extra wildcards.
+- [ ] Schema names and attrs were not renamed accidentally.
+- [ ] Every sequential migration exists for the new `dataVersion`.
+- [ ] Light/dark, keyboard and the disabled fallback are checked.
+- [ ] Exporters/importers are checked against unsafe/large input.
+- [ ] A marketplace update is checked against a legacy workspace copy.

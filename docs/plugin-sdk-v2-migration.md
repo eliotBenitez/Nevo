@@ -1,37 +1,37 @@
 # Migration from trusted SDK V1 to SDK V2
 
-V2 не совместим с исходным кодом V1. Миграция меняет модель выполнения:
+V2 is not source-compatible with V1. The migration changes the execution model:
 
 | V1 | V2 |
 | --- | --- |
-| Код в главном WebView | Изолированный Worker |
+| Code in the main WebView | Isolated Worker |
 | `onRegister(ctx)` | `definePlugin({ setup(api) })` |
 | ProseMirror objects | JSON snapshot + transaction intent |
-| DOM callbacks/NodeView | Host UI, sanitized SVG или iframe |
+| DOM callbacks/NodeView | Host UI, sanitized SVG or iframe |
 | Direct/in-process services | Capability-gated brokers |
-| Split capability arrays | Единый `capabilities` |
+| Split capability arrays | Single `capabilities` |
 
-Trusted V1 остаётся для bundled/system, folder и уже установленных legacy
-plugins. Новая marketplace publication обязана быть V2.
+Trusted V1 remains for bundled/system, folder and already installed legacy
+plugins. New marketplace publications must be V2.
 
-## До начала
+## Before you start
 
-Составьте inventory:
+Build an inventory:
 
-- registrations и их IDs;
+- registrations and their IDs;
 - schema node/mark names;
-- attrs и content expressions;
+- attrs and content expressions;
 - serialized/export formats;
-- storage keys и их JSON shape;
+- storage keys and their JSON shape;
 - filesystem/network/Tauri calls;
 - custom DOM/NodeView behavior;
-- workspace routes и modals;
-- текущая persisted data version.
+- workspace routes and modals;
+- the current persisted data version.
 
-Schema names, attrs, contribution IDs и storage keys считаются persisted/public
-contract. Не переименовывайте их только ради cleanup.
+Schema names, attrs, contribution IDs and storage keys are a persisted/public
+contract. Do not rename them just for cleanup.
 
-## 1. Обновите manifest
+## 1. Update the manifest
 
 V1:
 
@@ -61,12 +61,13 @@ V2:
 }
 ```
 
-Добавьте `network` только при реальном `api.network.fetch`.
+Add `network` only if you actually call `api.network.fetch`.
 
-`dataVersion` описывает persisted data, а не runtime. Если storage/schema data не
-изменилась, переход V1 → V2 сам по себе не требует увеличивать `dataVersion`.
+`dataVersion` describes persisted data, not the runtime. If the storage/schema
+data has not changed, the V1 → V2 transition alone does not require increasing
+`dataVersion`.
 
-## 2. Перенесите registration
+## 2. Move registrations
 
 V1:
 
@@ -115,11 +116,12 @@ export default definePlugin({
 })
 ```
 
-Не переносите `state`, `dispatch` или `view` в closure. Их нет в Worker.
+Do not carry `state`, `dispatch` or `view` over in a closure. They do not exist
+in the Worker.
 
-## 3. Перенесите schema и UI
+## 3. Move the schema and UI
 
-Сохраните имя и attrs:
+Keep the name and attrs:
 
 ```ts
 api.blockType({
@@ -148,17 +150,17 @@ api.blockType({
 })
 ```
 
-Замените:
+Replace:
 
 - `toDOM`/`parseDOM` callbacks → declarative `ui`;
 - computed static view → `render: "svg"`;
 - interactive NodeView → Tier 2 `frame`;
 - direct popover DOM → `api.register('popover', descriptor)`.
 
-Raw HTML, DOM callbacks, external CSS resources и global selectors V2 не
-принимает.
+V2 does not accept raw HTML, DOM callbacks, external CSS resources or global
+selectors.
 
-## 4. Перенесите services
+## 4. Move services
 
 | V1 behavior | V2 replacement |
 | --- | --- |
@@ -171,12 +173,12 @@ Raw HTML, DOM callbacks, external CSS resources и global selectors V2 не
 | `setTimeout`/`setInterval` | `api.scheduling` |
 | Tauri invoke | allow-listed `api.workspace.invoke` |
 
-Если replacement отсутствует, функциональность нельзя переносить обходным
-путём. Зафиксируйте SDK gap отдельно.
+If there is no replacement, the functionality must not be ported through a
+workaround. Record the SDK gap separately.
 
-## 5. Добавьте serializers/importers
+## 5. Add serializers/importers
 
-Custom node должна экспортироваться без plugin runtime:
+A custom node must be exportable without the plugin runtime:
 
 ```ts
 api.serializer({
@@ -193,12 +195,12 @@ api.serializer({
 })
 ```
 
-Добавьте Markdown/HTML/Typst/DOCX serializer для каждого custom node, если этот
-format поддерживает продуктовый workflow. Importer нужен для обратного
-round-trip fenced syntax.
+Add a Markdown/HTML/Typst/DOCX serializer for every custom node if the product
+workflow supports that format. An importer is needed for the reverse round-trip
+of fenced syntax.
 
-DOCX serializer (нужен host SDK >= 2.1.0) возвращает не `docx`-объекты, а
-декларативный JSON-фрагмент; handler получает только `{ node }`:
+A DOCX serializer (requires host SDK >= 2.1.0) returns not `docx` objects but a
+declarative JSON fragment; the handler receives only `{ node }`:
 
 ```ts
 api.serializer({
@@ -217,17 +219,17 @@ api.serializer({
 })
 ```
 
-Блоки: `paragraph`, `heading` (level 1-6), `table` (`rows` → cells → inlines,
-`header`), `image` (`svg` или `src` — путь к ассету внутри workspace) и
-`children` (хост подставляет дочерние ноды). Inline: `text` (`bold`, `italic`,
-`underline`, `strike`, `code`, `color` как `#RRGGBB`, `link` со схемой
-http/https/mailto) и `break`. Невалидный фрагмент отклоняется целиком, а нода
-экспортируется как текст детей.
+Blocks: `paragraph`, `heading` (level 1-6), `table` (`rows` → cells → inlines,
+`header`), `image` (`svg` or `src` — a path to an asset inside the workspace)
+and `children` (the host substitutes the child nodes). Inlines: `text` (`bold`,
+`italic`, `underline`, `strike`, `code`, `color` as `#RRGGBB`, `link` with an
+http/https/mailto scheme) and `break`. An invalid fragment is rejected as a
+whole, and the node is exported as the text of its children.
 
-## 6. Миграции persisted data
+## 6. Persisted data migrations
 
-`migrations` индексируется целевой data version. Для перехода 1 → 3 нужны оба
-handlers: `2` и `3`.
+`migrations` is indexed by the target data version. For a 1 → 3 transition both
+handlers are required: `2` and `3`.
 
 ```ts
 export default definePlugin({
@@ -266,7 +268,7 @@ export default definePlugin({
 })
 ```
 
-Каждый handler получает:
+Each handler receives:
 
 ```ts
 {
@@ -276,7 +278,7 @@ export default definePlugin({
 }
 ```
 
-И обязан вернуть:
+And must return:
 
 ```ts
 {
@@ -286,57 +288,57 @@ export default definePlugin({
 }
 ```
 
-Пропущенный step, неверный `dataVersion`, non-JSON result или invalid node
-отклоняют update.
+A skipped step, a wrong `dataVersion`, a non-JSON result or an invalid node
+rejects the update.
 
-## Как Nevo применяет migration
+## How Nevo applies a migration
 
-Marketplace update двухфазный:
+A marketplace update has two phases:
 
-1. скачивает package в staging;
-2. проверяет permission fingerprint;
-3. загружает staged Worker и validates contributions;
-4. сохраняет live Y.Doc и останавливает старый Worker;
-5. читает plugin nodes из реальных `.nevo/collab/<noteId>.yjs`;
-6. последовательно вызывает migrations;
-7. проверяет новые nodes против новой schema на копиях;
-8. journaled backup сохраняет plugin directory, storage, registry и Y.Doc;
-9. только затем новая версия публикуется атомарно.
+1. downloads the package into staging;
+2. checks the permission fingerprint;
+3. loads the staged Worker and validates contributions;
+4. saves the live Y.Doc and stops the old Worker;
+5. reads plugin nodes from the real `.nevo/collab/<noteId>.yjs`;
+6. calls the migrations sequentially;
+7. checks the new nodes against the new schema on copies;
+8. a journaled backup saves the plugin directory, storage, registry and Y.Doc;
+9. only then is the new version published atomically.
 
-`note.content` не является источником истины для существующего local document:
-оно только seed нового Y.Doc.
+`note.content` is not the source of truth for an existing local document: it
+only seeds a new Y.Doc.
 
-Crash, validation error, missing migration, fingerprint race или installed
-version race восстанавливает прежние files/data.
+A crash, validation error, missing migration, fingerprint race or installed
+version race restores the previous files/data.
 
 ## Callout compatibility example
 
-При runtime migration без data migration сохраните:
+For a runtime migration without a data migration, keep:
 
 - node name `callout_block`;
-- attrs `variant` и `icon`;
+- attrs `variant` and `icon`;
 - content expression `block+`;
 - nested rich content;
-- serializers для всех поддержанных formats.
+- serializers for all supported formats.
 
-Это позволяет cached schema fallback открыть document даже при disabled/broken
-plugin.
+This lets the cached schema fallback open the document even when the plugin is
+disabled/broken.
 
-## Testing migration
+## Testing a migration
 
-Для каждой legacy version:
+For each legacy version:
 
-1. создайте workspace fixture реальной старой версией;
-2. добавьте несколько plugin nodes, включая nested content;
-3. сохраните workspace, чтобы данные оказались в Y.Doc;
-4. сделайте копию workspace;
-5. обновите plugin через marketplace transaction;
-6. проверьте storage и каждую node;
-7. проверьте editor undo/redo и export;
-8. повторите с искусственной ошибкой migration и убедитесь в rollback;
-9. disable plugin и проверьте cached fallback.
+1. create a workspace fixture with the real old version;
+2. add several plugin nodes, including nested content;
+3. save the workspace so that the data ends up in the Y.Doc;
+4. make a copy of the workspace;
+5. update the plugin through a marketplace transaction;
+6. check the storage and every node;
+7. check editor undo/redo and export;
+8. repeat with an artificial migration error and verify the rollback;
+9. disable the plugin and check the cached fallback.
 
-Unit test чистого migration:
+Unit test of a pure migration:
 
 ```ts
 it('preserves rich children while renaming the attr', async () => {
@@ -363,15 +365,15 @@ it('preserves rich children while renaming the attr', async () => {
 
 ## Migration checklist
 
-- [ ] `apiVersion` и `executionMode` переключены на V2.
-- [ ] Split capability arrays заменены единым минимальным `capabilities`.
-- [ ] `onRegister(ctx)` заменён `setup(api)`.
-- [ ] ProseMirror mutations выражены transaction intents.
-- [ ] Direct DOM заменён подходящим UI tier.
-- [ ] Direct services заменены brokers.
-- [ ] Contribution IDs сохраняют namespace и стабильность.
-- [ ] Schema names/attrs/content сохранены или migrated.
-- [ ] Serializers/importers покрывают custom nodes.
-- [ ] Каждый `dataVersion` step существует и tested.
-- [ ] Legacy Y.Doc fixture проходит update и rollback.
-- [ ] Conformance, unit tests и реальный Nevo host проходят.
+- [ ] `apiVersion` and `executionMode` are switched to V2.
+- [ ] Split capability arrays are replaced with a single minimal `capabilities`.
+- [ ] `onRegister(ctx)` is replaced with `setup(api)`.
+- [ ] ProseMirror mutations are expressed as transaction intents.
+- [ ] Direct DOM is replaced with a suitable UI tier.
+- [ ] Direct services are replaced with brokers.
+- [ ] Contribution IDs keep their namespace and stability.
+- [ ] Schema names/attrs/content are preserved or migrated.
+- [ ] Serializers/importers cover custom nodes.
+- [ ] Every `dataVersion` step exists and is tested.
+- [ ] The legacy Y.Doc fixture passes update and rollback.
+- [ ] Conformance, unit tests and the real Nevo host pass.
