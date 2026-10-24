@@ -1,7 +1,8 @@
 /* The mobile detail view contains panel components with their own internals. */
 @media (max-width: 719px) {
   .mobile-settings__detail > .panel { min-height: 100%; }
-  .mobile-settings__detail .panel-header { display: none; }
+  /* The topbar h1 already names the section; keep only the description and actions. */
+  .mobile-settings__detail .settings-section-header__title { display: none; }
   .mobile-settings__detail .panel-body {
     padding-top: 16px;
     padding-bottom: calc(24px + max(var(--safe-area-bottom), 0px));
