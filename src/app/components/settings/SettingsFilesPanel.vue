@@ -15,7 +15,7 @@ import { systemCommands, type WorkspaceLocation } from '../../../tauri/commands'
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
-const { settings, diagnostics, activePath } = storeToRefs(workspaceStore)
+const { settings, diagnostics, activePath, appMetadata } = storeToRefs(workspaceStore)
 
 const trashRetentionOptions = computed(() => [
   { value: 7, label: t('settings.files.trashRetention.7days') },
@@ -68,7 +68,7 @@ async function setSnapshotRetentionCount(value: number) {
     />
 
     <div class="panel-body tw:flex tw:min-h-0 tw:flex-1 tw:flex-col tw:gap-5 tw:overflow-auto tw:overscroll-contain tw:px-[30px] tw:pt-[18px] tw:pb-[30px]">
-      <SettingsGroup :title="t('settings.files.groups.paths')">
+      <SettingsGroup v-if="appMetadata?.supportsRevealInFileManager" :title="t('settings.files.groups.paths')">
         <SettingsRow
           :title="t('settings.files.paths.title')"
           :description="t('settings.files.paths.description')"
