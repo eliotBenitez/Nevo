@@ -82,6 +82,16 @@
   }
 }
 
+/* Narrow inline rows stack their control below the copy (SettingsRow utilities);
+   a lone toggle is small enough to stay beside it. Unlayered to beat `tw:`. */
+@media (max-width: 980px) {
+  .settings-row:not(.settings-row--stacked):has(> .row-control > .nv-toggle:only-child) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+  }
+}
+
 /* Transient marker for a setting opened from settings search. */
 .settings-row--highlight {
   animation: settings-row-highlight 1.6s ease-out;
