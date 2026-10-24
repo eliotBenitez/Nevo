@@ -76,11 +76,11 @@ async function openExternalUrl(url: string) {
               <RefreshCw :size="14" />
               {{ isChecking ? t('updater.checking') : t('settings.about.actions.checkUpdates') }}
             </NvButton>
-            <NvButton @click="openAppLocation('config', true)">
+            <NvButton v-if="appMetadata?.supportsRevealInFileManager" @click="openAppLocation('config', true)">
               <Settings :size="14" />
               {{ t('settings.about.actions.revealConfig') }}
             </NvButton>
-            <NvButton @click="openAppLocation('appData')">
+            <NvButton v-if="appMetadata?.supportsRevealInFileManager" @click="openAppLocation('appData')">
               <FolderOpen :size="14" />
               {{ t('settings.about.actions.openUserFolder') }}
             </NvButton>
