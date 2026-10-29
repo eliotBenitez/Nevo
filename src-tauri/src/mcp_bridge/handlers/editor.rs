@@ -218,16 +218,22 @@ pub(super) async fn load_note(
     let workspace_path = workspace_path.to_string();
     let note_id = note_id.to_string();
     tauri::async_runtime::spawn_blocking(move || {
-        let manifest = load_manifest(&workspace_path).map_err(RpcError::internal)?;
-        if manifest.trash.iter().any(|item| item.id == note_id) {
-            return Err(RpcError::not_found(&format!(
-                "Note {note_id} is in the trash"
-            )));
-        }
+        reject_trashed(&workspace_path, &note_id)?;
         load_note_impl(workspace_path, note_id).map_err(|error| RpcError::not_found(&error))
     })
     .await
     .map_err(|error| RpcError::internal(error.to_string()))?
+}
+
+/// Blocking: fails when `note_id` is in the manifest trash.
+pub(super) fn reject_trashed(workspace_path: &str, note_id: &str) -> Result<(), RpcError> {
+    let manifest = load_manifest(workspace_path).map_err(RpcError::internal)?;
+    if manifest.trash.iter().any(|item| item.id == note_id) {
+        return Err(RpcError::not_found(&format!(
+            "Note {note_id} is in the trash"
+        )));
+    }
+    Ok(())
 }
 
 fn require_document_editor(note: &NoteDocument) -> Result<(), RpcError> {

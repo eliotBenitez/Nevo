@@ -1,5 +1,5 @@
 import type { Node as PMNode, NodeType } from 'prosemirror-model'
-import { NodeSelection, type Command, type Selection } from 'prosemirror-state'
+import { NodeSelection, type Command, type EditorState, type Selection, type Transaction } from 'prosemirror-state'
 
 export interface SelectedNodeMatch {
   pos: number
@@ -26,6 +26,34 @@ export function createInsertBlockCommand(nodeType: NodeType, attrs: Record<strin
     dispatch(tr.scrollIntoView())
     return true
   }
+}
+
+/**
+ * Inserts a block node (replacing an empty paragraph, else the selection) and
+ * selects it. The inserted node is found in the last step's changed range: when
+ * a block lands in non-empty text the old cursor no longer maps onto it.
+ */
+export function insertBlockAndSelect(state: EditorState, dispatch: (tr: Transaction) => void, node: PMNode): boolean {
+  const { $from } = state.selection
+  let tr = state.tr
+  let insertPos: number | null = null
+
+  if (state.selection.empty && $from.parent.isTextblock && $from.parent.content.size === 0) {
+    insertPos = $from.before()
+    tr = tr.replaceWith(insertPos, insertPos + $from.parent.nodeSize, node)
+  } else {
+    tr = tr.replaceSelectionWith(node, false)
+    tr.mapping.maps[tr.mapping.maps.length - 1]?.forEach((_from, _to, newFrom, newTo) => {
+      tr.doc.nodesBetween(newFrom, newTo, (child, pos) => {
+        if (insertPos === null && child.type === node.type && child.eq(node)) insertPos = pos
+        return insertPos === null
+      })
+    })
+  }
+
+  if (insertPos !== null) tr.setSelection(NodeSelection.create(tr.doc, insertPos))
+  dispatch(tr.scrollIntoView())
+  return true
 }
 
 export function findSelectedNode(selection: Selection, nodeType: NodeType): SelectedNodeMatch | null {

@@ -75,16 +75,22 @@ export function createMediaNodeView(
   // menu) so it stays visible in both player and bookmarks layouts.
   header.insertBefore(audioUi.modeControl, menu)
 
+  // Recorded on pointerdown: WebKit does not focus a range input on press, so focus cannot tell.
+  let pressedSlider = false
+  function onPointerDown(event: Event) {
+    const target = event.target
+    pressedSlider = target instanceof HTMLElement && target.matches('input[type="range"]') && audioUi.stopEvent(target)
+  }
   function onDragStart(event: DragEvent) {
     // The block is `draggable: true`, so pressing a slider thumb would start a
     // native node drag that revokes pointer capture and freezes the slider after
     // its first move. Cancel the drag when the gesture began on an audio slider.
-    const active = document.activeElement
-    if (active instanceof HTMLElement && active.matches('input[type="range"]') && audioUi.stopEvent(active)) {
+    if (pressedSlider) {
       event.preventDefault()
       event.stopPropagation()
     }
   }
+  dom.addEventListener('pointerdown', onPointerDown, true)
   dom.addEventListener('dragstart', onDragStart)
 
   function clearVideoSource() {
@@ -190,6 +196,7 @@ export function createMediaNodeView(
     stopEvent(event) {
       const target = event.target as Node
       return audioUi.stopEvent(target) || transcriptUi.stopEvent(target) || video.contains(target) || menu.contains(target)
+        || audioUi.modeControl.contains(target)
     },
     ignoreMutation: () => true,
     update(nextNode) {
@@ -206,6 +213,7 @@ export function createMediaNodeView(
       transcriptUi.destroy()
       clearVideoSource()
       cleanupPick()
+      dom.removeEventListener('pointerdown', onPointerDown, true)
       dom.removeEventListener('dragstart', onDragStart)
       render(null, menu)
     },

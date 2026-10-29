@@ -830,17 +830,13 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
             return handleInternalLinkClick(view, event)
           },
           contextmenu(view, event) {
-            console.log('contextmenu event fired in ProseMirror!', { shiftKey: event.shiftKey, defaultPrevented: event.defaultPrevented, callbacksHasContextMenuRequest: !!callbacks.onContextMenuRequest })
             if (event.shiftKey) return false
             if (event.defaultPrevented) return false
             
             handleTableContextMenu(view, event)
             
             if (callbacks.onContextMenuRequest) {
-               console.log('Calling callbacks.onContextMenuRequest')
-               const result = callbacks.onContextMenuRequest(view, event)
-               console.log('callbacks.onContextMenuRequest returned', result)
-               return result
+               return callbacks.onContextMenuRequest(view, event)
             }
             return false
           },

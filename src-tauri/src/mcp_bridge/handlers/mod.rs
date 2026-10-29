@@ -142,7 +142,9 @@ pub async fn dispatch(
             editor::write_markdown(require_app(app)?, workspace_path, params).await
         }
         "notes.rename" => editor::rename_note(require_app(app)?, workspace_path, params).await,
-        "notes.restoreSnapshot" => history::restore_snapshot(require_app(app)?, params).await,
+        "notes.restoreSnapshot" => {
+            history::restore_snapshot(require_app(app)?, workspace_path, params).await
+        }
         _ => {
             let result =
                 run_blocking(workspace_path.to_string(), method.to_string(), params).await?;

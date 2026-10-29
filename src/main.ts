@@ -18,14 +18,6 @@ import './styles/surfaces.css'
 import './styles/primitives.css'
 import './styles/nv-modal.css'
 import './styles/app.css'
-// editor.css, settings.css, mobile-settings.css, onboarding.css, graph.css,
-// features/kanban-modal.css, features/draw/draw.css, and the highlight.js
-// theme moved to the components that actually render that content (editor
-// route, settings modal, onboarding route, graph feature, kanban card modal,
-// draw route, code-block node view) so they ship with those routes instead
-// of app startup. @vue-flow/* styles were dropped entirely: nothing in `src`
-// imports `@vue-flow/core` or uses its components (the graph feature uses its
-// own D3 force-directed canvas), so they were dead CSS.
 
 const pinia = createPinia()
 
@@ -43,7 +35,6 @@ async function bootstrap() {
 
   // Prevent native context menu on Windows/Linux unless Shift is held
   window.addEventListener('contextmenu', (e) => {
-    console.log('Global window contextmenu event fired!', { shiftKey: e.shiftKey, defaultPrevented: e.defaultPrevented })
     if (!e.shiftKey) e.preventDefault()
   })
 

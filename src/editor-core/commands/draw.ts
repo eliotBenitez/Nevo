@@ -1,6 +1,7 @@
 import type { NodeType } from 'prosemirror-model'
 import { NodeSelection, type Command } from 'prosemirror-state'
 import { generateDrawId } from '../../utils/draw/drawEngine'
+import { insertBlockAndSelect } from './utils'
 
 /** Insert an empty draw_block. When `drawId` is empty a fresh one is generated
  *  on each invocation, so the slash command can register a single factory.
@@ -11,21 +12,7 @@ export function createInsertDrawCommand(nodeType: NodeType, drawId = ''): Comman
     const id = drawId || generateDrawId()
     const node = nodeType.create({ drawId: id, src: '', svgPreview: '', title: '' })
     if (!dispatch) return true
-
-    const { $from } = state.selection
-    let insertPos = state.selection.from
-    let tr = state.tr
-
-    if (state.selection.empty && $from.parent.isTextblock && $from.parent.content.size === 0) {
-      insertPos = $from.before()
-      tr = tr.replaceWith(insertPos, insertPos + $from.parent.nodeSize, node)
-    } else {
-      tr = tr.replaceSelectionWith(node, false)
-      insertPos = tr.mapping.map(insertPos)
-    }
-
-    dispatch(tr.setSelection(NodeSelection.create(tr.doc, insertPos)).scrollIntoView())
-    return true
+    return insertBlockAndSelect(state, dispatch, node)
   }
 }
 

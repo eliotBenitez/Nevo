@@ -574,7 +574,6 @@ export class EditorPluginHost {
     }
     if (contribution.kind === 'blockType') {
       const schema = descriptor.schema
-      console.log('DBG blockType', contribution.id, 'schema?', typeof schema, 'frame?', typeof descriptor.frame)
       if (schema && typeof schema === 'object' && !Array.isArray(schema)) {
         const merged = {
           ...schema,

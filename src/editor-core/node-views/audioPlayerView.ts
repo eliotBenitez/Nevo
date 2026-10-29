@@ -237,7 +237,8 @@ export function createAudioPlayerView(node: PMNode, options: AudioPlayerViewOpti
   forward.addEventListener('click', () => { audio.currentTime = Math.min(Number.isFinite(audio.duration) ? audio.duration : Infinity, audio.currentTime + 10) })
   seek.addEventListener('pointerdown', () => { seeking = true })
   seek.addEventListener('input', () => { if (Number.isFinite(audio.duration) && audio.duration > 0) audio.currentTime = Number(seek.value) / 1000 * audio.duration })
-  seek.addEventListener('change', () => { seeking = false; updateClock() })
+  // `change` does not fire for a press without movement or a cancelled gesture.
+  for (const type of ['change', 'pointerup', 'pointercancel']) seek.addEventListener(type, () => { seeking = false; updateClock() })
   volume.addEventListener('input', () => { audio.volume = Number(volume.value) })
   retry.addEventListener('click', () => { status.dataset.error = ''; setSource(source, true) })
   audio.addEventListener('timeupdate', updateClock)
