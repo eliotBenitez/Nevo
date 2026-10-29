@@ -22,8 +22,9 @@ export default defineConfig(async () => ({
   },
 
   build: {
-    // MathJax's lazy SVG output module has a separate 1.3 MiB budget; all
-    // other chunks are checked against 1.1 MiB by build-tools/check-bundle-size.mjs.
+    // MathJax's lazy SVG output module (1.3 MiB) and Mermaid's lazy ELK layout
+    // (1.5 MiB) have separate budgets; all other chunks are checked against
+    // 1.1 MiB by build-tools/check-bundle-size.mjs.
     chunkSizeWarningLimit: 1300,
     rollupOptions: {
       output: {

@@ -6,12 +6,16 @@ const distDir = fileURLToPath(new globalThis.URL('../dist/', import.meta.url))
 const assetsDir = join(distDir, 'assets')
 const defaultBudget = 1100 * 1024
 const lazyMathJaxSvgBudget = 1300 * 1024
+// Mermaid 12 bundles the ELK layout engine; it loads only for diagrams that opt into `layout: elk`.
+const lazyMermaidElkBudget = 1500 * 1024
 const failures = []
 
 for (const fileName of await readdir(assetsDir)) {
   if (!fileName.endsWith('.js')) continue
   const bytes = (await stat(join(assetsDir, fileName))).size
-  const budget = fileName.startsWith('svg-') ? lazyMathJaxSvgBudget : defaultBudget
+  const budget = fileName.startsWith('svg-')
+    ? lazyMathJaxSvgBudget
+    : fileName.startsWith('elk-') ? lazyMermaidElkBudget : defaultBudget
   if (bytes > budget) failures.push({ fileName, bytes, budget })
 }
 
