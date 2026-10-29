@@ -54,7 +54,7 @@
     "markmap-view": "^0.18.12",
     "mermaid": "^11.15.0",
     "perfect-freehand": "^1.2.3",
-    "pinia": "^3.0.4",
+    "pinia": "4.1.0",
     "prosemirror-commands": "^1.7.2",
     "prosemirror-dropcursor": "^1.8.4",
     "prosemirror-history": "^1.5.1",
