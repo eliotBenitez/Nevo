@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { mobileWorkspaceViewClass, mobileViewHeaderClass, mobileViewEyebrowClass, mobileViewTitleClass, mobileIconButtonClass, mobileIconButtonStrongClass, mobileIconButtonDefaultClass, mobileLibraryTabClass, mobileLibraryTabBadgeClass, mobileEmptyStateClass } from './mobileChromeClasses'
-import { ChevronRight, FilePlus2, Filter, Folder, Search, Tag } from '../../../ui/icons'
+import { BookOpen, ChevronRight, FilePlus2, Filter, Folder, Search, Tag } from '../../../ui/icons'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
@@ -20,6 +20,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'create-note': []
+  'create-notebook': []
   'open-note': [noteId: string]
   'open-folder': [folderId: string]
   'open-search': []
@@ -101,6 +102,10 @@ function createNote() {
   emit('create-note')
 }
 
+function createNotebook() {
+  emit('create-notebook')
+}
+
 function openNote(noteId: string) {
   emit('open-note', noteId)
 }
@@ -121,14 +126,24 @@ function openSearch() {
         <p class="mobile-view-header__eyebrow" :class="mobileViewEyebrowClass">{{ workspaceName }}</p>
         <h1 :class="mobileViewTitleClass">{{ t('workspace.mobile.library.title') }}</h1>
       </div>
-      <button
-        type="button"
-        class="mobile-icon-button mobile-icon-button--strong" :class="[mobileIconButtonClass, mobileIconButtonStrongClass]"
-        :aria-label="t('workspace.actions.newNote')"
-        @click="createNote"
-      >
-        <FilePlus2 :size="21" />
-      </button>
+      <div class="tw:flex tw:items-center tw:gap-2">
+        <button
+          type="button"
+          class="mobile-icon-button" :class="[mobileIconButtonClass, mobileIconButtonDefaultClass]"
+          :aria-label="t('app.notebook.create')"
+          @click="createNotebook"
+        >
+          <BookOpen :size="20" />
+        </button>
+        <button
+          type="button"
+          class="mobile-icon-button mobile-icon-button--strong" :class="[mobileIconButtonClass, mobileIconButtonStrongClass]"
+          :aria-label="t('workspace.actions.newNote')"
+          @click="createNote"
+        >
+          <FilePlus2 :size="21" />
+        </button>
+      </div>
     </header>
 
     <div class="mobile-library__tools tw:flex tw:items-center tw:gap-2.5">

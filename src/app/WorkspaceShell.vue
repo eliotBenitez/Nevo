@@ -622,6 +622,11 @@ function openMobileNoteDetails() {
   if (!activeNote.value) return
   mobileNoteDetailsOpen.value = true
 }
+function deleteMobileNote() {
+  const note = activeNote.value
+  if (!note) return
+  void onTreeAction({ action: 'delete', target: { kind: 'note', id: note.id, title: note.title, folderId: note.folderId } })
+}
 function exportMobileNote() {
   handleRequestExport('markdown')
 }
@@ -1085,6 +1090,7 @@ function openAiChatSource(source: ChatSource) {
       @back="backFromMobileEditor"
       @export="exportMobileNote"
       @details="openMobileNoteDetails"
+      @delete="deleteMobileNote"
       @change-mode="changeNoteView"
     />
 
@@ -1164,6 +1170,7 @@ function openAiChatSource(source: ChatSource) {
         :folders="manifest?.tree ?? []"
         :previews="workspaceStore.sidebarNotePreviews"
         @create-note="createNote"
+        @create-notebook="createNotebook"
         @open-note="openNote"
         @open-folder="openFolder"
         @open-search="runWorkspaceSearch()"
@@ -1175,6 +1182,7 @@ function openAiChatSource(source: ChatSource) {
         :enabled="kanbanEnabled"
         @create="createBoard"
         @open="openBoard"
+        @board-action="onBoardAction"
       />
       <MobileMoreView
         v-else-if="isMobileMoreView"

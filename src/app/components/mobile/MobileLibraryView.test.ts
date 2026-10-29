@@ -100,4 +100,11 @@ describe('MobileLibraryView', () => {
     expect(tabs[2].attributes('aria-selected')).toBe('true')
     expect(wrapper.findAll('.mobile-tag-cloud button')).toHaveLength(2)
   })
+
+  it('offers notebook creation next to note creation', async () => {
+    const wrapper = mountLibrary()
+
+    await wrapper.get('[aria-label="Create notebook"]').trigger('click')
+    expect(wrapper.emitted('create-notebook')).toHaveLength(1)
+  })
 })
