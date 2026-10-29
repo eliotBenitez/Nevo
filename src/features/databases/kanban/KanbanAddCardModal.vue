@@ -20,7 +20,6 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const title = ref('')
-const titleInputRef = ref<HTMLInputElement | null>(null)
 
 const columnOptions = computed(() =>
   getBoardColumns(props.board).map(opt => ({ value: opt.id, label: localizeDefaultKanbanLabel(opt.name, key => t(key)) }))
@@ -46,7 +45,6 @@ function onKeydown(e: KeyboardEvent) {
     <div class="kadd-body tw:flex tw:flex-col tw:gap-3">
       <!-- Title input -->
       <input
-        ref="titleInputRef"
         v-model="title"
         type="text"
         class="kadd-title-input tw:box-border tw:w-full tw:h-9 tw:px-2.5 tw:rounded-[calc(7px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--input-bg) tw:text-content-primary tw:text-sm tw:outline-none tw:transition-colors tw:duration-[120ms] tw:focus:border-accent tw:placeholder:text-content-muted"

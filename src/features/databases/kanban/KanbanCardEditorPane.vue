@@ -26,7 +26,6 @@ const status = ref(getCardStatusValue(props.card, props.board))
 const dirty = ref(false)
 const saving = ref(false)
 const saveError = ref('')
-const titleInput = ref<HTMLInputElement | null>(null)
 const paneRef = ref<HTMLElement | null>(null)
 const propertiesDetails = ref<HTMLDetailsElement | null>(null)
 const propertiesRef = ref<{ collect: () => { fields: KanbanCardField[]; priority: KanbanCardPriority } } | null>(null)
@@ -210,7 +209,7 @@ defineExpose({ flush })
         </NvPopupMenu>
         <button type="button" class="kb-editor-close tw:grid tw:size-8 tw:shrink-0 tw:place-items-center tw:rounded-md tw:border-0 tw:bg-transparent tw:text-content-muted tw:cursor-pointer tw:hover:bg-surface-subtle tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-focus-ring tw:max-[1300px]:hidden" :aria-label="t('kanban.common.close')" :title="t('kanban.common.close')" @click="goBack"><X :size="17" /></button>
       </div>
-      <input ref="titleInput" v-model="title" class="kb-editor-title tw:box-border tw:w-full tw:min-w-0 tw:border-0 tw:bg-transparent tw:px-0 tw:text-[28px] tw:font-[650] tw:text-content-primary tw:outline-none tw:focus-visible:rounded-[4px] tw:focus-visible:outline-2 tw:focus-visible:outline-offset-4 tw:focus-visible:outline-focus-ring tw:max-[760px]:text-[25px] tw:max-[760px]:leading-[1.2]" :placeholder="t('kanban.card.titlePlaceholder')" @input="changed">
+      <input v-model="title" class="kb-editor-title tw:box-border tw:w-full tw:min-w-0 tw:border-0 tw:bg-transparent tw:px-0 tw:text-[28px] tw:font-[650] tw:text-content-primary tw:outline-none tw:focus-visible:rounded-[4px] tw:focus-visible:outline-2 tw:focus-visible:outline-offset-4 tw:focus-visible:outline-focus-ring tw:max-[760px]:text-[25px] tw:max-[760px]:leading-[1.2]" :placeholder="t('kanban.card.titlePlaceholder')" @input="changed">
       <div class="kb-editor-meta tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:min-[1301px]:mt-2.5">
         <span v-if="statusOption" class="kb-editor-chip tw:inline-flex tw:min-h-8 tw:items-center tw:rounded-full tw:bg-surface-subtle tw:px-3 tw:text-xs">{{ statusLabel }}</span>
         <span class="kb-editor-chip kb-editor-chip--priority tw:inline-flex tw:min-h-8 tw:items-center tw:gap-1.5 tw:rounded-full tw:bg-surface-subtle tw:px-3 tw:text-xs"><span class="kb-editor-priority-dot tw:size-[7px] tw:rounded-full tw:bg-content-muted tw:data-[priority=low]:bg-[#3b82f6] tw:data-[priority=medium]:bg-[#f59e0b] tw:data-[priority=high]:bg-[#f97316] tw:data-[priority=urgent]:bg-[#ef4444]" :data-priority="card.priority ?? 'none'" />{{ priorityLabel }}</span>
