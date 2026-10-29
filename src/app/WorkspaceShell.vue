@@ -179,6 +179,7 @@ const pendingDrawUpdate = ref<DrawUpdatePayload | null>(null)
 const templateCreatePickerOpen = ref(false)
 const templateCreateFolderId = ref<string | null>(null)
 const createFolderModalOpen = ref(false)
+const createFolderParentId = ref<string | null>(null)
 const obsidianImportOpen = ref(false)
 const obsidianImportFolderId = ref<string | null>(null)
 const notionImportOpen = ref(false)
@@ -803,8 +804,9 @@ async function handleTemplateCreate(payload: { template: TemplateDocument; field
   await createTemplatedNote(templateCreateFolderId.value, payload.template.id, payload.fieldValues)
   templateCreateFolderId.value = null
 }
-async function createFolder() {
+async function createFolder(parentId?: string) {
   mobileSidebarOpen.value = false
+  createFolderParentId.value = parentId ?? resolveFolderPlacementFolder()
   createFolderTitle.value = ''
   createFolderError.value = ''
   createFolderModalOpen.value = true
@@ -823,7 +825,7 @@ async function submitCreateFolder() {
     return
   }
   const icon = settings.value.workspace.defaultFolderIcon || '📁'
-  await treeStore.createFolder(resolveFolderPlacementFolder(), title, icon)
+  await treeStore.createFolder(createFolderParentId.value, title, icon)
   closeCreateFolderModal()
 }
 async function importMd() {

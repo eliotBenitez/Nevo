@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { watchDebounced } from '@vueuse/core'
-import { Download, FolderPen, History, Pin, PinOff, Search, Trash2, Upload } from '../../ui/icons'
+import { Download, FolderPen, FolderPlus, History, Pin, PinOff, Search, Trash2, Upload } from '../../ui/icons'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import type { SidebarNotePreview, TreeNode } from '../../types/note'
@@ -63,7 +63,7 @@ type BoardMenuAction = 'rename' | 'delete'
 const emit = defineEmits<{
   'create-note': []
   'create-notebook': []
-  'create-folder': []
+  'create-folder': [parentId?: string]
   'import-md': []
   'import-obsidian': []
   'import-notion': []
@@ -451,6 +451,14 @@ function runImportIntoNote() {
   contextMenu.target = null
 }
 
+function runCreateSubfolder() {
+  const target = contextMenu.target
+  if (!target || target.kind !== 'folder') return
+  emit('create-folder', target.id)
+  contextMenu.open = false
+  contextMenu.target = null
+}
+
 function runImportIntoFolder() {
   const target = contextMenu.target
   if (!target || target.kind !== 'folder') return
@@ -639,6 +647,7 @@ function toggleGenericHome() {
     <NvMenuItem :icon="Trash2" :label="t('workspace.context.delete')" danger @select="runContextAction('delete')" />
     <NvMenuSeparator />
     <NvMenuItem :icon="Search" :label="t('workspace.context.search')" @select="runContextAction('search')" />
+    <NvMenuItem v-if="contextMenu.target?.kind === 'folder'" :icon="FolderPlus" :label="t('workspace.context.newSubfolder')" @select="runCreateSubfolder" />
     <NvMenuItem v-if="contextMenu.target?.kind === 'folder'" :icon="Upload" :label="t('workspace.context.importAsNote')" @select="runImportIntoFolder" />
     <NvMenuItem v-if="contextMenu.target?.kind === 'note'" :icon="Upload" :label="t('workspace.context.importIntoNote')" @select="runImportIntoNote" />
     <NvMenuItem v-if="contextMenu.target?.kind === 'note'" :icon="History" :label="t('workspace.system.history')" @select="runContextAction('history')" />

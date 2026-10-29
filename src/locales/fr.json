@@ -781,6 +781,7 @@
       "search": "Rechercher",
       "export": "Exporter",
       "importIntoNote": "Importer un .md dans la note",
+      "newSubfolder": "Nouveau sous-dossier",
       "importAsNote": "Importer un .md comme note",
       "renamePrompt": "Nouveau nom",
       "deleteConfirm": "Supprimer cet élément ?",

@@ -785,6 +785,7 @@
       "searchPrompt": "Поиск по названию",
       "searchNoResults": "Ничего не найдено",
       "importIntoNote": "Импорт .md в заметку",
+      "newSubfolder": "Новая подпапка",
       "importAsNote": "Импорт .md как заметку",
       "openNoteMenu": "Открыть меню заметки",
       "renameModalTitle": "Переименовать",

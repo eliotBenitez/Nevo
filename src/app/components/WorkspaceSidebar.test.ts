@@ -457,6 +457,16 @@ describe('WorkspaceSidebar folder actions', () => {
     expect(wrapper.emitted('create-note-in-folder')).toEqual([['folder-1']])
     wrapper.unmount()
   })
+
+  it('creates a subfolder from the folder context menu', async () => {
+    const wrapper = mountSidebar({ tree: treeWithFolder })
+    await flushUi()
+    const folderRow = wrapper.findAll('.tree-row').find(row => row.text().includes('Projects'))!
+    await folderRow.trigger('contextmenu', { clientX: 40, clientY: 50 })
+    await activateMenuButton('New subfolder')
+    expect(wrapper.emitted('create-folder')).toEqual([['folder-1']])
+    wrapper.unmount()
+  })
 })
 
 describe('WorkspaceSidebar drag-and-drop', () => {
