@@ -183,6 +183,7 @@ function stagedHostBroker(storage: Record<string, unknown>) {
         target[key] = jsonClone(args.value)
         return null
       }
+      if (!method.endsWith('.delete')) throw new Error(`Staged plugin host method is not exposed: ${method}`)
       delete target[key]
       return null
     }

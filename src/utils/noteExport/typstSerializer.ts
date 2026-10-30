@@ -17,6 +17,7 @@ import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSumma
 import { formatAudioTime, readAudioBookmarks } from '../../core/media/audioBookmarks'
 import { readAudioTranscript } from '../../core/media/audioTranscript'
 import { htmlBlockAsCodeNode } from './htmlBlockCode'
+import { formatDateOnly } from '../dateOnly'
 
 export interface TypstImageAsset {
   /** Filename referenced inside the Typst source via `image("name")`. */
@@ -404,10 +405,6 @@ function registerDraw(svg: string, ctx: SerializeCtx): string {
   return `${ctx.assetPathPrefix}${name}`
 }
 
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
 function buildPreamble(title: string, options: PdfExportOptions): string {
   const paper = options.paperFormat === 'Letter' ? 'us-letter' : 'a4'
   const flipped = options.orientation === 'landscape'
@@ -416,7 +413,7 @@ function buildPreamble(title: string, options: PdfExportOptions): string {
   const numbering = options.pageNumbers ? ', numbering: "1"' : ''
   // Running header: note title (left) + export date (right), small and muted.
   const header = options.runningHeader
-    ? `, header: [#text(8pt, fill: luma(120))[${escapeText(title)} #h(1fr) ${todayIso()}]]`
+    ? `, header: [#text(8pt, fill: luma(120))[${escapeText(title)} #h(1fr) ${formatDateOnly(new Date())}]]`
     : ''
   // Chosen system font, falling back to the embedded font for missing glyphs;
   // empty selection uses the embedded font directly.
@@ -438,7 +435,7 @@ function buildPreamble(title: string, options: PdfExportOptions): string {
 
   if (options.titlePage) {
     lines.push(
-      `#align(center + horizon)[#text(26pt, weight: "bold")[${escapeText(title)}]\n#v(0.8em)\n#text(11pt, fill: luma(120))[${todayIso()}]]`,
+      `#align(center + horizon)[#text(26pt, weight: "bold")[${escapeText(title)}]\n#v(0.8em)\n#text(11pt, fill: luma(120))[${formatDateOnly(new Date())}]]`,
       '#pagebreak()',
     )
   } else {

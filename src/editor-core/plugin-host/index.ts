@@ -984,6 +984,7 @@ export class EditorPluginHost {
         await this.runtime.pluginStorageSet(manifest.id, 'workspace', key, values.value)
         return null
       }
+      if (!method.endsWith('.delete')) throw new Error(`Plugin host method is not exposed: ${method}`)
       if (!this.runtime?.pluginStorageDelete) throw new Error('Workspace plugin storage is unavailable')
       await this.runtime.pluginStorageDelete(manifest.id, 'workspace', key)
       return null
@@ -1000,6 +1001,7 @@ export class EditorPluginHost {
         await this.runtime.pluginStorageSet(manifest.id, 'local', key, values.value)
         return null
       }
+      if (!method.endsWith('.delete')) throw new Error(`Plugin host method is not exposed: ${method}`)
       if (!this.runtime?.pluginStorageDelete) throw new Error('Local plugin storage is unavailable')
       await this.runtime.pluginStorageDelete(manifest.id, 'local', key)
       return null

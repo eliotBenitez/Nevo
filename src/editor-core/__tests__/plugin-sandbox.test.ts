@@ -302,6 +302,54 @@ describe('sandboxed plugin host', () => {
     expect(storageGet).not.toHaveBeenCalled()
   })
 
+  it('rejects an unknown storage method instead of deleting the key', async () => {
+    let invokeRequestId = ''
+    const storageDelete = vi.fn()
+    const worker = new FakeWorker(request => {
+      if (request.type === 'initialize') return response(request, definition())
+      if (request.type === 'lifecycle') return response(request, null)
+      if (request.type === 'invoke') {
+        invokeRequestId = request.requestId
+        return {
+          protocolVersion: SANDBOX_PROTOCOL_VERSION,
+          requestId: 'plugin.sandbox:host:1',
+          sessionToken: request.sessionToken,
+          type: 'hostCall',
+          call: { method: 'storage.workspace.has', args: { key: 'saved' } },
+        }
+      }
+      if (request.type === 'hostResponse') {
+        return {
+          protocolVersion: SANDBOX_PROTOCOL_VERSION,
+          requestId: invokeRequestId,
+          type: 'response',
+          ok: true,
+          result: { type: 'transaction', revision: 0, operations: [] },
+        }
+      }
+      return null
+    })
+    const host = new EditorPluginHost({
+      workspacePath: '/workspace',
+      manifests: [manifest({ capabilities: ['editor.write', 'storage.workspace'] })],
+      nevoVersion: '1.0.0',
+      workerFactory: () => worker as unknown as Worker,
+      runtime: { pluginStorageDelete: storageDelete },
+    })
+    await host.initialize()
+    host.registries.slashItems.get('plugin.sandbox.hello')?.run(
+      runContext(editorState(), () => {}),
+    )
+
+    await vi.waitFor(() => {
+      expect(worker.requests.find(item => item.type === 'hostResponse')).toMatchObject({
+        ok: false,
+        error: { message: expect.stringContaining('not exposed: storage.workspace.has') },
+      })
+    })
+    expect(storageDelete).not.toHaveBeenCalled()
+  })
+
   it('brokers assets.write to the runtime when the capability is granted', async () => {
     let invokeRequestId = ''
     const assetWrite = vi.fn().mockResolvedValue('c0ffee')

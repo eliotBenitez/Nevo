@@ -83,6 +83,7 @@ import { useNotebookCreation } from './composables/useNotebookCreation'
 import { createEditorLayoutScrollStabilizer } from './composables/editor/editorLayoutScrollStabilizer'
 import { forgetAllNoteViews } from './composables/editor/noteViewMemory'
 import { workspaceHomeFavoriteKey } from '../utils/workspace-settings'
+import { formatDateOnly } from '../utils/dateOnly'
 import { finalizeActiveRecording } from '../core/voice-recording/activeRecording'
 import {
   readRememberedNoteView,
@@ -739,8 +740,9 @@ function onBoardAction(payload: { action: 'rename' | 'delete'; boardId: string; 
 function backToOnboarding() { mobileSidebarOpen.value = false; flushSave(); router.push('/onboarding') }
 function resolveNoteTitle(): string {
   const pattern = settings.value.workspace.defaultNoteTitlePattern
-  if (pattern === 'date') return new Date().toISOString().slice(0, 10)
-  if (pattern === 'date-time') return new Date().toISOString().slice(0, 16).replace('T', ' ')
+  const now = new Date()
+  if (pattern === 'date') return formatDateOnly(now)
+  if (pattern === 'date-time') return `${formatDateOnly(now)} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
   return t('workspace.untitledNote')
 }
 
