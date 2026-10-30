@@ -175,7 +175,7 @@ function onMonthEventClick(card: KanbanCard, date: Date) {
 function isOverdue(card: KanbanCard) {
   if (!activeDateField.value) return false
   const field = findCardField(card, activeDateField.value)
-  return typeof field?.value === 'string' ? new Date(field.value) < today : false
+  return typeof field?.value === 'string' && field.value !== '' ? field.value.slice(0, 10) < todayIso : false
 }
 
 function dayAt(event: PointerEvent) {

@@ -54,6 +54,20 @@ describe('KanbanCalendarView', () => {
     expect(wrapper.find('.kb-cal__day-num--today').text()).toBe('15')
   })
 
+  it('flags only cards due before today as overdue', () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 15, 12, 0))
+
+    const overdue = (value: string) => mount(KanbanCalendarView, {
+      props: { board, cards: [cardDueOn(value)] },
+      global: { plugins: [createPinia(), createI18n({ legacy: false, locale: 'en', messages: { en: enMessages } })] },
+    }).find('.kb-cal__event--overdue').exists()
+
+    expect(overdue('2026-10-14')).toBe(true)
+    expect(overdue('2026-10-15')).toBe(false)
+    expect(overdue('2026-10-16')).toBe(false)
+  })
+
   describe('drag to reschedule', () => {
     const init = { bubbles: true, pointerId: 1, isPrimary: true, button: 0 }
 
