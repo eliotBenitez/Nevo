@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight } from '../../../ui/icons'
 import type { KanbanBoard, KanbanCard } from '../../../types/kanban'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
-import { findCardField, getBoardStatusProperty, getCardFieldDescriptors, getCardStatusValue } from './kanbanFields'
+import { cloneCardFields, findCardField, getBoardStatusProperty, getCardFieldDescriptors, getCardStatusValue } from './kanbanFields'
 import { resolveCalendarDateField } from './calendarDateField'
 import { formatDateOnly } from '../../../utils/dateOnly'
+import { trackPointerDrag } from '../../../utils/pointerDrag'
+import { useKanbanStore } from '../../../stores/kanban'
 
 interface Props {
   board: KanbanBoard
@@ -17,6 +19,7 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{ 'open-card': [cardId: string] }>()
 const { t, locale } = useI18n()
+const kanbanStore = useKanbanStore()
 
 type CalMode = 'month' | 'week' | 'day'
 
@@ -25,7 +28,6 @@ const today = new Date()
 const todayIso = formatDateOnly(today)
 const viewDate = ref(new Date(today.getFullYear(), today.getMonth(), today.getDate()))
 const dragOverDay = ref<string | null>(null)
-const draggingCardId = ref<string | null>(null)
 const selectedDateFieldId = ref('')
 
 const statusProp = computed(() => getBoardStatusProperty(props.board))
@@ -176,23 +178,41 @@ function isOverdue(card: KanbanCard) {
   return typeof field?.value === 'string' ? new Date(field.value) < today : false
 }
 
-function onDragStart(cardId: string) {
-  draggingCardId.value = cardId
+function dayAt(event: PointerEvent) {
+  return document.elementFromPoint?.(event.clientX, event.clientY)?.closest<HTMLElement>('[data-iso]')?.dataset.iso ?? null
 }
 
-function onDayDragOver(event: DragEvent, iso: string) {
-  event.preventDefault()
-  dragOverDay.value = iso
+async function rescheduleCard(cardId: string, iso: string) {
+  const card = props.cards.find(item => item.id === cardId)
+  const descriptor = activeDateField.value
+  if (!card || !descriptor) return
+  const fields = cloneCardFields(card)
+  const field = findCardField({ fields }, descriptor)
+  if (!field || typeof field.value !== 'string' || field.value.slice(0, 10) === iso) return
+  // Keep a time part (e.g. "T09:30:00") when the stored value has one.
+  field.value = iso + field.value.slice(10)
+  await kanbanStore.updateCard(props.board.id, card.id, { fields })
 }
 
-function onDayDrop(_iso: string) {
-  dragOverDay.value = null
-  draggingCardId.value = null
+// Pointer events instead of HTML5 DnD, which is unreliable in WebKitGTK.
+let cancelDrag: (() => void) | null = null
+
+function onEventPointerDown(event: PointerEvent, cardId: string) {
+  if (event.button !== 0 || event.isPrimary === false || cancelDrag) return
+  cancelDrag = trackPointerDrag(event, {
+    onMove: (e) => { dragOverDay.value = dayAt(e) },
+    onEnd: (e) => {
+      const iso = dayAt(e)
+      if (iso) void rescheduleCard(cardId, iso)
+    },
+    onFinish: () => {
+      cancelDrag = null
+      dragOverDay.value = null
+    },
+  })
 }
 
-function onDayDragLeave() {
-  dragOverDay.value = null
-}
+onBeforeUnmount(() => cancelDrag?.())
 
 const dowLabels = computed(() =>
   Array.from({ length: 7 }, (_, index) =>
@@ -299,10 +319,8 @@ function weekColClass(day: { isToday: boolean; iso: string }) {
             :key="day.iso"
             class="kb-cal__day tw:relative tw:flex tw:min-h-20 tw:flex-col tw:gap-[3px] tw:px-[7px] tw:py-1.5 tw:max-[760px]:min-h-11 tw:max-[760px]:gap-0.5 tw:max-[760px]:px-0.5 tw:max-[760px]:py-1"
             :class="monthDayClass(day)"
+            :data-iso="day.iso"
             @click="onDayClick(day.date)"
-            @dragover="onDayDragOver($event, day.iso)"
-            @drop="onDayDrop(day.iso)"
-            @dragleave.self="onDayDragLeave"
           >
             <div class="kb-cal__day-num-wrap tw:flex tw:justify-end tw:max-[760px]:justify-center">
               <span class="kb-cal__day-num tw:text-[11px]" :class="todayNumClass(day.isToday)">{{ day.date.getDate() }}</span>
@@ -314,8 +332,7 @@ function weekColClass(day: { isToday: boolean; iso: string }) {
                 class="kb-cal__event tw:flex tw:items-center tw:gap-1 tw:rounded-[calc(4px*var(--radius-scale,1))] tw:border-l-2 tw:border-l-[var(--text-muted,var(--text-muted))] tw:bg-[var(--hover-strong,var(--surface-overlay))] tw:px-1.5 tw:py-1 tw:text-[10.5px] tw:text-content-secondary tw:cursor-pointer tw:max-[760px]:size-[7px] tw:max-[760px]:overflow-hidden tw:max-[760px]:rounded-full tw:max-[760px]:border-0 tw:max-[760px]:bg-[var(--kb-cal-dot,var(--text-muted))]! tw:max-[760px]:p-0"
                 :class="{ 'kb-cal__event--overdue': isOverdue(card) }"
                 :style="eventStyle(card)"
-                draggable="true"
-                @dragstart="onDragStart(card.id)"
+                @pointerdown="onEventPointerDown($event, card.id)"
                 @click.stop="onMonthEventClick(card, day.date)"
               >
                 <span v-if="isOverdue(card)" class="kb-cal__event-warn tw:max-[760px]:hidden">⚠</span>
@@ -347,9 +364,7 @@ function weekColClass(day: { isToday: boolean; iso: string }) {
           :key="day.iso"
           class="kb-cal__week-view__col tw:relative tw:flex tw:min-h-20 tw:flex-col tw:gap-[3px] tw:px-[7px] tw:py-1.5 tw:max-[760px]:min-h-12 tw:max-[760px]:flex-row tw:max-[760px]:items-start tw:max-[760px]:gap-2.5"
           :class="weekColClass(day)"
-          @dragover="onDayDragOver($event, day.iso)"
-          @drop="onDayDrop(day.iso)"
-          @dragleave.self="onDayDragLeave"
+          :data-iso="day.iso"
         >
           <div class="kb-cal__week-view__phone-label tw:hidden tw:w-9 tw:shrink-0 tw:flex-col tw:items-center tw:text-[10.5px] tw:text-content-muted tw:max-[760px]:flex">
             <span class="tw:uppercase">{{ day.label }}</span>
@@ -362,8 +377,7 @@ function weekColClass(day: { isToday: boolean; iso: string }) {
               class="kb-cal__event tw:flex tw:items-center tw:gap-1 tw:rounded-[calc(4px*var(--radius-scale,1))] tw:border-l-2 tw:border-l-[var(--text-muted,var(--text-muted))] tw:bg-[var(--hover-strong,var(--surface-overlay))] tw:px-1.5 tw:py-1 tw:text-[10.5px] tw:text-content-secondary tw:cursor-pointer"
               :class="{ 'kb-cal__event--overdue': isOverdue(card) }"
               :style="eventStyle(card)"
-              draggable="true"
-              @dragstart="onDragStart(card.id)"
+              @pointerdown="onEventPointerDown($event, card.id)"
               @click.stop="emit('open-card', card.id)"
             >
               <span v-if="isOverdue(card)" class="kb-cal__event-warn">⚠</span>

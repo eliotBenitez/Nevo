@@ -30,17 +30,12 @@ const emit = defineEmits<{
   'add-card': [columnId: string]
   'quick-add-card': [columnId: string, title: string]
   'open-card': [cardId: string]
-  'card-dragstart': [event: DragEvent, cardId: string, columnId: string]
   'card-handle-pointerdown': [event: PointerEvent, cardId: string, columnId: string]
-  'drop': [event: DragEvent, columnId: string, targetIndex: number]
-  'col-dragenter': [columnId: string]
   'rename-column': [columnId: string, name: string]
   'delete-column': [columnId: string]
 }>()
 const { t } = useI18n()
 
-const dropZoneIndex = ref<number | null>(null)
-const cardsEl = ref<HTMLDivElement | null>(null)
 const isEditingName = ref(false)
 const displayName = computed(() => localizeDefaultKanbanLabel(props.column.name, key => t(key)))
 const draftName = ref(displayName.value)
@@ -86,47 +81,10 @@ const columnMenuItems = computed<NvMenuItemDef[]>(() => [
   },
 ])
 
-const resolvedDropZoneIndex = computed(() => props.activeDropZoneIndex ?? dropZoneIndex.value)
-
-function onCardDragStart(event: DragEvent, cardId: string) {
-  emit('card-dragstart', event, cardId, props.column.id)
-}
+const resolvedDropZoneIndex = computed(() => props.activeDropZoneIndex ?? null)
 
 function onCardHandlePointerDown(event: PointerEvent, cardId: string) {
   emit('card-handle-pointerdown', event, cardId, props.column.id)
-}
-
-function onZoneDragOver(event: DragEvent, zoneIdx: number) {
-  event.preventDefault()
-  event.stopPropagation()
-  dropZoneIndex.value = zoneIdx
-}
-
-function onZoneDrop(event: DragEvent, zoneIdx: number) {
-  event.preventDefault()
-  event.stopPropagation()
-  dropZoneIndex.value = null
-  emit('drop', event, props.column.id, zoneIdx)
-}
-
-function onColumnDragLeave(event: DragEvent) {
-  const related = event.relatedTarget as HTMLElement | null
-  if (related && cardsEl.value?.contains(related)) return
-  dropZoneIndex.value = null
-}
-
-function onColumnDragOver(event: DragEvent) {
-  event.preventDefault()
-  if (props.cards.length === 0) dropZoneIndex.value = 0
-  emit('col-dragenter', props.column.id)
-}
-
-function onColumnDrop(event: DragEvent) {
-  if (props.cards.length === 0) {
-    event.preventDefault()
-    dropZoneIndex.value = null
-    emit('drop', event, props.column.id, 0)
-  }
 }
 
 function startRename() {
@@ -196,9 +154,6 @@ function dropZoneClass(zoneIndex: number) {
     class="kb-column tw:flex tw:w-[292px] tw:min-w-[292px] tw:shrink-0 tw:flex-col tw:overflow-visible tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--frame-bg) tw:max-[760px]:w-[clamp(280px,calc(100vw_-_32px_-_max(var(--safe-area-left),0px)_-_max(var(--safe-area-right),0px)),360px)] tw:max-[760px]:min-w-[clamp(280px,calc(100vw_-_32px_-_max(var(--safe-area-left),0px)_-_max(var(--safe-area-right),0px)),360px)] tw:max-[760px]:[scroll-snap-align:start]"
     :data-column-id="column.id"
     :data-card-count="cards.length"
-    @dragover="onColumnDragOver"
-    @drop="onColumnDrop"
-    @dragleave="onColumnDragLeave"
   >
     <!-- Column header -->
     <div class="kb-column__header tw:flex tw:min-h-[38px] tw:flex-wrap tw:items-center tw:gap-[7px] tw:px-[9px] tw:pt-2 tw:pb-[7px] tw:max-[760px]:min-h-9 tw:max-[760px]:gap-1 tw:max-[760px]:py-0 tw:max-[760px]:pr-1">
@@ -267,7 +222,6 @@ function dropZoneClass(zoneIndex: number) {
 
     <!-- Cards list -->
     <div
-      ref="cardsEl"
       class="kb-column__cards tw:flex tw:flex-1 tw:flex-col tw:gap-px tw:overflow-y-auto tw:px-2 tw:pt-[7px] tw:pb-[5px] tw:max-[760px]:pt-0"
       :class="cards.length === 0 ? 'kb-column__cards--empty tw:min-h-20' : 'tw:min-h-12'"
     >
@@ -287,7 +241,6 @@ function dropZoneClass(zoneIndex: number) {
           hide-status
           :view-settings="viewSettings"
           @click="emit('open-card', item.card.id)"
-          @dragstart="onCardDragStart"
           @handle-pointerdown="onCardHandlePointerDown"
         />
         <div
@@ -296,9 +249,6 @@ function dropZoneClass(zoneIndex: number) {
           :class="dropZoneClass(item.zoneIndex)"
           :data-column-id="column.id"
           :data-drop-zone-index="item.zoneIndex"
-          @dragover="onZoneDragOver($event, item.zoneIndex)"
-          @dragleave.stop="dropZoneIndex = null"
-          @drop="onZoneDrop($event, item.zoneIndex)"
         />
       </template>
 

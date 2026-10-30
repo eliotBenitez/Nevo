@@ -35,32 +35,35 @@ function mountTabs(tabs: TabEntry[]) {
   })
 }
 
-function createDataTransfer() {
-  return {
-    effectAllowed: '',
-    setData: vi.fn(),
-  }
+const pointerInit = { bubbles: true, pointerId: 1, isPrimary: true, button: 0 }
+
+function pointerDown(el: Element) {
+  el.dispatchEvent(new PointerEvent('pointerdown', { ...pointerInit, clientX: 10, clientY: 10 }))
+}
+
+function pointerMove(over: Element | null, x = 60) {
+  document.elementFromPoint = vi.fn(() => over)
+  window.dispatchEvent(new PointerEvent('pointermove', { ...pointerInit, clientX: x, clientY: 10 }))
+}
+
+function pointerUp(x = 60) {
+  window.dispatchEvent(new PointerEvent('pointerup', { ...pointerInit, clientX: x, clientY: 10 }))
 }
 
 describe('TitleBarTabs', () => {
   it('emits reorder with current indexes when dragging a tab over another tab', async () => {
     const tabs = [createTab('a', 'Alpha'), createTab('b', 'Beta'), createTab('c', 'Gamma')]
     const wrapper = mountTabs(tabs)
-    const dataTransfer = createDataTransfer()
     const tabEls = wrapper.findAll('.title-tab')
 
-    await tabEls[0].trigger('dragstart', { dataTransfer })
-    await tabEls[2].trigger('dragenter')
+    pointerDown(tabEls[0].element)
+    pointerMove(tabEls[2].element)
 
-    expect(dataTransfer.effectAllowed).toBe('move')
-    expect(dataTransfer.setData).toHaveBeenCalledWith('text/plain', 'a')
-    expect(wrapper.emitted('reorder')).toEqual([[
-      0,
-      2,
-    ]])
+    expect(wrapper.emitted('reorder')).toEqual([[0, 2]])
 
     await wrapper.setProps({ tabs: [tabs[1], tabs[2], tabs[0]] })
-    await wrapper.findAll('.title-tab')[0].trigger('dragenter')
+    pointerMove(wrapper.findAll('.title-tab')[0].element)
+    pointerUp()
 
     expect(wrapper.emitted('reorder')).toEqual([
       [0, 2],
@@ -68,14 +71,15 @@ describe('TitleBarTabs', () => {
     ])
   })
 
-  it('does not emit reorder when dragging over the same tab', async () => {
+  it('does not emit reorder when dragging over the same tab or below the threshold', async () => {
     const tabs = [createTab('a', 'Alpha'), createTab('b', 'Beta')]
     const wrapper = mountTabs(tabs)
     const tabEls = wrapper.findAll('.title-tab')
 
-    await tabEls[0].trigger('dragstart', { dataTransfer: createDataTransfer() })
-    await tabEls[0].trigger('dragenter')
-    await tabEls[0].trigger('drop')
+    pointerDown(tabEls[0].element)
+    pointerMove(tabEls[1].element, 12)
+    pointerMove(tabEls[0].element)
+    pointerUp()
 
     expect(wrapper.emitted('reorder')).toBeUndefined()
   })
@@ -83,13 +87,32 @@ describe('TitleBarTabs', () => {
   it('does not select a tab when a click follows a drag gesture', async () => {
     const tabs = [createTab('a', 'Alpha'), createTab('b', 'Beta')]
     const wrapper = mountTabs(tabs)
-    const firstTab = wrapper.findAll('.title-tab')[0]
+    document.body.appendChild(wrapper.element)
+    const tabEls = wrapper.findAll('.title-tab')
 
-    await firstTab.trigger('dragstart', { dataTransfer: createDataTransfer() })
-    await firstTab.trigger('dragend')
-    await firstTab.trigger('click')
+    pointerDown(tabEls[0].element)
+    pointerMove(tabEls[1].element)
+    pointerUp()
+    await tabEls[0].trigger('click')
 
     expect(wrapper.emitted('select')).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it('restores the original position on Escape', async () => {
+    const tabs = [createTab('a', 'Alpha'), createTab('b', 'Beta'), createTab('c', 'Gamma')]
+    const wrapper = mountTabs(tabs)
+    const tabEls = wrapper.findAll('.title-tab')
+
+    pointerDown(tabEls[0].element)
+    pointerMove(tabEls[2].element)
+    await wrapper.setProps({ tabs: [tabs[1], tabs[2], tabs[0]] })
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+
+    expect(wrapper.emitted('reorder')).toEqual([
+      [0, 2],
+      [2, 0],
+    ])
   })
 
   it('emits select when clicking a tab', async () => {

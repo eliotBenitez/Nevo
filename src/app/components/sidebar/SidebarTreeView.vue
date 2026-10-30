@@ -3,11 +3,7 @@ import { BookOpen, FolderPen, Plus } from '../../../ui/icons'
 import { useI18n } from 'vue-i18n'
 import type { TreeNode } from '../../../types/note'
 import WorkspaceTreeNode from '../WorkspaceTreeNode.vue'
-import type {
-  SidebarDragOver,
-  SidebarDragSource,
-  SidebarDragTarget,
-} from '../../composables/useSidebarDrag'
+import type { SidebarDragOver, SidebarDragSource } from '../../composables/useSidebarDrag'
 
 interface Props {
   tree: TreeNode[]
@@ -38,22 +34,14 @@ const emit = defineEmits<{
     x: number
     y: number
   }]
-  'drag-start': [event: DragEvent, source: SidebarDragSource]
-  'drag-over': [target: SidebarDragTarget, isFolderTarget: boolean, event: DragEvent]
-  'drag-enter': [targetId: string]
-  'drag-leave': [targetId: string]
-  'drop': [event: DragEvent, target: SidebarDragTarget]
-  'root-drag-over': [event: DragEvent]
-  'root-drag-leave': []
-  'root-drop': [event: DragEvent]
-  'dragend': []
+  'drag-pointerdown': [event: PointerEvent, source: SidebarDragSource]
 }>()
 
 const { t } = useI18n()
 </script>
 
 <template>
-  <div class="tree-wrap tw:min-h-0 tw:flex-1 tw:overflow-auto tw:overscroll-contain tw:flex tw:flex-col tw:gap-0.5 tw:[contain:paint]" @dragend="emit('dragend')">
+  <div class="tree-wrap tw:min-h-0 tw:flex-1 tw:overflow-auto tw:overscroll-contain tw:flex tw:flex-col tw:gap-0.5 tw:[contain:paint]">
     <div v-if="isEmpty" class="tree-empty tw:p-[12px_10px] tw:border tw:border-dashed tw:border-(--border-subtle) tw:rounded-[calc(10px*var(--radius-scale,1))] tw:bg-[color-mix(in_oklab,var(--surface-raised)_72%,transparent)] tw:text-content-muted tw:text-xs">
       <div class="tree-empty__title tw:text-content-secondary tw:font-semibold">{{ t('workspace.emptyTree.title') }}</div>
       <div class="tree-empty__subtitle tw:mt-1 tw:leading-[1.4]">{{ t('workspace.emptyTree.subtitle') }}</div>
@@ -89,11 +77,7 @@ const { t } = useI18n()
       @open-note="emit('open-note', $event)"
       @create-note-in-folder="emit('create-note-in-folder', $event)"
       @context-menu="emit('context-menu', $event)"
-      @drag-start="(event, source) => emit('drag-start', event, source)"
-      @drag-over="(target, isFolder, event) => emit('drag-over', target, isFolder, event)"
-      @drag-enter="emit('drag-enter', $event)"
-      @drag-leave="emit('drag-leave', $event)"
-      @drop="(event, target) => emit('drop', event, target)"
+      @drag-pointerdown="(event, source) => emit('drag-pointerdown', event, source)"
     />
 
     <div
@@ -101,9 +85,7 @@ const { t } = useI18n()
       :class="rootDropActive
         ? 'tree-root-drop-zone--active tw:bg-[color-mix(in_oklab,var(--accent)_9%,transparent)] tw:border-[color-mix(in_oklab,var(--accent)_36%,transparent)]'
         : 'tw:bg-transparent tw:border-transparent'"
-      @dragover.stop.prevent="emit('root-drag-over', $event)"
-      @dragleave="emit('root-drag-leave')"
-      @drop.stop.prevent="emit('root-drop', $event)"
+      data-tree-root-drop
     />
   </div>
 </template>

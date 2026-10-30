@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, type CSSProperties } from 'vue'
+import { computed, type CSSProperties } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { GripVertical } from '../../../ui/icons'
 import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
@@ -23,10 +23,8 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{
   'click': [cardId: string]
-  'dragstart': [event: DragEvent, cardId: string]
   'handle-pointerdown': [event: PointerEvent, cardId: string]
 }>()
-const cardEl = ref<HTMLDivElement | null>(null)
 const { t, locale } = useI18n()
 
 const safeFields = computed(() => Array.isArray(props.card.fields) ? props.card.fields : [])
@@ -128,14 +126,14 @@ function extractText(node: unknown): string {
   return `${ownText} ${children}`.trim()
 }
 
-function onDragStart(event: DragEvent) {
-  if (event.dataTransfer && cardEl.value) {
-    event.dataTransfer.setDragImage(cardEl.value, 24, 24)
-  }
-  emit('dragstart', event, props.card.id)
+function onHandlePointerDown(event: PointerEvent) {
+  emit('handle-pointerdown', event, props.card.id)
 }
 
-function onHandlePointerDown(event: PointerEvent) {
+// Dragging also starts from the card body; the engine waits for a movement
+// threshold, so a plain click still opens the card.
+function onBodyPointerDown(event: PointerEvent) {
+  if ((event.target as HTMLElement | null)?.closest('button, a, input, textarea, select, [contenteditable="true"]')) return
   emit('handle-pointerdown', event, props.card.id)
 }
 
@@ -269,13 +267,11 @@ function getTagColorStyle(tag: KanbanPropertyOption) {
 
 <template>
   <div
-    ref="cardEl"
     class="kb-card tw:group tw:relative tw:flex tw:flex-row tw:items-stretch tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border tw:border-solid tw:select-none tw:overflow-hidden tw:transition-[box-shadow,border-color,background-color,transform] tw:duration-150 tw:motion-reduce:transition-none tw:hover:border-transparent tw:focus-visible:border-transparent tw:hover:shadow-[0_0_0_2px_var(--focus-ring),var(--shadow-raised)] tw:focus-visible:shadow-[0_0_0_2px_var(--focus-ring),var(--shadow-raised)] tw:focus-visible:outline-none"
     :class="[stateHookClasses, borderColorClass, backgroundClass, boxShadowClass, dragPositionClass]"
     :style="floatingStyle"
-    draggable="true"
     tabindex="0"
-    @dragstart="onDragStart"
+    @pointerdown="onBodyPointerDown"
     @click="emit('click', card.id)"
     @keydown.enter.prevent="emit('click', card.id)"
   >

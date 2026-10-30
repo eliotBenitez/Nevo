@@ -469,103 +469,102 @@ describe('WorkspaceSidebar folder actions', () => {
   })
 })
 
+/** Pointer drag: pointerdown on `from`, move past the threshold, release over `over` at clientY `y`; the nearest .tree-row is a 30px row at top 100. */
+async function pointerDrag(from: Element, over: Element, y: number) {
+  const rowEl = (over.closest('.tree-row') ?? over) as HTMLElement
+  rowEl.getBoundingClientRect = vi.fn(() => ({
+    x: 0, y: 100, top: 100, left: 0, right: 240, bottom: 130, width: 240, height: 30, toJSON: () => ({}),
+  }))
+  document.elementFromPoint = vi.fn(() => over)
+  const init = { bubbles: true, pointerId: 1, isPrimary: true, button: 0 }
+  from.dispatchEvent(new PointerEvent('pointerdown', { ...init, clientX: 10, clientY: 10 }))
+  window.dispatchEvent(new PointerEvent('pointermove', { ...init, clientX: 10, clientY: 30 }))
+  window.dispatchEvent(new PointerEvent('pointermove', { ...init, clientX: 10, clientY: y }))
+  await flushUi()
+  window.dispatchEvent(new PointerEvent('pointerup', { ...init, clientX: 10, clientY: y }))
+  await flushUi()
+}
+
 describe('WorkspaceSidebar drag-and-drop', () => {
-  it('renders tree rows as draggable', async () => {
+  it('exposes tree rows as pointer drag sources, not HTML5 draggable', async () => {
     const wrapper = mountSidebar({ tree: treeWithFolder })
 
     const rows = wrapper.findAll('.tree-row')
     expect(rows.length).toBeGreaterThanOrEqual(2)
     for (const row of rows) {
-      expect(row.attributes('draggable')).toBe('true')
+      expect(row.attributes('draggable')).toBeUndefined()
+      expect(row.attributes('data-tree-row-id')).toBeTruthy()
     }
     wrapper.unmount()
   })
 
-  it('moves a note into a folder on drop into the folder row', async () => {
+  it('does not start a drag below the movement threshold', async () => {
     const wrapper = mountSidebar({ tree: treeWithFolder })
     const treeStore = useTreeStore()
-
     const moveSpy = vi.spyOn(treeStore, 'moveNote').mockResolvedValue(undefined)
-
     const rows = wrapper.findAll('.tree-row')
-    const folderRow = rows.find((r) => r.text().includes('Projects'))!
     const noteRow = rows.find((r) => r.text().includes('First note'))!
 
-    // dragstart на заметке
-    await noteRow.trigger('dragstart', { dataTransfer: makeDataTransfer() })
-    // dragover на папке в центральной зоне (into)
-    await folderRow.trigger('dragover', {
-      dataTransfer: makeDataTransfer(),
-      offsetY: 15,
-      currentTarget: { offsetHeight: 30 },
-    })
+    const init = { bubbles: true, pointerId: 1, isPrimary: true, button: 0 }
+    noteRow.element.dispatchEvent(new PointerEvent('pointerdown', { ...init, clientX: 10, clientY: 10 }))
+    window.dispatchEvent(new PointerEvent('pointermove', { ...init, clientX: 12, clientY: 11 }))
     await flushUi()
-    // drop на папке
-    await folderRow.trigger('drop', { dataTransfer: makeDataTransfer() })
-
-    expect(moveSpy).toHaveBeenCalledWith('note-1', 'folder-1')
+    expect(noteRow.classes()).not.toContain('tree-row--dragging')
+    window.dispatchEvent(new PointerEvent('pointerup', { ...init, clientX: 12, clientY: 11 }))
+    expect(moveSpy).not.toHaveBeenCalled()
     moveSpy.mockRestore()
     wrapper.unmount()
   })
 
-  it('keeps folder drop detection relative to the row when hovering child text', async () => {
+  it('aborts the drag on Escape without moving anything', async () => {
     const wrapper = mountSidebar({ tree: treeWithFolder })
     const treeStore = useTreeStore()
-
     const moveSpy = vi.spyOn(treeStore, 'moveNote').mockResolvedValue(undefined)
-    const reorderSpy = vi.spyOn(treeStore, 'reorderItem').mockResolvedValue(undefined)
+    const rows = wrapper.findAll('.tree-row')
+    const folderRow = rows.find((r) => r.text().includes('Projects'))!
+    const noteRow = rows.find((r) => r.text().includes('First note'))!
+    document.elementFromPoint = vi.fn(() => folderRow.element)
+
+    const init = { bubbles: true, pointerId: 1, isPrimary: true, button: 0 }
+    noteRow.element.dispatchEvent(new PointerEvent('pointerdown', { ...init, clientX: 10, clientY: 10 }))
+    window.dispatchEvent(new PointerEvent('pointermove', { ...init, clientX: 10, clientY: 40 }))
+    await flushUi()
+    expect(noteRow.classes()).toContain('tree-row--dragging')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await flushUi()
+    expect(noteRow.classes()).not.toContain('tree-row--dragging')
+    window.dispatchEvent(new PointerEvent('pointerup', { ...init, clientX: 10, clientY: 40 }))
+    expect(moveSpy).not.toHaveBeenCalled()
+    moveSpy.mockRestore()
+    wrapper.unmount()
+  })
+
+  it('moves a note into a folder when released over child text in the middle of the folder row', async () => {
+    const wrapper = mountSidebar({ tree: treeWithFolder })
+    const treeStore = useTreeStore()
+    const moveSpy = vi.spyOn(treeStore, 'moveNote').mockResolvedValue(undefined)
 
     const rows = wrapper.findAll('.tree-row')
     const folderRow = rows.find((r) => r.text().includes('Projects'))!
     const noteRow = rows.find((r) => r.text().includes('First note'))!
 
-    Object.defineProperty(folderRow.element, 'offsetHeight', { configurable: true, value: 30 })
-    folderRow.element.getBoundingClientRect = vi.fn(() => ({
-      x: 0,
-      y: 100,
-      top: 100,
-      left: 0,
-      right: 240,
-      bottom: 130,
-      width: 240,
-      height: 30,
-      toJSON: () => ({}),
-    }))
-
-    await noteRow.trigger('dragstart', { dataTransfer: makeDataTransfer() })
-    await folderRow.get('.tree-title').trigger('dragover', {
-      dataTransfer: makeDataTransfer(),
-      offsetY: 1,
-      clientY: 115,
-    })
-    await flushUi()
-    await folderRow.trigger('drop', { dataTransfer: makeDataTransfer() })
+    await pointerDrag(noteRow.element, folderRow.get('.tree-title').element, 115)
 
     expect(moveSpy).toHaveBeenCalledWith('note-1', 'folder-1')
-    expect(reorderSpy).not.toHaveBeenCalled()
     moveSpy.mockRestore()
-    reorderSpy.mockRestore()
     wrapper.unmount()
   })
 
   it('reorders root notes when dropped before another root note', async () => {
     const wrapper = mountSidebar({ tree: treeWithFolder })
     const treeStore = useTreeStore()
-
     const reorderSpy = vi.spyOn(treeStore, 'reorderItem').mockResolvedValue(undefined)
 
     const rows = wrapper.findAll('.tree-row')
     const firstNote = rows.find((r) => r.text().includes('First note'))!
     const secondNote = rows.find((r) => r.text().includes('Second note'))!
 
-    await secondNote.trigger('dragstart', { dataTransfer: makeDataTransfer() })
-    await firstNote.trigger('dragover', {
-      dataTransfer: makeDataTransfer(),
-      offsetY: 2,
-      currentTarget: { offsetHeight: 30 },
-    })
-    await flushUi()
-    await firstNote.trigger('drop', { dataTransfer: makeDataTransfer() })
+    await pointerDrag(secondNote.element, firstNote.element, 102)
 
     expect(reorderSpy).toHaveBeenCalledWith('note-2', 'note-1', 'before', null)
     reorderSpy.mockRestore()
@@ -575,21 +574,13 @@ describe('WorkspaceSidebar drag-and-drop', () => {
   it('moves a note before a note in another parent when dropped in tree mode', async () => {
     const wrapper = mountSidebar({ tree: treeWithNestedNotes })
     const treeStore = useTreeStore()
-
     const movePositionSpy = vi.spyOn(treeStore, 'moveNoteToPosition').mockResolvedValue(undefined)
 
     const rows = wrapper.findAll('.tree-row')
     const rootNote = rows.find((r) => r.text().includes('Root note'))!
     const folderNote = rows.find((r) => r.text().includes('Folder note'))!
 
-    await rootNote.trigger('dragstart', { dataTransfer: makeDataTransfer() })
-    await folderNote.trigger('dragover', {
-      dataTransfer: makeDataTransfer(),
-      offsetY: 2,
-      currentTarget: { offsetHeight: 30 },
-    })
-    await flushUi()
-    await folderNote.trigger('drop', { dataTransfer: makeDataTransfer() })
+    await pointerDrag(rootNote.element, folderNote.element, 102)
 
     expect(movePositionSpy).toHaveBeenCalledWith('root-note', 'folder-note', 'before', 'folder-1')
     movePositionSpy.mockRestore()
@@ -599,21 +590,13 @@ describe('WorkspaceSidebar drag-and-drop', () => {
   it('moves a folder note before a root folder when dropped on the folder edge', async () => {
     const wrapper = mountSidebar({ tree: treeWithNestedNotes })
     const treeStore = useTreeStore()
-
     const movePositionSpy = vi.spyOn(treeStore, 'moveNoteToPosition').mockResolvedValue(undefined)
 
     const rows = wrapper.findAll('.tree-row')
     const folderRow = rows.find((r) => r.text().includes('Projects'))!
     const folderNote = rows.find((r) => r.text().includes('Folder note'))!
 
-    await folderNote.trigger('dragstart', { dataTransfer: makeDataTransfer() })
-    await folderRow.trigger('dragover', {
-      dataTransfer: makeDataTransfer(),
-      offsetY: 1,
-      currentTarget: { offsetHeight: 30 },
-    })
-    await flushUi()
-    await folderRow.trigger('drop', { dataTransfer: makeDataTransfer() })
+    await pointerDrag(folderNote.element, folderRow.element, 101)
 
     expect(movePositionSpy).toHaveBeenCalledWith('folder-note', 'folder-1', 'before', null)
     movePositionSpy.mockRestore()
@@ -623,17 +606,13 @@ describe('WorkspaceSidebar drag-and-drop', () => {
   it('moves a folder note to the root when dropped on the tree empty area', async () => {
     const wrapper = mountSidebar({ tree: treeWithNestedNotes })
     const treeStore = useTreeStore()
-
     const moveSpy = vi.spyOn(treeStore, 'moveNote').mockResolvedValue(undefined)
 
     const rows = wrapper.findAll('.tree-row')
     const folderNote = rows.find((r) => r.text().includes('Folder note'))!
     const rootDropZone = wrapper.get('.tree-root-drop-zone')
 
-    await folderNote.trigger('dragstart', { dataTransfer: makeDataTransfer() })
-    await rootDropZone.trigger('dragover', { dataTransfer: makeDataTransfer() })
-    await flushUi()
-    await rootDropZone.trigger('drop', { dataTransfer: makeDataTransfer() })
+    await pointerDrag(folderNote.element, rootDropZone.element, 300)
 
     expect(moveSpy).toHaveBeenCalledWith('folder-note', null)
     moveSpy.mockRestore()

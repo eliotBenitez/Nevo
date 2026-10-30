@@ -1,5 +1,6 @@
 import { computed, ref, type CSSProperties } from 'vue'
 import type { KanbanCard } from '../../../../types/kanban'
+import { swallowNextClick } from '../../../../utils/pointerDrag'
 
 interface PointerDragRuntime {
   pointerId: number
@@ -25,7 +26,7 @@ interface KanbanPointerDragOptions {
   cardsForColumn: (columnId: string) => KanbanCard[]
   /** Resolved reduced-motion preference ('reduce' | 'no-preference' | 'system'). */
   getReducedMotion: () => string
-  /** Commit a finished drag (also used by the native HTML5 drop path). */
+  /** Commit a finished drag. */
   onCommitMove: (cardId: string, toColumnId: string, targetIndex: number) => void
 }
 
@@ -37,8 +38,7 @@ const pointerDragSettleEpsilon = 0.35
 const pointerDragTiltLimit = 1.1
 
 /** RAF-smoothed pointer drag-and-drop engine for the Kanban board, extracted
- *  from KanbanView. Owns the shared drag state so the native HTML5 drag path in
- *  the view can reuse the same refs and `clearDragState`. */
+ *  from KanbanView. */
 export function useKanbanPointerDrag(options: KanbanPointerDragOptions) {
   const pointerDragStarted = ref(false)
   const dragCardId = ref<string | null>(null)
@@ -253,6 +253,7 @@ export function useKanbanPointerDrag(options: KanbanPointerDragOptions) {
   function onWindowPointerCancel(event: PointerEvent) {
     const runtime = pointerDragRuntime
     if (!runtime || event.pointerId !== runtime.pointerId) return
+    if (pointerDragStarted.value) swallowNextClick()
     clearDragState()
   }
 
@@ -272,6 +273,7 @@ export function useKanbanPointerDrag(options: KanbanPointerDragOptions) {
     const toColumnId = dropTargetColumnId.value
     const targetIndex = dropTargetIndex.value
     const shouldMove = pointerDragStarted.value && !!cardId && !!toColumnId && targetIndex !== null
+    if (pointerDragStarted.value) swallowNextClick()
 
     clearDragState()
 

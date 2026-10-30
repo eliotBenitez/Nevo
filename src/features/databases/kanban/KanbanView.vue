@@ -72,7 +72,7 @@ const addCardDefaultColumnId = ref<string | undefined>(undefined)
 let loadRequestId = 0
 const COLUMN_COLORS = ['#6b7280', '#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#a855f7', '#ec4899', '#14b8a6']
 
-// Pointer drag-and-drop engine (shared state reused by the native HTML5 path).
+// Pointer drag-and-drop engine.
 const {
   dragCardId,
   dragFromColumnId,
@@ -222,45 +222,6 @@ function onBoardWheel(event: WheelEvent) {
 
   event.preventDefault()
   boardEl.scrollLeft = clampedNextScrollLeft
-}
-
-function onCardDragStart(event: DragEvent, cardId: string, columnId: string) {
-  dragCardId.value = cardId
-  dragFromColumnId.value = columnId
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('text/plain', cardId)
-    event.dataTransfer.setData('cardId', cardId)
-    event.dataTransfer.setData('fromColumn', columnId)
-  }
-}
-
-function getTransferValue(event: DragEvent, key: string) {
-  return event.dataTransfer?.getData(key)?.trim() ?? ''
-}
-
-function resolveDraggedCardId(event: DragEvent) {
-  return dragCardId.value
-    || getTransferValue(event, 'cardId')
-    || getTransferValue(event, 'text/plain')
-}
-
-async function onDrop(event: DragEvent, toColumnId: string, targetIndex: number) {
-  try {
-    const cardId = resolveDraggedCardId(event)
-    if (!cardId || !board.value) return
-    await kanbanStore.moveCard(props.boardId, cardId, toColumnId, targetIndex)
-  } finally {
-    clearDragState()
-  }
-}
-
-function onColumnDragEnter(columnId: string) {
-  dropTargetColumnId.value = columnId
-}
-
-function onBoardDragEnd() {
-  clearDragState()
 }
 
 // Drop tooltip: name of column the card would move to
@@ -434,7 +395,6 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
       ref="boardScrollRef"
       class="kb-view__board tw:relative tw:box-border tw:flex tw:w-full tw:max-w-full tw:min-w-0 tw:flex-1 tw:items-start tw:gap-3 tw:overflow-x-auto tw:overflow-y-hidden tw:px-[18px] tw:pt-4 tw:pb-[22px] tw:[-webkit-overflow-scrolling:touch] tw:[overscroll-behavior-inline:contain] tw:[scrollbar-color:var(--border-strong,var(--border-subtle))_transparent] tw:[scrollbar-width:thin] tw:[&::-webkit-scrollbar]:h-3 tw:[&::-webkit-scrollbar-thumb]:rounded-full tw:[&::-webkit-scrollbar-thumb]:border-2 tw:[&::-webkit-scrollbar-thumb]:border-solid tw:[&::-webkit-scrollbar-thumb]:border-transparent tw:[&::-webkit-scrollbar-thumb]:bg-[color-mix(in_oklab,var(--border-strong,var(--border-subtle))_92%,transparent)] tw:[&::-webkit-scrollbar-thumb]:[background-clip:padding-box] tw:[&::-webkit-scrollbar-track]:bg-transparent tw:max-[760px]:gap-2.5 tw:max-[760px]:pt-3 tw:max-[760px]:pr-[calc(14px+max(var(--safe-area-right),0px))] tw:max-[760px]:pb-[calc(18px+max(var(--safe-area-bottom),0px))] tw:max-[760px]:pl-[calc(14px+max(var(--safe-area-left),0px))] tw:max-[760px]:[scroll-padding-inline:calc(14px+max(var(--safe-area-left),0px))] tw:max-[760px]:[scroll-snap-type:inline_proximity]"
       @wheel="onBoardWheel"
-      @dragend="onBoardDragEnd"
     >
       <KanbanColumn
         v-for="col in columns"
@@ -455,10 +415,7 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
         @add-card="addCard"
         @quick-add-card="quickAddCard"
         @open-card="openCard"
-        @card-dragstart="(e, cardId, colId) => onCardDragStart(e, cardId, colId)"
         @card-handle-pointerdown="(e, cardId, colId) => onCardHandlePointerDown(e, cardId, colId)"
-        @drop="(e, colId, idx) => onDrop(e, colId, idx)"
-        @col-dragenter="onColumnDragEnter"
         @rename-column="renameStatusColumn"
         @delete-column="deleteStatusColumn"
       />

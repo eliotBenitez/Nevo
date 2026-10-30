@@ -5,11 +5,7 @@ import { useI18n } from 'vue-i18n'
 import type { TreeNode } from '../../types/note'
 import NvNoteIcon from '../../ui/primitives/NvNoteIcon.vue'
 import { folderNoteCount } from '../../utils/folder-note-count'
-import type {
-  SidebarDragOver,
-  SidebarDragSource,
-  SidebarDragTarget,
-} from '../composables/useSidebarDrag'
+import type { SidebarDragOver, SidebarDragSource } from '../composables/useSidebarDrag'
 
 interface Props {
   node: TreeNode
@@ -39,11 +35,7 @@ const emit = defineEmits<{
     x: number
     y: number
   }]
-  'drag-start': [event: DragEvent, source: SidebarDragSource]
-  'drag-over': [target: SidebarDragTarget, isFolderTarget: boolean, event: DragEvent]
-  'drag-enter': [targetId: string]
-  'drag-leave': [targetId: string]
-  'drop': [event: DragEvent, target: SidebarDragTarget]
+  'drag-pointerdown': [event: PointerEvent, source: SidebarDragSource]
 }>()
 
 const { t } = useI18n()
@@ -144,44 +136,20 @@ function buildSource(): SidebarDragSource {
   return { id: currentId.value, kind: 'note', parentId: null }
 }
 
-function buildTarget(): SidebarDragTarget {
-  if (isFolder.value && folder.value) {
-    return { id: folder.value.id, kind: 'folder', parentId: folder.value.parentId }
+function onPointerDown(event: PointerEvent) {
+  if (!props.dragEnabled) return
+  if ((event.target as HTMLElement | null)?.closest('.tree-folder-add')) return
+  emit('drag-pointerdown', event, buildSource())
+}
+
+const rowDataAttrs = computed(() => {
+  const source = buildSource()
+  return {
+    'data-tree-row-id': source.id,
+    'data-tree-row-kind': source.kind,
+    'data-tree-row-parent': source.parentId ?? '',
   }
-  if (note.value) {
-    return { id: note.value.id, kind: 'note', parentId: note.value.folderId }
-  }
-  return { id: currentId.value, kind: 'note', parentId: null }
-}
-
-function onDragStart(event: DragEvent) {
-  if (!props.dragEnabled) {
-    event.preventDefault()
-    return
-  }
-  emit('drag-start', event, buildSource())
-}
-
-function onDragOver(event: DragEvent) {
-  if (!props.dragEnabled) return
-  emit('drag-over', buildTarget(), isFolder.value, event)
-}
-
-function onDragEnter() {
-  if (!props.dragEnabled) return
-  emit('drag-enter', currentId.value)
-}
-
-function onDragLeave() {
-  if (!props.dragEnabled) return
-  emit('drag-leave', currentId.value)
-}
-
-function onDrop(event: DragEvent) {
-  if (!props.dragEnabled) return
-  event.preventDefault()
-  emit('drop', event, buildTarget())
-}
+})
 </script>
 
 <template>
@@ -200,16 +168,12 @@ function onDrop(event: DragEvent) {
       :style="{ paddingLeft: `${8 + depth * 14}px` }"
       role="button"
       tabindex="0"
-      :draggable="dragEnabled ? true : undefined"
+      v-bind="rowDataAttrs"
       @click="onFolderClick"
       @keydown.enter.prevent="onFolderClick"
       @keydown.space.prevent="onFolderClick"
       @contextmenu="onContextMenu"
-      @dragstart="onDragStart"
-      @dragover="onDragOver"
-      @dragenter="onDragEnter"
-      @dragleave="onDragLeave"
-      @drop="onDrop"
+      @pointerdown="onPointerDown"
     >
       <span class="tree-drop-line tree-drop-line--top tw:absolute tw:left-1.5 tw:right-1.5 tw:h-0 tw:rounded-[calc(2px*var(--radius-scale,1))] tw:pointer-events-none tw:transition-[height,opacity,background,box-shadow] tw:duration-100 tw:-top-0.5" aria-hidden="true" />
       <span class="tree-arrow tw:w-3 tw:h-3 tw:grid tw:place-items-center tw:text-content-muted" @click.stop="toggleFolder">
@@ -221,7 +185,6 @@ function onDrop(event: DragEvent) {
       <button
         type="button"
         class="tree-folder-add tw:w-5 tw:h-5 tw:p-0 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border-none tw:bg-transparent tw:text-content-muted tw:grid tw:place-items-center tw:cursor-pointer tw:opacity-0 tw:transition-[opacity,background,color] tw:duration-[120ms]"
-        draggable="false"
         :title="t('workspace.actions.newNote')"
         :aria-label="t('workspace.actions.newNote')"
         @click="createInFolder"
@@ -244,16 +207,12 @@ function onDrop(event: DragEvent) {
       :style="{ paddingLeft: `${22 + depth * 14}px` }"
       role="button"
       tabindex="0"
-      :draggable="dragEnabled ? true : undefined"
+      v-bind="rowDataAttrs"
       @click="onNoteClick"
       @keydown.enter.prevent="onNoteClick"
       @keydown.space.prevent="onNoteClick"
       @contextmenu="onContextMenu"
-      @dragstart="onDragStart"
-      @dragover="onDragOver"
-      @dragenter="onDragEnter"
-      @dragleave="onDragLeave"
-      @drop="onDrop"
+      @pointerdown="onPointerDown"
     >
       <span class="tree-drop-line tree-drop-line--top tw:absolute tw:left-1.5 tw:right-1.5 tw:h-0 tw:rounded-[calc(2px*var(--radius-scale,1))] tw:pointer-events-none tw:transition-[height,opacity,background,box-shadow] tw:duration-100 tw:-top-0.5" aria-hidden="true" />
       <NvNoteIcon :value="note.icon || '📄'" :size="14" class="tree-note-emoji tw:w-[18px] tw:inline-flex tw:justify-center tw:flex-none tw:leading-none" />
@@ -278,11 +237,7 @@ function onDrop(event: DragEvent) {
         @open-note="emit('open-note', $event)"
         @create-note-in-folder="emit('create-note-in-folder', $event)"
         @context-menu="emit('context-menu', $event)"
-        @drag-start="(event, source) => emit('drag-start', event, source)"
-        @drag-over="(target, isFolder, event) => emit('drag-over', target, isFolder, event)"
-        @drag-enter="emit('drag-enter', $event)"
-        @drag-leave="emit('drag-leave', $event)"
-        @drop="(event, target) => emit('drop', event, target)"
+        @drag-pointerdown="(event, source) => emit('drag-pointerdown', event, source)"
       />
     </div>
   </div>

@@ -68,23 +68,16 @@ const DragDropColumnStub = defineComponent({
       required: true,
     },
   },
-  emits: ['card-dragstart', 'card-handle-pointerdown', 'drop'],
+  emits: ['card-handle-pointerdown'],
   methods: {
-    triggerDragStart(event: DragEvent) {
-      this.$emit('card-dragstart', event, 'card-1', 'todo')
-    },
     triggerHandlePointerDown(event: PointerEvent) {
       this.$emit('card-handle-pointerdown', event, 'card-1', 'todo')
-    },
-    triggerDrop(event: DragEvent) {
-      this.$emit('drop', event, this.column.id, 0)
     },
   },
   template: `
     <div class="kanban-column-drag-stub kb-column" :data-column-id="column.id" data-card-count="1">
-      <button class="drag-start" @dragstart="triggerDragStart" />
       <button class="pointer-drag-start" @pointerdown="triggerHandlePointerDown" />
-      <div class="drop-target kb-drop-zone" :data-column-id="column.id" data-drop-zone-index="0" @drop="triggerDrop" />
+      <div class="drop-target kb-drop-zone" :data-column-id="column.id" data-drop-zone-index="0" />
     </div>
   `,
 })
@@ -247,6 +240,8 @@ describe('KanbanView', () => {
   })
 
   afterEach(() => {
+    // Consumes the post-drag click swallow listener so it cannot eat the next test's click.
+    window.dispatchEvent(new MouseEvent('click'))
     Object.defineProperty(window, 'requestAnimationFrame', {
       configurable: true,
       value: originalRequestAnimationFrame,
@@ -390,60 +385,6 @@ describe('KanbanView', () => {
 
     expect(wrapper.text()).toContain('Cards unavailable')
     expect(wrapper.find('.kanban-column-stub').exists()).toBe(false)
-
-    wrapper.unmount()
-  })
-
-  it('moves a dragged card using reactive drag state before transfer fallback data', async () => {
-    vi.mocked(kanbanCommands.listBoards).mockResolvedValue([
-      {
-        ...makeBoard(),
-        propertyDefinitions: [
-          {
-            id: 'status',
-            name: 'Status',
-            type: 'select',
-            order: 0,
-            options: [
-              { id: 'todo', name: 'Todo', color: '#3b82f6' },
-              { id: 'done', name: 'Done', color: '#22c55e' },
-            ],
-          },
-        ],
-      },
-    ])
-    vi.mocked(kanbanCommands.listCards).mockResolvedValue([makeCard()])
-
-    const wrapper = await mountViewWithStubs('board-1', {
-      KanbanColumn: DragDropColumnStub,
-    })
-
-    await vi.waitFor(() => {
-      expect(wrapper.find('.kanban-column-drag-stub').exists()).toBe(true)
-    })
-
-    const dataTransfer = {
-      effectAllowed: 'none',
-      store: new Map<string, string>(),
-      setData(type: string, value: string) {
-        this.store.set(type, value)
-      },
-      getData(type: string) {
-        return this.store.get(type) ?? ''
-      },
-    }
-
-    await wrapper.find('.drag-start').trigger('dragstart', { dataTransfer })
-    expect(dataTransfer.effectAllowed).toBe('move')
-    expect(dataTransfer.getData('text/plain')).toBe('card-1')
-
-    dataTransfer.setData('cardId', 'wrong-card')
-    dataTransfer.setData('text/plain', 'wrong-card')
-
-    await wrapper.find('.drop-target').trigger('drop', { dataTransfer })
-    await flushUi()
-
-    expect(kanbanCommands.moveCard).toHaveBeenCalledWith('/workspace', 'board-1', 'card-1', 'todo', 0)
 
     wrapper.unmount()
   })

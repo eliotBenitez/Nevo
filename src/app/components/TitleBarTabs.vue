@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from 'vue'
+import { trackPointerDrag } from '../../utils/pointerDrag'
 import { X } from '../../ui/icons'
 import { useI18n } from 'vue-i18n'
 import NvNoteIcon from '../../ui/primitives/NvNoteIcon.vue'
@@ -19,16 +20,9 @@ const emit = defineEmits<{
 const hoveredTabId = ref<string | null>(null)
 const draggedTabId = ref<string | null>(null)
 const dragOverTabId = ref<string | null>(null)
-const lastReorderTargetId = ref<string | null>(null)
-const suppressNextClick = ref(false)
 const { t } = useI18n()
-let clickSuppressTimer: ReturnType<typeof setTimeout> | null = null
 
 function onTabClick(tab: TabEntry) {
-  if (suppressNextClick.value) {
-    suppressNextClick.value = false
-    return
-  }
   emit('select', tab.noteId)
 }
 
@@ -41,73 +35,45 @@ function tabIndex(tabId: string) {
   return props.tabs.findIndex(tab => tab.id === tabId)
 }
 
-function suppressClickAfterDrag() {
-  suppressNextClick.value = true
-  if (clickSuppressTimer) clearTimeout(clickSuppressTimer)
-  clickSuppressTimer = setTimeout(() => {
-    suppressNextClick.value = false
-    clickSuppressTimer = null
-  }, 100)
+// Pointer events instead of HTML5 DnD, which is unreliable in WebKitGTK.
+let cancelDrag: (() => void) | null = null
+
+function onTabPointerDown(event: PointerEvent, tab: TabEntry) {
+  if (event.button !== 0 || event.isPrimary === false || cancelDrag) return
+  const originIndex = tabIndex(tab.id)
+  let lastTargetId: string | null = null
+  cancelDrag = trackPointerDrag(event, {
+    onStart: () => { draggedTabId.value = tab.id },
+    onMove: (e) => {
+      const overId = document.elementFromPoint?.(e.clientX, e.clientY)
+        ?.closest<HTMLElement>('[data-tab-id]')?.dataset.tabId ?? null
+      dragOverTabId.value = overId
+      if (!overId || overId === tab.id || overId === lastTargetId) return
+      const fromIndex = tabIndex(tab.id)
+      const toIndex = tabIndex(overId)
+      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return
+      lastTargetId = overId
+      emit('reorder', fromIndex, toIndex)
+    },
+    onAbort: () => {
+      const currentIndex = tabIndex(tab.id)
+      if (currentIndex !== -1 && originIndex !== -1 && currentIndex !== originIndex) {
+        emit('reorder', currentIndex, originIndex)
+      }
+    },
+    onFinish: () => {
+      cancelDrag = null
+      draggedTabId.value = null
+      dragOverTabId.value = null
+    },
+  })
 }
 
-function resetDragState(suppressClick = false) {
-  draggedTabId.value = null
-  dragOverTabId.value = null
-  lastReorderTargetId.value = null
-  if (suppressClick) suppressClickAfterDrag()
-}
-
-function reorderDraggedTab(targetTab: TabEntry) {
-  if (!draggedTabId.value || draggedTabId.value === targetTab.id) return false
-
-  const fromIndex = tabIndex(draggedTabId.value)
-  const toIndex = tabIndex(targetTab.id)
-  if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return false
-
-  emit('reorder', fromIndex, toIndex)
-  lastReorderTargetId.value = targetTab.id
-  return true
-}
-
-function onDragStart(e: DragEvent, tab: TabEntry) {
-  draggedTabId.value = tab.id
-  if (e.dataTransfer) {
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', tab.id)
-  }
-}
-
-function onDragEnter(tab: TabEntry) {
-  if (!draggedTabId.value) return
-  dragOverTabId.value = tab.id
-  if (lastReorderTargetId.value === tab.id) return
-  reorderDraggedTab(tab)
-}
-
-function onDragLeave(tab: TabEntry) {
-  if (dragOverTabId.value === tab.id) {
-    dragOverTabId.value = null
-  }
-}
-
-function onDrop(tab: TabEntry) {
-  if (lastReorderTargetId.value !== tab.id) {
-    reorderDraggedTab(tab)
-  }
-  resetDragState(true)
-}
-
-function onDragEnd() {
-  resetDragState(true)
-}
-
-onBeforeUnmount(() => {
-  if (clickSuppressTimer) clearTimeout(clickSuppressTimer)
-})
+onBeforeUnmount(() => cancelDrag?.())
 </script>
 
 <template>
-  <div class="tabs-strip tw:flex tw:items-center tw:gap-[5px] tw:flex-1 tw:min-w-0 tw:px-1 tw:overflow-hidden" role="tablist" :aria-label="t('workspace.tabs.label')" @dragover.prevent>
+  <div class="tabs-strip tw:flex tw:items-center tw:gap-[5px] tw:flex-1 tw:min-w-0 tw:px-1 tw:overflow-hidden" role="tablist" :aria-label="t('workspace.tabs.label')">
     <div
       v-for="tab in tabs"
       :key="tab.id"
@@ -130,14 +96,9 @@ onBeforeUnmount(() => {
         class="title-tab tw:appearance-none tw:w-full tw:flex tw:items-center tw:justify-start tw:gap-1.5 tw:h-[30px] tw:pr-[30px] tw:pl-2.5 tw:py-0 tw:rounded-[calc(8px*var(--radius-scale,1))] tw:text-[12.5px] tw:font-[450] tw:text-content-muted tw:bg-transparent tw:border tw:border-solid tw:border-transparent tw:cursor-pointer tw:select-none tw:transition-[background,color,box-shadow] tw:duration-150"
         :title="tab.title"
         :aria-selected="tab.id === activeTabId"
-        draggable="true"
+        :data-tab-id="tab.id"
         @click="onTabClick(tab)"
-        @dragstart="onDragStart($event, tab)"
-        @dragenter="onDragEnter(tab)"
-        @dragleave="onDragLeave(tab)"
-        @dragover.prevent
-        @dragend="onDragEnd"
-        @drop.prevent="onDrop(tab)"
+        @pointerdown="onTabPointerDown($event, tab)"
       >
         <span class="tab-icon tw:text-[13px] tw:leading-none tw:flex-none tw:flex tw:transition-colors tw:duration-150">
           <NvNoteIcon :value="tab.icon" :size="14" />
@@ -148,7 +109,6 @@ onBeforeUnmount(() => {
         v-if="!tab.isPinned"
         type="button"
         class="tab-close tw:appearance-none tw:border-0 tw:grid tw:place-items-center tw:w-5 tw:h-5 tw:rounded-[calc(4px*var(--radius-scale,1))] tw:text-content-muted tw:bg-transparent tw:absolute tw:right-[5px] tw:top-1/2 tw:-mt-2.5 tw:opacity-0 tw:scale-[0.92] tw:pointer-events-none tw:cursor-pointer tw:[transition:opacity_150ms,transform_150ms,background_100ms,color_100ms]"
-        draggable="false"
         :aria-label="t('workspace.tabs.close', { title: tab.title })"
         @click="onClose($event, tab)"
       >
