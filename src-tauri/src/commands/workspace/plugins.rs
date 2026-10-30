@@ -293,7 +293,13 @@ pub(crate) fn ensure_bundled_system_plugins(workspace_path: &str) -> Result<(), 
 }
 
 #[tauri::command]
-pub fn list_plugins(workspace_path: String) -> Result<Vec<PluginManifest>, String> {
+pub async fn list_plugins(workspace_path: String) -> Result<Vec<PluginManifest>, String> {
+    tauri::async_runtime::spawn_blocking(move || list_plugins_sync(workspace_path))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+pub fn list_plugins_sync(workspace_path: String) -> Result<Vec<PluginManifest>, String> {
     let logger = crate::logging::logger();
     let workspace_path = normalize_workspace_path(&workspace_path).inspect_err(|message| {
         let _ = logger.error(
@@ -429,7 +435,19 @@ pub fn validate_plugin_manifest(
 }
 
 #[tauri::command]
-pub fn set_plugin_enabled(
+pub async fn set_plugin_enabled(
+    workspace_path: String,
+    plugin_id: String,
+    enabled: bool,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        set_plugin_enabled_sync(workspace_path, plugin_id, enabled)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+pub fn set_plugin_enabled_sync(
     workspace_path: String,
     plugin_id: String,
     enabled: bool,

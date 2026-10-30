@@ -2,7 +2,7 @@ use super::*;
 use crate::commands::folder::{
     create_folder_sync, delete_folder_sync, load_manifest, save_manifest,
 };
-use crate::commands::workspace::create_workspace;
+use crate::commands::workspace::create_workspace_sync;
 use chrono::Utc;
 use serde_json::json;
 use uuid::Uuid;
@@ -14,7 +14,7 @@ struct TestWorkspace {
 impl TestWorkspace {
     fn new() -> Self {
         let path = std::env::temp_dir().join(format!("nevo-note-history-{}", Uuid::new_v4()));
-        create_workspace(
+        create_workspace_sync(
             path.to_string_lossy().into_owned(),
             "History".to_string(),
             "N".to_string(),
@@ -311,7 +311,7 @@ fn restore_note_uses_saved_icon_and_falls_back_to_root_when_parent_was_deleted()
 
     delete_note_impl(workspace_path.clone(), note.id.clone()).expect("move note to trash");
     delete_folder_sync(workspace_path.clone(), folder.id, false).expect("delete empty parent");
-    restore_from_trash(workspace_path.clone(), note.id.clone()).expect("restore note");
+    restore_from_trash_sync(workspace_path.clone(), note.id.clone()).expect("restore note");
 
     let manifest = load_manifest(&workspace_path).expect("load manifest");
     let restored_meta = manifest

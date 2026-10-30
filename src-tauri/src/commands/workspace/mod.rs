@@ -5,6 +5,7 @@ mod paths;
 mod plugin_sdk;
 mod plugins;
 mod settings;
+mod trash_prune;
 mod types;
 
 // `paths` is otherwise a private implementation detail of `workspace`;

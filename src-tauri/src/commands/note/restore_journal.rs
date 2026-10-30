@@ -601,7 +601,7 @@ mod tests {
         let dir = TestDir::new();
         let _ = std::fs::remove_dir_all(&dir.path);
         let ws = dir.path_string();
-        crate::commands::workspace::create_workspace(
+        crate::commands::workspace::create_workspace_sync(
             ws.clone(),
             "J".into(),
             "J".into(),

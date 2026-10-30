@@ -336,7 +336,7 @@ mod tests {
     use super::*;
     use crate::commands::note::{NoteDocument, NoteProperties, NoteStatus, NoteType};
     use crate::commands::note_index::index::upsert_note_document;
-    use crate::commands::workspace::create_workspace;
+    use crate::commands::workspace::create_workspace_sync;
 
     struct TestWorkspace {
         path: std::path::PathBuf,
@@ -346,7 +346,7 @@ mod tests {
         fn new() -> Self {
             let path = std::env::temp_dir()
                 .join(format!("nevo-note-index-query-{}", uuid::Uuid::new_v4()));
-            create_workspace(
+            create_workspace_sync(
                 path.to_string_lossy().into_owned(),
                 "Query".to_string(),
                 "N".to_string(),

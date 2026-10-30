@@ -3,7 +3,7 @@ use crate::commands::note::{
     create_note_impl, list_note_snapshots_impl, load_note_impl, note_path, save_note_impl,
 };
 use crate::commands::note_index::{query_notes_impl, NoteQueryRequest};
-use crate::commands::workspace::create_workspace;
+use crate::commands::workspace::create_workspace_sync;
 use serde_json::json;
 use uuid::Uuid;
 
@@ -14,7 +14,7 @@ struct TestWorkspace {
 impl TestWorkspace {
     fn new() -> Self {
         let path = std::env::temp_dir().join(format!("nevo-snapshot-restore-{}", Uuid::new_v4()));
-        create_workspace(
+        create_workspace_sync(
             path.to_string_lossy().into_owned(),
             "Restore".to_string(),
             "N".to_string(),

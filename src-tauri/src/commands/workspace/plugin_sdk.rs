@@ -870,7 +870,13 @@ fn plugin_registry_path(workspace_path: &str) -> Result<PathBuf, String> {
 }
 
 #[tauri::command]
-pub fn plugin_registry_load(workspace_path: String) -> Result<serde_json::Value, String> {
+pub async fn plugin_registry_load(workspace_path: String) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || plugin_registry_load_sync(workspace_path))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+pub fn plugin_registry_load_sync(workspace_path: String) -> Result<serde_json::Value, String> {
     let path = plugin_registry_path(&workspace_path)?;
     if !path.exists() {
         return Ok(serde_json::json!({ "version": 1, "plugins": {} }));
@@ -883,7 +889,18 @@ pub fn plugin_registry_load(workspace_path: String) -> Result<serde_json::Value,
 }
 
 #[tauri::command]
-pub fn plugin_registry_save(
+pub async fn plugin_registry_save(
+    workspace_path: String,
+    registry: serde_json::Value,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        plugin_registry_save_sync(workspace_path, registry)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+pub fn plugin_registry_save_sync(
     workspace_path: String,
     registry: serde_json::Value,
 ) -> Result<(), String> {

@@ -168,7 +168,13 @@ fn config_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
 }
 
 #[tauri::command]
-pub fn load_app_config(app: tauri::AppHandle) -> Result<AppConfig, String> {
+pub async fn load_app_config(app: tauri::AppHandle) -> Result<AppConfig, String> {
+    tauri::async_runtime::spawn_blocking(move || load_app_config_sync(app))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+pub fn load_app_config_sync(app: tauri::AppHandle) -> Result<AppConfig, String> {
     let logger = logger();
     let path = config_path(&app)?;
     if !path.exists() {
@@ -222,7 +228,13 @@ pub fn load_app_config(app: tauri::AppHandle) -> Result<AppConfig, String> {
 }
 
 #[tauri::command]
-pub fn save_app_config(app: tauri::AppHandle, config: AppConfig) -> Result<(), String> {
+pub async fn save_app_config(app: tauri::AppHandle, config: AppConfig) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || save_app_config_sync(app, config))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+pub fn save_app_config_sync(app: tauri::AppHandle, config: AppConfig) -> Result<(), String> {
     let logger = logger();
     let path = config_path(&app)?;
     let content = serde_json::to_string_pretty(&config).map_err(|error| {

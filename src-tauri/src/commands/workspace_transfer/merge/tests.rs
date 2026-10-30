@@ -10,7 +10,7 @@ use crate::commands::folder::{create_folder_sync, load_manifest};
 use crate::commands::note::create_note_impl;
 use crate::commands::note::notebook::create_notebook_impl;
 use crate::commands::note::save_note_impl;
-use crate::commands::workspace::create_workspace;
+use crate::commands::workspace::create_workspace_sync;
 use crate::commands::workspace_transfer::archive_read::extract_archive;
 use crate::commands::workspace_transfer::archive_write::write_workspace_archive;
 use crate::commands::workspace_transfer::collect::collect_full_workspace_files;
@@ -39,7 +39,7 @@ fn noop_channel() -> tauri::ipc::Channel<TransferProgress> {
 
 fn new_workspace(temp: &TempDir, sub: &str, name: &str) -> PathBuf {
     let path = temp.0.join(sub);
-    create_workspace(
+    create_workspace_sync(
         path.to_string_lossy().into_owned(),
         name.to_string(),
         "N".to_string(),

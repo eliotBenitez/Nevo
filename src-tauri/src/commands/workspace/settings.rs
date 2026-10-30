@@ -958,7 +958,7 @@ fn save_custom_css_sync(workspace_path: String, css: String) -> Result<(), Strin
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::commands::workspace::create_workspace;
+    use crate::commands::workspace::create_workspace_sync;
     use crate::commands::workspace::types::WorkspaceHomeFavorite;
     use serde_json::json;
     use uuid::Uuid;
@@ -970,7 +970,7 @@ mod tests {
     impl TestWorkspace {
         fn new() -> Self {
             let path = std::env::temp_dir().join(format!("nevo-settings-{}", Uuid::new_v4()));
-            create_workspace(
+            create_workspace_sync(
                 path.to_string_lossy().into_owned(),
                 "Settings".to_string(),
                 "N".to_string(),

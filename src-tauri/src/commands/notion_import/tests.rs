@@ -9,7 +9,7 @@ use zip::{CompressionMethod, ZipWriter};
 use super::assets::import_assets;
 use super::scanner::scan_archive;
 use super::session::NotionImportState;
-use crate::commands::workspace::create_workspace;
+use crate::commands::workspace::create_workspace_sync;
 
 struct TempDir {
     path: PathBuf,
@@ -159,7 +159,7 @@ fn imports_allowed_assets_as_a_batch_and_rejects_unknown_paths() {
     let manifest = scan_archive(zip_path, &state).expect("scan archive");
     let session = state.get(&manifest.session_token).expect("session");
     let workspace = temp.path.join("workspace");
-    create_workspace(
+    create_workspace_sync(
         workspace.to_string_lossy().into_owned(),
         "Workspace".to_string(),
         "N".to_string(),

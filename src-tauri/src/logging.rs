@@ -509,7 +509,13 @@ pub fn logger() -> GlobalLogger {
 }
 
 #[tauri::command]
-pub fn log_frontend_event(entry: FrontendLogEntry) -> Result<(), String> {
+pub async fn log_frontend_event(entry: FrontendLogEntry) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || log_frontend_event_sync(entry))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+pub fn log_frontend_event_sync(entry: FrontendLogEntry) -> Result<(), String> {
     let logger = logger();
     let diagnostics_enabled = entry
         .diagnostics_enabled

@@ -37,7 +37,8 @@ pub(super) fn store_asset_bytes(
     };
     let final_name = format!("{}-{}.{}", hash, safe_stem, extension);
     let final_path = assets_dir.join(&final_name);
-    std::fs::write(&final_path, bytes).map_err(|error| error.to_string())?;
+    crate::commands::path_utils::write_atomic(&final_path, bytes)
+        .map_err(|error| error.to_string())?;
 
     Ok(ImportedImageAsset {
         src: format!(".nevo/assets/{}", final_name),

@@ -2,11 +2,10 @@ use chrono::Utc;
 use std::path::Path;
 use uuid::Uuid;
 
-use super::paths::{
-    notes_dir_path, settings_path, snapshots_dir_path, workspace_context, workspace_error_context,
-};
+use super::paths::{settings_path, workspace_context, workspace_error_context};
 use super::plugins::ensure_bundled_system_plugins;
 use super::settings::{is_extended_diagnostics_enabled, read_workspace_settings};
+use super::trash_prune::prune_expired_trash;
 use super::types::{
     WorkspaceManifest, WorkspaceSettings, CURRENT_WORKSPACE_SCHEMA_VERSION,
     INITIAL_WORKSPACE_SCHEMA_VERSION,
@@ -17,7 +16,18 @@ use crate::commands::path_utils::{
 use crate::logging::{LogContext, LogError};
 
 #[tauri::command]
-pub fn create_workspace(
+pub async fn create_workspace(
+    path: String,
+    name: String,
+    glyph: String,
+    gradient: String,
+) -> Result<WorkspaceManifest, String> {
+    tauri::async_runtime::spawn_blocking(move || create_workspace_sync(path, name, glyph, gradient))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+pub fn create_workspace_sync(
     path: String,
     name: String,
     glyph: String,
@@ -154,7 +164,13 @@ pub fn create_workspace(
 }
 
 #[tauri::command]
-pub fn open_workspace(path: String) -> Result<WorkspaceManifest, String> {
+pub async fn open_workspace(path: String) -> Result<WorkspaceManifest, String> {
+    tauri::async_runtime::spawn_blocking(move || open_workspace_sync(path))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+pub fn open_workspace_sync(path: String) -> Result<WorkspaceManifest, String> {
     let logger = crate::logging::logger();
     let path = normalize_workspace_path(&path).inspect_err(|message| {
         let _ = logger.error(
@@ -272,49 +288,12 @@ pub fn open_workspace(path: String) -> Result<WorkspaceManifest, String> {
         );
     })?;
 
-    // Prune trash on open
+    // Prune trash on open; never fails opening (the manifest stays as read).
     if let Ok(settings) = read_workspace_settings(&settings_path(&workspace_path)) {
         let retention_days = settings.files.trash_retention_days;
-
         if retention_days > 0 {
-            let now = Utc::now();
-            let mut pruned = false;
-            let trash_len = manifest.trash.len();
-
-            manifest.trash.retain(|item| {
-                if let Ok(deleted_at) = chrono::DateTime::parse_from_rfc3339(&item.deleted_at) {
-                    let age = now.signed_duration_since(deleted_at.with_timezone(&Utc));
-                    if age.num_days() >= retention_days as i64 {
-                        if item.item_type == "note" {
-                            let path = notes_dir_path(&workspace_path)
-                                .join(format!("note-{}.nevo", item.id));
-                            if path.exists() {
-                                let _ = std::fs::remove_file(path);
-                            }
-                            let snap_dir = snapshots_dir_path(&workspace_path).join(&item.id);
-                            if snap_dir.exists() {
-                                let _ = std::fs::remove_dir_all(snap_dir);
-                            }
-                        }
-                        pruned = true;
-                        return false;
-                    }
-                }
-                true
-            });
-
-            if pruned {
-                let _ = logger.info(
-                    "tauri.workspace",
-                    "open_workspace",
-                    &format!(
-                        "Pruned {} items from trash",
-                        trash_len - manifest.trash.len()
-                    ),
-                    true,
-                    workspace_context(&workspace_path),
-                );
-                let _ = save_workspace_manifest(workspace_path.clone(), manifest.clone());
+            if let Ok(Some(pruned)) = prune_expired_trash(&workspace_path, retention_days) {
+                manifest = pruned;
             }
         }
     }
@@ -334,13 +313,31 @@ pub fn open_workspace(path: String) -> Result<WorkspaceManifest, String> {
 /// Reads the current manifest without running the open-workspace migrations,
 /// plugin installation, trash retention, or active-root side effects.
 #[tauri::command]
-pub fn load_workspace_manifest(path: String) -> Result<WorkspaceManifest, String> {
+pub async fn load_workspace_manifest(path: String) -> Result<WorkspaceManifest, String> {
+    tauri::async_runtime::spawn_blocking(move || load_workspace_manifest_sync(path))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+pub fn load_workspace_manifest_sync(path: String) -> Result<WorkspaceManifest, String> {
     let path = normalize_workspace_path(&path)?;
     crate::commands::folder::load_manifest(&path.to_string_lossy())
 }
 
 #[tauri::command]
-pub fn save_workspace_manifest(path: String, manifest: WorkspaceManifest) -> Result<(), String> {
+pub async fn save_workspace_manifest(
+    path: String,
+    manifest: WorkspaceManifest,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || save_workspace_manifest_sync(path, manifest))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+pub fn save_workspace_manifest_sync(
+    path: String,
+    manifest: WorkspaceManifest,
+) -> Result<(), String> {
     let logger = crate::logging::logger();
     let path = normalize_workspace_path(&path).inspect_err(|message| {
         let _ = logger.error(
@@ -428,7 +425,7 @@ mod tests {
     impl TestWorkspace {
         fn new() -> Self {
             let path = std::env::temp_dir().join(format!("nevo-manifest-test-{}", Uuid::new_v4()));
-            create_workspace(
+            create_workspace_sync(
                 path.to_string_lossy().into_owned(),
                 "Test".to_string(),
                 "N".to_string(),
@@ -466,7 +463,7 @@ mod tests {
         )
         .expect("rewrite manifest with a future schema version");
 
-        let error = open_workspace(workspace.path_string()).expect_err("must be rejected");
+        let error = open_workspace_sync(workspace.path_string()).expect_err("must be rejected");
         assert_eq!(
             error,
             format!(
@@ -503,7 +500,7 @@ mod tests {
         )
         .expect("rewrite manifest with an older schema version");
 
-        let manifest = open_workspace(workspace.path_string()).expect("must open");
+        let manifest = open_workspace_sync(workspace.path_string()).expect("must open");
         assert_eq!(manifest.schema_version, 0);
     }
 
@@ -515,7 +512,7 @@ mod tests {
         let mut current = stale.clone();
         current.schema_version = 2;
         save_manifest(&path, &current).expect("raise schema gate");
-        let error = save_workspace_manifest(path.clone(), stale)
+        let error = save_workspace_manifest_sync(path.clone(), stale)
             .expect_err("schema 1 stale manifest must not overwrite schema 2");
         assert!(error.starts_with("workspace-schema-stale:"));
         assert_eq!(load_manifest(&path).unwrap().schema_version, 2);
@@ -530,7 +527,7 @@ mod tests {
         let mut current = load_manifest(&path).expect("load manifest");
         current.schema_version = CURRENT_WORKSPACE_SCHEMA_VERSION;
         save_manifest(&path, &current).expect("raise schema");
-        let manifest = open_workspace(path).expect("must open");
+        let manifest = open_workspace_sync(path).expect("must open");
         assert_eq!(manifest.schema_version, CURRENT_WORKSPACE_SCHEMA_VERSION);
     }
 
@@ -551,13 +548,14 @@ mod tests {
         )
         .expect("rewrite manifest with an unknown field");
 
-        let manifest = load_workspace_manifest(workspace.path_string()).expect("load manifest");
+        let manifest =
+            load_workspace_manifest_sync(workspace.path_string()).expect("load manifest");
         assert_eq!(
             manifest.extra.get("futureFeatureFlag"),
             Some(&serde_json::Value::from("from-a-newer-build"))
         );
 
-        save_workspace_manifest(workspace.path_string(), manifest).expect("save manifest");
+        save_workspace_manifest_sync(workspace.path_string(), manifest).expect("save manifest");
 
         let after = std::fs::read_to_string(workspace.manifest_path()).expect("read manifest");
         let after_value: serde_json::Value = serde_json::from_str(&after).expect("parse manifest");
@@ -648,7 +646,7 @@ mod tests {
         std::fs::write(&manifest_path, &pre_recovery_manifest_bytes)
             .expect("restore pre-recovery manifest");
 
-        let manifest = open_workspace(ws.clone()).expect("open workspace");
+        let manifest = open_workspace_sync(ws.clone()).expect("open workspace");
 
         assert!(
             !marker_path.exists(),
@@ -691,5 +689,41 @@ mod tests {
             on_disk.trash.is_empty(),
             "the pruning save must persist the pruned trash, not the stale pre-recovery copy"
         );
+    }
+
+    #[test]
+    fn open_workspace_prunes_only_expired_trashed_notes() {
+        let workspace = TestWorkspace::new();
+        let ws = workspace.path_string();
+        let old_id = Uuid::new_v4().to_string();
+        let fresh_id = Uuid::new_v4().to_string();
+        let old_file = crate::commands::note::note_path(&ws, &old_id).expect("old note path");
+        let fresh_file = crate::commands::note::note_path(&ws, &fresh_id).expect("fresh note path");
+        let old_snaps = super::super::paths::snapshots_dir_path(&ws).join(&old_id);
+        std::fs::create_dir_all(&old_snaps).expect("snapshot dir");
+        std::fs::create_dir_all(old_file.parent().expect("notes dir")).expect("notes dir");
+        std::fs::write(&old_file, b"old").expect("old note");
+        std::fs::write(&fresh_file, b"fresh").expect("fresh note");
+
+        let mut manifest = load_manifest(&ws).expect("load manifest");
+        let item = |id: &str, age_days: i64| super::super::types::TrashedItem {
+            id: id.to_string(),
+            item_type: "note".to_string(),
+            title: id.to_string(),
+            deleted_at: (chrono::Utc::now() - chrono::Duration::days(age_days)).to_rfc3339(),
+            original_parent_id: None,
+            icon: None,
+            extra: Default::default(),
+        };
+        manifest.trash = vec![item(&old_id, 90), item(&fresh_id, 0)];
+        save_manifest(&ws, &manifest).expect("save manifest");
+
+        let opened = open_workspace_sync(ws.clone()).expect("open workspace");
+        let ids = |m: &WorkspaceManifest| m.trash.iter().map(|t| t.id.clone()).collect::<Vec<_>>();
+        assert_eq!(ids(&opened), vec![fresh_id.clone()]);
+        assert_eq!(ids(&load_manifest(&ws).expect("reload")), vec![fresh_id]);
+        assert!(!old_file.exists(), "expired note file must be deleted");
+        assert!(!old_snaps.exists(), "expired snapshot dir must be deleted");
+        assert!(fresh_file.exists(), "non-expired note file must be kept");
     }
 }
