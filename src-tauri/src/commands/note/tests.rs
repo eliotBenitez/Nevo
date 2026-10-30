@@ -861,3 +861,27 @@ fn search_note_context_skips_malformed_notes_and_returns_hits() {
     .expect("search context");
     assert!(trashed.is_empty());
 }
+
+#[test]
+fn save_note_refuses_to_overwrite_malformed_or_unreadable_note_file() {
+    let workspace = TestWorkspace::new();
+    let workspace_path = workspace.path_string();
+    let note = create_note_impl(
+        workspace_path.clone(),
+        None,
+        "Guarded".to_string(),
+        "📄".to_string(),
+    )
+    .expect("create note");
+    let path = note_path(&workspace_path, &note.id).expect("note path");
+
+    for (on_disk, expected) in [
+        ("{ nope", "malformed note"),
+        (r#"{"id": 5}"#, "unreadable note"),
+    ] {
+        std::fs::write(&path, on_disk).expect("corrupt note file");
+        let error = save_note_impl(workspace_path.clone(), note.clone()).expect_err("must refuse");
+        assert!(error.contains(expected), "{error}");
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), on_disk);
+    }
+}
