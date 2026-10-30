@@ -163,6 +163,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         glyph: config.glyph,
         gradient: config.gradient,
       })
+      await flushPendingLastContext()
       manifest.value = newManifest
       _setHandle({ kind: 'local', path })
       await hydrateWorkspaceState()
@@ -269,6 +270,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       if (backend.value && activePath.value !== path) {
         await (await import('./workspaceSwitchGuard')).flushBeforeWorkspaceSwitch()
       }
+      await flushPendingLastContext()
       _setHandle({ kind: 'local', path })
       const loadedManifest = await backend.value!.open()
       manifest.value = loadedManifest
@@ -519,6 +521,16 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       lastContextPersistTimer = null
       void persistLastContext()
     }, LAST_CONTEXT_PERSIST_DEBOUNCE_MS)
+  }
+
+  // A debounced write must land in the workspace it was scheduled for: once the
+  // handle switches, `backend` points at the next workspace while `settings`
+  // still holds the previous one's, and the write would overwrite them.
+  async function flushPendingLastContext() {
+    if (!lastContextPersistTimer) return
+    clearTimeout(lastContextPersistTimer)
+    lastContextPersistTimer = null
+    await persistLastContext()
   }
 
   async function persistLastContext() {

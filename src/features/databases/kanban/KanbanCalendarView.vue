@@ -6,6 +6,7 @@ import type { KanbanBoard, KanbanCard } from '../../../types/kanban'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import { findCardField, getBoardStatusProperty, getCardFieldDescriptors, getCardStatusValue } from './kanbanFields'
 import { resolveCalendarDateField } from './calendarDateField'
+import { formatDateOnly } from '../../../utils/dateOnly'
 
 interface Props {
   board: KanbanBoard
@@ -21,7 +22,7 @@ type CalMode = 'month' | 'week' | 'day'
 
 const calMode = ref<CalMode>('month')
 const today = new Date()
-const todayIso = today.toISOString().slice(0, 10)
+const todayIso = formatDateOnly(today)
 const viewDate = ref(new Date(today.getFullYear(), today.getMonth(), today.getDate()))
 const dragOverDay = ref<string | null>(null)
 const draggingCardId = ref<string | null>(null)
@@ -79,7 +80,7 @@ const weekDays = computed(() => {
   return Array.from({ length: 7 }, (_, index) => {
     const day = new Date(monday)
     day.setDate(monday.getDate() + index)
-    const iso = day.toISOString().slice(0, 10)
+    const iso = formatDateOnly(day)
     return {
       iso,
       isToday: iso === todayIso,
@@ -89,7 +90,7 @@ const weekDays = computed(() => {
   })
 })
 
-const viewDayIso = computed(() => viewDate.value.toISOString().slice(0, 10))
+const viewDayIso = computed(() => formatDateOnly(viewDate.value))
 
 const calGrid = computed(() => {
   const year = viewDate.value.getFullYear()
@@ -105,7 +106,7 @@ const calGrid = computed(() => {
   for (let weekIndex = 0; weekIndex < 6; weekIndex++) {
     const week: { date: Date; iso: string; inMonth: boolean; isToday: boolean }[] = []
     for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
-      const iso = cursor.toISOString().slice(0, 10)
+      const iso = formatDateOnly(cursor)
       week.push({
         date: new Date(cursor),
         iso,
