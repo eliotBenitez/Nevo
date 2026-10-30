@@ -300,7 +300,8 @@ change stored note icons.
   (`schema/index.ts`), state factory (`state.ts`), serialization (`serialization.ts`), and
   the plugin host (`plugin-host/`, entry `plugin-host/index.ts`). Sandboxed plugins run in
   a Web Worker (`plugin-host/sandboxWorker.ts`) behind a capability-checked message
-  protocol (`plugin-host/sandboxProtocol.ts`).
+  protocol (`plugin-host/sandboxProtocol.ts`); host calls from the sandbox are
+  capability-checked in `plugin-host/sandboxHostBroker.ts`.
 - **Mermaid previews** — `src/editor-core/node-views/mermaid.ts` lazily renders
   diagrams with strict security and native SVG text labels. The framework-agnostic
   `src/utils/sanitizeMermaidSvg.ts` adapter converts allowlisted presentation CSS
@@ -477,7 +478,8 @@ reintroducing either feature.
   sub-struct in `src-tauri/src/commands/workspace/types.rs` (with a `#[serde(rename)]` +
   a sensible `default`), mirror it in the matching TS interface in
   `src/types/workspace.ts`, and normalize it in
-  `src-tauri/src/commands/workspace/settings.rs::normalize_settings_value`.
+  the matching section of `src-tauri/src/commands/workspace/settings/normalize/`
+  (`normalize_settings_value` dispatches one `apply_<section>` per section).
 - **A new Tauri command** → see `nevo-tauri-command` skill; the checklist (Rust module +
   `generate_handler!` registration + capability + TS wrapper) is easy to half-do.
 - **A new ProseMirror node/block/mark** → see `nevo-editor-block` skill; touches schema,
