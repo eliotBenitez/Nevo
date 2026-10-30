@@ -24,6 +24,8 @@ export interface DocxExportOptions {
   /** Localized "Page" and "of" words for the page-number footer; default English. */
   pageLabel?: string
   pageOfLabel?: string
+  /** Localized audio transcript heading; omitted falls back to English. */
+  transcriptLabel?: string
   titlePage: boolean
   runningHeader: boolean
   exportNoteTitle: boolean

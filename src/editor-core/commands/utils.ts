@@ -30,7 +30,7 @@ export function createInsertBlockCommand(nodeType: NodeType, attrs: Record<strin
 
 /**
  * Inserts a block node (replacing an empty paragraph, else the selection) and
- * selects it. The inserted node is found in the last step's changed range: when
+ * selects it. The inserted node is found in the steps' changed ranges: when
  * a block lands in non-empty text the old cursor no longer maps onto it.
  */
 export function insertBlockAndSelect(state: EditorState, dispatch: (tr: Transaction) => void, node: PMNode): boolean {
@@ -43,10 +43,16 @@ export function insertBlockAndSelect(state: EditorState, dispatch: (tr: Transact
     tr = tr.replaceWith(insertPos, insertPos + $from.parent.nodeSize, node)
   } else {
     tr = tr.replaceSelectionWith(node, false)
-    tr.mapping.maps[tr.mapping.maps.length - 1]?.forEach((_from, _to, newFrom, newTo) => {
-      tr.doc.nodesBetween(newFrom, newTo, (child, pos) => {
-        if (insertPos === null && child.type === node.type && child.eq(node)) insertPos = pos
-        return insertPos === null
+    // Multi-range selections (CellSelection) add delete steps after the insertion,
+    // so map each step's changed range forward into the final doc.
+    tr.mapping.maps.forEach((map, index) => {
+      const rest = tr.mapping.slice(index + 1)
+      map.forEach((_from, _to, newFrom, newTo) => {
+        if (insertPos !== null) return
+        tr.doc.nodesBetween(rest.map(newFrom, -1), rest.map(newTo, 1), (child, pos) => {
+          if (insertPos === null && child.type === node.type && child.eq(node)) insertPos = pos
+          return insertPos === null
+        })
       })
     })
   }

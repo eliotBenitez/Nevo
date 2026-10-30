@@ -22,6 +22,7 @@ interface SerializeCtx {
   listDepth: number
   ordered: boolean
   orderedIndex: number
+  transcriptLabel: string
 }
 
 function registerAsset(src: string, ctx: SerializeCtx): string {
@@ -281,7 +282,7 @@ function nodeToMd(node: BlockNode, ctx: SerializeCtx): string {
       const entries = bookmarks.map(bookmark => `- ${formatAudioTime(bookmark.time)} — ${escapeMarkdownText(bookmark.label)}`)
       const transcript = readAudioTranscript(node.attrs?.transcript)
       if (transcript.length) {
-        entries.push('', 'Transcript:', ...transcript.map(segment =>
+        entries.push('', `${escapeMarkdownText(ctx.transcriptLabel)}:`, ...transcript.map(segment =>
           `- ${formatAudioTime(segment.start)} — ${escapeMarkdownText(segment.text)}`))
       }
       return [link, ...entries].join('\n')
@@ -345,6 +346,7 @@ function nodeToMd(node: BlockNode, ctx: SerializeCtx): string {
 export function serializeNoteToMarkdown(
   note: Pick<NoteDocument, 'title' | 'content'>,
   assetsSubfolderName: string,
+  transcriptLabel = 'Transcript',
 ): MarkdownSerializeResult {
   const ctx: SerializeCtx = {
     assetSrcs: [],
@@ -352,6 +354,7 @@ export function serializeNoteToMarkdown(
     listDepth: 0,
     ordered: false,
     orderedIndex: 1,
+    transcriptLabel,
   }
   const body = nodeToMd(note.content, ctx)
   const markdown = `# ${note.title}\n\n${body}`
@@ -395,6 +398,7 @@ async function resolveAsyncMarkdownPlugins(
 export async function serializeNoteToMarkdownAsync(
   note: NoteDocument,
   assetsSubfolderName: string,
+  transcriptLabel = 'Transcript',
 ): Promise<MarkdownSerializeResult> {
   const ctx: SerializeCtx = {
     assetSrcs: [],
@@ -402,6 +406,7 @@ export async function serializeNoteToMarkdownAsync(
     listDepth: 0,
     ordered: false,
     orderedIndex: 1,
+    transcriptLabel,
   }
   const replacements = new Map<string, string>()
   const resolved = await resolveAsyncMarkdownPlugins(note.content, ctx, replacements, { value: 0 })

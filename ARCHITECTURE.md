@@ -451,7 +451,7 @@ up" as a drive-by:
   `decodeLegacyNoteYDoc.ts`). Invoked once per workspace open from
   `workspace.ts`'s `migrateLegacyYjsState` (§3). Needed for as long as pre-migration
   workspaces exist in the wild.
-- The `vendor-yjs` Rollup `manualChunks` entry in `vite.config.ts` — keeps the `yjs`
+- The `vendor-yjs` Rolldown `codeSplitting` group in `vite.config.ts` — keeps the `yjs`
   package (a transitive dependency of the migration code above) in its own lazily-loaded
   chunk instead of the startup bundle.
 - `runLegacyCloudCleanup()` (`src/app/legacyCloudCleanup.ts`, called once from `main.ts`,

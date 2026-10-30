@@ -78,6 +78,7 @@ interface SerializeCtx {
   vegaSeq: number
   drawSeq: number
   assetPathPrefix: string
+  transcriptLabel: string
 }
 
 /** Escape a literal string for a Typst double-quoted string token. */
@@ -303,7 +304,7 @@ function nodeToTypst(node: BlockNode, ctx: SerializeCtx): string {
       })
       const transcript = readAudioTranscript(node.attrs?.transcript)
       if (transcript.length) {
-        entries.push('#linebreak()#strong[Transcript]', ...transcript.map(segment =>
+        entries.push(`#linebreak()#strong[${escapeText(ctx.transcriptLabel)}]`, ...transcript.map(segment =>
           `#linebreak()${escapeText(formatAudioTime(segment.start))} — ${escapeText(segment.text.replace(/\s+/g, ' '))}`))
       }
       return [title, ...entries].join(' ')
@@ -471,6 +472,7 @@ export function serializeNoteToTypst(
     vegaSeq: 0,
     drawSeq: 0,
     assetPathPrefix: serializeOptions.assetPathPrefix ?? '',
+    transcriptLabel: options.transcriptLabel || 'Transcript',
   }
   const body = nodeToTypst(note.content, ctx)
   const source = `${buildPreamble(note.title, options)}\n\n${body}\n`
@@ -524,6 +526,7 @@ export async function serializeNoteToTypstAsync(
     vegaSeq: 0,
     drawSeq: 0,
     assetPathPrefix: serializeOptions.assetPathPrefix ?? '',
+    transcriptLabel: options.transcriptLabel || 'Transcript',
   }
   const replacements = new Map<string, string>()
   const resolved = await resolveAsyncTypstPlugins(note.content, ctx, replacements, { value: 0 })

@@ -947,6 +947,32 @@ describe('sandboxed plugin host', () => {
     await host.dispose()
   })
 
+  it('refuses a serializer for a core node type', async () => {
+    const worker = new FakeWorker(request => {
+      if (request.type === 'initialize') {
+        return response(request, {
+          contributions: [{
+            kind: 'serializer',
+            id: 'plugin.sandbox.paragraph-docx',
+            handlerId: 'plugin.sandbox:h1',
+            descriptor: { id: 'plugin.sandbox.paragraph-docx', nodeType: 'paragraph', format: 'docx' },
+          }],
+        })
+      }
+      return response(request, null)
+    })
+    const host = new EditorPluginHost({
+      workspacePath: '/workspace',
+      manifests: [manifest({ capabilities: ['editor.read'] })],
+      nevoVersion: '1.0.0',
+      workerFactory: () => worker as unknown as Worker,
+    })
+    await host.initialize()
+    expect(host.registries.nodeSerializers.has('paragraph')).toBe(false)
+    expect(host.errors.some(error => error.includes('cannot serialize node paragraph'))).toBe(true)
+    await host.dispose()
+  })
+
   it('renders a Tier 1 svg block through a sanitized Worker render handler', async () => {
     const renderDefinition: NevoSandboxPluginDefinition = {
       contributions: [{

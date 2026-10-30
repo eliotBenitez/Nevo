@@ -74,6 +74,7 @@ const options = computed<PdfExportOptions>(() => ({
   headingNumbers: headingNumbers.value,
   tableOfContents: tableOfContents.value,
   tocTitle: t('export.tableOfContents'),
+  transcriptLabel: t('media.transcript'),
   titlePage: titlePage.value,
   runningHeader: runningHeader.value,
 }))

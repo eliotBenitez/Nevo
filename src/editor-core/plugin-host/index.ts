@@ -21,6 +21,7 @@ import type {
 } from '../../types/editor-plugin'
 import { sanitizePluginPath, normalizeErrorMessage, validateManifest, type EditorPluginHostOptions } from './utils'
 import { buildPluginContext } from './context'
+import { nevoBaseSchema } from '../schema'
 import { workspaceAssetUrl } from '../../utils/workspaceAssetUrl'
 import { assertWorkspaceCommandCapability } from './capabilities'
 import {
@@ -56,6 +57,7 @@ export class EditorPluginHost {
   private readonly runtimePlugins = new Map<string, NevoEditorRuntimePlugin>()
   private readonly contexts = new Map<string, NevoEditorContext>()
   private readonly sandboxedSessions = new Map<string, SandboxedPluginSession>()
+  private readonly serializerOwners = new Map<string, string>()
   private readonly sandboxedCodeTokens = new Map<string, string>()
   private readonly sandboxedEventHandlers = new Map<string, Map<string, string[]>>()
   private readonly sandboxedUiHandlers = new Map<string, string>()
@@ -686,6 +688,12 @@ export class EditorPluginHost {
       if (!nodeType || !['markdown', 'html', 'typst', 'docx'].includes(String(format))) {
         throw new Error(`Serializer ${contribution.id} has invalid nodeType/format`)
       }
+      // A plugin may serialize its own nodes only: never core nodes, never another plugin's.
+      const owner = this.serializerOwners.get(nodeType)
+      if (nevoBaseSchema.nodes[nodeType] || (owner && owner !== manifest.id)) {
+        throw new Error(`Serializer ${contribution.id} cannot serialize node ${nodeType}`)
+      }
+      this.serializerOwners.set(nodeType, manifest.id)
       const serializer = this.registries.nodeSerializers.get(nodeType) ?? {}
       const invoke = async (node: unknown, helpers: { serializeChildren: () => string }) => {
         const result = await session.invoke(handlerId!, { node, children: helpers.serializeChildren() })

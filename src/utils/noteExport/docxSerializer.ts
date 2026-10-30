@@ -557,7 +557,7 @@ async function blocksFor(node: BlockNode, ctx: Ctx): Promise<(Paragraph | Table)
           paragraphs.push(new Paragraph({ children: textRuns(`${formatAudioTime(bookmark.time)} — ${label}`) }))
         }
         const transcript = readAudioTranscript(node.attrs?.transcript)
-        if (transcript.length) paragraphs.push(new Paragraph({ children: textRuns('Transcript', { bold: true }) }))
+        if (transcript.length) paragraphs.push(new Paragraph({ children: textRuns(ctx.options?.transcriptLabel || 'Transcript', { bold: true }) }))
         for (const segment of transcript) {
           paragraphs.push(new Paragraph({ children: textRuns(`${formatAudioTime(segment.start)} — ${segment.text.replace(/\s+/g, ' ')}`) }))
         }

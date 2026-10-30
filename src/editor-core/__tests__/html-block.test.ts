@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { EditorState, NodeSelection, TextSelection } from 'prosemirror-state'
 import type { Command } from 'prosemirror-state'
 import { DOMParser as PMDOMParser, DOMSerializer } from 'prosemirror-model'
+import { CellSelection } from 'prosemirror-tables'
 import type { EditorView } from 'prosemirror-view'
 import { nevoBaseSchema } from '../schema'
 import { createCoreCommands } from '../commands'
@@ -143,5 +144,18 @@ describe('html block insertion in text', () => {
     const { selection } = state
     expect(selection instanceof NodeSelection && selection.node.type.name).toBe('html_block')
     expect(state.doc.textContent).toBe('abcd')
+  })
+
+  it('selects the block inserted over a multi-cell selection', () => {
+    const s = nevoBaseSchema
+    const cell = (text: string) => s.node('table_cell', null, [s.node('paragraph', null, [s.text(text)])])
+    const doc = s.node('doc', null, [s.node('table', null, [s.node('table_row', null, [cell('a'), cell('b')])])])
+    let state = EditorState.create({ doc })
+    const cells: number[] = []
+    state.doc.descendants((node, pos) => { if (node.type.name === 'table_cell') cells.push(pos) })
+    state = state.apply(state.tr.setSelection(CellSelection.create(state.doc, cells[0], cells[1])))
+    createInsertHtmlCommand(s.nodes.html_block)(state, tr => { state = state.apply(tr) })
+    const { selection } = state
+    expect(selection instanceof NodeSelection && selection.node.type.name).toBe('html_block')
   })
 })

@@ -68,6 +68,7 @@ const options = computed<DocxExportOptions>(() => ({
   tocTitle: t('export.tableOfContents'),
   pageLabel: t('export.pageLabel'),
   pageOfLabel: t('export.pageOf'),
+  transcriptLabel: t('media.transcript'),
   titlePage: titlePage.value,
   runningHeader: runningHeader.value,
   exportNoteTitle: exportNoteTitle.value,
