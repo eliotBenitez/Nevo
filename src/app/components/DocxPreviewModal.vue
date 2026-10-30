@@ -179,9 +179,7 @@ onBeforeUnmount(() => {
         v-model:margin-right="marginRight"
         v-model:margin-bottom="marginBottom"
         v-model:margin-left="marginLeft"
-        :title="note.title"
         v-model:line-spacing="lineSpacing"
-        :system-fonts="systemFonts"
         v-model:paragraph-spacing="paragraphSpacing"
         v-model:page-numbers="pageNumbers"
         v-model:heading-numbers="headingNumbers"
@@ -191,6 +189,8 @@ onBeforeUnmount(() => {
         v-model:export-note-title="exportNoteTitle"
         v-model:zoom="zoom"
         v-model:fit-width="fitWidth"
+        :title="note.title"
+        :system-fonts="systemFonts"
       />
 
       <main class="docx-preview tw:relative tw:min-h-0 tw:min-w-0 tw:overflow-hidden tw:bg-surface-subtle">

@@ -123,6 +123,7 @@ describe('DocxPreviewModal', () => {
       tocTitle: expect.any(String),
       pageLabel: expect.any(String),
       pageOfLabel: expect.any(String),
+      transcriptLabel: expect.any(String),
       titlePage: false,
       runningHeader: false,
       exportNoteTitle: true,
