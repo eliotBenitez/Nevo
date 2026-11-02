@@ -58,7 +58,7 @@ onBeforeUnmount(() => {
     :close-on-backdrop="true"
     labelled-by="nv-confirm-title"
     described-by="nv-confirm-message"
-    :panel-class="variant === 'danger' ? 'nv-confirm-dialog--danger' : undefined"
+    :panel-class="variant === 'danger' ? 'nv-confirm-dialog nv-confirm-dialog--danger' : 'nv-confirm-dialog'"
     @close="cancel"
   >
     <template #header>
@@ -79,7 +79,7 @@ onBeforeUnmount(() => {
     </template>
 
     <template #footer>
-      <footer class="nv-confirm-dialog__footer tw:flex tw:justify-end tw:gap-2 tw:max-[480px]:flex-col-reverse">
+      <footer class="nv-confirm-dialog__footer tw:flex tw:justify-end tw:gap-2">
         <NvButton variant="ghost" class="nv-confirm-dialog__button" @click="cancel">
           <X :size="14" aria-hidden="true" />
           {{ cancelLabel }}
@@ -113,6 +113,20 @@ onBeforeUnmount(() => {
   height: 2px;
   content: '';
   background: linear-gradient(90deg, transparent, var(--status-danger), transparent);
+}
+
+/* A confirm stays a centered dialog on phones instead of NvModal's bottom sheet. */
+@media (max-width: 560px) {
+  .nv-modal:has(> .nv-confirm-dialog) {
+    place-items: center stretch;
+    padding:
+      max(var(--safe-area-top), 16px)
+      max(var(--safe-area-right), 16px)
+      max(var(--safe-area-bottom), 16px)
+      max(var(--safe-area-left), 16px);
+  }
+
+  .nv-modal__panel.nv-confirm-dialog { border-radius: calc(16px * var(--radius-scale, 1)); }
 }
 </style>
 
@@ -161,9 +175,9 @@ onBeforeUnmount(() => {
 
 @media (max-width: 480px) {
   .nv-confirm-dialog__footer :deep(.nv-btn) {
+    flex: 1 1 0;
+    min-width: 0;
     min-height: 44px;
-    width: 100%;
-    justify-content: center;
   }
 }
 </style>
