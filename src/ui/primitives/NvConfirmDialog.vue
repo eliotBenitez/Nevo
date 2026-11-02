@@ -58,7 +58,7 @@ onBeforeUnmount(() => {
     :close-on-backdrop="true"
     labelled-by="nv-confirm-title"
     described-by="nv-confirm-message"
-    :panel-class="variant === 'danger' ? 'nv-confirm-dialog nv-confirm-dialog--danger' : 'nv-confirm-dialog'"
+    :panel-class="variant === 'danger' ? 'nv-confirm-dialog--danger' : undefined"
     @close="cancel"
   >
     <template #header>
@@ -113,22 +113,7 @@ onBeforeUnmount(() => {
   height: 2px;
   content: '';
   background: linear-gradient(90deg, transparent, var(--status-danger), transparent);
-}
-
-/* A confirm stays a centered dialog on phones instead of NvModal's bottom sheet. */
-@media (max-width: 560px) {
-  .nv-modal:has(> .nv-confirm-dialog) {
-    place-items: center stretch;
-    padding:
-      max(var(--safe-area-top), 16px)
-      max(var(--safe-area-right), 16px)
-      max(var(--safe-area-bottom), 16px)
-      max(var(--safe-area-left), 16px);
-  }
-
-  .nv-modal__panel.nv-confirm-dialog { border-radius: calc(16px * var(--radius-scale, 1)); }
-}
-</style>
+}</style>
 
 <style scoped>
 /* Shell (backdrop, panel box, position, radius, animation) is owned by NvModal
