@@ -848,6 +848,17 @@ describe('WorkspaceShell', () => {
     wrapper.unmount()
   })
 
+  it('hides the desktop titlebar on the phone history picker', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true })
+    updateViewport()
+
+    const { wrapper } = await mountShell({ initialRoute: '/workspace/history' })
+    window.dispatchEvent(new Event('resize'))
+    await flushAnimationFrame()
+
+    expect(wrapper.find('.workspace-titlebar').exists()).toBe(false)
+  })
+
   it('uses the mobile editor header and opens the note details screen', async () => {
     Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true })
     updateViewport()

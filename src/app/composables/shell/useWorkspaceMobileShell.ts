@@ -158,6 +158,7 @@ export function useWorkspaceMobileShell(options: UseWorkspaceMobileShellOptions)
       isMobilePrimaryView.value
       || Boolean(activeNoteId.value)
       || isGraphView.value
+      || isHistoryIndex.value
       || isKanbanView.value
       || isSettingsView.value
       || isArchiveView.value
