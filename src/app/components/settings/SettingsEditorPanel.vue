@@ -60,7 +60,6 @@ const editorStatsOptions = ['off', 'corner'].map(v => ({ value: v, label: opt('e
         <SettingsRow
           :title="t('settings.editor.documentWidth.title')"
           :description="t('settings.editor.documentWidth.panelDescription')"
-          class="settings-row--inline-control"
         >
           <NvSelect
             :model-value="settings.appearance.editorLineWidth"
@@ -182,7 +181,6 @@ const editorStatsOptions = ['off', 'corner'].map(v => ({ value: v, label: opt('e
           :title="t('settings.editor.slashMenuLayout.title')"
           :description="t('settings.editor.slashMenuLayout.description')"
           :disabled="!settings.editor.slashCommands"
-          class="settings-row--inline-control"
         >
           <NvSelect
             :model-value="settings.editor.slashMenuLayout"

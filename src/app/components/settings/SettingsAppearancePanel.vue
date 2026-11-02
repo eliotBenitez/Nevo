@@ -147,7 +147,6 @@ const roundnessIndex = computed({
         <SettingsRow
           :title="t('settings.appearance.mode.title')"
           :description="t('settings.appearance.mode.description')"
-          class="settings-row--inline-control"
         >
           <NvSelect
             :model-value="themeStore.theme"
@@ -177,7 +176,6 @@ const roundnessIndex = computed({
         <SettingsRow
           :title="t('settings.appearance.contrastMode.title')"
           :description="t('settings.appearance.contrastMode.description')"
-          class="settings-row--inline-control"
         >
           <NvSelect
             :model-value="settings.appearance.contrastMode"
@@ -231,7 +229,6 @@ const roundnessIndex = computed({
         <SettingsRow
           :title="t('settings.appearance.interfaceDensity.title')"
           :description="t('settings.appearance.interfaceDensity.description')"
-          class="settings-row--inline-control"
         >
           <NvSelect
             :model-value="appConfig.interfaceDensity"
@@ -246,7 +243,6 @@ const roundnessIndex = computed({
         <SettingsRow
           :title="t('settings.appearance.iconSet.title')"
           :description="t('settings.appearance.iconSet.description')"
-          class="settings-row--inline-control"
         >
           <NvSelect
             :model-value="appConfig.iconSet"

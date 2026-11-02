@@ -134,7 +134,6 @@ async function setSnapshotRetentionCount(value: number) {
         <SettingsRow
           :title="t('settings.files.trashRetention.title')"
           :description="t('settings.files.trashRetention.description')"
-          class="settings-row--inline-control"
         >
           <NvSelect
             :model-value="String(settings.files.trashRetentionDays)"
