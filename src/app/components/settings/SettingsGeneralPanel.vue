@@ -133,6 +133,7 @@ const noteOptions = computed(() => {
         <SettingsRow
           :title="t('settings.general.productTour.title')"
           :description="t('settings.general.productTour.description')"
+          class="settings-row--inline-control"
         >
           <button type="button" class="nv-btn nv-btn--ghost" @click="takeTourAgain">
             <RotateCcw :size="14" aria-hidden="true" />
