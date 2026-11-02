@@ -24,17 +24,8 @@ function opt(key: string, value: string): string {
   return t(`settings.options.${key}.${value}`)
 }
 
-const lineWidthOptions = [
-  { id: 'narrow' as EditorLineWidth, label: opt('lineWidth', 'narrow') },
-  { id: 'medium' as EditorLineWidth, label: opt('lineWidth', 'medium') },
-  { id: 'wide' as EditorLineWidth, label: opt('lineWidth', 'wide') },
-]
-
-const slashMenuLayoutOptions = [
-  { id: 'list' as SlashMenuLayout, label: opt('slashMenuLayout', 'list') },
-  { id: 'grid' as SlashMenuLayout, label: opt('slashMenuLayout', 'grid') },
-  { id: 'preview' as SlashMenuLayout, label: opt('slashMenuLayout', 'preview') },
-]
+const lineWidthOptions = ['narrow', 'medium', 'wide'].map(v => ({ value: v, label: opt('lineWidth', v) }))
+const slashMenuLayoutOptions = ['list', 'grid', 'preview'].map(v => ({ value: v, label: opt('slashMenuLayout', v) }))
 
 const focusModeOptions = ['off', 'soft'].map(v => ({ value: v, label: opt('focusMode', v) }))
 const typewriterPositionOptions = ['upper', 'center', 'lower'].map(v => ({ value: v, label: opt('typewriterPosition', v) }))
@@ -66,24 +57,18 @@ const editorStatsOptions = ['off', 'corner'].map(v => ({ value: v, label: opt('e
 
       <!-- Layout -->
       <SettingsGroup :title="t('settings.editor.groups.layout')">
-        <!-- Width segmented -->
         <SettingsRow
           :title="t('settings.editor.documentWidth.title')"
           :description="t('settings.editor.documentWidth.panelDescription')"
+          class="settings-row--inline-control"
         >
-          <div class="segmented" role="group" :aria-label="t('settings.editor.documentWidth.title')">
-            <button
-              v-for="optItem in lineWidthOptions"
-              :key="optItem.id"
-              type="button"
-              class="segmented__item"
-              :class="{ 'is-active': settings.appearance.editorLineWidth === optItem.id }"
-              :aria-pressed="settings.appearance.editorLineWidth === optItem.id"
-              @click="u(d => { d.appearance.editorLineWidth = optItem.id })"
-            >
-              {{ optItem.label }}
-            </button>
-          </div>
+          <NvSelect
+            :model-value="settings.appearance.editorLineWidth"
+            :options="lineWidthOptions"
+            :min-width="150"
+            :aria-label="t('settings.editor.documentWidth.title')"
+            @update:model-value="v => u(d => { d.appearance.editorLineWidth = v as EditorLineWidth })"
+          />
         </SettingsRow>
 
         <!-- Font size range with mono value -->
@@ -197,21 +182,16 @@ const editorStatsOptions = ['off', 'corner'].map(v => ({ value: v, label: opt('e
           :title="t('settings.editor.slashMenuLayout.title')"
           :description="t('settings.editor.slashMenuLayout.description')"
           :disabled="!settings.editor.slashCommands"
+          class="settings-row--inline-control"
         >
-          <div class="segmented" role="group" :aria-label="t('settings.editor.slashMenuLayout.title')">
-            <button
-              v-for="optItem in slashMenuLayoutOptions"
-              :key="optItem.id"
-              type="button"
-              class="segmented__item"
-              :class="{ 'is-active': settings.editor.slashMenuLayout === optItem.id }"
-              :aria-pressed="settings.editor.slashMenuLayout === optItem.id"
-              :disabled="!settings.editor.slashCommands"
-              @click="u(d => { d.editor.slashMenuLayout = optItem.id })"
-            >
-              {{ optItem.label }}
-            </button>
-          </div>
+          <NvSelect
+            :model-value="settings.editor.slashMenuLayout"
+            :options="slashMenuLayoutOptions"
+            :min-width="150"
+            :disabled="!settings.editor.slashCommands"
+            :aria-label="t('settings.editor.slashMenuLayout.title')"
+            @update:model-value="v => u(d => { d.editor.slashMenuLayout = v as SlashMenuLayout })"
+          />
         </SettingsRow>
 
         <SettingsRow

@@ -126,36 +126,6 @@
   }
 }
 
-.segmented {
-  display: inline-flex;
-  padding: 2px;
-  border-radius: calc(8px * var(--radius-scale, 1));
-  border: 1px solid transparent;
-  background: var(--surface-subtle);
-}
-
-.segmented__item {
-  height: 26px;
-  padding: 0 10px;
-  border: none;
-  border-radius: calc(6px * var(--radius-scale, 1));
-  background: transparent;
-  color: var(--text-muted);
-  font: 500 12px var(--font-ui);
-  cursor: pointer;
-}
-
-.segmented__item.is-active {
-  background: var(--surface-raised);
-  color: var(--text-primary);
-  box-shadow: var(--shadow-raised);
-}
-
-.segmented__item:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--focus-ring);
-}
-
 /* Shared input hook (settings rows, plugin forms, hotkeys). Layered so `tw:`
    utilities on a consumer element override it; contextual overrides in
    settings.css stay unlayered and keep winning as before. */

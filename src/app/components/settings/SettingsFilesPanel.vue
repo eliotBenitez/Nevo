@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { Archive, Database, FileText, Folder, FolderOpen, HardDrive, Image, Plug, Trash2 } from '../../../ui/icons'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import NvNumberInput from '../../../ui/primitives/NvNumberInput.vue'
+import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import SettingsSectionHeader from './ui/SettingsSectionHeader.vue'
 import SettingsGroup from './ui/SettingsGroup.vue'
 import SettingsRow from './ui/SettingsRow.vue'
@@ -18,10 +19,10 @@ const workspaceStore = useWorkspaceStore()
 const { settings, diagnostics, activePath, appMetadata } = storeToRefs(workspaceStore)
 
 const trashRetentionOptions = computed(() => [
-  { value: 7, label: t('settings.files.trashRetention.7days') },
-  { value: 30, label: t('settings.files.trashRetention.30days') },
-  { value: 90, label: t('settings.files.trashRetention.90days') },
-  { value: 0, label: t('settings.files.trashRetention.never') },
+  { value: '7', label: t('settings.files.trashRetention.7days') },
+  { value: '30', label: t('settings.files.trashRetention.30days') },
+  { value: '90', label: t('settings.files.trashRetention.90days') },
+  { value: '0', label: t('settings.files.trashRetention.never') },
 ])
 
 function setTrashRetention(days: number) {
@@ -133,21 +134,15 @@ async function setSnapshotRetentionCount(value: number) {
         <SettingsRow
           :title="t('settings.files.trashRetention.title')"
           :description="t('settings.files.trashRetention.description')"
-          layout="stacked"
+          class="settings-row--inline-control"
         >
-          <div class="segmented" role="group" :aria-label="t('settings.files.trashRetention.title')">
-            <button
-              v-for="opt in trashRetentionOptions"
-              :key="opt.value"
-              type="button"
-              class="segmented__item"
-              :class="{ 'is-active': settings.files.trashRetentionDays === opt.value }"
-              :aria-pressed="settings.files.trashRetentionDays === opt.value"
-              @click="setTrashRetention(opt.value)"
-            >
-              {{ opt.label }}
-            </button>
-          </div>
+          <NvSelect
+            :model-value="String(settings.files.trashRetentionDays)"
+            :options="trashRetentionOptions"
+            :min-width="150"
+            :aria-label="t('settings.files.trashRetention.title')"
+            @update:model-value="v => setTrashRetention(Number(v))"
+          />
         </SettingsRow>
 
         <SettingsRow

@@ -3,6 +3,7 @@ import { createI18n } from 'vue-i18n'
 import { createPinia, setActivePinia } from 'pinia'
 import { describe, expect, it, vi } from 'vitest'
 import SettingsEditorPanel from './SettingsEditorPanel.vue'
+import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { createDefaultWorkspaceSettings } from '../../../utils/workspace-settings/defaults'
 import en from '../../../locales/en.json'
@@ -22,10 +23,10 @@ describe('SettingsEditorPanel slash menu layout', () => {
       store.settings = draft
     })
     const wrapper = mount(SettingsEditorPanel, { global: { plugins: [i18n] } })
-    const group = wrapper.get('[role="group"][aria-label="Slash menu view"]')
-    const options = group.findAll('button')
-    expect(options.map(option => option.text())).toEqual(['List', 'Tiles', 'Previews'])
-    await options[2].trigger('click')
+    const select = wrapper.findAllComponents(NvSelect).find(s => s.props('ariaLabel') === 'Slash menu view')!
+    expect(select.props('options').map(option => option.label)).toEqual(['List', 'Tiles', 'Previews'])
+    select.vm.$emit('update:modelValue', 'preview')
+    await wrapper.vm.$nextTick()
     expect(store.settings.editor.slashMenuLayout).toBe('preview')
   })
 })
