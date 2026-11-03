@@ -9,6 +9,7 @@ import { useWorkspaceStore } from './workspace'
 import { workspaceHandleKey } from '../core/workspace-backend'
 import { createNoteCache } from '../core/document-session/noteCache'
 import { createSaveQueue } from '../core/document-session/saveQueue'
+import { createExternalWriteGate } from '../core/document-session/externalWriteGate'
 import { getEditorSession, suspendEditorPersistence } from '../core/document-session/editorSessionRegistry'
 
 export type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
@@ -18,6 +19,7 @@ export type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 // opened notes is meant to survive across, say, closing and reopening the
 // history modal, not just across mutations within one active session.
 const noteCache = createNoteCache()
+const externalWrites = createExternalWriteGate()
 
 const EMPTY_PROPERTIES: NoteProperties = {
   type: null,
@@ -171,6 +173,11 @@ export const useNoteStore = defineStore('note', () => {
     const sessionToken = ++noteSessionToken
     resetNoteState()
 
+    if (externalWrites.isPending(noteId)) {
+      await externalWrites.settled(noteId)
+      if (sessionToken !== noteSessionToken || workspaceStore.backend !== backend) return
+    }
+
     const cachedNote = noteCache.get(handleKey, noteId)
     if (cachedNote && !options.force) {
       noteCache.set(handleKey, cachedNote)
@@ -185,7 +192,14 @@ export const useNoteStore = defineStore('note', () => {
 
     let note: NoteDocument
     try {
-      note = await backend.loadNote(noteId)
+      for (;;) {
+        const generation = externalWrites.generation(noteId)
+        note = await backend.loadNote(noteId)
+        // An external write started mid-read: this copy may predate it.
+        if (externalWrites.generation(noteId) === generation) break
+        await externalWrites.settled(noteId)
+        if (sessionToken !== noteSessionToken || workspaceStore.backend !== backend) return
+      }
     } catch (error) {
       await appLogger.error({
         source: 'frontend.note',
@@ -243,10 +257,11 @@ export const useNoteStore = defineStore('note', () => {
     if (!backend) return
     const handleKey = workspaceHandleKey(backend.handle)
     noteCache.clearExcept(handleKey)
-    if (noteCache.get(handleKey, noteId)) return
+    if (noteCache.get(handleKey, noteId) || externalWrites.isPending(noteId)) return
     try {
+      const generation = externalWrites.generation(noteId)
       const note = await backend.loadNote(noteId)
-      if (workspaceStore.backend !== backend) return
+      if (workspaceStore.backend !== backend || externalWrites.generation(noteId) !== generation) return
       noteCache.set(handleKey, keepContentRaw(note))
     } catch (error) {
       await appLogger.error({
@@ -264,6 +279,21 @@ export const useNoteStore = defineStore('note', () => {
     const backend = useWorkspaceStore().backend
     if (!backend) return
     noteCache.delete(workspaceHandleKey(backend.handle), noteId)
+  }
+
+  /**
+   * Runs a write to a note that is not open in the editor (an MCP agent's
+   * edit). Opening that note waits until the write has finished and its cache
+   * entry is dropped, so the editor never mounts the pre-write body.
+   */
+  function writeNoteExternally<T>(noteId: string, write: () => Promise<T>): Promise<T> {
+    return externalWrites.run(noteId, async () => {
+      try {
+        return await write()
+      } finally {
+        invalidateNoteCache(noteId)
+      }
+    })
   }
 
   /**
@@ -591,6 +621,7 @@ export const useNoteStore = defineStore('note', () => {
     flushDurably,
     prewarmCache,
     invalidateNoteCache,
+    writeNoteExternally,
     setContent,
     setCanvas,
     setNotebook,

@@ -58,7 +58,7 @@ async function loadClosedNote(noteId: string): Promise<ClosedNote> {
   const noteStore = useNoteStore()
   if (noteStore.activeNote?.id === noteId) {
     assertEditorFormatSupportsEdit(noteStore.getActiveNoteFormat(noteId))
-    throw new EditorUnavailableError(`Note ${noteId} is still opening in the editor. Try again in a moment.`)
+    throw new EditorUnavailableError(`Note ${noteId} is open or opening in the editor. Read a fresh snapshot and retry.`)
   }
   const backend = useWorkspaceStore().backend
   if (!backend) throw new EditorUnavailableError('No workspace is open in Nevo.')
@@ -79,26 +79,30 @@ async function loadClosedNote(noteId: string): Promise<ClosedNote> {
 }
 
 async function commit(closed: ClosedNote, tr: Transaction): Promise<ApplyEditResult> {
-  const noteStore = useNoteStore()
   const workspaceStore = useWorkspaceStore()
   const noteId = closed.note.id
-  if (noteStore.activeNote?.id === noteId || workspaceStore.backend !== closed.backend) {
-    throw new EditorUnavailableError(`Note ${noteId} was opened while the edit was prepared. Read a fresh snapshot and retry.`)
+  if (workspaceStore.backend !== closed.backend) {
+    throw new EditorUnavailableError('The workspace changed while the edit was prepared.')
   }
 
   const content = serializeDocToNoteContent(closed.state.apply(tr).doc)
   const note: NoteDocument = { ...closed.note, content, updatedAt: new Date().toISOString() }
   await closed.backend.saveNote(note)
 
-  noteStore.invalidateNoteCache(noteId)
   useTreeStore().syncNoteMeta(noteId, { title: note.title, icon: note.icon }, note.updatedAt)
   void workspaceStore.refreshSidebarNotePreviews()
-  // Opened while the write was in flight, the editor may hold the old body;
-  // reload it unless the user has already typed into it.
-  if (noteStore.activeNote?.id === noteId && !noteStore.isDirty) {
-    await noteStore.loadNote(noteId, { force: true })
-  }
   return { applied: true, noteId, revision: persistedRevision(content) }
+}
+
+/**
+ * Load, edit and save run as one gated write: opening the note waits for it,
+ * so the editor can never mount the pre-write body and autosave it back.
+ */
+function editClosedNote(noteId: string, build: (closed: ClosedNote) => Transaction): Promise<ApplyEditResult> {
+  return useNoteStore().writeNoteExternally(noteId, async () => {
+    const closed = await loadClosedNote(noteId)
+    return commit(closed, build(closed))
+  })
 }
 
 export async function readClosedNoteSnapshot(noteId: string): Promise<EditorSnapshotResult> {
@@ -112,12 +116,10 @@ export async function readClosedNoteSnapshot(noteId: string): Promise<EditorSnap
   }
 }
 
-export async function applyClosedNoteEdit(request: ApplyEditRequest): Promise<ApplyEditResult> {
-  const closed = await loadClosedNote(request.noteId)
-  return commit(closed, buildEditTransaction(closed.state, request, closed.revision))
+export function applyClosedNoteEdit(request: ApplyEditRequest): Promise<ApplyEditResult> {
+  return editClosedNote(request.noteId, closed => buildEditTransaction(closed.state, request, closed.revision))
 }
 
-export async function writeClosedNoteMarkdown(request: WriteMarkdownRequest): Promise<ApplyEditResult> {
-  const closed = await loadClosedNote(request.noteId)
-  return commit(closed, buildMarkdownTransaction(closed.state, request, closed.revision))
+export function writeClosedNoteMarkdown(request: WriteMarkdownRequest): Promise<ApplyEditResult> {
+  return editClosedNote(request.noteId, closed => buildMarkdownTransaction(closed.state, request, closed.revision))
 }

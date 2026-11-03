@@ -860,4 +860,52 @@ describe('useNoteStore', () => {
       expect(noteStore.activeNote?.content.content?.[0]?.content?.[0]?.text).toBe('Restored from disk')
     })
   })
+
+  describe('writeNoteExternally', () => {
+    const textOf = (note: NoteDocument | null) => note?.content.content?.[0]?.content?.[0]?.text
+
+    it('makes opening a note wait for an external write instead of mounting the cached body', async () => {
+      const noteStore = useNoteStore()
+      const mockedNoteCommands = vi.mocked(noteCommands)
+      mockedNoteCommands.loadNote.mockResolvedValue(createNote('gated-1', 'Before agent'))
+      await noteStore.loadNote('gated-1')
+      noteStore.clearNote()
+
+      const write = deferred<void>()
+      const writing = noteStore.writeNoteExternally('gated-1', async () => {
+        await write.promise
+        mockedNoteCommands.loadNote.mockResolvedValue(createNote('gated-1', 'After agent'))
+      })
+      const opening = noteStore.loadNote('gated-1')
+      await flushMicrotasks()
+      expect(noteStore.activeNote).toBeNull()
+
+      write.resolve()
+      await Promise.all([writing, opening])
+
+      expect(textOf(noteStore.activeNote)).toBe('After agent')
+    })
+
+    it('re-reads a note whose load overlapped the start of an external write', async () => {
+      const noteStore = useNoteStore()
+      const mockedNoteCommands = vi.mocked(noteCommands)
+      const staleRead = deferred<NoteDocument>()
+      mockedNoteCommands.loadNote.mockReturnValueOnce(staleRead.promise)
+
+      const opening = noteStore.loadNote('gated-2')
+      await flushMicrotasks()
+      const writing = noteStore.writeNoteExternally('gated-2', async () => {
+        mockedNoteCommands.loadNote.mockResolvedValue(createNote('gated-2', 'After agent'))
+      })
+      staleRead.resolve(createNote('gated-2', 'Before agent'))
+      await Promise.all([writing, opening])
+
+      expect(mockedNoteCommands.loadNote).toHaveBeenCalledTimes(2)
+      expect(textOf(noteStore.activeNote)).toBe('After agent')
+    })
+  })
 })
+
+async function flushMicrotasks() {
+  for (let index = 0; index < 5; index += 1) await Promise.resolve()
+}

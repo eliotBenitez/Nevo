@@ -3,6 +3,7 @@ import { EditorState } from 'prosemirror-state'
 import { EditorView } from 'prosemirror-view'
 import { nevoBaseSchema } from '../../../editor-core/schema'
 import type { NoteDocument } from '../../../types/note'
+import { createExternalWriteGate } from '../../../core/document-session/externalWriteGate'
 import { clearActiveEditor, registerActiveEditor } from './activeEditorRegistry'
 import {
   applyClosedNoteEdit,
@@ -12,13 +13,13 @@ import {
   writeClosedNoteMarkdown,
 } from './mcpClosedNoteEdits'
 
+const gate = createExternalWriteGate()
+
 const mocks = vi.hoisted(() => ({
   noteStore: {
     activeNote: null as { id: string } | null,
-    isDirty: false,
     getActiveNoteFormat: vi.fn(() => ({ status: 'document', editable: true })),
-    invalidateNoteCache: vi.fn(),
-    loadNote: vi.fn(),
+    writeNoteExternally: vi.fn(),
   },
   workspaceStore: {
     backend: null as unknown,
@@ -62,7 +63,7 @@ describe('mcpClosedNoteEdits', () => {
     clearActiveEditor()
     vi.clearAllMocks()
     mocks.noteStore.activeNote = null
-    mocks.noteStore.isDirty = false
+    mocks.noteStore.writeNoteExternally.mockImplementation((noteId: string, write: () => Promise<unknown>) => gate.run(noteId, write))
   })
 
   it('routes to the live editor only for the open note', () => {
@@ -102,9 +103,21 @@ describe('mcpClosedNoteEdits', () => {
     expect(backend.saveNote).toHaveBeenCalledOnce()
     expect(JSON.stringify(backend.stored.content)).toContain('Hello world')
     expect(result.revision).toBe(persistedRevision(backend.stored.content))
-    expect(mocks.noteStore.invalidateNoteCache).toHaveBeenCalledWith('note-2')
+    expect(mocks.noteStore.writeNoteExternally).toHaveBeenCalledWith('note-2', expect.any(Function))
     expect(mocks.treeStore.syncNoteMeta).toHaveBeenCalledWith('note-2', { title: 'Closed', icon: 'N' }, backend.stored.updatedAt)
-    expect(mocks.noteStore.loadNote).not.toHaveBeenCalled()
+  })
+
+  it('runs concurrent edits to one closed note one after another', async () => {
+    const backend = createBackend(storedNote(paragraphDoc('Intro')))
+    mocks.workspaceStore.backend = backend
+
+    await Promise.all([
+      writeClosedNoteMarkdown({ noteId: 'note-2', markdown: 'First', mode: 'append' }),
+      writeClosedNoteMarkdown({ noteId: 'note-2', markdown: 'Second', mode: 'append' }),
+    ])
+
+    // Unserialized, both would read "Intro" and the second save would drop "First".
+    expect(JSON.stringify(backend.stored.content)).toMatch(/Intro.*First.*Second/)
   })
 
   it('refuses an edit quoting a revision of an older body', async () => {
@@ -157,32 +170,7 @@ describe('mcpClosedNoteEdits', () => {
     mocks.noteStore.activeNote = { id: 'note-2' }
 
     await expect(writeClosedNoteMarkdown({ noteId: 'note-2', markdown: 'x', mode: 'append' }))
-      .rejects.toThrow(/still opening/)
+      .rejects.toThrow(/open or opening in the editor/)
     expect(backend.loadNoteWithContent).not.toHaveBeenCalled()
-  })
-
-  it('refuses to save when the note was opened while it was being read', async () => {
-    const backend = createBackend(storedNote(paragraphDoc('Hello')))
-    backend.loadNoteWithContent.mockImplementationOnce(async () => {
-      mocks.noteStore.activeNote = { id: 'note-2' }
-      return backend.stored
-    })
-    mocks.workspaceStore.backend = backend
-
-    await expect(writeClosedNoteMarkdown({ noteId: 'note-2', markdown: 'x', mode: 'append' }))
-      .rejects.toThrow(/was opened while the edit was prepared/)
-    expect(backend.saveNote).not.toHaveBeenCalled()
-  })
-
-  it('reloads a note opened during the write so the editor shows the new body', async () => {
-    const backend = createBackend(storedNote(paragraphDoc('Hello')))
-    backend.saveNote.mockImplementationOnce(async () => {
-      mocks.noteStore.activeNote = { id: 'note-2' }
-    })
-    mocks.workspaceStore.backend = backend
-
-    await writeClosedNoteMarkdown({ noteId: 'note-2', markdown: 'x', mode: 'append' })
-
-    expect(mocks.noteStore.loadNote).toHaveBeenCalledWith('note-2', { force: true })
   })
 })
