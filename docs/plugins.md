@@ -141,6 +141,13 @@ action invokes the stored handler later. For more on the call order and the
 permitted descriptors, see
 [Contributions and lifecycle](./plugin-sdk/contributions.md).
 
+Each plugin has its own page in Settings → Plugins, opened from its card in the
+installed list or the marketplace catalog. The page shows the manifest details
+(version, source, execution mode, devices, permissions, network policy), the
+plugin's actions, and an optional top-level `README.md` rendered as plain
+Markdown without links, images, or raw HTML. Fields from `settingsSchema` open
+in a settings dialog from the card or the page.
+
 ## Public imports
 
 The main entry point `@nevo/plugin-sdk` exports:

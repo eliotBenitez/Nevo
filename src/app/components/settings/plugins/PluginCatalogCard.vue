@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Download, ExternalLink, RefreshCw, Trash2 } from '../../../../ui/icons'
+import { ChevronRight, Download, ExternalLink, RefreshCw, Trash2 } from '../../../../ui/icons'
 import type { MarketplaceCatalogItem, MarketplacePluginStatus, PluginManifest } from '../../../../types/workspace'
 import { useWorkspaceStore } from '../../../../stores/workspace'
 import { isPluginAvailableForApp } from '../../../../core/plugins/runtimeAvailability'
+import { pluginCapabilities } from './pluginDisplay'
 import NvButton from '../../../../ui/primitives/NvButton.vue'
 import SettingsObjectCard from '../ui/SettingsObjectCard.vue'
 
@@ -19,6 +20,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
+  (e: 'open'): void
   (e: 'install'): void
   (e: 'update'): void
   (e: 'remove'): void
@@ -37,18 +39,7 @@ const description = computed(() => (
   catalogManifest(props.item)?.description || props.item.manifestError || t('settings.plugins.noDescription')
 ))
 
-const capabilities = computed(() => {
-  const manifest = catalogManifest(props.item)
-  if (!manifest) return []
-  if (manifest.executionMode === 'sandboxed-worker') {
-    return (manifest.capabilities ?? []).slice(0, 6)
-  }
-  return [
-    ...manifest.editorCapabilities,
-    ...(manifest.uiCapabilities ?? []),
-    ...(manifest.workspaceCapabilities ?? []),
-  ].slice(0, 6)
-})
+const capabilities = computed(() => (props.item.manifest ? pluginCapabilities(props.item.manifest).slice(0, 6) : []))
 
 const domains = computed(() => props.item.manifest?.network?.hosts ?? [])
 
@@ -88,8 +79,17 @@ const isAvailableOnDevice = computed(() => !props.item.manifest || isPluginAvail
     <div class="plugin-card__head tw:flex tw:items-start tw:justify-between tw:gap-3">
       <div>
         <div class="plugin-card__title tw:text-content-primary tw:text-[13.5px] tw:font-[560] tw:[overflow-wrap:anywhere]">
-          {{ title }}
-          <span v-if="item.manifest" class="plugin-card__version tw:text-content-muted tw:text-[11px] tw:font-nv-mono">v{{ item.manifest.version }}</span>
+          <button
+            type="button"
+            class="plugin-title-button tw:inline-flex tw:max-w-full tw:flex-wrap tw:items-baseline tw:gap-x-1.5 tw:border-0 tw:bg-transparent tw:p-0 tw:text-start tw:text-inherit tw:font-[inherit] tw:cursor-pointer tw:hover:text-accent"
+            :aria-label="t('settings.plugins.page.open', { plugin: title })"
+            :data-plugin-open="item.pluginId"
+            @click="emit('open')"
+          >
+            <span>{{ title }}</span>
+            <span v-if="item.manifest" class="plugin-card__version tw:text-content-muted tw:text-[11px] tw:font-nv-mono">v{{ item.manifest.version }}</span>
+            <ChevronRight :size="14" class="tw:shrink-0 tw:self-center tw:text-content-muted" aria-hidden="true" />
+          </button>
         </div>
         <div class="plugin-card__author tw:mt-0.5 tw:text-content-muted tw:text-[11px] tw:font-nv-mono">
           {{ item.pluginId }}

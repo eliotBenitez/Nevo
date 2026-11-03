@@ -40,7 +40,7 @@ function mountCard(runtime: AppMetadata['runtime']) {
   const workspaceStore = useWorkspaceStore()
   workspaceStore.appMetadata = { runtime } as AppMetadata
   return mount(PluginCard, {
-    props: { plugin: desktopOnlyPlugin(), isValid: true, isExpanded: false, isLoading: false },
+    props: { plugin: desktopOnlyPlugin(), isValid: true, isLoading: false },
     global: { plugins: [i18n] },
   })
 }
@@ -54,5 +54,23 @@ describe('PluginCard', () => {
   it('does not mark a plugin unavailable on a listed runtime', () => {
     const wrapper = mountCard('desktop')
     expect(wrapper.text()).not.toContain(UNAVAILABLE_TEXT)
+  })
+
+  it('emits open from the title button', async () => {
+    const wrapper = mountCard('desktop')
+    await wrapper.find('.plugin-title-button').trigger('click')
+    expect(wrapper.emitted('open')).toHaveLength(1)
+  })
+
+  it('emits openSettings from the configure button', async () => {
+    setActivePinia(createPinia())
+    const plugin = { ...desktopOnlyPlugin(), settingsSchema: [{ key: 'k' }] } as unknown as PluginManifest
+    const wrapper = mount(PluginCard, {
+      props: { plugin, isValid: true, isLoading: false },
+      global: { plugins: [i18n] },
+    })
+    const configure = wrapper.findAll('button').find(b => b.text() === en.settings.plugins.settings.configure)
+    await configure!.trigger('click')
+    expect(wrapper.emitted('openSettings')).toHaveLength(1)
   })
 })

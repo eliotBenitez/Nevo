@@ -10,7 +10,7 @@ pub(super) const MARKETPLACE_REPO: &str = "eliotBenitez/nevo-marketplace";
 pub(super) const MARKETPLACE_BRANCH: &str = "main";
 const MARKETPLACE_TREE_URL: &str =
     "https://api.github.com/repos/eliotBenitez/nevo-marketplace/git/trees/main?recursive=1";
-const MARKETPLACE_RAW_BASE: &str =
+pub(super) const MARKETPLACE_RAW_BASE: &str =
     "https://raw.githubusercontent.com/eliotBenitez/nevo-marketplace/main";
 pub(super) const MARKETPLACE_META_FILE: &str = ".nevo-marketplace.json";
 
@@ -34,7 +34,7 @@ pub(super) struct MarketplaceFile {
     pub(super) sha: String,
 }
 
-fn catalog_client() -> Result<reqwest::Client, String> {
+pub(super) fn catalog_client() -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
         .connect_timeout(std::time::Duration::from_secs(10))
         .timeout(std::time::Duration::from_secs(30))
@@ -231,7 +231,7 @@ pub(super) fn safe_relative_path(path: &str) -> Result<PathBuf, String> {
     Ok(candidate.to_path_buf())
 }
 
-fn encode_raw_path(path: &str) -> String {
+pub(super) fn encode_raw_path(path: &str) -> String {
     path.split('/')
         .map(|segment| segment.replace(' ', "%20"))
         .collect::<Vec<_>>()

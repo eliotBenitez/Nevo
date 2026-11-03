@@ -1,0 +1,26 @@
+/* Plugin README prose (Settings > Plugins page). Markup comes from AiChatMarkdown. */
+.plugin-readme { max-width: 72ch; min-width: 0; font-size: 14px; line-height: 1.65; color: var(--text-primary); display: flex; flex-direction: column; gap: 12px; }
+.plugin-readme p { margin: 0; text-wrap: pretty; overflow-wrap: anywhere; }
+.plugin-readme h3 { margin: 20px 0 6px; font-size: 16px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.plugin-readme h4 { margin: 12px 0 0; font-size: 14.5px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.plugin-readme h5, .plugin-readme h6 { margin: 8px 0 0; font-size: 13.5px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.plugin-readme > :first-child { margin-top: 0; }
+.plugin-readme ul, .plugin-readme ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.plugin-readme li { overflow-wrap: anywhere; }
+.plugin-readme .ai-li-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.plugin-readme .ai-task { list-style: none; display: flex; gap: 6px; margin-left: -20px; }
+.plugin-readme .ai-task input { flex: none; margin: 6px 0 0; }
+.plugin-readme code { font-family: var(--font-mono); font-size: 12.5px; padding: 1px 4px; border-radius: var(--radius-sm); background: var(--surface-subtle); }
+.plugin-readme pre { margin: 0; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-subtle); overflow-x: auto; white-space: pre; font-size: 12.5px; line-height: 1.5; }
+.plugin-readme pre code { padding: 0; background: transparent; }
+.plugin-readme blockquote { margin: 0; padding-left: 12px; border-left: 1px solid var(--border-strong); color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px; }
+.plugin-readme .ai-table-wrap { overflow-x: auto; }
+.plugin-readme table { border-collapse: collapse; font-size: 13px; }
+.plugin-readme th, .plugin-readme td { border: 1px solid var(--border-default); padding: 5px 9px; text-align: left; vertical-align: top; }
+.plugin-readme th { font-weight: 600; background: var(--surface-subtle); }
+.plugin-readme hr { width: 100%; margin: 4px 0; border: 0; border-top: 1px solid var(--border-default); }
+
+
+@media (prefers-reduced-motion: reduce) {
+  .plugin-loading-icon { animation: none; }
+}

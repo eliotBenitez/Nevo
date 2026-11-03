@@ -3,6 +3,7 @@
 @import './app/workspace-shell.css';
 @import './app/ai-chat.css';
 @import './app/ai-chat-messages.css';
+@import './app/plugin-page.css';
 @import './app/mobile-workspace.css';
 @import './app/pdf-preview-modal.css';
 @import './app/docx-preview-modal.css';

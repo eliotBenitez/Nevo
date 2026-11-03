@@ -271,11 +271,18 @@ For local testing, copy the contents of `dist/` into:
 ```text
 <workspace>/.nevo/plugins/acme.hello/
 ├── index.js
-└── manifest.json
+├── manifest.json
+└── README.md        (optional)
 ```
 
 The directory name must exactly match `manifest.id`. After copying, restart Nevo
 or reopen the workspace, then check the plugin in Settings → Plugins.
+
+An optional `README.md` (any letter case, up to 256 KiB, UTF-8) at the top of
+the plugin folder is shown on the plugin's page in Settings → Plugins, both for
+installed plugins and for marketplace entries. It is rendered as plain
+Markdown: links show as text, images show their alt text, and raw HTML is not
+rendered.
 
 Do not publish a development bundle as a trusted/folder V1 plugin. For the
 marketplace, the package must keep `apiVersion: "2.0.0"` and
