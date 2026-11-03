@@ -4,7 +4,9 @@
 //! is ahead of `note.json` until the next autosave flush. Writing the file
 //! from Rust would therefore be invisible to the open editor and then
 //! clobbered by its next autosave, so every content edit is dispatched as a
-//! ProseMirror transaction on the live view instead.
+//! ProseMirror transaction on the live view instead. A note that is not open
+//! is edited by the webview too, on a headless state parsed from `note.json`,
+//! so both paths share the editor schema and serializer.
 
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -23,17 +25,26 @@ const MAX_OPERATIONS: usize = 64;
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SnapshotParams {
-    /// Optional guard: fail unless this note is the one currently open.
+    /// The note to read; the open note when absent.
     #[serde(default)]
     pub note_id: Option<String>,
 }
 
-/// Returns the open note's id, current revision, and document JSON. An agent
-/// calls this before `notes.applyEdit` to learn the revision to quote.
-pub async fn editor_snapshot(app: &tauri::AppHandle, params: Value) -> Result<Value, RpcError> {
+/// Returns a note's id, current revision, and document JSON. An agent calls
+/// this before `notes.applyEdit` to learn the revision to quote.
+pub async fn editor_snapshot(
+    app: &tauri::AppHandle,
+    workspace_path: &str,
+    params: Value,
+) -> Result<Value, RpcError> {
     let params: SnapshotParams = parse_params(params)?;
     if let Some(note_id) = params.note_id.as_deref() {
         validate_id(note_id).map_err(|error| RpcError::bad_request("invalid_note_id", &error))?;
+        let workspace_path = workspace_path.to_string();
+        let note_id = note_id.to_string();
+        tauri::async_runtime::spawn_blocking(move || reject_trashed(&workspace_path, &note_id))
+            .await
+            .map_err(|error| RpcError::internal(error.to_string()))??;
     }
     webview::request(app, "editor.snapshot", json!({ "noteId": params.note_id })).await
 }
@@ -71,6 +82,8 @@ pub async fn apply_edit(
     }
 
     require_document_editor(&load_note(workspace_path, &params.note_id).await?)?;
+    // A closed note has no editor undo, so this snapshot is its only way back.
+    snapshot_before_mutation_async(workspace_path, &params.note_id).await?;
 
     webview::request(
         app,
@@ -149,7 +162,22 @@ fn validate_write_markdown(params: &WriteMarkdownParams) -> Result<(), RpcError>
     Ok(())
 }
 
-/// Appends Markdown to, or replaces the body of, the note open in the editor.
+/// Snapshots the saved copy before an agent's content edit; an open note's
+/// unsaved typing is still covered by editor undo.
+async fn snapshot_before_mutation_async(
+    workspace_path: &str,
+    note_id: &str,
+) -> Result<(), RpcError> {
+    let workspace_path = workspace_path.to_string();
+    let note_id = note_id.to_string();
+    tauri::async_runtime::spawn_blocking(move || {
+        super::write::snapshot_before_mutation(&workspace_path, &note_id)
+    })
+    .await
+    .map_err(|error| RpcError::internal(error.to_string()))?
+}
+
+/// Appends Markdown to, or replaces the body of, a note.
 pub async fn write_markdown(
     app: &tauri::AppHandle,
     workspace_path: &str,
@@ -159,14 +187,7 @@ pub async fn write_markdown(
     validate_write_markdown(&params)?;
     require_document_editor(&load_note(workspace_path, &params.note_id).await?)?;
 
-    // Snapshots the saved copy; unsaved typing is still covered by editor undo.
-    let snapshot_path = workspace_path.to_string();
-    let note_id = params.note_id.clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        super::write::snapshot_before_mutation(&snapshot_path, &note_id)
-    })
-    .await
-    .map_err(|error| RpcError::internal(error.to_string()))??;
+    snapshot_before_mutation_async(workspace_path, &params.note_id).await?;
 
     webview::request(
         app,

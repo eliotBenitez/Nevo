@@ -12,6 +12,12 @@ import {
   writeEditorMarkdown,
   type WriteMarkdownRequest,
 } from './editor/mcpEditorOperations'
+import {
+  applyClosedNoteEdit,
+  isOpenInEditor,
+  readClosedNoteSnapshot,
+  writeClosedNoteMarkdown,
+} from './editor/mcpClosedNoteEdits'
 import { appLogger } from '../../utils/logger'
 import { useWorkspaceStore } from '../../stores/workspace'
 import { useNoteStore } from '../../stores/note'
@@ -40,7 +46,8 @@ function errorMessage(error: unknown): string {
 
 /**
  * Serves the requests the MCP bridge cannot answer from Rust: reading and
- * editing the live editor state, and asking the user to approve a write while
+ * editing note content (live editor state for the open note, `note.json` for
+ * any other), and asking the user to approve a write while
  * the bridge is in `ask` mode.
  */
 export function useMcpBridgeHost(options: McpBridgeHostOptions): void {
@@ -54,15 +61,19 @@ export function useMcpBridgeHost(options: McpBridgeHostOptions): void {
 
   async function route(request: McpBridgeRequest): Promise<unknown> {
     switch (request.kind) {
-      case 'editor.snapshot':
-        return readEditorSnapshot(request.payload.noteId as string | null)
+      case 'editor.snapshot': {
+        const noteId = request.payload.noteId as string | null
+        return isOpenInEditor(noteId) ? readEditorSnapshot(noteId) : readClosedNoteSnapshot(noteId!)
+      }
       case 'editor.applyEdit': {
-        assertEditorFormatSupportsEdit(noteStore.getActiveNoteFormat(request.payload.noteId as string))
-        return applyEditorEdit({
+        const edit = {
           noteId: request.payload.noteId as string,
           revision: request.payload.revision as number,
           operations: request.payload.operations as unknown[],
-        })
+        }
+        if (!isOpenInEditor(edit.noteId)) return applyClosedNoteEdit(edit)
+        assertEditorFormatSupportsEdit(noteStore.getActiveNoteFormat(edit.noteId))
+        return applyEditorEdit(edit)
       }
       case 'editor.open': {
         const noteId = request.payload.noteId as string
@@ -71,6 +82,7 @@ export function useMcpBridgeHost(options: McpBridgeHostOptions): void {
       }
       case 'editor.writeMarkdown': {
         const payload = request.payload as unknown as WriteMarkdownRequest
+        if (!isOpenInEditor(payload.noteId)) return writeClosedNoteMarkdown(payload)
         assertEditorFormatSupportsEdit(noteStore.getActiveNoteFormat(payload.noteId))
         return writeEditorMarkdown(payload)
       }

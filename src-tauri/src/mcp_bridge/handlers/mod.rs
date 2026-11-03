@@ -135,7 +135,9 @@ pub async fn dispatch(
     match method {
         // Editor-bound methods talk to the webview and must stay on the async
         // path; everything else is filesystem work moved off the runtime.
-        "notes.editorSnapshot" => editor::editor_snapshot(require_app(app)?, params).await,
+        "notes.editorSnapshot" => {
+            editor::editor_snapshot(require_app(app)?, workspace_path, params).await
+        }
         "notes.applyEdit" => editor::apply_edit(require_app(app)?, workspace_path, params).await,
         "notes.open" => editor::open_note(require_app(app)?, workspace_path, params).await,
         "notes.writeMarkdown" => {
