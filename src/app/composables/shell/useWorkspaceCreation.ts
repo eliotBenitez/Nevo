@@ -31,7 +31,7 @@ export function useWorkspaceCreation(options: UseWorkspaceCreationOptions) {
   const treeStore = useTreeStore()
   const tabsStore = useTabsStore()
   const noteStore = useNoteStore()
-  const { settings, plugins } = storeToRefs(workspaceStore)
+  const { settings, availablePlugins } = storeToRefs(workspaceStore)
   const { importMarkdownFile, importMarkdownIntoNote } = useMarkdownImport()
 
   const templateCreatePickerOpen = ref(false)
@@ -43,7 +43,7 @@ export function useWorkspaceCreation(options: UseWorkspaceCreationOptions) {
   const notionImportOpen = ref(false)
   const createFolderTitle = ref('')
   const createFolderError = ref('')
-  const templatesEnabled = computed(() => isPluginEnabled(plugins.value, 'nevo.templates'))
+  const templatesEnabled = computed(() => isPluginEnabled(availablePlugins.value, 'nevo.templates'))
 
   function resolveNoteTitle(): string {
     const pattern = settings.value.workspace.defaultNoteTitlePattern

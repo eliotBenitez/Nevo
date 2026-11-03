@@ -184,6 +184,11 @@ against the real Nevo host.
 - Worker protocol version: `2.0`;
 - `apiVersion` compatibility is determined by the major version;
 - `nevoVersionRange` supports an exact version, `^<major>`, `*`, and `latest`;
+- `runtimes` (optional) lists the runtimes the plugin runs on — any of
+  `desktop`, `android`, `ios`; omitted means all. On other runtimes the plugin
+  is not loaded and cannot be installed or updated from the marketplace;
+- a provided `runtimes` list must be non-empty, known, and duplicate-free, or
+  the manifest is reported as invalid;
 - `dataVersion` is a positive integer and changes only together with persisted
   data;
 - changing capabilities or the network policy changes the permission

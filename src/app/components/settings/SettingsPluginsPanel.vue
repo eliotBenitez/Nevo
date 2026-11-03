@@ -10,6 +10,7 @@ import { systemCommands, workspaceCommands } from '../../../tauri/commands'
 import type { MarketplaceCatalogItem, PluginManifest } from '../../../types/workspace'
 import { getEnabledPluginCount, getTotalPluginCount } from '../../../utils/plugin-counts'
 import { sortPluginsByKind } from '../../../utils/system-plugins'
+import { isPluginAvailableForApp } from '../../../core/plugins/runtimeAvailability'
 import { appLogger } from '../../../utils/logger'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import SettingsSectionHeader from './ui/SettingsSectionHeader.vue'
@@ -102,6 +103,8 @@ function catalogTitle(item: MarketplaceCatalogItem): string {
 
 function canRunMarketplaceAction(item: MarketplaceCatalogItem, action: MarketplaceAction): boolean {
   if (loadingPluginId.value === item.pluginId || item.status === 'invalid' || item.status === 'conflict') return false
+  // Do not install or update (and so migrate) a plugin on a runtime it does not support.
+  if (action !== 'remove' && item.manifest && !isPluginAvailableForApp(item.manifest, workspaceStore.appMetadata)) return false
   if (action === 'install') return item.status === 'notInstalled'
   if (action === 'update') return item.status === 'updateAvailable'
   return item.status === 'installed' || item.status === 'disabled' || item.status === 'updateAvailable'

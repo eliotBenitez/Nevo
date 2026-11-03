@@ -672,6 +672,7 @@ const pluginSignature = computed(() => props.pluginManifests
     manifest.entryPoint,
     manifest.priority ?? 0,
     (manifest.editorCapabilities ?? []).join(','),
+    (manifest.runtimes ?? []).join(','),
   ].join(':'))
   .join('|'))
 

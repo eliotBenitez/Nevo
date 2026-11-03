@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { TextSelection } from 'prosemirror-state'
 import type { NoteDocument } from '../../../types/note'
+import type { AppMetadata, PluginManifest } from '../../../types/workspace'
+import { useWorkspaceStore } from '../../../stores/workspace'
 import { createDefaultWorkspaceSettings } from '../../../utils/workspace-settings'
 import { appLogger } from '../../../utils/logger'
 import { i18n } from '../../../i18n'
@@ -525,6 +527,35 @@ describe('useEditorCore internal links', () => {
     } finally {
       destroy()
     }
+  })
+})
+
+describe('useEditorCore plugin runtime availability', () => {
+  it('leaves plugins that do not support the current runtime out of the host setup', async () => {
+    const templates: PluginManifest = {
+      id: 'nevo.templates',
+      name: 'Templates',
+      version: '1.0.0',
+      description: '',
+      enabled: true,
+      kind: 'system',
+      source: 'bundled',
+      entryPoint: 'index.js',
+      apiVersion: '1.0.0',
+      editorCapabilities: [],
+      runtimes: ['desktop'],
+    }
+    const workspaceStore = useWorkspaceStore()
+    const core = createEditorCore()
+    const editor = useEditorCore(core, createCallbacks())
+
+    workspaceStore.appMetadata = { runtime: 'android' } as AppMetadata
+    await editor.initPluginHost(null, [templates])
+    expect(core.systemPlugins.templates).toBe(false)
+
+    workspaceStore.appMetadata = { runtime: 'desktop' } as AppMetadata
+    await editor.initPluginHost(null, [templates])
+    expect(core.systemPlugins.templates).toBe(true)
   })
 })
 

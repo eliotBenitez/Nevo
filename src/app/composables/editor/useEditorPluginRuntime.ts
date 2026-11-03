@@ -46,6 +46,7 @@ function pluginManifestSignature(manifests: PluginManifest[]): string {
       (manifest.workspaceCapabilities ?? []).join(','),
       (manifest.network?.hosts ?? []).join(','),
       (manifest.network?.methods ?? []).join(','),
+      (manifest.runtimes ?? []).join(','),
     ].join(':'))
     .join('|')
 }

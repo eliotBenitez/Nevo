@@ -20,10 +20,10 @@ export interface UseWorkspaceHomeShellOptions {
 export function useWorkspaceHomeShell({ pluginUiContributions, pluginUiReady, openNote, openRoute }: UseWorkspaceHomeShellOptions) {
   const workspaceStore = useWorkspaceStore()
   const kanbanStore = useKanbanStore()
-  const { manifest, settings, plugins } = storeToRefs(workspaceStore)
+  const { manifest, settings, availablePlugins } = storeToRefs(workspaceStore)
 
   const homeFavoritesManagerOpen = ref(false)
-  const kanbanEnabled = computed(() => isPluginEnabled(plugins.value, 'nevo.kanban'))
+  const kanbanEnabled = computed(() => isPluginEnabled(availablePlugins.value, 'nevo.kanban'))
   const boardsMeta = computed(() => kanbanStore.boardsList.map(b => ({ id: b.id, title: b.title, icon: b.icon, updatedAt: b.updatedAt })))
   const workspaceHome = useWorkspaceHome({
     manifest,

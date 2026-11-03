@@ -5,8 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { FolderOpen, GitBranch, Kanban, LayoutTemplate, Network, BarChart3, Settings, Trash2 } from '../../../../ui/icons'
 import type { PluginManifest } from '../../../../types/workspace'
 import { useWorkspaceStore } from '../../../../stores/workspace'
-import { isPluginAvailableOnRuntime } from '../../../../core/plugins/runtimeAvailability'
-import { resolveRuntimeCapabilities } from '../../../../utils/runtime'
+import { isPluginAvailableForApp } from '../../../../core/plugins/runtimeAvailability'
 import { isSystemPluginId, SYSTEM_PLUGIN_SHORT_IDS } from '../../../../utils/system-plugins'
 import NvButton from '../../../../ui/primitives/NvButton.vue'
 import NvToggle from '../../../../ui/primitives/NvToggle.vue'
@@ -31,9 +30,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
 
-const isAvailableOnDevice = computed(() =>
-  isPluginAvailableOnRuntime(props.plugin, resolveRuntimeCapabilities(workspaceStore.appMetadata).runtime),
-)
+const isAvailableOnDevice = computed(() => isPluginAvailableForApp(props.plugin, workspaceStore.appMetadata))
 
 const systemPluginIcons: Record<string, Component> = {
   'nevo.kanban': markRaw(Kanban),

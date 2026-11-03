@@ -3,6 +3,8 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Download, ExternalLink, RefreshCw, Trash2 } from '../../../../ui/icons'
 import type { MarketplaceCatalogItem, MarketplacePluginStatus, PluginManifest } from '../../../../types/workspace'
+import { useWorkspaceStore } from '../../../../stores/workspace'
+import { isPluginAvailableForApp } from '../../../../core/plugins/runtimeAvailability'
 import NvButton from '../../../../ui/primitives/NvButton.vue'
 import SettingsObjectCard from '../ui/SettingsObjectCard.vue'
 
@@ -67,6 +69,9 @@ function stateClass(state: RowState): string {
 }
 
 const isIssue = computed(() => props.item.status === 'invalid' || props.item.status === 'conflict')
+
+const workspaceStore = useWorkspaceStore()
+const isAvailableOnDevice = computed(() => !props.item.manifest || isPluginAvailableForApp(props.item.manifest, workspaceStore.appMetadata))
 </script>
 
 <template>
@@ -102,6 +107,12 @@ const isIssue = computed(() => props.item.status === 'invalid' || props.item.sta
     </div>
 
     <div class="plugin-card__footer tw:mt-2.5 tw:flex tw:flex-wrap tw:items-center tw:gap-2.5">
+      <span
+        v-if="!isAvailableOnDevice"
+        class="status-chip tw:inline-flex tw:h-5 tw:items-center tw:justify-center tw:rounded-full tw:border tw:border-transparent tw:px-2 tw:text-[10.5px] tw:font-semibold tw:bg-[var(--surface-warning)] tw:text-[var(--warning)]"
+      >
+        {{ t('settings.plugins.unavailableOnDevice') }}
+      </span>
       <NvButton
         v-if="item.status === 'notInstalled'"
         variant="primary"

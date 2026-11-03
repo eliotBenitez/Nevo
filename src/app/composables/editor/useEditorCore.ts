@@ -44,8 +44,7 @@ import { createDatabaseRepository } from '../../../features/database/databaseRep
 import { createDatabaseCleanup, collectRemovedAssetSrcs } from './documentCleanup'
 import { createIdleTaskScheduler } from './idleTaskScheduler'
 import { resolveBlockRef } from '../../../core/blockRef/resolveBlockRef'
-import { isPluginAvailableOnRuntime } from '../../../core/plugins/runtimeAvailability'
-import { resolveRuntimeCapabilities } from '../../../utils/runtime'
+import { isPluginAvailableForApp } from '../../../core/plugins/runtimeAvailability'
 import { isTranscriptionSupported, transcribeAudio } from '../../../tauri/transcription'
 import { slashGridColumns } from '../../../utils/slashMenuLayout'
 import type { EmbedUrlMode } from './useEmbedUrlPopover'
@@ -505,9 +504,8 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
   }
 
   async function initPluginHost(workspacePath: string | null, installedManifests: PluginManifest[]) {
-    const runtime = resolveRuntimeCapabilities(workspaceStore.appMetadata).runtime
     // Plugins that do not support this runtime are not registered at all.
-    const pluginManifests = installedManifests.filter(plugin => isPluginAvailableOnRuntime(plugin, runtime))
+    const pluginManifests = installedManifests.filter(plugin => isPluginAvailableForApp(plugin, workspaceStore.appMetadata))
     core.workspacePath = workspacePath
     core.systemPlugins = {
       templates: pluginManifests.find(plugin => plugin.id === 'nevo.templates')?.enabled === true,

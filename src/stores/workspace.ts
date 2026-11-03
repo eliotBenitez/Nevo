@@ -30,6 +30,7 @@ import { applyWorkspaceStyle } from '../utils/apply-workspace-style'
 import { expandHomePath } from '../utils/workspacePath'
 import { workspaceNoteCount } from '../utils/workspace-note-count'
 import { pauseMarketplaceRuntime } from '../core/plugins/marketplaceRuntime'
+import { isPluginAvailableForApp } from '../core/plugins/runtimeAvailability'
 import { useToast } from '../ui/composables/useToast'
 
 export function getRestoreCandidates(recents: RecentWorkspace[]): RecentWorkspace[] {
@@ -100,6 +101,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   // `diagnostics.noteCount` is a snapshot taken on open and goes stale on create/delete.
   const noteCount = computed(() => (manifest.value ? workspaceNoteCount(manifest.value) : undefined))
   const appMetadata = ref<AppMetadata | null>(null)
+  /** Installed plugins that can run on this device (see manifest `runtimes`). */
+  const availablePlugins = computed(() => plugins.value.filter(plugin => isPluginAvailableForApp(plugin, appMetadata.value)))
 
   async function init() {
     try {
@@ -623,7 +626,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (!activePath.value) return
     const pluginId = 'nevo.github-sync'
     try {
-      const enabled = plugins.value.find(p => p.id === pluginId)?.enabled === true
+      const enabled = availablePlugins.value.find(p => p.id === pluginId)?.enabled === true
       const autoSync = getPluginSetting(pluginId, 'autoSync') === true
       const interval = Number(getPluginSetting(pluginId, 'intervalMinutes')) || 15
       if (enabled && autoSync) {
@@ -792,6 +795,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     manifest,
     settings,
     plugins,
+    availablePlugins,
     sidebarNotePreviews,
     marketplaceCatalog,
     recents,
