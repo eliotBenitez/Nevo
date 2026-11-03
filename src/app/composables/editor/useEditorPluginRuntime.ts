@@ -92,10 +92,11 @@ export function useEditorPluginRuntime(options: EditorPluginRuntimeOptions) {
     initialized.value = true
   }
 
+  // Keyed by value: a fresh object would rebuild (and remount) the editor on every unrelated re-render.
   const stopRuntimeWatch = watch(
     () => {
       const settings = options.getSettings()
-      return {
+      return JSON.stringify({
         workspacePath: options.getWorkspacePath(),
         pluginSignature: pluginManifestSignature(options.getPluginManifests()),
         pluginRevision: options.getPluginRevision?.() ?? 0,
@@ -106,9 +107,9 @@ export function useEditorPluginRuntime(options: EditorPluginRuntimeOptions) {
         pasteBehavior: settings.editor.pasteBehavior,
         aiEnabled: settings.ai.enabled,
         aiSlash: settings.ai.slashCommands,
-      }
+      })
     },
-    rebuild,
+    () => rebuild(),
     { immediate: true },
   )
 
