@@ -146,6 +146,12 @@ outside the plugin directory. The SDK must be included in the bundle.
 | `priority` | No | Load order; a higher value loads earlier |
 | `settingsSchema` | No | Fields of the plugin settings UI |
 
+On a runtime the plugin does not list, its schema nodes survive only through
+the SDK V2 schema cache in `.nevo/plugin-registry.json`. Notes that use nodes
+of an excluded trusted-webview plugin, or of a sandboxed plugin that has never
+registered in this workspace, open as a plain-text fallback that is not saved
+back.
+
 The legacy fields `editorCapabilities`, `uiCapabilities` and
 `workspaceCapabilities` are not a source of SDK V2 permissions.
 

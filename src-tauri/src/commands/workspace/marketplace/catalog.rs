@@ -1,4 +1,4 @@
-use super::super::plugins::{list_plugins_sync, validate_plugin_id};
+use super::super::plugins::{list_plugins_sync, validate_plugin_id, validate_plugin_runtimes};
 use super::super::types::{PluginExecutionMode, PluginManifest};
 use super::repository::{
     safe_relative_path, split_plugin_tree_path, GitHubTreeEntry, MarketplaceFile,
@@ -304,16 +304,7 @@ pub(super) fn validate_marketplace_manifest(
             }
         }
     }
-    if let Some(runtimes) = &manifest.runtimes {
-        if runtimes.is_empty() {
-            return Err("runtimes must not be empty when provided".to_string());
-        }
-        for runtime in runtimes {
-            if !["desktop", "android", "ios"].contains(&runtime.as_str()) {
-                return Err(format!("unknown plugin runtime: {runtime}"));
-            }
-        }
-    }
+    validate_plugin_runtimes(&manifest.runtimes)?;
     if manifest.entry_point.trim().is_empty() {
         return Err("entryPoint is required".to_string());
     }

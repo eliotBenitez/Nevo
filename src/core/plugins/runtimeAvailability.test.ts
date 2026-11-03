@@ -14,6 +14,10 @@ describe('isPluginAvailableOnRuntime', () => {
     expect(isPluginAvailableOnRuntime(desktopOnly, 'desktop')).toBe(true)
     expect(isPluginAvailableOnRuntime(desktopOnly, 'android')).toBe(false)
     expect(isPluginAvailableOnRuntime(desktopOnly, 'ios')).toBe(false)
-    expect(isPluginAvailableOnRuntime(desktopOnly, 'web')).toBe(false)
+  })
+
+  it('does not gate when the runtime is unknown (app metadata not loaded)', () => {
+    const desktopOnly: { runtimes: NevoPluginRuntime[] } = { runtimes: ['desktop'] }
+    expect(isPluginAvailableOnRuntime(desktopOnly, 'web')).toBe(true)
   })
 })

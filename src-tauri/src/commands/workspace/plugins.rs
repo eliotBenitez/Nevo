@@ -383,6 +383,26 @@ pub(crate) fn validate_plugin_id(plugin_id: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// `None` means every runtime; a provided list must be non-empty, known and unique.
+pub(crate) fn validate_plugin_runtimes(runtimes: &Option<Vec<String>>) -> Result<(), String> {
+    let Some(runtimes) = runtimes else {
+        return Ok(());
+    };
+    if runtimes.is_empty() {
+        return Err("runtimes must not be empty when provided".to_string());
+    }
+    let mut unique = std::collections::BTreeSet::new();
+    for runtime in runtimes {
+        if !["desktop", "android", "ios"].contains(&runtime.as_str()) {
+            return Err(format!("unknown plugin runtime: {runtime}"));
+        }
+        if !unique.insert(runtime) {
+            return Err(format!("duplicate plugin runtime: {runtime}"));
+        }
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub fn validate_plugin_manifest(
     workspace_path: String,
@@ -427,6 +447,7 @@ pub fn validate_plugin_manifest(
         );
         message
     })?;
+    validate_plugin_runtimes(&manifest.runtimes)?;
     let _ = logger.debug(
         "tauri.workspace",
         "validate_plugin_manifest",
@@ -532,7 +553,7 @@ pub fn set_plugin_enabled_sync(
 
 #[cfg(test)]
 mod tests {
-    use super::{ensure_bundled_system_plugins, validate_plugin_id};
+    use super::{ensure_bundled_system_plugins, validate_plugin_id, validate_plugin_runtimes};
     use crate::commands::workspace::paths::plugins_dir_path;
     use crate::commands::workspace::types::{PluginExecutionMode, PluginManifest};
     use std::path::PathBuf;
@@ -581,6 +602,47 @@ mod tests {
         assert_eq!(manifest.execution_mode, PluginExecutionMode::TrustedWebview);
         let serialized = serde_json::to_value(manifest).expect("serialize manifest");
         assert_eq!(serialized["executionMode"], "trusted-webview");
+    }
+
+    fn manifest_with_runtimes(runtimes: &str) -> PluginManifest {
+        serde_json::from_str(&format!(
+            r#"{{
+  "id": "plugin.runtimes",
+  "name": "Runtimes",
+  "version": "1.0.0",
+  "enabled": true,
+  "entryPoint": "index.js",
+  "runtimes": {runtimes}
+}}"#
+        ))
+        .expect("malformed runtimes must not fail the manifest parse")
+    }
+
+    #[test]
+    fn malformed_runtimes_parse_and_fail_validation() {
+        for runtimes in [r#""desktop""#, r#"["desktop", 1]"#, "[]", r#"["Desktop"]"#] {
+            let manifest = manifest_with_runtimes(runtimes);
+            assert!(
+                validate_plugin_runtimes(&manifest.runtimes).is_err(),
+                "{runtimes}"
+            );
+        }
+        assert!(validate_plugin_runtimes(
+            &manifest_with_runtimes(r#"["desktop", "desktop"]"#).runtimes
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn valid_or_missing_runtimes_pass_validation() {
+        let manifest = manifest_with_runtimes(r#"["desktop", "ios"]"#);
+        assert_eq!(
+            manifest.runtimes,
+            Some(vec!["desktop".to_string(), "ios".to_string()])
+        );
+        assert!(validate_plugin_runtimes(&manifest.runtimes).is_ok());
+        assert_eq!(manifest_with_runtimes("null").runtimes, None);
+        assert!(validate_plugin_runtimes(&None).is_ok());
     }
 
     #[test]
