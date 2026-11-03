@@ -985,7 +985,7 @@ fn template_create_note_sync(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::commands::workspace::create_workspace;
+    use crate::commands::workspace::create_workspace_sync;
     use serde_json::json;
 
     struct TestWorkspace {
@@ -995,7 +995,7 @@ mod tests {
     impl TestWorkspace {
         fn new() -> Self {
             let path = std::env::temp_dir().join(format!("nevo-template-{}", Uuid::new_v4()));
-            create_workspace(
+            create_workspace_sync(
                 path.to_string_lossy().into_owned(),
                 "Templates".to_string(),
                 "T".to_string(),

@@ -11,6 +11,7 @@ import NvNoteIcon from '../../../ui/primitives/NvNoteIcon.vue'
 import SettingsSectionHeader from './ui/SettingsSectionHeader.vue'
 import { systemCommands, type AppLocation } from '../../../tauri/commands'
 import { formatWorkspacePath } from '../../../utils/workspacePath'
+import { resolveRuntimeCapabilities } from '../../../utils/runtime'
 
 const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
@@ -18,6 +19,8 @@ const { manifest, appMetadata, diagnostics, activePath } = storeToRefs(workspace
 
 const { status: updaterStatus, check: checkForUpdates } = useAppUpdater()
 const isChecking = computed(() => updaterStatus.value === 'checking')
+// Mobile builds are installed manually and ship without the updater plugin.
+const supportsUpdates = computed(() => !resolveRuntimeCapabilities(appMetadata.value).isMobileRuntime)
 const workspacePath = computed(() => diagnostics.value?.workspacePath
   ? formatWorkspacePath(diagnostics.value.workspacePath, appMetadata.value?.platform)
   : t('settings.about.notAvailable'))
@@ -69,15 +72,15 @@ async function openExternalUrl(url: string) {
           </div>
 
           <div class="about-actions tw:mt-5 tw:flex tw:flex-wrap tw:items-center tw:gap-2">
-            <NvButton variant="primary" :loading="isChecking" :disabled="isChecking" @click="onCheckUpdates">
+            <NvButton v-if="supportsUpdates" variant="primary" :loading="isChecking" :disabled="isChecking" @click="onCheckUpdates">
               <RefreshCw :size="14" />
               {{ isChecking ? t('updater.checking') : t('settings.about.actions.checkUpdates') }}
             </NvButton>
-            <NvButton @click="openAppLocation('config', true)">
+            <NvButton v-if="appMetadata?.supportsRevealInFileManager" @click="openAppLocation('config', true)">
               <Settings :size="14" />
               {{ t('settings.about.actions.revealConfig') }}
             </NvButton>
-            <NvButton @click="openAppLocation('appData')">
+            <NvButton v-if="appMetadata?.supportsRevealInFileManager" @click="openAppLocation('appData')">
               <FolderOpen :size="14" />
               {{ t('settings.about.actions.openUserFolder') }}
             </NvButton>

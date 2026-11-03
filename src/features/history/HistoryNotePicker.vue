@@ -59,7 +59,7 @@ onMounted(() => { void loadNotes() })
 
 <template>
   <main class="history-picker tw:flex tw:h-full tw:min-h-0 tw:w-full tw:flex-col tw:bg-[var(--workspace-editor-surface,var(--surface-canvas))]">
-    <header class="tw:flex tw:w-full tw:shrink-0 tw:items-center tw:gap-3 tw:border-b-0 tw:px-4 tw:pt-[14px] tw:pb-2">
+    <header class="tw:flex tw:w-full tw:shrink-0 tw:items-center tw:gap-3 tw:border-b-0 tw:px-4 tw:pt-[14px] tw:pb-2 tw:max-[719px]:pt-[calc(14px+max(var(--safe-area-top),0px))]">
       <NvButton variant="ghost" :aria-label="t('workspace.back')" @click="emit('back')"><ArrowLeft :size="16" /></NvButton>
       <div>
         <h1 class="tw:m-0 tw:text-lg tw:font-semibold tw:text-content-primary">{{ t('workspace.history.pickerTitle') }}</h1>

@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
 import { EditorState, TextSelection } from 'prosemirror-state'
-import { EditorView } from 'prosemirror-view'
 import { history, undo } from 'prosemirror-history'
 import type { Node as PMNode } from 'prosemirror-model'
 import { nevoBaseSchema } from '../schema'
@@ -13,6 +12,7 @@ import {
   startDictationUi,
   stopDictationUi,
 } from '../plugins/dictation'
+import { createTestView } from '../../test-utils/editorView'
 
 const schema = nevoBaseSchema
 
@@ -20,7 +20,7 @@ function makeView(doc: PMNode, cursor: number) {
   const options = { t: (k: string) => k, onStop: vi.fn() }
   let state = EditorState.create({ doc, plugins: [history(), createDictationPlugin(options)] })
   state = state.apply(state.tr.setSelection(TextSelection.create(state.doc, cursor)))
-  const view = new EditorView(document.createElement('div'), { state })
+  const view = createTestView(document.createElement('div'), { state })
   return { view, options }
 }
 

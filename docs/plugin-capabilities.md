@@ -1,25 +1,25 @@
 # Plugin SDK V2: capabilities
 
-Capability — исполняемое разрешение. Оно одновременно:
+A capability is an enforceable permission. It is simultaneously:
 
-1. объявляется в `manifest.capabilities`;
-2. показывается пользователю при marketplace install/update;
-3. проверяется при регистрации contribution;
-4. повторно проверяется при каждом host broker call.
+1. declared in `manifest.capabilities`;
+2. shown to the user on marketplace install/update;
+3. checked when a contribution is registered;
+4. re-checked on every host broker call.
 
-SDK V2 не читает legacy-массивы `editorCapabilities`, `uiCapabilities` и
-`workspaceCapabilities` как источник разрешений.
+SDK V2 does not read the legacy `editorCapabilities`, `uiCapabilities`, and
+`workspaceCapabilities` arrays as a source of permissions.
 
 ## Editor
 
-| Capability | Что разрешает | Не разрешает |
+| Capability | Allows | Does not allow |
 | --- | --- | --- |
-| `editor.read` | `editor.doc` в snapshot; decorations; serializers | Direct `EditorState`, DOM или запись |
-| `editor.write` | Commands, keymaps, slash/toolbar actions, importers и transaction intents | Direct ProseMirror transaction |
-| `editor.write.self` | Tier 2 frame может patch attrs собственной node | Запись в другие nodes или selection |
-| `editor.schema` | Schema nodes, marks и block types | Raw `NodeSpec` callbacks или NodeView DOM |
+| `editor.read` | `editor.doc` in the snapshot; decorations; serializers | Direct `EditorState`, DOM, or writes |
+| `editor.write` | Commands, keymaps, slash/toolbar actions, importers, and transaction intents | Direct ProseMirror transactions |
+| `editor.write.self` | A Tier 2 frame can patch the attrs of its own node | Writing to other nodes or the selection |
+| `editor.schema` | Schema nodes, marks, and block types | Raw `NodeSpec` callbacks or NodeView DOM |
 
-Пример editor command:
+Editor command example:
 
 ```json
 {
@@ -27,7 +27,7 @@ SDK V2 не читает legacy-массивы `editorCapabilities`, `uiCapabili
 }
 ```
 
-Для custom block с чтением документа:
+For a custom block that reads the document:
 
 ```json
 {
@@ -41,17 +41,17 @@ SDK V2 не читает legacy-массивы `editorCapabilities`, `uiCapabili
 
 ## UI
 
-| Capability | Что разрешает |
+| Capability | Allows |
 | --- | --- |
-| `ui.contributions` | Host-rendered popovers и sidebar items |
-| `ui.iframe` | Sandboxed workspace views и modals |
-| `ui.blockFrame` | Sandboxed iframe внутри content-less block |
-| `ui.navigation` | Brokered in-app navigation, когда method опубликован host |
+| `ui.contributions` | Host-rendered popovers and sidebar items |
+| `ui.iframe` | Sandboxed workspace views and modals |
+| `ui.blockFrame` | A sandboxed iframe inside a content-less block |
+| `ui.navigation` | Brokered in-app navigation, when the method is published by the host |
 
-`workspace.view.register` и `workspace.navigation` существуют только для
-trusted SDK V1. Не добавляйте их в новый V2 manifest.
+`workspace.view.register` and `workspace.navigation` exist only for
+trusted SDK V1. Do not add them to a new V2 manifest.
 
-Tier 2 interactive block обычно требует:
+A Tier 2 interactive block usually requires:
 
 ```json
 {
@@ -63,39 +63,39 @@ Tier 2 interactive block обычно требует:
 }
 ```
 
-Без `editor.write.self` frame рендерится read-only.
+Without `editor.write.self`, the frame renders read-only.
 
 ## Workspace domains
 
-| Capability | Опубликованные операции |
+| Capability | Published operations |
 | --- | --- |
 | `template.read` | `template_list`, `template_get` |
 | `template.write` | `template_create`, `template_update`, `template_delete`, `template_create_note` |
 | `kanban.read` | `kanban_list_boards`, `kanban_list_cards` |
-| `kanban.write` | Create/update/delete/move card/board и save board schema |
-| `workspace.read/write` | Зарезервировано для workspace domain broker |
-| `note.read/write` | Зарезервировано для note domain broker |
+| `kanban.write` | Create/update/delete/move card/board and save board schema |
+| `workspace.read/write` | Reserved for the workspace domain broker |
+| `note.read/write` | Reserved for the note domain broker |
 
-Текущий публичный `api.workspace.invoke()` открывает только allow-listed template
-и kanban commands. Capability не позволяет вызвать произвольную Tauri command и
-не создаёт SDK method, которого нет в `PluginSetupApi`.
+The current public `api.workspace.invoke()` exposes only allow-listed template
+and kanban commands. A capability does not allow calling an arbitrary Tauri
+command and does not create an SDK method that is not in `PluginSetupApi`.
 
-## Settings, storage и secrets
+## Settings, storage, and secrets
 
 | Capability | API | Scope |
 | --- | --- | --- |
 | `settings.read` | `api.settings.get()` | `.nevo/settings.json`, plugin namespace |
 | `settings.write` | `api.settings.set()` | `.nevo/settings.json`, plugin namespace |
-| `secrets.read` | `api.secrets.get()` | Secure store, только Worker |
+| `secrets.read` | `api.secrets.get()` | Secure store, Worker only |
 | `storage.workspace` | `api.storage.workspace.*` | Synced workspace data |
 | `storage.local` | `api.storage.local.*` | Unsynced app data |
 
-`secret: true` в `settingsSchema` означает:
+`secret: true` in `settingsSchema` means:
 
-- UI сохраняет значение в secure store;
-- `api.settings.get(key)` его не возвращает;
-- Worker читает его через `api.secrets.get(key)`;
-- iframe секрет не получает.
+- the UI saves the value to the secure store;
+- `api.settings.get(key)` does not return it;
+- the Worker reads it via `api.secrets.get(key)`;
+- the iframe does not receive the secret.
 
 ## Assets
 
@@ -104,7 +104,7 @@ Tier 2 interactive block обычно требует:
 | `assets.read` | `api.assets.read()`, `api.assets.url()` |
 | `assets.write` | `api.assets.write()`, `upload()`, `delete()` |
 
-Если плагин создаёт и затем показывает asset, нужны оба разрешения:
+If a plugin creates and then displays an asset, both permissions are needed:
 
 ```json
 {
@@ -119,13 +119,12 @@ Tier 2 interactive block обычно требует:
 | `runtime.events` | `api.onEditorEvent()` |
 | `runtime.scheduling` | `api.scheduling.setTimeout/setInterval/clear` |
 
-Глобальные Worker timers остаются отозванными даже при
-`runtime.scheduling`: capability открывает только host-managed API с квотами и
-автоматической очисткой.
+Global Worker timers stay revoked even with `runtime.scheduling`: the
+capability opens only the host-managed API with quotas and automatic cleanup.
 
 ## Network
 
-`network.fetch` требует и capability, и policy:
+`network.fetch` requires both the capability and a policy:
 
 ```json
 {
@@ -137,11 +136,11 @@ Tier 2 interactive block обычно требует:
 }
 ```
 
-Capability без `network` policy не даёт доступ ни к одному host. Policy без
-capability отклоняется marketplace validation.
+A capability without a `network` policy grants access to no host. A policy
+without the capability is rejected by marketplace validation.
 
-Разрешение применяется к `api.network.fetch()`, но не возвращает глобальный
-`fetch` Worker и не открывает network iframe.
+The permission applies to `api.network.fetch()`, but does not restore the
+Worker's global `fetch` and does not open network access for an iframe.
 
 ## Contribution matrix
 
@@ -164,10 +163,10 @@ capability отклоняется marketplace validation.
 | `modal` | `ui.iframe` |
 | `editorEvent` | `runtime.events` |
 
-Handler может использовать дополнительные brokers, поэтому итоговый manifest
-содержит union разрешений contribution и handler body.
+A handler may use additional brokers, so the final manifest contains the union
+of the contribution and handler body permissions.
 
-## Минимальные наборы
+## Minimal sets
 
 ### Locale-aware insertion command
 
@@ -177,8 +176,8 @@ Handler может использовать дополнительные brokers
 }
 ```
 
-Snapshot всё равно содержит selection, schema names, `now`, `locale` и
-`timeZone`; `editor.read` нужен только для `doc`.
+The snapshot still contains the selection, schema names, `now`, `locale`, and
+`timeZone`; `editor.read` is needed only for `doc`.
 
 ### Rich host-rendered block
 
@@ -227,31 +226,32 @@ Snapshot всё равно содержит selection, schema names, `now`, `loc
 }
 ```
 
-## Permission fingerprint и updates
+## Permission fingerprint and updates
 
-Marketplace fingerprint включает:
+The marketplace fingerprint includes:
 
 - execution mode;
 - normalized capability set;
-- normalized network hosts и methods.
+- normalized network hosts and methods.
 
-Если fingerprint изменился, Nevo показывает новые permissions до staging.
-Commit повторно сверяет fingerprint и installed version, поэтому update
-отклоняется, если пакет или разрешения изменились, пока пользователь подтверждал
-операцию или Worker выполнял migrations.
+If the fingerprint changed, Nevo shows the new permissions before staging.
+Commit re-checks the fingerprint and installed version, so an update is
+rejected if the package or permissions changed while the user was confirming
+the operation or the Worker was running migrations.
 
-Удаление capability тоже меняет fingerprint. Это ожидаемо: manifest и
-подтверждённая пользователем политика должны совпадать точно.
+Removing a capability also changes the fingerprint. This is expected: the
+manifest and the user-confirmed policy must match exactly.
 
-## Как выбирать capabilities
+## How to choose capabilities
 
-1. Начните с пустого списка.
-2. Добавьте разрешение для каждой contribution по matrix.
-3. Добавьте permissions только для реально вызываемых brokers.
-4. Разделяйте read и write.
-5. Не добавляйте зарезервированное разрешение «на будущее».
-6. После refactor удаляйте неиспользуемые capabilities.
-7. Проверяйте manifest в реальном Nevo: test host не enforce-ит полную matrix.
+1. Start with an empty list.
+2. Add a permission for each contribution according to the matrix.
+3. Add permissions only for brokers that are actually called.
+4. Separate read and write.
+5. Do not add a reserved permission "for the future".
+6. After a refactor, remove unused capabilities.
+7. Check the manifest in a real Nevo: the test host does not enforce the full
+   matrix.
 
-См. [host services](./plugin-sdk/services.md) для API и квот и
-[security model](./plugin-security.md) для границы доверия.
+See [host services](./plugin-sdk/services.md) for the API and quotas and the
+[security model](./plugin-security.md) for the trust boundary.

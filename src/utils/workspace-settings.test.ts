@@ -194,7 +194,7 @@ describe('normalizeWorkspaceSettings', () => {
   })
 
   // The same fixture drives the Rust save/reload test in
-  // src-tauri/src/commands/workspace/settings.rs, so a field added here
+  // src-tauri/src/commands/workspace/settings/tests.rs, so a field added here
   // without a Rust counterpart fails there instead of being silently dropped.
   it('keeps the shared round-trip fixture in sync with every settings field', () => {
     const keyShape = (value: unknown): unknown => value && typeof value === 'object' && !Array.isArray(value)

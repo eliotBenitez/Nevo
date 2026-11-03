@@ -269,7 +269,7 @@ fn collect_notes_meta(folder: &FolderMeta) -> Vec<NoteMeta> {
 mod tests {
     use super::*;
     use crate::commands::note::create_note_impl;
-    use crate::commands::workspace::create_workspace;
+    use crate::commands::workspace::create_workspace_sync;
     use uuid::Uuid;
 
     struct TestWorkspace {
@@ -279,7 +279,7 @@ mod tests {
     impl TestWorkspace {
         fn new() -> Self {
             let path = std::env::temp_dir().join(format!("nevo-folder-{}", Uuid::new_v4()));
-            create_workspace(
+            create_workspace_sync(
                 path.to_string_lossy().into_owned(),
                 "Folder".to_string(),
                 "N".to_string(),

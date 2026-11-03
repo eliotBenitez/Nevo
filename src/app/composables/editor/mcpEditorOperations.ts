@@ -3,6 +3,7 @@ import {
   createEditorSnapshot,
   validateTransactionIntent,
 } from '../../../editor-core/plugin-host/sandboxTransactions'
+import type { EditorState, Transaction } from 'prosemirror-state'
 import { getActiveEditor } from './activeEditorRegistry'
 import { parseMarkdownToSlice } from './markdownPaste'
 import type { NoteFormatResult } from '../../../core/notebook/types'
@@ -107,9 +108,8 @@ function normalizeMcpInsertionPositions(operations: unknown[]): unknown[] {
   })
 }
 
-export function applyEditorEdit(request: ApplyEditRequest): ApplyEditResult {
-  const active = requireActiveEditor(request.noteId)
-
+/** Validates an agent's operations against `currentRevision` and builds the transaction; shared by open and closed notes. */
+export function buildEditTransaction(state: EditorState, request: ApplyEditRequest, currentRevision: number): Transaction {
   let intent
   try {
     intent = validateTransactionIntent(
@@ -118,18 +118,22 @@ export function applyEditorEdit(request: ApplyEditRequest): ApplyEditResult {
         revision: request.revision,
         operations: normalizeMcpInsertionPositions(request.operations),
       },
-      active.revision,
+      currentRevision,
     )
   } catch (error) {
     // Rethrow the original error with a message the agent can act on: the
     // sandbox wording ("stale editor state") does not say what to do next.
     if (error instanceof Error && error.name === 'STALE_EDITOR_STATE') {
-      error.message = `The note changed since revision ${request.revision} (now ${active.revision}). Read a fresh snapshot and retry.`
+      error.message = `The note changed since revision ${request.revision} (now ${currentRevision}). Read a fresh snapshot and retry.`
     }
     throw error
   }
+  return applyTransactionIntent(state, intent)
+}
 
-  active.view.dispatch(applyTransactionIntent(active.view.state, intent))
+export function applyEditorEdit(request: ApplyEditRequest): ApplyEditResult {
+  const active = requireActiveEditor(request.noteId)
+  active.view.dispatch(buildEditTransaction(active.view.state, request, active.revision))
 
   const after = getActiveEditor()
   return {
@@ -147,15 +151,13 @@ export interface WriteMarkdownRequest {
   revision?: number
 }
 
-export function writeEditorMarkdown(request: WriteMarkdownRequest): ApplyEditResult {
-  const active = requireActiveEditor(request.noteId)
-  if (request.mode === 'replace' && request.revision !== active.revision) {
+export function buildMarkdownTransaction(state: EditorState, request: WriteMarkdownRequest, currentRevision: number): Transaction {
+  if (request.mode === 'replace' && request.revision !== currentRevision) {
     throw new Error(
-      `The note changed since revision ${request.revision ?? 'unknown'} (now ${active.revision}). Read a fresh snapshot and retry.`,
+      `The note changed since revision ${request.revision ?? 'unknown'} (now ${currentRevision}). Read a fresh snapshot and retry.`,
     )
   }
 
-  const { state } = active.view
   const slice = parseMarkdownToSlice(request.markdown, state.schema)
   if (!slice) throw new Error('The Markdown produced no content.')
 
@@ -163,7 +165,12 @@ export function writeEditorMarkdown(request: WriteMarkdownRequest): ApplyEditRes
   // A fresh note is a single empty paragraph; appending after it would leave a blank first line.
   const isBlank = doc.childCount === 1 && doc.firstChild!.isTextblock && doc.firstChild!.content.size === 0
   const from = request.mode === 'replace' || isBlank ? 0 : doc.content.size
-  active.view.dispatch(state.tr.replaceWith(from, doc.content.size, slice.content).scrollIntoView())
+  return state.tr.replaceWith(from, doc.content.size, slice.content)
+}
+
+export function writeEditorMarkdown(request: WriteMarkdownRequest): ApplyEditResult {
+  const active = requireActiveEditor(request.noteId)
+  active.view.dispatch(buildMarkdownTransaction(active.view.state, request, active.revision).scrollIntoView())
 
   return {
     applied: true,

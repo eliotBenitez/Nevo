@@ -122,9 +122,15 @@ function bindingValue(binding: string, attrs: Record<string, unknown>): string {
   return value === undefined || value === null ? '' : String(value)
 }
 
-export function hostUiToDomSpec(node: HostUiNode, attrs: Record<string, unknown>): DOMOutputSpec | 0 {
+type HostUiDomSpec = [string, Record<string, string>, ...(DOMOutputSpec | string | 0)[]]
+
+function childToDomSpec(node: HostUiNode, attrs: Record<string, unknown>): DOMOutputSpec | string | 0 {
   if (node.type === 'contentSlot') return 0
   if (node.type === 'text') return node.bind ? bindingValue(node.bind, attrs) : (node.value ?? '')
+  return hostUiToDomSpec(node, attrs)
+}
+
+export function hostUiToDomSpec(node: HostUiElement, attrs: Record<string, unknown>): HostUiDomSpec {
   const domAttrs: Record<string, string> = {}
   for (const [name, raw] of Object.entries(node.props ?? {})) {
     if (name === 'data-bind' && typeof raw === 'string') continue
@@ -132,11 +138,24 @@ export function hostUiToDomSpec(node: HostUiNode, attrs: Record<string, unknown>
       ? bindingValue(raw, attrs)
       : String(raw)
   }
+  if (node.children?.some(child => child.type === 'contentSlot')) domAttrs['data-nevo-plugin-content'] = ''
   return [
     node.tag,
     domAttrs,
-    ...(node.children ?? []).map(child => hostUiToDomSpec(child, attrs)),
+    ...(node.children ?? []).map(child => childToDomSpec(child, attrs)),
   ]
+}
+
+// Attrs ride along as JSON so copy/paste and HTML re-parsing keep them; only declared names are read back.
+function parsedNodeAttrs(raw: string | null, specs: Record<string, unknown>): Record<string, unknown> {
+  if (!raw) return {}
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (!isObject(parsed)) return {}
+    return Object.fromEntries(Object.keys(specs).filter(key => key in parsed).map(key => [key, parsed[key]]))
+  } catch {
+    return {}
+  }
 }
 
 function sanitizedAttrs(value: unknown): Record<string, { default?: unknown }> {
@@ -173,18 +192,24 @@ export function schemaNodeFromDescriptor(descriptor: Record<string, unknown>): {
     throw new Error(`Invalid group for ${name}`)
   }
   const ui = descriptor.ui === undefined ? null : sanitizeHostUi(descriptor.ui, `${name}.ui`)
+  // ProseMirror needs an element at the top and a content hole that is the only child of its element.
+  if (ui && ui.type !== 'element') throw new Error(`${name}.ui must be an element`)
   const pluginId = typeof descriptor.pluginId === 'string' ? descriptor.pluginId : ''
   let contentSlots = 0
-  const countSlots = (node: HostUiNode) => {
-    if (node.type === 'contentSlot') contentSlots += 1
-    if (node.type === 'element') node.children?.forEach(countSlots)
+  const countSlots = (node: HostUiNode, siblings: number) => {
+    if (node.type === 'contentSlot') {
+      if (siblings > 1) throw new Error(`${name}.ui contentSlot must be the only child of its element`)
+      contentSlots += 1
+    }
+    if (node.type === 'element') node.children?.forEach((child, _, all) => countSlots(child, all.length))
   }
-  if (ui) countSlots(ui)
+  if (ui) countSlots(ui, 1)
   if (contentSlots > 1) throw new Error(`${name}.ui may contain only one contentSlot`)
   if (content && ui && contentSlots !== 1) throw new Error(`${name}.ui must contain one contentSlot`)
 
+  const attrs = sanitizedAttrs(descriptor.attrs)
   const spec: NodeSpec = {
-    attrs: sanitizedAttrs(descriptor.attrs),
+    attrs,
     ...(typeof content === 'string' ? { content } : {}),
     ...(typeof group === 'string' ? { group } : {}),
     inline: booleanField(descriptor, 'inline'),
@@ -193,23 +218,26 @@ export function schemaNodeFromDescriptor(descriptor: Record<string, unknown>): {
     draggable: booleanField(descriptor, 'draggable'),
     defining: booleanField(descriptor, 'defining'),
     isolating: booleanField(descriptor, 'isolating'),
-    parseDOM: [{ tag: `div[data-nevo-plugin-node="${name}"]` }],
+    parseDOM: [{
+      tag: `${ui ? ui.tag : 'div'}[data-nevo-plugin-node="${name}"]`,
+      getAttrs: dom => parsedNodeAttrs(dom.getAttribute('data-nevo-plugin-attrs'), attrs),
+      // Only the slot's element holds content; bound text and chrome around it must not be parsed as children.
+      contentElement: dom => dom.hasAttribute('data-nevo-plugin-content')
+        ? dom
+        : dom.querySelector<HTMLElement>('[data-nevo-plugin-content]') ?? dom,
+    }],
     toDOM(node) {
+      const marker: Record<string, string> = {
+        'data-nevo-plugin-node': name,
+        'data-nevo-plugin-attrs': JSON.stringify(node.attrs),
+        ...(pluginId ? { 'data-nevo-plugin': pluginId } : {}),
+      }
       if (ui) {
         const rendered = hostUiToDomSpec(ui, node.attrs)
-        if (Array.isArray(rendered)) {
-          const renderedAttrs = rendered[1]
-          if (renderedAttrs && typeof renderedAttrs === 'object' && !Array.isArray(renderedAttrs)) {
-            renderedAttrs['data-nevo-plugin-node'] = name
-            if (pluginId) renderedAttrs['data-nevo-plugin'] = pluginId
-          }
-        }
-        return rendered as DOMOutputSpec
+        Object.assign(rendered[1], marker)
+        return rendered
       }
-      return ['div', {
-        'data-nevo-plugin-node': name,
-        ...(pluginId ? { 'data-nevo-plugin': pluginId } : {}),
-      }, ...(content ? [0] : [])]
+      return ['div', marker, ...(content ? [0] : [])]
     },
   }
   return { name, spec }

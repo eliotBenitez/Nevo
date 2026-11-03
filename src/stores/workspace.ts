@@ -30,6 +30,7 @@ import { applyWorkspaceStyle } from '../utils/apply-workspace-style'
 import { expandHomePath } from '../utils/workspacePath'
 import { workspaceNoteCount } from '../utils/workspace-note-count'
 import { pauseMarketplaceRuntime } from '../core/plugins/marketplaceRuntime'
+import { isPluginAvailableForApp } from '../core/plugins/runtimeAvailability'
 import { useToast } from '../ui/composables/useToast'
 
 export function getRestoreCandidates(recents: RecentWorkspace[]): RecentWorkspace[] {
@@ -56,6 +57,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   // deeply proxying this large object on every nested read while staying reactive.
   const settings = shallowRef<WorkspaceSettings>(createDefaultWorkspaceSettings())
   const plugins = ref<PluginManifest[]>([])
+  /** Incremented on every plugin rescan; plugin hosts rebuild on change. */
+  const pluginRevision = ref(0)
   const sidebarNotePreviews = ref<SidebarNotePreview[]>([])
   const marketplaceCatalog = ref<MarketplaceCatalog | null>(null)
   const recents = ref<RecentWorkspace[]>([])
@@ -100,6 +103,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   // `diagnostics.noteCount` is a snapshot taken on open and goes stale on create/delete.
   const noteCount = computed(() => (manifest.value ? workspaceNoteCount(manifest.value) : undefined))
   const appMetadata = ref<AppMetadata | null>(null)
+  /** Installed plugins that can run on this device (see manifest `runtimes`). */
+  const availablePlugins = computed(() => plugins.value.filter(plugin => isPluginAvailableForApp(plugin, appMetadata.value)))
 
   async function init() {
     try {
@@ -163,6 +168,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         glyph: config.glyph,
         gradient: config.gradient,
       })
+      await flushPendingLastContext()
       manifest.value = newManifest
       _setHandle({ kind: 'local', path })
       await hydrateWorkspaceState()
@@ -269,6 +275,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       if (backend.value && activePath.value !== path) {
         await (await import('./workspaceSwitchGuard')).flushBeforeWorkspaceSwitch()
       }
+      await flushPendingLastContext()
       _setHandle({ kind: 'local', path })
       const loadedManifest = await backend.value!.open()
       manifest.value = loadedManifest
@@ -521,6 +528,16 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     }, LAST_CONTEXT_PERSIST_DEBOUNCE_MS)
   }
 
+  // A debounced write must land in the workspace it was scheduled for: once the
+  // handle switches, `backend` points at the next workspace while `settings`
+  // still holds the previous one's, and the write would overwrite them.
+  async function flushPendingLastContext() {
+    if (!lastContextPersistTimer) return
+    clearTimeout(lastContextPersistTimer)
+    lastContextPersistTimer = null
+    await persistLastContext()
+  }
+
   async function persistLastContext() {
     if (!backend.value) return
     const normalized = normalizeWorkspaceSettings(settings.value)
@@ -580,6 +597,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (!backend.value) return
     try {
       plugins.value = await backend.value.listPlugins()
+      pluginRevision.value += 1
       await loadDiagnostics()
     } catch (error) {
       await appLogger.error({
@@ -611,7 +629,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (!activePath.value) return
     const pluginId = 'nevo.github-sync'
     try {
-      const enabled = plugins.value.find(p => p.id === pluginId)?.enabled === true
+      const enabled = availablePlugins.value.find(p => p.id === pluginId)?.enabled === true
       const autoSync = getPluginSetting(pluginId, 'autoSync') === true
       const interval = Number(getPluginSetting(pluginId, 'intervalMinutes')) || 15
       if (enabled && autoSync) {
@@ -780,6 +798,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     manifest,
     settings,
     plugins,
+    pluginRevision,
+    availablePlugins,
     sidebarNotePreviews,
     marketplaceCatalog,
     recents,

@@ -210,7 +210,7 @@ mod tests {
 
     #[test]
     fn cancel_interrupts_a_stalled_connection() {
-        use tokio::io::AsyncWriteExt;
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
         let dir = std::env::temp_dir().join(format!("nevo-dl-stall-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let rt = tokio::runtime::Builder::new_current_thread()
@@ -222,6 +222,8 @@ mod tests {
             let url = format!("http://{}/t.bin", listener.local_addr().unwrap());
             tokio::spawn(async move {
                 let (mut socket, _) = listener.accept().await.unwrap();
+                // hyper rejects a response that arrives before the request was sent.
+                let _ = socket.read(&mut [0; 1024]).await;
                 let _ = socket
                     .write_all(
                         b"HTTP/1.1 200 OK

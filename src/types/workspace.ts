@@ -5,6 +5,7 @@ import type {
   NevoEditorCapability,
   NevoPluginCapability,
   NevoPluginExecutionMode,
+  NevoPluginRuntime,
   NevoWorkspaceCapability,
   NevoUiCapability,
 } from './editor-plugin'
@@ -322,6 +323,8 @@ export interface PluginManifest {
     methods: Array<'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'>
   }
   nevoVersionRange?: string
+  runtimes?: NevoPluginRuntime[]
+  defaultLocale?: string
   priority?: number
   settingsSchema?: PluginSettingField[]
 }

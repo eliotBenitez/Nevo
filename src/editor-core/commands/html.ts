@@ -1,26 +1,13 @@
 import type { NodeType } from 'prosemirror-model'
 import { NodeSelection, type Command } from 'prosemirror-state'
 import { clampHtmlBlockHeight, HTML_BLOCK_DEFAULT_CODE, HTML_BLOCK_DEFAULT_HEIGHT } from '../schema/htmlBlock'
+import { insertBlockAndSelect } from './utils'
 
 export function createInsertHtmlCommand(nodeType: NodeType): Command {
   return (state, dispatch) => {
     const node = nodeType.create({ code: HTML_BLOCK_DEFAULT_CODE, height: HTML_BLOCK_DEFAULT_HEIGHT })
     if (!dispatch) return true
-
-    const { $from } = state.selection
-    let insertPos = state.selection.from
-    let tr = state.tr
-
-    if (state.selection.empty && $from.parent.isTextblock && $from.parent.content.size === 0) {
-      insertPos = $from.before()
-      tr = tr.replaceWith(insertPos, insertPos + $from.parent.nodeSize, node)
-    } else {
-      tr = tr.replaceSelectionWith(node, false)
-      insertPos = tr.mapping.map(insertPos)
-    }
-
-    dispatch(tr.setSelection(NodeSelection.create(tr.doc, insertPos)).scrollIntoView())
-    return true
+    return insertBlockAndSelect(state, dispatch, node)
   }
 }
 

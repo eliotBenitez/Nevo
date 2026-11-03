@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { DOMParser, DOMSerializer, Schema } from 'prosemirror-model'
 import { EditorState } from 'prosemirror-state'
 import type { EditorView } from 'prosemirror-view'
 import { EditorPluginHost } from '../plugin-host'
@@ -299,6 +300,54 @@ describe('sandboxed plugin host', () => {
       })
     })
     expect(storageGet).not.toHaveBeenCalled()
+  })
+
+  it('rejects an unknown storage method instead of deleting the key', async () => {
+    let invokeRequestId = ''
+    const storageDelete = vi.fn()
+    const worker = new FakeWorker(request => {
+      if (request.type === 'initialize') return response(request, definition())
+      if (request.type === 'lifecycle') return response(request, null)
+      if (request.type === 'invoke') {
+        invokeRequestId = request.requestId
+        return {
+          protocolVersion: SANDBOX_PROTOCOL_VERSION,
+          requestId: 'plugin.sandbox:host:1',
+          sessionToken: request.sessionToken,
+          type: 'hostCall',
+          call: { method: 'storage.workspace.has', args: { key: 'saved' } },
+        }
+      }
+      if (request.type === 'hostResponse') {
+        return {
+          protocolVersion: SANDBOX_PROTOCOL_VERSION,
+          requestId: invokeRequestId,
+          type: 'response',
+          ok: true,
+          result: { type: 'transaction', revision: 0, operations: [] },
+        }
+      }
+      return null
+    })
+    const host = new EditorPluginHost({
+      workspacePath: '/workspace',
+      manifests: [manifest({ capabilities: ['editor.write', 'storage.workspace'] })],
+      nevoVersion: '1.0.0',
+      workerFactory: () => worker as unknown as Worker,
+      runtime: { pluginStorageDelete: storageDelete },
+    })
+    await host.initialize()
+    host.registries.slashItems.get('plugin.sandbox.hello')?.run(
+      runContext(editorState(), () => {}),
+    )
+
+    await vi.waitFor(() => {
+      expect(worker.requests.find(item => item.type === 'hostResponse')).toMatchObject({
+        ok: false,
+        error: { message: expect.stringContaining('not exposed: storage.workspace.has') },
+      })
+    })
+    expect(storageDelete).not.toHaveBeenCalled()
   })
 
   it('brokers assets.write to the runtime when the capability is granted', async () => {
@@ -632,11 +681,22 @@ describe('sandboxed plugin host', () => {
         props: { class: 'callout' },
         children: [
           { type: 'text', bind: 'attrs.variant' },
-          { type: 'contentSlot' },
+          { type: 'element', tag: 'div', children: [{ type: 'contentSlot' }] },
         ],
       },
     })
     expect(spec.content).toBe('block+')
+    const slotNextToText = {
+      type: 'element',
+      tag: 'aside',
+      children: [{ type: 'text', value: 'x' }, { type: 'contentSlot' }],
+    }
+    expect(() => schemaNodeFromDescriptor({ name: 'bad_block', content: 'block+', ui: slotNextToText }))
+      .toThrow('only child')
+    expect(() => schemaNodeFromDescriptor({ name: 'bad_block', content: 'block+', ui: { type: 'contentSlot' } }))
+      .toThrow('must be an element')
+    expect(() => schemaNodeFromDescriptor({ name: 'bad_block', ui: { type: 'text', value: 'x' } }))
+      .toThrow('must be an element')
     expect(() => sanitizeHostUi({
       type: 'element',
       tag: 'iframe',
@@ -646,6 +706,36 @@ describe('sandboxed plugin host', () => {
       .toContain('[data-nevo-plugin="plugin.sandbox"] .callout')
     expect(() => sanitizeScopedCss('plugin.sandbox', 'body { display: none }'))
       .toThrow('forbidden')
+  })
+
+  it('renders a UI node and parses it back with its tag and attrs', () => {
+    const { name, spec } = schemaNodeFromDescriptor({
+      name: 'callout_block',
+      group: 'block',
+      content: 'block+',
+      attrs: { variant: { default: 'info' } },
+      ui: {
+        type: 'element',
+        tag: 'aside',
+        children: [
+          { type: 'text', bind: 'attrs.variant' },
+          { type: 'element', tag: 'div', children: [{ type: 'contentSlot' }] },
+        ],
+      },
+    })
+    const schema = new Schema({
+      nodes: nevoBaseSchema.spec.nodes.addToEnd(name, spec),
+      marks: nevoBaseSchema.spec.marks,
+    })
+    const node = schema.nodes.callout_block.create({ variant: 'warning' }, schema.nodes.paragraph.create(null, schema.text('hi')))
+    const wrap = document.createElement('div')
+    wrap.appendChild(DOMSerializer.fromSchema(schema).serializeNode(node))
+    expect(wrap.querySelector('aside')?.textContent).toBe('warninghi')
+
+    const parsed = DOMParser.fromSchema(schema).parse(wrap).firstChild
+    expect(parsed?.type.name).toBe('callout_block')
+    expect(parsed?.attrs.variant).toBe('warning')
+    expect(parsed?.textContent).toBe('hi')
   })
 
   it('renders declarative decorations without exposing ProseMirror to the Worker', async () => {
@@ -728,7 +818,7 @@ describe('sandboxed plugin host', () => {
     expect(() => validateManifest(manifest({ capabilities: undefined }), '1.0.0'))
       .toThrow('requires a unified capabilities array')
     expect(() => validateManifest(manifest({ apiVersion: '1.0.0' }), '1.0.0'))
-      .toThrow('expected 2.1.0 for sandboxed-worker')
+      .toThrow('expected 2.2.0 for sandboxed-worker')
     expect(() => validateManifest(manifest({
       apiVersion: '2.0.0',
       executionMode: 'trusted-webview',
@@ -902,6 +992,32 @@ describe('sandboxed plugin host', () => {
     await expect(docx!({ type: 'sandbox_box' })).rejects.toThrow('must return an object')
     result = { blocks: [{ type: 'paragraph', children: [{ type: 'text', text: 'x'.repeat(1024 * 1024) }] }] }
     await expect(docx!({ type: 'sandbox_box' })).rejects.toThrow(/exceed/)
+    await host.dispose()
+  })
+
+  it('refuses a serializer for a core node type', async () => {
+    const worker = new FakeWorker(request => {
+      if (request.type === 'initialize') {
+        return response(request, {
+          contributions: [{
+            kind: 'serializer',
+            id: 'plugin.sandbox.paragraph-docx',
+            handlerId: 'plugin.sandbox:h1',
+            descriptor: { id: 'plugin.sandbox.paragraph-docx', nodeType: 'paragraph', format: 'docx' },
+          }],
+        })
+      }
+      return response(request, null)
+    })
+    const host = new EditorPluginHost({
+      workspacePath: '/workspace',
+      manifests: [manifest({ capabilities: ['editor.read'] })],
+      nevoVersion: '1.0.0',
+      workerFactory: () => worker as unknown as Worker,
+    })
+    await host.initialize()
+    expect(host.registries.nodeSerializers.has('paragraph')).toBe(false)
+    expect(host.errors.some(error => error.includes('cannot serialize node paragraph'))).toBe(true)
     await host.dispose()
   })
 

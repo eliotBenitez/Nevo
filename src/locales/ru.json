@@ -785,6 +785,7 @@
       "searchPrompt": "Поиск по названию",
       "searchNoResults": "Ничего не найдено",
       "importIntoNote": "Импорт .md в заметку",
+      "newSubfolder": "Новая подпапка",
       "importAsNote": "Импорт .md как заметку",
       "openNoteMenu": "Открыть меню заметки",
       "renameModalTitle": "Переименовать",
@@ -1823,14 +1824,43 @@
       },
       "manifestIssue": "Ошибка манифеста",
       "manifestValid": "Манифест корректен",
+      "unavailableOnDevice": "Недоступен на этом устройстве",
       "emptyTitle": "Плагины не найдены.",
       "emptyDescription": "Добавьте папки плагинов в `.nevo/plugins` и пересканируйте это пространство.",
       "settings": {
         "configure": "Настроить",
-        "hide": "Скрыть",
         "secretSet": "Задано",
         "secretPlaceholder": "Введите значение",
-        "saved": "Сохранено"
+        "saved": "Сохранено",
+        "modalTitle": "Настройки: {plugin}",
+        "done": "Готово"
+      },
+      "page": {
+        "back": "Все плагины",
+        "enabled": "Включён",
+        "readmeLoading": "Загрузка README…",
+        "readmeEmpty": "У этого плагина нет README.",
+        "readmeError": "Не удалось загрузить README.",
+        "retry": "Повторить",
+        "open": "Открыть {plugin}",
+        "facts": {
+          "details": "Сведения",
+          "version": "Версия",
+          "installedVersion": "Установлена",
+          "source": "Источник",
+          "execution": "Среда выполнения",
+          "dataVersion": "Версия данных",
+          "devices": "Устройства",
+          "permissions": "Разрешения",
+          "network": "Сеть",
+          "methods": "Методы"
+        },
+        "runtimes": {
+          "desktop": "Компьютер",
+          "android": "Android",
+          "ios": "iOS",
+          "all": "Все устройства"
+        }
       }
     },
     "mcp": {

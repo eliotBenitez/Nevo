@@ -136,7 +136,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div class="archive-phone__body tw:min-h-0 tw:flex-1 tw:overflow-y-auto tw:px-3">
+      <div class="archive-phone__body tw:min-h-0 tw:flex-1 tw:overflow-y-auto tw:px-3 tw:py-1">
         <div v-if="count === 0" class="archive-state archive-empty tw:flex tw:flex-col tw:items-center tw:justify-center tw:gap-2 tw:px-5 tw:py-12 tw:text-center tw:text-content-secondary">
           <Inbox :size="32" class="archive-state__icon tw:mb-1 tw:text-content-muted" aria-hidden="true" />
           <strong class="tw:text-sm tw:font-semibold tw:text-content-primary">{{ t('workspace.trash.emptyTitle') }}</strong>

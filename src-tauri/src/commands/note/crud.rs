@@ -268,10 +268,15 @@ pub(crate) fn save_note_impl(workspace_path: String, note: NoteDocument) -> Resu
         let current_raw = std::fs::read_to_string(&path).map_err(|error| {
             format!("Unable to validate the current note before saving: {error}")
         })?;
-        let current_value: serde_json::Value = serde_json::from_str(&current_raw)
-            .map_err(|error| format!("Refusing to overwrite a malformed note: {error}"))?;
-        let current_note: NoteDocument = serde_json::from_value(current_value)
-            .map_err(|error| format!("Refusing to overwrite an unreadable note: {error}"))?;
+        // One pass over the file: autosave runs this on every save, and a large
+        // note made the old text → Value → NoteDocument round trip costly.
+        let current_note: NoteDocument =
+            serde_json::from_str(&current_raw).map_err(|error| match error.classify() {
+                serde_json::error::Category::Data => {
+                    format!("Refusing to overwrite an unreadable note: {error}")
+                }
+                _ => format!("Refusing to overwrite a malformed note: {error}"),
+            })?;
         let current_format = validate_note_for_write(&current_note)
             .map_err(|_| "unsupported-format: the existing note is read-only".to_string())?;
         let requested_format = validate_note_for_write(&note)

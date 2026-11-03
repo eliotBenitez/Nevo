@@ -1,18 +1,18 @@
 # Host services
 
-Worker не имеет прямого storage, filesystem, network или timers. Вместо них
-`PluginSetupApi` предоставляет brokers. Каждый вызов заново проверяет capability
-из установленного manifest и автоматически добавляет workspace/plugin namespace.
+A Worker has no direct storage, filesystem, network or timers. Instead,
+`PluginSetupApi` provides brokers. Every call re-checks the capability from the
+installed manifest and automatically adds the workspace/plugin namespace.
 
-## Сводка
+## Summary
 
 | API | Capability | Scope |
 | --- | --- | --- |
-| `api.storage.workspace` | `storage.workspace` | Синхронизируемый workspace JSON |
-| `api.storage.local` | `storage.local` | Локальный app-data JSON |
-| `api.settings.get` | `settings.read` | Plugin settings в workspace settings |
-| `api.settings.set` | `settings.write` | Plugin settings в workspace settings |
-| `api.secrets.get` | `secrets.read` | Secure store namespace плагина |
+| `api.storage.workspace` | `storage.workspace` | Syncable workspace JSON |
+| `api.storage.local` | `storage.local` | Local app-data JSON |
+| `api.settings.get` | `settings.read` | Plugin settings in workspace settings |
+| `api.settings.set` | `settings.write` | Plugin settings in workspace settings |
+| `api.secrets.get` | `secrets.read` | The plugin's secure store namespace |
 | `api.assets.read/url` | `assets.read` | Workspace binary asset store |
 | `api.assets.write/upload/delete` | `assets.write` | Workspace binary asset store |
 | `api.network.fetch` | `network.fetch` + policy | Allow-listed HTTPS |
@@ -42,14 +42,14 @@ await api.storage.workspace.set('state', {
 await api.storage.workspace.delete('state')
 ```
 
-Файл:
+File:
 
 ```text
 <workspace>/.nevo/plugin-data/<pluginId>.json
 ```
 
-Он относится к workspace, попадает в backup/transfer и может синхронизироваться
-вместе с workspace.
+It belongs to the workspace, is included in backup/transfer and may be synced
+together with the workspace.
 
 ### Local storage
 
@@ -60,23 +60,23 @@ await api.storage.local.set('cache', {
 })
 ```
 
-Local scope хранится в app data с workspace fingerprint и plugin namespace. Он
-подходит для кэша и machine-local preferences, но не для данных, которые должны
-переезжать с workspace.
+The local scope is stored in app data with a workspace fingerprint and a plugin
+namespace. It suits caches and machine-local preferences, but not data that
+must move with the workspace.
 
-### Лимиты storage
+### Storage limits
 
-- ключ: `A-Z a-z 0-9 . _ -`, от 1 до 160 символов;
-- одно значение: до 256 KiB serialized JSON;
-- каждый scope: до 5 MiB на plugin;
-- запись атомарно переписывает plugin JSON file.
+- key: `A-Z a-z 0-9 . _ -`, 1 to 160 characters;
+- a single value: up to 256 KiB of serialized JSON;
+- each scope: up to 5 MiB per plugin;
+- a write atomically rewrites the plugin JSON file.
 
-Не используйте storage как database для сотен chatty writes. Группируйте
-связанные значения и избегайте записи на каждое editor event.
+Do not use storage as a database for hundreds of chatty writes. Group related
+values and avoid writing on every editor event.
 
-## Settings и secrets
+## Settings and secrets
 
-Settings UI объявляется в manifest. Обычные поля:
+The settings UI is declared in the manifest. Regular fields:
 
 ```ts
 const format = await api.settings.get<string>('format')
@@ -91,7 +91,7 @@ Capabilities:
 }
 ```
 
-Поле с `secret: true` хранится отдельно:
+A field with `secret: true` is stored separately:
 
 ```ts
 const token = await api.secrets.get('apiToken')
@@ -110,16 +110,16 @@ if (!token) throw new Error('Configure API token in plugin settings')
 }
 ```
 
-Секрет доступен только Worker. Не возвращайте его handler result, не сохраняйте
-в storage/node attrs и не передавайте iframe. `api.network.fetch` намеренно
-запрещает `Authorization` и cookies, поэтому секрет нельзя использовать как
-произвольный credential header этого broker. Проектируйте интеграцию вокруг
-поддержанного server authentication flow.
+A secret is available only to the Worker. Do not return it in a handler result,
+store it in storage/node attrs or pass it to an iframe. `api.network.fetch`
+deliberately forbids `Authorization` and cookies, so a secret cannot be used as
+an arbitrary credential header of this broker. Design the integration around a
+supported server authentication flow.
 
 ## Binary assets
 
-Asset store content-addressed: ID равен SHA-256 содержимого, одинаковые bytes
-дедуплицируются.
+The asset store is content-addressed: the ID equals the SHA-256 of the content,
+and identical bytes are deduplicated.
 
 ```ts
 const assetId = await api.assets.write(smallBase64)
@@ -131,26 +131,26 @@ const imageUrl = await api.assets.url(assetId)
 await api.assets.delete(assetId)
 ```
 
-Файлы:
+Files:
 
 ```text
 <workspace>/.nevo/plugin-assets/<pluginId>/<assetId>
 ```
 
-### Когда какой method
+### Which method to use
 
-| Method | Назначение | Лимит |
+| Method | Purpose | Limit |
 | --- | --- | --- |
-| `write()` | Маленький single-shot payload | 512 KiB raw bytes |
-| `upload()` | Автоматический chunked upload | 8 MiB assembled |
-| `read()` | Получить base64 через Worker channel | Только asset до 512 KiB |
-| `url()` | Отобразить large image во frame | До 8 MiB |
-| `delete()` | Удалить asset текущего plugin | — |
+| `write()` | A small single-shot payload | 512 KiB raw bytes |
+| `upload()` | Automatic chunked upload | 8 MiB assembled |
+| `read()` | Get base64 through the Worker channel | Only assets up to 512 KiB |
+| `url()` | Display a large image in a frame | Up to 8 MiB |
+| `delete()` | Delete an asset of the current plugin | — |
 
-Общая квота — 64 MiB на plugin, одновременно можно вести до восьми chunked
-uploads. При ошибке `upload()` SDK abort-ит staging file.
+The total quota is 64 MiB per plugin, and up to eight chunked uploads can run
+at once. If `upload()` fails, the SDK aborts the staging file.
 
-В editor node храните только `assetId`:
+In an editor node, store only the `assetId`:
 
 ```ts
 return transaction(editor.revision, [{
@@ -164,12 +164,13 @@ return transaction(editor.revision, [{
 }])
 ```
 
-`api.assets.url()` выдаёт `nevoplugin-asset://` URL для `<img>` внутри Tier 2
-frame. Host проверяет magic bytes и отдаёт только PNG, JPEG, GIF, WebP и AVIF.
+`api.assets.url()` issues a `nevoplugin-asset://` URL for `<img>` inside a
+Tier 2 frame. The host checks magic bytes and serves only PNG, JPEG, GIF, WebP
+and AVIF.
 
 ## Network broker
 
-Manifest объявляет hosts и methods:
+The manifest declares hosts and methods:
 
 ```json
 {
@@ -213,24 +214,24 @@ Response:
 }
 ```
 
-Broker:
+The broker:
 
-- принимает только credential-free HTTPS URL;
-- проверяет method и каждый redirect против manifest;
-- запрещает private, loopback, link-local и другие non-public IP;
-- pin-ит проверенные DNS addresses, закрывая DNS rebinding window;
-- допускает до пяти redirects;
-- ограничивает request/response body 5 MiB;
-- имеет connect timeout 10 секунд и общий timeout 30 секунд;
-- не использует browser cookies или credential store.
+- accepts only credential-free HTTPS URLs;
+- checks the method and every redirect against the manifest;
+- forbids private, loopback, link-local and other non-public IPs;
+- pins verified DNS addresses, closing the DNS rebinding window;
+- allows up to five redirects;
+- limits the request/response body to 5 MiB;
+- has a 10-second connect timeout and a 30-second overall timeout;
+- does not use browser cookies or a credential store.
 
-Запрещены `authorization`, `cookie`, `host`, `content-length`, proxy/connection
-headers и browser-owned `sec-*`. Wildcard host `*.example.com` разрешает
-subdomains, но не apex `example.com`.
+`authorization`, `cookie`, `host`, `content-length`, proxy/connection headers
+and browser-owned `sec-*` are forbidden. The wildcard host `*.example.com`
+allows subdomains, but not the apex `example.com`.
 
 ## Scheduling
 
-Глобальные `setTimeout` и `setInterval` внутри Worker отозваны. Используйте:
+The global `setTimeout` and `setInterval` are revoked inside the Worker. Use:
 
 ```ts
 const scheduleId = await api.scheduling.setInterval(
@@ -250,21 +251,21 @@ const scheduleId = await api.scheduling.setInterval(
 await api.scheduling.clear(scheduleId)
 ```
 
-Правила:
+Rules:
 
-- delay/interval: от 100 ms до 24 часов;
-- до 32 активных schedules на plugin;
-- schedule принадлежит текущей host session;
-- schedules очищаются при deactivate/dispose;
-- это не durable jobs: после restart их нужно зарегистрировать заново.
+- delay/interval: from 100 ms to 24 hours;
+- up to 32 active schedules per plugin;
+- a schedule belongs to the current host session;
+- schedules are cleared on deactivate/dispose;
+- these are not durable jobs: they must be registered again after a restart.
 
-Регистрируйте recurring work в `activate()`, если оно не зависит от
-registration descriptors, и сохраняйте schedule ID только в памяти Worker.
+Register recurring work in `activate()` if it does not depend on registration
+descriptors, and keep the schedule ID only in Worker memory.
 
 ## Workspace commands
 
-`api.workspace.invoke()` не является произвольным Tauri invoke. Host разрешает
-только фиксированный список:
+`api.workspace.invoke()` is not an arbitrary Tauri invoke. The host allows only
+a fixed list:
 
 | Command ID | Capability |
 | --- | --- |
@@ -292,18 +293,18 @@ const boards = await api.workspace.invoke<JsonValue>(
 )
 ```
 
-Command name и аргументы должны совпадать с текущим host contract. Не формируйте
-command ID из untrusted input.
+The command name and arguments must match the current host contract. Do not
+build a command ID from untrusted input.
 
-Capabilities `workspace.*` и `note.*` зарезервированы для соответствующих domain
-brokers, но текущий публичный `PluginSetupApi.workspace.invoke` не открывает
-произвольные workspace/note commands. Наличие capability само по себе не создаёт
-method, которого нет в SDK.
+The `workspace.*` and `note.*` capabilities are reserved for the corresponding
+domain brokers, but the current public `PluginSetupApi.workspace.invoke` does
+not expose arbitrary workspace/note commands. Having a capability does not by
+itself create a method that does not exist in the SDK.
 
-## Обработка broker errors
+## Handling broker errors
 
-Broker rejection приходит как `Error`, а `error.name` содержит host error code,
-если он доступен:
+A broker rejection arrives as an `Error`, and `error.name` contains the host
+error code when available:
 
 ```ts
 try {
@@ -314,5 +315,5 @@ try {
 }
 ```
 
-Различайте ожидаемые состояния (`null`, missing setting, non-2xx status) и
-ошибки capability/quota. Не делайте бесконечный retry внутри 5-second handler.
+Distinguish expected states (`null`, a missing setting, a non-2xx status) from
+capability/quota errors. Do not retry endlessly inside a 5-second handler.

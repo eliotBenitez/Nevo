@@ -127,6 +127,22 @@ describe('AiChatPanel', () => {
     expect(wrapper.find('.ai-msg-ai').text()).toContain('<img')
   })
 
+  it('renders markdown answers as elements with working citations and no links', async () => {
+    const store = useAiChatStore()
+    const text = '- **bold** item [1]\n- [site](http://x.test)\n\n```\ncode\n\nblock\n```'
+    store.messages.push({ id: 'a1', role: 'assistant', text, status: 'done', sources: [SOURCE] })
+    const wrapper = mountPanel()
+    const root = wrapper.find('.ai-msg-ai')
+    expect(root.findAll('ul > li')).toHaveLength(2)
+    expect(root.find('strong').text()).toBe('bold')
+    expect(root.findAll('pre')).toHaveLength(1)
+    expect(root.find('pre code').text()).toBe('code\n\nblock')
+    expect(root.find('a').exists()).toBe(false)
+    expect(root.text()).toContain('site')
+    await root.find('.ai-cite').trigger('click')
+    expect(actions.openSource).toHaveBeenCalledWith(SOURCE)
+  })
+
   it('shows the offline card naming the endpoint host and retries', async () => {
     const store = useAiChatStore()
     store.messages.push({ id: 'u1', role: 'user', text: 'q' }, { id: 'a1', role: 'assistant', text: '', status: 'error', errorKind: 'offline', errorMessage: 'connection refused', sources: [] })

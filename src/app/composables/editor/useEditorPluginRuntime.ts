@@ -3,6 +3,7 @@ import type { EditorCore } from './useEditorCore'
 import type { PluginManifest, WorkspaceSettings } from '../../../types/workspace'
 import type { NevoSandboxUiContributionSnapshot } from '../../../types/editor-plugin'
 import { registerMarketplaceRuntimeGuard } from '../../../core/plugins/marketplaceRuntime'
+import { i18n } from '../../../i18n'
 
 const EMPTY_PLUGIN_CONTRIBUTIONS: NevoSandboxUiContributionSnapshot = {
   workspaceViews: [],
@@ -20,6 +21,8 @@ interface EditorPluginRuntimeOptions {
   editorSetup: PluginRuntimeEditorSetup
   getWorkspacePath: () => string | null
   getPluginManifests: () => PluginManifest[]
+  /** Bumped by a plugin rescan so edited catalogs re-run `setup` without a version change. */
+  getPluginRevision?: () => number
   getSettings: () => WorkspaceSettings
   flushPendingContent: () => void
   unmountNotePreload: () => void
@@ -40,12 +43,14 @@ function pluginManifestSignature(manifests: PluginManifest[]): string {
       manifest.executionMode ?? 'trusted-webview',
       manifest.dataVersion ?? 1,
       manifest.priority ?? 0,
+      manifest.defaultLocale ?? '',
       (manifest.capabilities ?? []).join(','),
       (manifest.editorCapabilities ?? []).join(','),
       (manifest.uiCapabilities ?? []).join(','),
       (manifest.workspaceCapabilities ?? []).join(','),
       (manifest.network?.hosts ?? []).join(','),
       (manifest.network?.methods ?? []).join(','),
+      (manifest.runtimes ?? []).join(','),
     ].join(':'))
     .join('|')
 }
@@ -66,6 +71,8 @@ export function useEditorPluginRuntime(options: EditorPluginRuntimeOptions) {
 
   async function rebuild(): Promise<void> {
     if (paused.value || disposed) return
+    // The rebuild remounts the editor from saved content, so persist pending edits first.
+    options.flushPendingContent()
     await options.editorSetup.initPluginHost(
       options.getWorkspacePath(),
       options.getPluginManifests(),
@@ -85,21 +92,24 @@ export function useEditorPluginRuntime(options: EditorPluginRuntimeOptions) {
     initialized.value = true
   }
 
+  // Keyed by value: a fresh object would rebuild (and remount) the editor on every unrelated re-render.
   const stopRuntimeWatch = watch(
     () => {
       const settings = options.getSettings()
-      return {
+      return JSON.stringify({
         workspacePath: options.getWorkspacePath(),
         pluginSignature: pluginManifestSignature(options.getPluginManifests()),
+        pluginRevision: options.getPluginRevision?.() ?? 0,
+        locale: i18n.global.locale.value,
         slashCommands: settings.editor.slashCommands,
         markdownShortcuts: settings.editor.markdownShortcuts,
         tabKeyBehavior: settings.editor.tabKeyBehavior,
         pasteBehavior: settings.editor.pasteBehavior,
         aiEnabled: settings.ai.enabled,
         aiSlash: settings.ai.slashCommands,
-      }
+      })
     },
-    rebuild,
+    () => rebuild(),
     { immediate: true },
   )
 

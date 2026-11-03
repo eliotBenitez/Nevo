@@ -5,7 +5,7 @@ use super::paths::{
     assets_dir_path, notes_dir_path, settings_path, snapshots_dir_path, workspace_context,
     workspace_error_context,
 };
-use super::plugins::list_plugins;
+use super::plugins::list_plugins_sync;
 use super::settings::is_extended_diagnostics_enabled;
 use super::types::{
     count_folders, FolderMeta, WorkspaceCleanupReport, WorkspaceDiagnostics, WorkspaceManifest,
@@ -269,7 +269,7 @@ fn get_workspace_diagnostics_sync(workspace_path: String) -> Result<WorkspaceDia
         logs_path,
         note_count: manifest.root_notes.len() + count_notes(&manifest.tree),
         folder_count: count_folders(&manifest.tree),
-        plugin_count: list_plugins(workspace_str.clone())?.len(),
+        plugin_count: list_plugins_sync(workspace_str.clone())?.len(),
         snapshot_count: count_files_in_dir(&snapshots_dir),
         asset_count: count_files_in_dir(&assets_dir),
         workspace_bytes: dir_size_bytes(Path::new(&workspace_str)),
@@ -454,7 +454,7 @@ fn cleanup_orphaned_assets_sync(workspace_path: String) -> Result<WorkspaceClean
 mod tests {
     use super::*;
     use crate::commands::note::{create_note_impl, save_note_impl};
-    use crate::commands::workspace::create_workspace;
+    use crate::commands::workspace::create_workspace_sync;
     use chrono::Utc;
     use serde_json::json;
     use uuid::Uuid;
@@ -466,7 +466,7 @@ mod tests {
     impl TestWorkspace {
         fn new() -> Self {
             let path = std::env::temp_dir().join(format!("nevo-maint-{}", Uuid::new_v4()));
-            create_workspace(
+            create_workspace_sync(
                 path.to_string_lossy().into_owned(),
                 "Maint".to_string(),
                 "N".to_string(),

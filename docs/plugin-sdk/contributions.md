@@ -1,8 +1,8 @@
-# Contributions и lifecycle
+# Contributions and lifecycle
 
-Contribution — это JSON-дескриптор, который Nevo превращает в host-owned
-поведение. Функции не покидают Worker: SDK сохраняет их под непрозрачными
-handler IDs, а host вызывает handler после пользовательского действия.
+A contribution is a JSON descriptor that Nevo turns into host-owned behavior.
+Functions never leave the Worker: the SDK stores them under opaque handler IDs,
+and the host calls the handler after a user action.
 
 ## Plugin definition
 
@@ -28,42 +28,42 @@ export default definePlugin({
 })
 ```
 
-Порядок обычной загрузки:
+Normal load order:
 
-1. Nevo проверяет manifest и создаёт plugin-scoped code session.
-2. Worker импортирует entry module.
-3. `setup(api)` регистрирует contributions.
-4. Host проверяет все descriptors и сохраняет schema fallback.
-5. `activate()` вызывается после регистрации всех enabled plugins.
-6. При остановке workspace вызывается `deactivate()`.
-7. Перед уничтожением Worker вызывается `dispose()`.
+1. Nevo validates the manifest and creates a plugin-scoped code session.
+2. The Worker imports the entry module.
+3. `setup(api)` registers contributions.
+4. The host validates all descriptors and saves the schema fallback.
+5. `activate()` is called after all enabled plugins are registered.
+6. When the workspace stops, `deactivate()` is called.
+7. Before the Worker is destroyed, `dispose()` is called.
 
-`setup`, lifecycle и migrations имеют лимит 10 секунд. Обычный handler — 5
-секунд. Host-managed schedules очищаются при deactivate/dispose независимо от
-plugin code.
+`setup`, lifecycle hooks and migrations have a 10-second limit. A regular
+handler has 5 seconds. Host-managed schedules are cleared on deactivate/dispose
+regardless of plugin code.
 
-`setup` может вернуть массив raw contributions, но typed methods на `api`
-предпочтительнее: они создают handler IDs и уменьшают риск неверной формы.
+`setup` may return an array of raw contributions, but the typed methods on `api`
+are preferable: they create handler IDs and reduce the risk of a wrong shape.
 
-## Общие требования к descriptor
+## General descriptor requirements
 
-Каждый descriptor:
+Every descriptor:
 
-- содержит строковый `id`;
-- использует namespace `${api.pluginId}.…`;
-- имеет уникальный ID среди contributions этого плагина;
-- состоит только из JSON values;
-- не содержит более 300 ключей на объект, 2 000 элементов на массив и 24
-  уровней вложенности;
-- использует ID не длиннее 160 символов;
-- при наличии `title` ограничивает его 200 символами.
+- contains a string `id`;
+- uses the namespace `${api.pluginId}.…`;
+- has an ID that is unique among this plugin's contributions;
+- consists only of JSON values;
+- contains no more than 300 keys per object, 2,000 items per array and 24
+  levels of nesting;
+- uses an ID no longer than 160 characters;
+- limits `title`, when present, to 200 characters.
 
-При несовпадении capability весь sandbox definition отклоняется. Host не
-«пропускает» только одну неправильную регистрацию.
+On a capability mismatch the entire sandbox definition is rejected. The host
+does not "skip" just one incorrect registration.
 
-## Краткий справочник
+## Quick reference
 
-| API | Capability | Основные descriptor fields | Handler |
+| API | Capability | Main descriptor fields | Handler |
 | --- | --- | --- | --- |
 | `api.command()` | `editor.write` | `id`, `title?` | Required |
 | `api.keymap()` | `editor.write` | `id`, `key`, `priority?` | Required |
@@ -81,10 +81,10 @@ plugin code.
 | `api.modal()` | `ui.iframe` | `id`, `source` | Optional |
 | `api.onEditorEvent()` | `runtime.events` | `id`, `event` | Required |
 
-## Commands, keymaps и actions
+## Commands, keymaps and actions
 
-Все эти handlers получают editor snapshot и обычно возвращают transaction
-intent.
+All of these handlers receive an editor snapshot and usually return a
+transaction intent.
 
 ### Command
 
@@ -99,8 +99,8 @@ api.command({
 }]))
 ```
 
-Command попадает во внутренний command registry. Публичный SDK пока не
-предоставляет отдельный API для запуска command другого плагина.
+A command goes into the internal command registry. The public SDK does not yet
+provide a separate API for running another plugin's command.
 
 ### Keymap
 
@@ -116,8 +116,8 @@ api.keymap({
 }]))
 ```
 
-Key syntax соответствует ProseMirror key names. Больший `priority` обрабатывается
-раньше; при одинаковом priority порядок стабилизируется по plugin ID.
+The key syntax matches ProseMirror key names. A higher `priority` is handled
+first; with equal priority the order is stabilized by plugin ID.
 
 ### Slash item
 
@@ -140,10 +140,10 @@ api.toolbarAction({
 }, handler)
 ```
 
-## Schema nodes и marks
+## Schema nodes and marks
 
-Для schema contribution запрещены `toDOM`, `parseDOM` и любые callbacks.
-Разрешённый spec специально уже ProseMirror `NodeSpec`.
+`toDOM`, `parseDOM` and any callbacks are forbidden in a schema contribution.
+The allowed spec is deliberately narrower than ProseMirror's `NodeSpec`.
 
 ```ts
 api.schemaNode({
@@ -166,15 +166,15 @@ api.schemaNode({
 })
 ```
 
-Node descriptor поддерживает:
+The node descriptor supports:
 
 - `name`, `content`, `group`, `attrs`;
 - `inline`, `atom`, `selectable`, `draggable`, `defining`, `isolating`;
-- `ui` для безопасного DOM tree.
+- `ui` for a safe DOM tree.
 
-`name` и attr names соответствуют
-`^[A-Za-z][A-Za-z0-9_]{0,79}$`. Content expression поддерживает простые node/group
-names, `+`, `*`, `?`, пробелы и `|`; сложный ProseMirror grammar не принимается.
+`name` and attr names must match `^[A-Za-z][A-Za-z0-9_]{0,79}$`. A content
+expression supports simple node/group names, `+`, `*`, `?`, spaces and `|`;
+complex ProseMirror grammar is not accepted.
 
 ```ts
 api.schemaMark({
@@ -189,16 +189,16 @@ api.schemaMark({
 })
 ```
 
-Mark descriptor поддерживает `name`, `tag`, `attrs`, `inclusive`, `excludes`.
-`tag` должен входить в allow-list host UI elements.
+The mark descriptor supports `name`, `tag`, `attrs`, `inclusive`, `excludes`.
+`tag` must be in the host UI elements allow-list.
 
-Практически чаще нужен `api.blockType()`, потому что он объединяет schema,
-presentation и optional render handler. Все три UI tier подробно описаны в
-[UI и пользовательские блоки](./ui.md).
+In practice `api.blockType()` is needed more often, because it combines schema,
+presentation and an optional render handler. All three UI tiers are described in
+detail in [UI and custom blocks](./ui.md).
 
 ## Popover
 
-Popover редактирует attrs выбранной plugin node host-owned controls:
+A popover edits the attrs of the selected plugin node with host-owned controls:
 
 ```ts
 api.register('popover', {
@@ -223,13 +223,15 @@ api.register('popover', {
 })
 ```
 
-Field поддерживает `key`, `type`, `label`, `placeholder`, `rows`, `min`, `max`,
-`step`, `options`. Используйте типы, уже поддержанные UI Nevo: `text`,
-`textarea`, `select`, `number`, `checkbox` и совместимые plugin popover controls.
+A field supports `key`, `type`, `label`, `placeholder`, `rows`, `min`, `max`,
+`step`, `options`. Use the types already supported by the Nevo UI: `text`,
+`textarea`, `select`, `number`, `checkbox` and compatible plugin popover
+controls.
 
 ## Decorations
 
-Decoration декларативно добавляет CSS class выделению или всем подходящим nodes:
+A decoration declaratively adds a CSS class to the selection or to all matching
+nodes:
 
 ```ts
 api.register('decoration', {
@@ -241,7 +243,7 @@ api.register('decoration', {
 })
 ```
 
-Для `mode: "selection"` `nodeType` и `attrs` не нужны:
+For `mode: "selection"`, `nodeType` and `attrs` are not needed:
 
 ```ts
 api.register('decoration', {
@@ -251,12 +253,12 @@ api.register('decoration', {
 })
 ```
 
-`className` должен соответствовать `^[A-Za-z][A-Za-z0-9_-]{0,79}$`.
-Decoration descriptor не принимает произвольную функцию обхода документа.
+`className` must match `^[A-Za-z][A-Za-z0-9_-]{0,79}$`. A decoration descriptor
+does not accept an arbitrary document-traversal function.
 
 ## Serializers
 
-Serializer вызывается для конкретного node type:
+A serializer is called for a specific node type:
 
 ```ts
 api.serializer({
@@ -271,7 +273,7 @@ api.serializer({
 })
 ```
 
-Поддерживаемые formats: `markdown`, `html`, `typst`. Input:
+Supported formats: `markdown`, `html`, `typst`. Input:
 
 ```ts
 {
@@ -280,14 +282,14 @@ api.serializer({
 }
 ```
 
-`children` уже сериализованы текущим exporter и нужны content nodes. Handler
-обязан вернуть строку не длиннее 1 MiB. HTML проходит дополнительную проверку:
-`script`, `iframe`, `object`, `embed`, event attributes, `javascript:` и
-`data:text/html` отклоняются.
+`children` is already serialized by the current exporter and is needed for
+content nodes. The handler must return a string no longer than 1 MiB. HTML goes
+through an additional check: `script`, `iframe`, `object`, `embed`, event
+attributes, `javascript:` and `data:text/html` are rejected.
 
 ## Importers
 
-Importer преобразует fenced Markdown block в ProseMirror JSON:
+An importer converts a fenced Markdown block into ProseMirror JSON:
 
 ```ts
 api.importer({
@@ -302,12 +304,12 @@ api.importer({
 })
 ```
 
-Handler получает `{ code: string }` и возвращает node JSON или `null`. Тип ноды,
-attrs и content проверяются текущей editor schema.
+The handler receives `{ code: string }` and returns node JSON or `null`. The
+node type, attrs and content are validated against the current editor schema.
 
 ## Workspace UI contributions
 
-Workspace views и modals загружают plugin-relative HTML в iframe:
+Workspace views and modals load plugin-relative HTML in an iframe:
 
 ```ts
 api.workspaceView({
@@ -333,11 +335,11 @@ api.modal({
 })
 ```
 
-`source` не может быть absolute URL, `data:`, `javascript:`, содержать `..` или
-backslash. Route ограничен `/workspace/plugin/<pluginId>` namespace и не может
-содержать query/hash.
+`source` cannot be an absolute URL, `data:`, `javascript:`, or contain `..` or a
+backslash. The route is limited to the `/workspace/plugin/<pluginId>` namespace
+and cannot contain a query/hash.
 
-Optional handler получает UI events в форме:
+An optional handler receives UI events in the form:
 
 ```ts
 {
@@ -349,11 +351,11 @@ Optional handler получает UI events в форме:
 }
 ```
 
-Iframe bridge и ограничения описаны в [UI guide](./ui.md).
+The iframe bridge and its limits are described in the [UI guide](./ui.md).
 
 ## Editor events
 
-Сейчас sandbox host публикует одно событие — `transactionApplied`:
+Currently the sandbox host publishes a single event, `transactionApplied`:
 
 ```ts
 api.onEditorEvent({
@@ -368,13 +370,13 @@ api.onEditorEvent({
 })
 ```
 
-События debounce-ятся и не предназначены для синхронного перехвата transaction.
-`editor.doc` присутствует только при `editor.read`. Результат event handler не
-применяется как editor transaction.
+Events are debounced and are not meant for synchronously intercepting a
+transaction. `editor.doc` is present only with `editor.read`. The result of an
+event handler is not applied as an editor transaction.
 
-## Ошибки и отмена
+## Errors and cancellation
 
-Handler получает `AbortSignal`:
+A handler receives an `AbortSignal`:
 
 ```ts
 api.command(descriptor, async (_input, { editor, signal }) => {
@@ -384,12 +386,12 @@ api.command(descriptor, async (_input, { editor, signal }) => {
 })
 ```
 
-Timeout отправляет Worker cancel request и abort-ит signal. Ваши async helpers
-должны сами реагировать на `signal`; уже начатый broker call может завершиться,
-но его результат после отмены использовать не следует.
+A timeout sends the Worker a cancel request and aborts the signal. Your async
+helpers must react to `signal` themselves; a broker call that has already
+started may complete, but its result should not be used after cancellation.
 
-Fatal Worker error приводит к одному автоматическому restart и повтору
-invocation. Повторный crash переводит плагин в session quarantine. Поэтому
-handler должен быть идемпотентным до момента возврата результата: не сочетайте
-неповторяемый внешний side effect и editor transaction без собственного
-idempotency key.
+A fatal Worker error causes one automatic restart and a retry of the
+invocation. A repeated crash puts the plugin into session quarantine. Therefore
+a handler must be idempotent until the moment it returns its result: do not
+combine a non-repeatable external side effect with an editor transaction without
+your own idempotency key.

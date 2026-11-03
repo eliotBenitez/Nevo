@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { Decoration, EditorView } from 'prosemirror-view'
+import { Decoration } from 'prosemirror-view'
 import { createNevoEditorState } from '../state'
 import { nevoBaseSchema } from '../schema'
 import type { BlockNode } from '../../types/note'
 import { headingFoldingKey } from '../plugins/heading-folding'
+import { createTestView } from '../../test-utils/editorView'
 
 describe('heading folding', () => {
   it('hides content between collapsed heading and next same/higher level heading', () => {
@@ -21,7 +22,7 @@ describe('heading folding', () => {
 
     const setup = createNevoEditorState({ schema: nevoBaseSchema, content })
     const mount = document.createElement('div')
-    const view = new EditorView(mount, {
+    const view = createTestView(mount, {
       state: setup.state,
     })
 
@@ -49,7 +50,7 @@ describe('heading folding', () => {
 
     const setup = createNevoEditorState({ schema: nevoBaseSchema, content })
     const mount = document.createElement('div')
-    const view = new EditorView(mount, {
+    const view = createTestView(mount, {
       state: setup.state,
       dispatchTransaction(tr) {
         view.updateState(view.state.apply(tr))
@@ -77,7 +78,7 @@ describe('heading folding', () => {
     const setup = createNevoEditorState({ schema: nevoBaseSchema, content })
     const mount = document.createElement('div')
     document.body.appendChild(mount)
-    const view = new EditorView(mount, {
+    const view = createTestView(mount, {
       state: setup.state,
       nodeViews: setup.nodeViews,
       dispatchTransaction(tr) {

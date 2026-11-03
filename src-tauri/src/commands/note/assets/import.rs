@@ -5,12 +5,10 @@ use tauri::AppHandle;
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_dialog::DialogExt;
 
-use super::naming::{
-    find_existing_asset_path, hash_bytes, normalize_extension, sanitize_file_stem,
-};
+use super::store::store_asset_bytes;
 use crate::commands::ipc_request::{decoded_header, raw_body};
 use crate::commands::note::{
-    assets_dir_path, note_context, note_error_context, ImportedImageAsset, PickedImportedAsset,
+    note_context, note_error_context, ImportedImageAsset, PickedImportedAsset,
 };
 use crate::commands::path_utils::normalize_workspace_path;
 use crate::commands::workspace;
@@ -95,106 +93,44 @@ pub(crate) fn import_image_asset_impl(
     })?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let diagnostics_enabled = workspace::is_extended_diagnostics_enabled(&workspace_path);
-    let assets_dir = assets_dir_path(&workspace_path);
-    std::fs::create_dir_all(&assets_dir).map_err(|error| {
-        let message = error.to_string();
+    let asset = store_asset_bytes(&workspace_path, &file_name, &bytes).map_err(|message| {
         let _ = logger.error(
             "tauri.note",
             "import_image_asset",
-            "Failed to create assets directory",
+            "Failed to store imported asset",
             note_error_context(&workspace_path, "io", message.clone()),
         );
         message
     })?;
 
-    let hash = hash_bytes(&bytes);
-    if let Some(existing_path) = find_existing_asset_path(&assets_dir, &hash) {
-        let existing_name = existing_path
-            .file_name()
-            .and_then(|value| value.to_str())
-            .ok_or_else(|| {
-                let message = "Unable to resolve existing asset path".to_string();
-                let _ = logger.error(
-                    "tauri.note",
-                    "import_image_asset",
-                    "Failed to resolve deduplicated asset path",
-                    note_error_context(&workspace_path, "path", message.clone()),
-                );
-                message
-            })?;
-
-        let _ = logger.debug(
+    let _ = if asset.deduplicated {
+        logger.debug(
             "tauri.note",
             "import_image_asset",
             "Reused deduplicated asset",
             diagnostics_enabled,
             note_context(&workspace_path).with_payload(serde_json::json!({
                 "fileName": file_name,
-                "hash": hash,
+                "hash": asset.hash,
                 "deduplicated": true,
             })),
-        );
-
-        return Ok(ImportedImageAsset {
-            src: format!(".nevo/assets/{}", existing_name),
-            hash,
-            deduplicated: true,
-            bytes: bytes.len(),
-        });
-    }
-
-    let extension = normalize_extension(&file_name);
-    let stem = sanitize_file_stem(&file_name);
-    let safe_stem = if stem.is_empty() {
-        "asset".to_string()
+        )
     } else {
-        stem
-    };
-    let final_name = format!("{}-{}.{}", hash, safe_stem, extension);
-    let final_path = assets_dir.join(&final_name);
-    std::fs::write(&final_path, bytes).map_err(|error| {
-        let message = error.to_string();
-        let _ = logger.error(
+        logger.info(
             "tauri.note",
             "import_image_asset",
-            "Failed to write imported asset",
-            note_error_context(&workspace_path, "io", message.clone()),
-        );
-        message
-    })?;
+            "Imported asset into workspace",
+            diagnostics_enabled,
+            note_context(&workspace_path).with_payload(serde_json::json!({
+                "fileName": file_name,
+                "hash": asset.hash,
+                "deduplicated": false,
+                "bytes": asset.bytes,
+            })),
+        )
+    };
 
-    let size_bytes = std::fs::metadata(&final_path)
-        .map_err(|error| {
-            let message = error.to_string();
-            let _ = logger.error(
-                "tauri.note",
-                "import_image_asset",
-                "Failed to read imported asset metadata",
-                note_error_context(&workspace_path, "io", message.clone()),
-            );
-            message
-        })?
-        .len() as usize;
-
-    let _ = logger.info(
-        "tauri.note",
-        "import_image_asset",
-        "Imported asset into workspace",
-        diagnostics_enabled,
-        note_context(&workspace_path).with_payload(serde_json::json!({
-            "fileName": file_name,
-            "hash": hash,
-            "deduplicated": false,
-            "bytes": size_bytes,
-        })),
-    );
-
-    Ok(ImportedImageAsset {
-        src: format!(".nevo/assets/{}", final_name),
-        hash,
-        deduplicated: false,
-        bytes: size_bytes,
-    })
+    Ok(asset)
 }
 
 /// Import a file into the workspace assets directory.
@@ -335,8 +271,6 @@ pub(crate) fn import_asset_by_path_with_limit(
     })?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let diagnostics_enabled = workspace::is_extended_diagnostics_enabled(&workspace_path);
-    let assets_dir = assets_dir_path(&workspace_path);
-    std::fs::create_dir_all(&assets_dir).map_err(|error| error.to_string())?;
 
     let metadata = std::fs::metadata(&source_path).map_err(|error| error.to_string())?;
     if !metadata.is_file() || metadata.len() > max_bytes {
@@ -357,72 +291,42 @@ pub(crate) fn import_asset_by_path_with_limit(
         return Err("Source file is empty".to_string());
     }
 
-    let hash = hash_bytes(&bytes);
-    if let Some(existing_path) = find_existing_asset_path(&assets_dir, &hash) {
-        let existing_name = existing_path
-            .file_name()
-            .and_then(|value| value.to_str())
-            .ok_or_else(|| "Unable to resolve existing asset path".to_string())?;
+    let asset = store_asset_bytes(&workspace_path, &file_name, &bytes).map_err(|message| {
+        let _ = logger.error(
+            "tauri.note",
+            "import_asset_by_path",
+            "Failed to store imported asset",
+            note_error_context(&workspace_path, "io", message.clone()),
+        );
+        message
+    })?;
 
-        let _ = logger.debug(
+    let _ = if asset.deduplicated {
+        logger.debug(
             "tauri.note",
             "import_asset_by_path",
             "Reused deduplicated asset",
             diagnostics_enabled,
             note_context(&workspace_path).with_payload(serde_json::json!({
                 "fileName": file_name,
-                "hash": hash,
+                "hash": asset.hash,
                 "deduplicated": true,
             })),
-        );
-
-        return Ok(ImportedImageAsset {
-            src: format!(".nevo/assets/{}", existing_name),
-            hash,
-            deduplicated: true,
-            bytes: bytes.len(),
-        });
-    }
-
-    let extension = normalize_extension(&file_name);
-    let stem = sanitize_file_stem(&file_name);
-    let safe_stem = if stem.is_empty() {
-        "asset".to_string()
+        )
     } else {
-        stem
-    };
-    let final_name = format!("{}-{}.{}", hash, safe_stem, extension);
-    let final_path = assets_dir.join(&final_name);
-    std::fs::write(&final_path, &bytes).map_err(|error| {
-        let message = error.to_string();
-        let _ = logger.error(
+        logger.info(
             "tauri.note",
             "import_asset_by_path",
-            "Failed to write imported asset",
-            note_error_context(&workspace_path, "io", message.clone()),
-        );
-        message
-    })?;
+            "Imported asset from path into workspace",
+            diagnostics_enabled,
+            note_context(&workspace_path).with_payload(serde_json::json!({
+                "fileName": file_name,
+                "hash": asset.hash,
+                "deduplicated": false,
+                "bytes": asset.bytes,
+            })),
+        )
+    };
 
-    let size_bytes = bytes.len();
-
-    let _ = logger.info(
-        "tauri.note",
-        "import_asset_by_path",
-        "Imported asset from path into workspace",
-        diagnostics_enabled,
-        note_context(&workspace_path).with_payload(serde_json::json!({
-            "fileName": file_name,
-            "hash": hash,
-            "deduplicated": false,
-            "bytes": size_bytes,
-        })),
-    );
-
-    Ok(ImportedImageAsset {
-        src: format!(".nevo/assets/{}", final_name),
-        hash,
-        deduplicated: false,
-        bytes: size_bytes,
-    })
+    Ok(asset)
 }

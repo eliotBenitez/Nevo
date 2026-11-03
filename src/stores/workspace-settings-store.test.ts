@@ -218,6 +218,29 @@ describe('useWorkspaceStore settings integration', () => {
     )
   })
 
+  it('persists a pending last context to the previous workspace before switching', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.mocked(workspaceCommands.openWorkspace).mockResolvedValue(manifest())
+      vi.mocked(workspaceCommands.loadSettings).mockResolvedValue({} as never)
+      vi.mocked(workspaceCommands.listPlugins).mockResolvedValue([])
+      vi.mocked(workspaceCommands.saveSettings).mockResolvedValue()
+
+      const store = useWorkspaceStore()
+      await store.openWorkspace('/tmp/workspace-a')
+      await store.updateLastContext({ noteId: 'note-a', folderId: null })
+      await store.openWorkspace('/tmp/workspace-b')
+      await vi.runAllTimersAsync()
+
+      const saves = vi.mocked(workspaceCommands.saveSettings).mock.calls
+      expect(saves).toHaveLength(1)
+      expect(saves[0][0]).toBe('/tmp/workspace-a')
+      expect(saves[0][1].general.lastContext.noteId).toBe('note-a')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('reloads plugin state after toggling a manifest enabled flag', async () => {
     vi.mocked(workspaceCommands.openWorkspace).mockResolvedValue(manifest())
     vi.mocked(workspaceCommands.loadSettings).mockResolvedValue({} as never)

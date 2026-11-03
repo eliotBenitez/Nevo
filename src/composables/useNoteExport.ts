@@ -3,6 +3,8 @@ import type { NoteDocument } from '../types/note'
 import { noteCommands, type InlineExportAsset } from '../tauri/commands'
 import { loadHyperformula } from '../editor-core/tableFormula'
 import type { DocxExportOptions } from '../utils/noteExport/docxOptions'
+import { DEFAULT_PDF_OPTIONS } from '../utils/noteExport/pdfOptions'
+import { i18n } from '../i18n'
 import { normalizeDatabaseData, type DatabaseBlockDataV1 } from '../types/database-block'
 import { createDatabaseRepository } from '../features/database/databaseRepository'
 import { useWorkspaceStore } from '../stores/workspace'
@@ -88,7 +90,7 @@ export function useNoteExport() {
     const assetsSubfolderName = `${safeName}_assets`
     await loadHyperformula()
     const { serializeNoteToMarkdownAsync } = await import('../utils/noteExport/markdownSerializer')
-    const { markdown, assetSrcs } = await serializeNoteToMarkdownAsync(exportNote, assetsSubfolderName)
+    const { markdown, assetSrcs } = await serializeNoteToMarkdownAsync(exportNote, assetsSubfolderName, i18n.global.t('media.transcript'))
 
     await noteCommands.exportNoteMarkdown(
       workspacePath,
@@ -139,7 +141,7 @@ export function useNoteExport() {
     const assetsSubfolderName = `${safeName}_assets`
     await loadHyperformula()
     const { serializeNoteToHtml } = await import('../utils/noteExport/htmlSerializer')
-    const { html, assetSrcs } = await serializeNoteToHtml(exportNote, assetsSubfolderName)
+    const { html, assetSrcs } = await serializeNoteToHtml(exportNote, assetsSubfolderName, i18n.global.t('media.transcript'))
     await noteCommands.exportNoteHtml(
       workspacePath,
       `${safeName}.html`,
@@ -158,7 +160,7 @@ export function useNoteExport() {
     const stem = `${safeName}-typst`
     await loadHyperformula()
     const { buildTypstExport } = await import('../utils/noteExport/buildTypstExport')
-    const { source, assets } = await buildTypstExport(exportNote, undefined, {
+    const { source, assets } = await buildTypstExport(exportNote, { ...DEFAULT_PDF_OPTIONS, transcriptLabel: i18n.global.t('media.transcript') }, {
       assetPathPrefix: `${stem}_assets/`,
       assetBytes: bytesByName,
     })

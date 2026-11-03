@@ -746,6 +746,20 @@ pub struct PluginManifest {
     pub network: Option<PluginNetworkPolicy>,
     #[serde(rename = "nevoVersionRange")]
     pub nevo_version_range: Option<String>,
+    /// Runtimes the plugin supports (`desktop`, `android`, `ios`). `None` means all.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_plugin_runtimes",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub runtimes: Option<Vec<String>>,
+    /// Locale of the plugin's fallback catalog and README; absent means `en`.
+    #[serde(
+        rename = "defaultLocale",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub default_locale: Option<String>,
     #[serde(default)]
     pub priority: Option<i32>,
     #[serde(
@@ -804,6 +818,30 @@ fn default_api_version() -> String {
 
 fn default_plugin_data_version() -> u32 {
     1
+}
+
+/// A malformed `runtimes` value is kept as unknown entries for manifest
+/// validation to report, instead of failing the whole parse — plugin listing
+/// skips unparseable manifests, which would hide the plugin silently.
+fn deserialize_plugin_runtimes<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Ok(
+        match Option::<serde_json::Value>::deserialize(deserializer)? {
+            None | Some(serde_json::Value::Null) => None,
+            Some(serde_json::Value::Array(items)) => Some(
+                items
+                    .into_iter()
+                    .map(|item| match item {
+                        serde_json::Value::String(runtime) => runtime,
+                        other => other.to_string(),
+                    })
+                    .collect(),
+            ),
+            Some(other) => Some(vec![other.to_string()]),
+        },
+    )
 }
 
 fn default_editor_capabilities() -> Vec<String> {

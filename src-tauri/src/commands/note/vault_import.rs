@@ -323,7 +323,7 @@ fn import_vault_asset_inner(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::commands::workspace::create_workspace;
+    use crate::commands::workspace::create_workspace_sync;
     use std::fs;
     use uuid::Uuid;
 
@@ -357,7 +357,7 @@ mod tests {
         fn new() -> Self {
             let path =
                 std::env::temp_dir().join(format!("nevo-vault-import-ws-{}", Uuid::new_v4()));
-            create_workspace(
+            create_workspace_sync(
                 path.to_string_lossy().into_owned(),
                 "Vault".to_string(),
                 "N".to_string(),

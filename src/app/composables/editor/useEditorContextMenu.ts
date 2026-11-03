@@ -66,7 +66,6 @@ export function useEditorContextMenu(core: EditorCore, getCurrentNoteId: () => s
 
     event.preventDefault()
     ctxMenu.open = true
-    console.log('openContextMenu executed! ctxMenu.open is now', ctxMenu.open, 'pos:', ctxMenu.pos, 'items length:', menuItems.value.length)
     return true
   }
 

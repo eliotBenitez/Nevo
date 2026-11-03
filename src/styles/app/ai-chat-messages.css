@@ -24,6 +24,24 @@
 }
 .ai-msg-ai { font-size: 13.5px; line-height: 1.62; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .ai-msg-ai p { margin: 0; text-wrap: pretty; overflow-wrap: anywhere; white-space: pre-wrap; }
+.ai-msg-ai h3, .ai-msg-ai h4, .ai-msg-ai h5, .ai-msg-ai h6 { margin: 4px 0 0; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; white-space: pre-wrap; }
+.ai-msg-ai h3 { font-size: 15px; }
+.ai-msg-ai h4 { font-size: 14px; }
+.ai-msg-ai h5, .ai-msg-ai h6 { font-size: 13.5px; }
+.ai-msg-ai ul, .ai-msg-ai ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 3px; }
+.ai-msg-ai li { overflow-wrap: anywhere; white-space: pre-wrap; }
+.ai-msg-ai .ai-li-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ai-msg-ai .ai-task { list-style: none; display: flex; gap: 6px; margin-left: -20px; }
+.ai-msg-ai .ai-task input { flex: none; margin: 4px 0 0; }
+.ai-msg-ai code { font-family: var(--font-mono); font-size: 12.5px; padding: 1px 4px; border-radius: var(--radius-sm); background: var(--surface-subtle); }
+.ai-msg-ai pre { margin: 0; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface-subtle); overflow-x: auto; white-space: pre; font-size: 12.5px; line-height: 1.5; }
+.ai-msg-ai pre code { padding: 0; background: transparent; }
+.ai-msg-ai blockquote { margin: 0; padding-left: 10px; border-left: 2px solid var(--border-default); color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px; }
+.ai-msg-ai .ai-table-wrap { overflow-x: auto; }
+.ai-msg-ai table { border-collapse: collapse; font-size: 12.5px; }
+.ai-msg-ai th, .ai-msg-ai td { border: 1px solid var(--border-default); padding: 4px 8px; text-align: left; vertical-align: top; }
+.ai-msg-ai th { font-weight: 600; background: var(--surface-subtle); }
+.ai-msg-ai hr { width: 100%; margin: 2px 0; border: 0; border-top: 1px solid var(--border-default); }
 .ai-cite {
   display: inline-grid; place-items: center; min-width: 17px; height: 17px; padding: 0 4px; margin: 0 1px; border: 0; border-radius: 5px;
   background: var(--accent-soft); color: var(--accent); font: 500 10.5px/1 var(--font-mono); vertical-align: 1px; cursor: pointer;

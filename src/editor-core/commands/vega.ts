@@ -1,5 +1,6 @@
 import type { NodeType } from 'prosemirror-model'
 import { NodeSelection, type Command } from 'prosemirror-state'
+import { insertBlockAndSelect } from './utils'
 
 const DEFAULT_SPEC = '{}'
 
@@ -7,21 +8,7 @@ export function createInsertVegaCommand(nodeType: NodeType): Command {
   return (state, dispatch) => {
     const node = nodeType.create({ spec: DEFAULT_SPEC })
     if (!dispatch) return true
-
-    const { $from } = state.selection
-    let insertPos = state.selection.from
-    let tr = state.tr
-
-    if (state.selection.empty && $from.parent.isTextblock && $from.parent.content.size === 0) {
-      insertPos = $from.before()
-      tr = tr.replaceWith(insertPos, insertPos + $from.parent.nodeSize, node)
-    } else {
-      tr = tr.replaceSelectionWith(node, false)
-      insertPos = tr.mapping.map(insertPos)
-    }
-
-    dispatch(tr.setSelection(NodeSelection.create(tr.doc, insertPos)).scrollIntoView())
-    return true
+    return insertBlockAndSelect(state, dispatch, node)
   }
 }
 

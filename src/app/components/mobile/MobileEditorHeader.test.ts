@@ -89,4 +89,22 @@ describe('MobileEditorHeader', () => {
 
     wrapper.unmount()
   })
+
+  it('offers deleting the open note from the more menu', async () => {
+    const onDelete = vi.fn()
+    const wrapper = mount(MobileEditorHeader, {
+      attachTo: document.body,
+      props: { mode: 'document', context: '', title: 'Q4 strategy', showViewSwitcher: false, onDelete },
+      global: { plugins: [i18n] },
+    })
+
+    await wrapper.get('[aria-label="More"]').trigger('click')
+    await nextTick()
+    Array.from(document.body.querySelectorAll<HTMLButtonElement>('.nv-menu-item'))
+      .find(item => item.textContent?.trim() === 'Delete')
+      ?.click()
+
+    expect(onDelete).toHaveBeenCalledTimes(1)
+    wrapper.unmount()
+  })
 })

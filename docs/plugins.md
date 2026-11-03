@@ -1,59 +1,61 @@
 # Nevo Plugin SDK V2
 
-Plugin SDK позволяет расширять редактор и рабочее пространство Nevo без доступа
-к внутренним Vue-, ProseMirror- и Tauri-объектам. Marketplace-плагин работает в
-изолированном Worker, описывает интерфейс JSON-дескрипторами и просит host
-выполнить разрешённые операции через capability-gated API.
+The Plugin SDK lets you extend the Nevo editor and workspace without access to
+internal Vue, ProseMirror, or Tauri objects. A marketplace plugin runs in an
+isolated Worker, describes its interface with JSON descriptors, and asks the
+host to perform permitted operations through a capability-gated API.
 
-> Эта документация относится к `@nevo/plugin-sdk` 2.x и
-> `executionMode: "sandboxed-worker"`. Trusted SDK V1 нужен только для
-> совместимости с bundled/system, folder и уже установленными legacy-плагинами.
-> Новые marketplace-плагины должны использовать SDK V2.
+> This documentation applies to `@nevo/plugin-sdk` 2.x and
+> `executionMode: "sandboxed-worker"`. Trusted SDK V1 is needed only for
+> compatibility with bundled/system, folder, and already installed legacy
+> plugins. New marketplace plugins must use SDK V2.
 
-## С чего начать
+## Where to start
 
-Если вы пишете первый плагин, читайте страницы в таком порядке:
+If you are writing your first plugin, read the pages in this order:
 
-1. [Быстрый старт и manifest](./plugin-sdk/quickstart.md) — создайте, соберите и
-   установите минимальный плагин.
-2. [Contributions и lifecycle](./plugin-sdk/contributions.md) — добавьте
-   команды, меню, schema, serializers и события.
-3. [Работа с редактором](./plugin-sdk/editor.md) — читайте snapshot и возвращайте
-   атомарные transaction intents.
-4. [UI и пользовательские блоки](./plugin-sdk/ui.md) — выберите host UI,
-   безопасный SVG или sandboxed iframe.
+1. [Quickstart and manifest](./plugin-sdk/quickstart.md) — create, build, and
+   install a minimal plugin.
+2. [Contributions and lifecycle](./plugin-sdk/contributions.md) — add
+   commands, menus, schema, serializers, and events.
+3. [Working with the editor](./plugin-sdk/editor.md) — read snapshots and return
+   atomic transaction intents.
+4. [UI and custom blocks](./plugin-sdk/ui.md) — choose host UI, safe SVG, or a
+   sandboxed iframe.
 5. [Host services](./plugin-sdk/services.md) — storage, settings, secrets,
-   assets, network, scheduling и workspace commands.
-6. [Тестирование и отладка](./plugin-sdk/testing.md) — unit tests, conformance,
-   ручная проверка и типичные ошибки.
+   assets, network, scheduling, and workspace commands.
+6. [Testing and debugging](./plugin-sdk/testing.md) — unit tests, conformance,
+   manual checks, and common mistakes.
+7. [Localization](./plugin-sdk/localization.md) — ship translations, localized
+   settings and READMEs, and use `api.i18n`.
 
-Справочные материалы:
+Reference materials:
 
 - [Capability reference](./plugin-capabilities.md)
 - [Security model](./plugin-security.md)
 - [Migration from SDK V1](./plugin-sdk-v2-migration.md)
-- [Полные примеры Quick Date и Callout](../packages/plugin-sdk/examples)
+- [Full Quick Date and Callout examples](../packages/plugin-sdk/examples)
 
-## Что можно расширить
+## What you can extend
 
-SDK V2 поддерживает:
+SDK V2 supports:
 
-- editor commands, keymaps, slash items и toolbar actions;
-- schema nodes, marks и собственные block types;
-- declarative popovers и decorations;
-- Markdown, HTML, Typst и DOCX serializers, а также fenced-code importers;
-- workspace views, sidebar items и modals;
-- событие `transactionApplied` и host-managed scheduling;
-- plugin-scoped settings, secrets, JSON storage и binary assets;
-- HTTPS-запросы к заранее объявленным хостам;
-- allow-listed template и kanban commands.
+- editor commands, keymaps, slash items, and toolbar actions;
+- schema nodes, marks, and custom block types;
+- declarative popovers and decorations;
+- Markdown, HTML, Typst, and DOCX serializers, as well as fenced-code importers;
+- workspace views, sidebar items, and modals;
+- the `transactionApplied` event and host-managed scheduling;
+- plugin-scoped settings, secrets, JSON storage, and binary assets;
+- HTTPS requests to pre-declared hosts;
+- allow-listed template and kanban commands.
 
-Плагин не может импортировать внутренности Nevo, работать с DOM редактора,
-посылать произвольные Tauri-команды или читать файлы рабочего пространства.
-Если задача не помещается в опубликованный API, это ограничение SDK, а не
-сигнал обходить sandbox.
+A plugin cannot import Nevo internals, manipulate the editor DOM, send
+arbitrary Tauri commands, or read workspace files. If a task does not fit the
+published API, that is a limitation of the SDK, not a reason to bypass the
+sandbox.
 
-## Модель выполнения
+## Execution model
 
 ```mermaid
 flowchart LR
@@ -76,17 +78,20 @@ flowchart LR
   F -->|"attrs patch or invoke"| H
 ```
 
-Граница sandbox проходит в обоих направлениях:
+The sandbox boundary applies in both directions:
 
-- host передаёт handler только JSON input, editor snapshot и `AbortSignal`;
-- handler возвращает JSON, строку, `null` или transaction intent;
-- host заново проверяет capability, структуру, размер и актуальность результата;
-- DOM и привилегированные сервисы остаются на стороне host;
-- iframe не получает capability API и делегирует привилегированную работу Worker.
+- the host passes a handler only JSON input, an editor snapshot, and an
+  `AbortSignal`;
+- a handler returns JSON, a string, `null`, or a transaction intent;
+- the host re-checks the capability, structure, size, and freshness of the
+  result;
+- the DOM and privileged services stay on the host side;
+- an iframe does not get the capability API and delegates privileged work to
+  the Worker.
 
-## Минимальный плагин
+## Minimal plugin
 
-`manifest.json` объявляет разрешение на запись в редактор:
+`manifest.json` declares the permission to write to the editor:
 
 ```json
 {
@@ -106,7 +111,7 @@ flowchart LR
 }
 ```
 
-Entry module регистрирует slash item. Contribution ID всегда начинается с
+The entry module registers a slash item. A contribution ID always starts with
 `<pluginId>.`:
 
 ```ts
@@ -133,55 +138,71 @@ export default definePlugin({
 })
 ```
 
-`setup` выполняется при загрузке Worker и только регистрирует contributions.
-Пользовательское действие вызывает сохранённый handler позже. Подробнее о
-порядке вызовов и допустимых дескрипторах — в
-[Contributions и lifecycle](./plugin-sdk/contributions.md).
+`setup` runs when the Worker loads and only registers contributions. A user
+action invokes the stored handler later. For more on the call order and the
+permitted descriptors, see
+[Contributions and lifecycle](./plugin-sdk/contributions.md).
 
-## Публичные импорты
+Each plugin has its own page in Settings → Plugins, opened from its card in the
+installed list or the marketplace catalog. The page shows the manifest details
+(version, source, execution mode, devices, permissions, network policy), the
+plugin's actions, and an optional top-level `README.md` rendered as plain
+Markdown without links, images, or raw HTML. Fields from `settingsSchema` open
+in a settings dialog from the card or the page.
 
-Основной entry point `@nevo/plugin-sdk` экспортирует:
+## Public imports
 
-| Экспорт | Назначение |
+The main entry point `@nevo/plugin-sdk` exports:
+
+| Export | Purpose |
 | --- | --- |
-| `definePlugin()` | Объявляет plugin definition |
-| `transaction()` | Создаёт editor transaction intent |
-| `operations` | Короткие helpers для нескольких частых операций |
-| `ui` | Строит безопасное host UI дерево |
-| `defineBlockView()` | Запускает runtime внутри Tier 2 block iframe |
-| Protocol types | `JsonValue`, snapshots, capabilities, operations и contributions |
-| Protocol constants | API/protocol versions и основные лимиты |
+| `definePlugin()` | Declares the plugin definition |
+| `transaction()` | Creates an editor transaction intent |
+| `operations` | Short helpers for several common operations |
+| `ui` | Builds a safe host UI tree |
+| `defineBlockView()` | Starts the runtime inside a Tier 2 block iframe |
+| Protocol types | `JsonValue`, snapshots, capabilities, operations, and contributions |
+| Protocol constants | API/protocol versions and the main limits |
 
-`@nevo/plugin-sdk/test-host` экспортирует `createTestPluginHost()` для unit tests.
-Он эмулирует регистрацию и вызов handlers, но не заменяет проверки реального
-Nevo host.
+`@nevo/plugin-sdk/test-host` exports `createTestPluginHost()` for unit tests.
+It emulates handler registration and invocation, but does not replace checks
+against the real Nevo host.
 
-## Основные правила
+## Core rules
 
-1. Объявляйте только необходимые capabilities.
-2. Используйте `api.pluginId` при построении каждого contribution ID.
-3. Передавайте через API только JSON-совместимые данные: без функций, классов,
-   `Date`, `Map`, циклических ссылок и специальных чисел.
-4. Для editor handlers используйте `editor.revision` из полученного snapshot.
-5. Предпочитайте позиции `selection.from` и `selection.to`: они безопаснее при
-   изменившемся документе.
-6. Не храните бинарные данные в attrs ноды или JSON storage — используйте
-   `api.assets`, а в ноде сохраняйте `assetId`.
-7. Считайте schema node names, mark names, attrs и `dataVersion` persisted API.
-8. Обрабатывайте отмену через `signal` и укладывайтесь в лимит handler.
-9. Не рассчитывайте на DOM, `fetch`, timers или browser storage внутри Worker.
-10. Проверяйте плагин в light/dark theme, с клавиатуры и после disable/re-enable.
+1. Declare only the capabilities you need.
+2. Use `api.pluginId` when building every contribution ID.
+3. Pass only JSON-compatible data through the API: no functions, classes,
+   `Date`, `Map`, circular references, or special numbers.
+4. In editor handlers, use `editor.revision` from the received snapshot.
+5. Prefer the `selection.from` and `selection.to` positions: they are safer
+   when the document has changed.
+6. Do not store binary data in node attrs or JSON storage — use
+   `api.assets` and keep the `assetId` in the node.
+7. Treat schema node names, mark names, attrs, and `dataVersion` as persisted
+   API.
+8. Handle cancellation via `signal` and stay within the handler limit.
+9. Do not rely on the DOM, `fetch`, timers, or browser storage inside the
+   Worker.
+10. Test the plugin in light/dark theme, from the keyboard, and after
+    disable/re-enable.
 
-## Версии и совместимость
+## Versions and compatibility
 
 - SDK/API version: `2.0.0`;
 - Worker protocol version: `2.0`;
-- совместимость `apiVersion` определяется по major version;
-- `nevoVersionRange` поддерживает точную версию, `^<major>`, `*` и `latest`;
-- `dataVersion` — положительное целое и меняется только вместе с persisted data;
-- изменение capabilities или network policy меняет permission fingerprint и
-  требует нового подтверждения при marketplace update.
+- `apiVersion` compatibility is determined by the major version;
+- `nevoVersionRange` supports an exact version, `^<major>`, `*`, and `latest`;
+- `runtimes` (optional) lists the runtimes the plugin runs on — any of
+  `desktop`, `android`, `ios`; omitted means all. On other runtimes the plugin
+  is not loaded and cannot be installed or updated from the marketplace;
+- a provided `runtimes` list must be non-empty, known, and duplicate-free, or
+  the manifest is reported as invalid;
+- `dataVersion` is a positive integer and changes only together with persisted
+  data;
+- changing capabilities or the network policy changes the permission
+  fingerprint and requires new confirmation on a marketplace update.
 
-Переход с V1 требует переписать registrations и editor mutations, а не только
-поменять номер версии. Используйте
-[пошаговый migration guide](./plugin-sdk-v2-migration.md).
+Moving from V1 requires rewriting registrations and editor mutations, not just
+changing the version number. Use the
+[step-by-step migration guide](./plugin-sdk-v2-migration.md).

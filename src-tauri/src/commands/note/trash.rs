@@ -10,7 +10,13 @@ use crate::commands::path_utils::normalize_workspace_path;
 use crate::commands::workspace::NoteMeta;
 
 #[tauri::command]
-pub fn restore_from_trash(workspace_path: String, item_id: String) -> Result<(), String> {
+pub async fn restore_from_trash(workspace_path: String, item_id: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || restore_from_trash_sync(workspace_path, item_id))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+pub fn restore_from_trash_sync(workspace_path: String, item_id: String) -> Result<(), String> {
     let logger = crate::logging::logger();
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
@@ -94,7 +100,18 @@ pub fn restore_from_trash(workspace_path: String, item_id: String) -> Result<(),
 }
 
 #[tauri::command]
-pub fn permanently_delete_from_trash(
+pub async fn permanently_delete_from_trash(
+    workspace_path: String,
+    item_id: String,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        permanently_delete_from_trash_sync(workspace_path, item_id)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+pub fn permanently_delete_from_trash_sync(
     workspace_path: String,
     item_id: String,
 ) -> Result<(), String> {
@@ -150,7 +167,13 @@ pub fn permanently_delete_from_trash(
 }
 
 #[tauri::command]
-pub fn empty_trash(workspace_path: String) -> Result<(), String> {
+pub async fn empty_trash(workspace_path: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || empty_trash_sync(workspace_path))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+pub fn empty_trash_sync(workspace_path: String) -> Result<(), String> {
     let logger = crate::logging::logger();
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();

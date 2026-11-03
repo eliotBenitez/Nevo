@@ -6,6 +6,24 @@ import tailwindcss from '@tailwindcss/vite'
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
+// Vendor chunk for a module id, or null to leave it to default code splitting.
+function vendorChunk(id: string): string | null {
+  if (!id.includes("node_modules")) return null
+  // mermaid / vega / markmap intentionally omitted: they are already
+  // split into their own chunks via dynamic import().
+  if (id.includes("/prosemirror-")) return "vendor-prosemirror"
+  if (/\/(yjs|y-prosemirror|y-protocols|y-websocket)\//.test(id)) return "vendor-yjs"
+  // Anchored to the package directory: a loose `/vue/` segment would
+  // also capture `@lucide/vue`, whose star-imported icon catalogue
+  // (~1 MiB) must stay in the lazy icon-picker chunk, not this one.
+  if (/\/node_modules\/(vue|vue-router|@vue|pinia|@vueuse|vue-i18n)\//.test(id)) return "vendor-vue"
+  if (/\/(unified|remark-[^/]+|mdast-[^/]+|micromark[^/]*|unist-[^/]+)\//.test(id)) return "vendor-unified"
+  if (id.includes("/katex/")) return "vendor-katex"
+  if (id.includes("/highlight.js/")) return "vendor-highlight"
+  if (/\/d3-(force|zoom|drag|selection|dispatch|timer|quadtree|transition|interpolate|color|ease)\//.test(id)) return "vendor-d3"
+  return null
+}
+
 // https://vite.dev/config/
 export default defineConfig(async () => ({
   plugins: [
@@ -22,26 +40,13 @@ export default defineConfig(async () => ({
   },
 
   build: {
-    // MathJax's lazy SVG output module has a separate 1.3 MiB budget; all
-    // other chunks are checked against 1.1 MiB by build-tools/check-bundle-size.mjs.
+    // MathJax's lazy SVG output module (1.3 MiB) and Mermaid's lazy ELK layout
+    // (1.5 MiB) have separate budgets; all other chunks are checked against
+    // 1.1 MiB by build-tools/check-bundle-size.mjs.
     chunkSizeWarningLimit: 1300,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks(id) {
-          if (!id.includes("node_modules")) return
-          // mermaid / vega / markmap intentionally omitted: they are already
-          // split into their own chunks via dynamic import().
-          if (id.includes("/prosemirror-")) return "vendor-prosemirror"
-          if (/\/(yjs|y-prosemirror|y-protocols|y-websocket)\//.test(id)) return "vendor-yjs"
-          // Anchored to the package directory: a loose `/vue/` segment would
-          // also capture `@lucide/vue`, whose star-imported icon catalogue
-          // (~1 MiB) must stay in the lazy icon-picker chunk, not this one.
-          if (/\/node_modules\/(vue|vue-router|@vue|pinia|@vueuse|vue-i18n)\//.test(id)) return "vendor-vue"
-          if (/\/(unified|remark-[^/]+|mdast-[^/]+|micromark[^/]*|unist-[^/]+)\//.test(id)) return "vendor-unified"
-          if (id.includes("/katex/")) return "vendor-katex"
-          if (id.includes("/highlight.js/")) return "vendor-highlight"
-          if (/\/d3-(force|zoom|drag|selection|dispatch|timer|quadtree|transition|interpolate|color|ease)\//.test(id)) return "vendor-d3"
-        },
+        codeSplitting: { groups: [{ name: vendorChunk, debugName: "vendor" }] },
       },
     },
   },

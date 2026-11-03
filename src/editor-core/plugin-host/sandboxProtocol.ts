@@ -22,12 +22,18 @@ interface SandboxRequestBase {
   sessionToken: string
 }
 
+export interface SandboxI18nCatalog {
+  locale: string
+  messages: Record<string, string>
+}
+
 export interface SandboxInitializeMessage extends SandboxRequestBase {
   type: 'initialize'
   pluginUrl: string
   pluginId: string
   capabilities: NevoPluginCapability[]
   dataVersion: number
+  i18n?: SandboxI18nCatalog
 }
 
 export interface SandboxInvokeMessage extends SandboxRequestBase {
@@ -161,6 +167,11 @@ export function isSandboxWorkerRequest(value: unknown): value is SandboxWorkerRe
       && typeof value.pluginId === 'string'
       && Array.isArray(value.capabilities)
       && Number.isSafeInteger(value.dataVersion)
+      && (value.i18n === undefined || (
+        isObject(value.i18n)
+        && typeof value.i18n.locale === 'string'
+        && isObject(value.i18n.messages)
+      ))
   }
   if (value.type === 'invoke') {
     return isObject(value.invocation)

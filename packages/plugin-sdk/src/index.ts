@@ -1,6 +1,8 @@
 export * from './protocol'
+export * from './i18n'
 
 import { PLUGIN_PROTOCOL_VERSION } from './protocol'
+import type { PluginTranslator } from './i18n'
 import type {
   JsonObject,
   JsonValue,
@@ -41,6 +43,8 @@ export interface PluginRegistrationDescriptor {
 export interface PluginSetupApi {
   readonly pluginId: string
   readonly capabilities: ReadonlySet<PluginCapability>
+  /** Translator over `locales/<locale>.json`, resolved for the app locale (falls back to `defaultLocale`). */
+  readonly i18n: PluginTranslator
   register(
     kind: PluginContributionKind,
     descriptor: PluginRegistrationDescriptor,

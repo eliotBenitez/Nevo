@@ -176,9 +176,10 @@ pub async fn voice_recording_start(
     {
         let mut guard = lock_active(&state)?;
         start_is_allowed(guard.state()).map_err(|e| e.code())?;
-        // Dictation owns the microphone while starting/active. Checked after the
-        // reservation: dictation reserves first and then checks `is_idle`, so at
-        // least one of the two sees the other.
+        // Dictation owns the microphone while starting/active. This check and the
+        // `Starting` write below must stay under this one voice-state lock:
+        // dictation reserves its own slot first and then reads `is_idle` (which
+        // takes this lock), so at least one of the two sees the other.
         if dictation.is_active() {
             return Err(RecorderError::AlreadyRecording.code());
         }

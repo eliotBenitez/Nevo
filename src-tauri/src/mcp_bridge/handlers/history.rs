@@ -6,6 +6,7 @@
 use serde::Deserialize;
 use serde_json::{json, Value};
 
+use super::editor::reject_trashed;
 use super::{parse_params, RpcError};
 use crate::commands::note::{list_note_snapshots_impl, load_note_snapshot_impl};
 use crate::commands::path_utils::validate_id;
@@ -74,11 +75,21 @@ pub fn read_snapshot(workspace_path: &str, params: Value) -> Result<Value, RpcEr
     }))
 }
 
-/// Restores a snapshot. The restore itself first stores a recovery snapshot of
+/// Restores a snapshot of a live note (trashed notes are read-only to agents,
+/// as in `editor::load_note`). The restore itself first stores a recovery snapshot of
 /// the current state, so it is always reversible.
-pub async fn restore_snapshot(app: &tauri::AppHandle, params: Value) -> Result<Value, RpcError> {
+pub async fn restore_snapshot(
+    app: &tauri::AppHandle,
+    workspace_path: &str,
+    params: Value,
+) -> Result<Value, RpcError> {
     let params: SnapshotParams = parse_params(params)?;
     validate(&params)?;
+    let workspace_path = workspace_path.to_string();
+    let note_id = params.note_id.clone();
+    tauri::async_runtime::spawn_blocking(move || reject_trashed(&workspace_path, &note_id))
+        .await
+        .map_err(|error| RpcError::internal(error.to_string()))??;
     webview::request(
         app,
         "history.restore",

@@ -28,26 +28,26 @@ function onThemeModeClick(mode: ThemeMode) {
   void onboardingStore.markFirstStep('chooseAppearance')
 }
 
-const themeModes = computed<Array<{ id: ThemeMode; label: string }>>(() => [
-  { id: 'system', label: t('settings.options.theme.system') },
-  { id: 'light', label: t('settings.options.theme.light') },
-  { id: 'dark', label: t('settings.options.theme.dark') },
+const themeModes = computed<Array<{ value: ThemeMode; label: string }>>(() => [
+  { value: 'system', label: t('settings.options.theme.system') },
+  { value: 'light', label: t('settings.options.theme.light') },
+  { value: 'dark', label: t('settings.options.theme.dark') },
 ])
 
-const contrastModes = computed<Array<{ id: ContrastMode; label: string }>>(() => [
-  { id: 'soft', label: t('settings.options.contrastMode.soft') },
-  { id: 'balanced', label: t('settings.options.contrastMode.balanced') },
-  { id: 'high', label: t('settings.options.contrastMode.high') },
+const contrastModes = computed<Array<{ value: ContrastMode; label: string }>>(() => [
+  { value: 'soft', label: t('settings.options.contrastMode.soft') },
+  { value: 'balanced', label: t('settings.options.contrastMode.balanced') },
+  { value: 'high', label: t('settings.options.contrastMode.high') },
 ])
 
-const densityModes = computed<Array<{ id: InterfaceDensity; label: string }>>(() => [
-  { id: 'comfortable', label: t('settings.options.density.comfortable') },
-  { id: 'compact', label: t('settings.options.density.compact') },
+const densityModes = computed<Array<{ value: InterfaceDensity; label: string }>>(() => [
+  { value: 'comfortable', label: t('settings.options.density.comfortable') },
+  { value: 'compact', label: t('settings.options.density.compact') },
 ])
 
-const iconSets: Array<{ id: IconSet; label: string }> = [
-  { id: 'lucide', label: 'Lucide' },
-  { id: 'tabler', label: 'Tabler' },
+const iconSets: Array<{ value: IconSet; label: string }> = [
+  { value: 'lucide', label: 'Lucide' },
+  { value: 'tabler', label: 'Tabler' },
 ]
 
 const accentLabelKeys: Record<string, string> = {
@@ -148,19 +148,13 @@ const roundnessIndex = computed({
           :title="t('settings.appearance.mode.title')"
           :description="t('settings.appearance.mode.description')"
         >
-          <div class="segmented" role="group" :aria-label="t('settings.appearance.mode.title')">
-            <button
-              v-for="mode in themeModes"
-              :key="mode.id"
-              type="button"
-              class="segmented__item"
-              :class="{ 'is-active': themeStore.theme === mode.id }"
-              :aria-pressed="themeStore.theme === mode.id"
-              @click="onThemeModeClick(mode.id)"
-            >
-              {{ mode.label }}
-            </button>
-          </div>
+          <NvSelect
+            :model-value="themeStore.theme"
+            :options="themeModes"
+            :min-width="150"
+            :aria-label="t('settings.appearance.mode.title')"
+            @update:model-value="v => onThemeModeClick(v as ThemeMode)"
+          />
         </SettingsRow>
 
         <!-- Accent Color -->
@@ -183,19 +177,13 @@ const roundnessIndex = computed({
           :title="t('settings.appearance.contrastMode.title')"
           :description="t('settings.appearance.contrastMode.description')"
         >
-          <div class="segmented" role="group" :aria-label="t('settings.appearance.contrastMode.title')">
-            <button
-              v-for="mode in contrastModes"
-              :key="mode.id"
-              type="button"
-              class="segmented__item"
-              :class="{ 'is-active': settings.appearance.contrastMode === mode.id }"
-              :aria-pressed="settings.appearance.contrastMode === mode.id"
-              @click="workspaceStore.updateSettings(draft => { draft.appearance.contrastMode = mode.id })"
-            >
-              {{ mode.label }}
-            </button>
-          </div>
+          <NvSelect
+            :model-value="settings.appearance.contrastMode"
+            :options="contrastModes"
+            :min-width="150"
+            :aria-label="t('settings.appearance.contrastMode.title')"
+            @update:model-value="v => workspaceStore.updateSettings(draft => { draft.appearance.contrastMode = v as ContrastMode })"
+          />
         </SettingsRow>
 
         <!-- Theme schedule -->
@@ -242,19 +230,13 @@ const roundnessIndex = computed({
           :title="t('settings.appearance.interfaceDensity.title')"
           :description="t('settings.appearance.interfaceDensity.description')"
         >
-          <div class="segmented" role="group" :aria-label="t('settings.appearance.interfaceDensity.title')">
-            <button
-              v-for="density in densityModes"
-              :key="density.id"
-              type="button"
-              class="segmented__item"
-              :class="{ 'is-active': appConfig.interfaceDensity === density.id }"
-              :aria-pressed="appConfig.interfaceDensity === density.id"
-              @click="themeStore.setDensity(density.id)"
-            >
-              {{ density.label }}
-            </button>
-          </div>
+          <NvSelect
+            :model-value="appConfig.interfaceDensity"
+            :options="densityModes"
+            :min-width="150"
+            :aria-label="t('settings.appearance.interfaceDensity.title')"
+            @update:model-value="v => themeStore.setDensity(v as InterfaceDensity)"
+          />
         </SettingsRow>
 
         <!-- Icon set -->
@@ -262,19 +244,13 @@ const roundnessIndex = computed({
           :title="t('settings.appearance.iconSet.title')"
           :description="t('settings.appearance.iconSet.description')"
         >
-          <div class="segmented" role="group" :aria-label="t('settings.appearance.iconSet.title')">
-            <button
-              v-for="set in iconSets"
-              :key="set.id"
-              type="button"
-              class="segmented__item"
-              :class="{ 'is-active': appConfig.iconSet === set.id }"
-              :aria-pressed="appConfig.iconSet === set.id"
-              @click="themeStore.setIconSet(set.id)"
-            >
-              {{ set.label }}
-            </button>
-          </div>
+          <NvSelect
+            :model-value="appConfig.iconSet"
+            :options="iconSets"
+            :min-width="150"
+            :aria-label="t('settings.appearance.iconSet.title')"
+            @update:model-value="v => themeStore.setIconSet(v as IconSet)"
+          />
         </SettingsRow>
 
         <!-- Roundness -->

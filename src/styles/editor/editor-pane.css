@@ -171,6 +171,11 @@
   transition: none;
 }
 
+/* The overlay scrollbar is custom-drawn, so the global "hidden" setting must hide it explicitly. */
+[data-scrollbars="hidden"] .editor-scrollbar {
+  display: none;
+}
+
 .doc-content .nv-prosemirror {
   font-family: var(--workspace-editor-font-family, var(--font-ui));
 }

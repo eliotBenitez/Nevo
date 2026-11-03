@@ -1,21 +1,22 @@
-# Быстрый старт и manifest
+# Quickstart and manifest
 
-Эта страница проводит от пустой папки до загружаемого SDK V2 plugin bundle.
-Итоговая папка `dist/` содержит `manifest.json` и один или несколько ES modules,
-доступных только внутри каталога плагина.
+This page takes you from an empty folder to a loadable SDK V2 plugin bundle.
+The resulting `dist/` folder contains `manifest.json` and one or more ES modules
+that are accessible only inside the plugin directory.
 
-## Требования
+## Requirements
 
-- Node.js 20 или новее;
+- Node.js 20 or newer;
 - pnpm;
-- установленный Nevo с локальным workspace;
-- TypeScript рекомендуется, но runtime принимает собранный JavaScript ES module.
+- an installed Nevo with a local workspace;
+- TypeScript is recommended, but the runtime accepts a built JavaScript ES
+  module.
 
-Если вы работаете внутри репозитория Nevo, готовые примеры находятся в
-`packages/plugin-sdk/examples`, а базовый шаблон — в
+If you work inside the Nevo repository, ready-made examples are in
+`packages/plugin-sdk/examples`, and the base template is in
 `packages/plugin-sdk/templates/basic`.
 
-## 1. Создайте проект
+## 1. Create a project
 
 ```sh
 mkdir acme-hello
@@ -24,7 +25,7 @@ pnpm init
 pnpm add -D @nevo/plugin-sdk@^2.0.0 typescript vite vitest
 ```
 
-Минимальная структура:
+Minimal structure:
 
 ```text
 acme-hello/
@@ -39,10 +40,10 @@ acme-hello/
 └── vite.config.ts
 ```
 
-`public/manifest.json` автоматически попадёт в `dist/`, а Vite соберёт
-`src/index.ts` в `dist/index.js`.
+`public/manifest.json` is copied into `dist/` automatically, and Vite builds
+`src/index.ts` into `dist/index.js`.
 
-## 2. Настройте сборку
+## 2. Configure the build
 
 `package.json`:
 
@@ -82,8 +83,8 @@ export default defineConfig({
 })
 ```
 
-Не помечайте `@nevo/plugin-sdk` как external: bare import нельзя разрешить за
-пределами plugin directory. SDK должен попасть в bundle.
+Do not mark `@nevo/plugin-sdk` as external: a bare import cannot be resolved
+outside the plugin directory. The SDK must be included in the bundle.
 
 `tsconfig.json`:
 
@@ -100,7 +101,7 @@ export default defineConfig({
 }
 ```
 
-## 3. Добавьте manifest
+## 3. Add a manifest
 
 `public/manifest.json`:
 
@@ -123,33 +124,41 @@ export default defineConfig({
 }
 ```
 
-### Поля manifest
+### Manifest fields
 
-| Поле | Обязательно | Назначение |
+| Field | Required | Purpose |
 | --- | --- | --- |
-| `id` | Да | Стабильный ID и имя каталога; безопасные символы `A-Z a-z 0-9 . _ -` |
-| `name` | Да | Отображаемое имя |
-| `version` | Да | Версия пакета |
-| `description` | Нет | Описание в marketplace/settings |
-| `enabled` | Да | Начальное состояние |
-| `kind` | Да для marketplace | `marketplace`; другие значения зарезервированы для host |
-| `source` | Да для marketplace | `marketplace` |
-| `entryPoint` | Да | Plugin-relative ES module, например `index.js` |
-| `apiVersion` | Да | Для SDK V2 — `2.0.0` |
-| `executionMode` | Да | Для SDK V2 — `sandboxed-worker` |
-| `dataVersion` | Да | Версия persisted plugin data, целое `>= 1` |
-| `capabilities` | Да | Единый список разрешений SDK V2 |
-| `network` | При использовании сети | Разрешённые HTTPS hosts и methods |
-| `nevoVersionRange` | Нет | Точная версия, `^major`, `*` или `latest` |
-| `priority` | Нет | Порядок загрузки; большее значение загружается раньше |
-| `settingsSchema` | Нет | Поля UI настроек плагина |
+| `id` | Yes | Stable ID and directory name; safe characters `A-Z a-z 0-9 . _ -` |
+| `name` | Yes | Display name |
+| `version` | Yes | Package version |
+| `description` | No | Description in marketplace/settings |
+| `enabled` | Yes | Initial state |
+| `kind` | Yes for marketplace | `marketplace`; other values are reserved for the host |
+| `source` | Yes for marketplace | `marketplace` |
+| `entryPoint` | Yes | Plugin-relative ES module, for example `index.js` |
+| `apiVersion` | Yes | `2.0.0` for SDK V2 |
+| `executionMode` | Yes | `sandboxed-worker` for SDK V2 |
+| `dataVersion` | Yes | Persisted plugin data version, integer `>= 1` |
+| `capabilities` | Yes | Single SDK V2 permission list |
+| `network` | When using the network | Allowed HTTPS hosts and methods |
+| `nevoVersionRange` | No | Exact version, `^major`, `*` or `latest` |
+| `runtimes` | No | Where the plugin runs: any of `desktop`, `android`, `ios`. Omitted means all runtimes; on other runtimes the plugin is not loaded |
+| `defaultLocale` | No | Locale of the fallback catalog `locales/<defaultLocale>.json`; `en` when omitted. See [Localization](./localization.md) |
+| `priority` | No | Load order; a higher value loads earlier |
+| `settingsSchema` | No | Fields of the plugin settings UI |
 
-Legacy-поля `editorCapabilities`, `uiCapabilities` и
-`workspaceCapabilities` не являются источником разрешений SDK V2.
+On a runtime the plugin does not list, its schema nodes survive only through
+the SDK V2 schema cache in `.nevo/plugin-registry.json`. Notes that use nodes
+of an excluded trusted-webview plugin, or of a sandboxed plugin that has never
+registered in this workspace, open as a plain-text fallback that is not saved
+back.
+
+The legacy fields `editorCapabilities`, `uiCapabilities` and
+`workspaceCapabilities` are not a source of SDK V2 permissions.
 
 ### Network policy
 
-`network` разрешён только вместе с `network.fetch`:
+`network` is allowed only together with `network.fetch`:
 
 ```json
 {
@@ -161,13 +170,13 @@ Legacy-поля `editorCapabilities`, `uiCapabilities` и
 }
 ```
 
-Указывайте host без scheme, port, path или query. Запрос всё равно должен
-использовать HTTPS. Wildcard `*.example.com` не означает сам `example.com`;
-добавьте оба значения, если нужны оба.
+Specify a host without a scheme, port, path or query. The request must still use
+HTTPS. The wildcard `*.example.com` does not match `example.com` itself; add both
+values if you need both.
 
 ### Settings schema
 
-Nevo строит форму настроек из `settingsSchema`:
+Nevo builds the settings form from `settingsSchema`:
 
 ```json
 {
@@ -194,14 +203,15 @@ Nevo строит форму настроек из `settingsSchema`:
 }
 ```
 
-Поддерживаемые types: `text`, `password`, `textarea`, `select`, `number`,
-`checkbox`. Для number доступны `min`, `max`, `step`; для select — `options`.
+Supported types: `text`, `password`, `textarea`, `select`, `number`,
+`checkbox`. For number, `min`, `max` and `step` are available; for select,
+`options`.
 
-Обычное поле читается через `api.settings.get()`. Поле с `secret: true` хранится
-в secure store и читается только через `api.secrets.get()`. Секрет нельзя
-получить через `api.settings`.
+A regular field is read through `api.settings.get()`. A field with
+`secret: true` is stored in the secure store and read only through
+`api.secrets.get()`. A secret cannot be obtained through `api.settings`.
 
-## 4. Напишите entry module
+## 4. Write the entry module
 
 `src/index.ts`:
 
@@ -232,17 +242,17 @@ export default definePlugin({
 })
 ```
 
-Экспортируйте definition как `default` или именованный `plugin`. `default`
-проще и используется во всех примерах.
+Export the definition as `default` or as a named `plugin`. `default` is simpler
+and is used in all examples.
 
-## 5. Соберите и проверьте bundle
+## 5. Build and check the bundle
 
 ```sh
 pnpm build
 pnpm conformance
 ```
 
-Ожидаемая структура:
+Expected structure:
 
 ```text
 dist/
@@ -250,29 +260,40 @@ dist/
 └── manifest.json
 ```
 
-Conformance CLI сейчас проверяет форму модуля и наличие `setup`. Регистрации,
-capabilities и runtime-поведение дополнительно проверяет реальный host, поэтому
-обязательно добавьте unit tests и выполните ручную проверку.
+The conformance CLI currently checks the module shape and the presence of
+`setup`. Registrations, capabilities and runtime behavior are additionally
+checked by the real host, so be sure to add unit tests and perform a manual
+check.
 
-## 6. Установите development build
+## 6. Install a development build
 
-Для локальной проверки скопируйте содержимое `dist/` в:
+For local testing, copy the contents of `dist/` into:
 
 ```text
 <workspace>/.nevo/plugins/acme.hello/
 ├── index.js
-└── manifest.json
+├── manifest.json
+├── locales/         (optional, <locale>.json translations)
+└── README.md        (optional, also README.<locale>.md)
 ```
 
-Имя каталога должно точно совпадать с `manifest.id`. После копирования
-перезапустите Nevo или заново откройте workspace, затем проверьте плагин в
-Settings → Plugins.
+The directory name must exactly match `manifest.id`. After copying, restart Nevo
+or reopen the workspace, then check the plugin in Settings → Plugins.
 
-Не публикуйте development bundle как trusted/folder V1 plugin. Для marketplace
-package должен сохранять `apiVersion: "2.0.0"` и
+An optional `README.md` (any letter case, up to 256 KiB, UTF-8) at the top of
+the plugin folder is shown on the plugin's page in Settings → Plugins, both for
+installed plugins and for marketplace entries. It is rendered as plain
+Markdown: links show as text, images show their alt text, and raw HTML is not
+rendered.
+
+Translations in `locales/` and per-locale READMEs are described in
+[Localization](./localization.md).
+
+Do not publish a development bundle as a trusted/folder V1 plugin. For the
+marketplace, the package must keep `apiVersion: "2.0.0"` and
 `executionMode: "sandboxed-worker"`.
 
-## 7. Добавьте первый unit test
+## 7. Add the first unit test
 
 `test/index.test.ts`:
 
@@ -299,4 +320,4 @@ describe('acme.hello', () => {
 })
 ```
 
-Следующий шаг: [Contributions и lifecycle](./contributions.md).
+Next step: [Contributions and lifecycle](./contributions.md).

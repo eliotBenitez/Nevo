@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { watchDebounced } from '@vueuse/core'
-import { Download, FolderPen, History, Pin, PinOff, Search, Trash2, Upload } from '../../ui/icons'
+import { Download, FolderPen, FolderPlus, History, Pin, PinOff, Search, Trash2, Upload } from '../../ui/icons'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import type { SidebarNotePreview, TreeNode } from '../../types/note'
@@ -17,7 +17,7 @@ import NvMenuSeparator from '../../ui/primitives/NvMenuSeparator.vue'
 import { useWorkspaceStore } from '../../stores/workspace'
 import { useTreeStore } from '../../stores/tree'
 import { filterSidebarPreviewsByTags, sortSidebarPreviews } from '../../utils/sidebar/sidebarNotePreviews'
-import { useSidebarDrag, type SidebarDragTarget, type SidebarDragSource } from '../composables/useSidebarDrag'
+import { useSidebarDrag, type SidebarDropResult } from '../composables/useSidebarDrag'
 import { workspaceHomeFavoriteKey } from '../../utils/workspace-settings'
 import { pluralChoice } from '../../utils/plural-index'
 import SidebarTagSection from './SidebarTagSection.vue'
@@ -63,7 +63,7 @@ type BoardMenuAction = 'rename' | 'delete'
 const emit = defineEmits<{
   'create-note': []
   'create-notebook': []
-  'create-folder': []
+  'create-folder': [parentId?: string]
   'import-md': []
   'import-obsidian': []
   'import-notion': []
@@ -90,7 +90,7 @@ const emit = defineEmits<{
 const { t, locale } = useI18n()
 const workspaceStore = useWorkspaceStore()
 const treeStore = useTreeStore()
-const drag = useSidebarDrag()
+const drag = useSidebarDrag({ onTreeDrop })
 
 /** DnD активен во всех режимах сортировки; при переупорядочивании в не-manual
  *  режиме автоматически переключаемся на manual, чтобы порядок применился. */
@@ -218,7 +218,6 @@ const filteredNotePreviews = computed(() =>
 const tagPreviewItems = computed<SidebarTagPreviewItem[]>(() =>
   filteredNotePreviews.value.map((preview) => ({ ...preview, formattedDate: formatPreviewDate(preview.updatedAt) })),
 )
-const rootDropActive = ref(false)
 const tagPreviewEmptyKind = computed<'no-notes' | 'no-matches' | null>(() => {
   if (filteredNotePreviews.value.length) return null
   return selectedTags.value.size ? 'no-matches' : 'no-notes'
@@ -233,72 +232,18 @@ const collapseState = computed<'collapsed' | 'expanded'>(() =>
   collectFolderIds(props.tree).some((id) => collapsedFolders[id]) ? 'collapsed' : 'expanded',
 )
 
-function onTreeNodeDragStart(event: DragEvent, source: SidebarDragSource) {
-  drag.onDragStart(event, source)
-}
-
-async function onTreeNodeDrop(event: DragEvent, target: SidebarDragTarget) {
-  const result = drag.resolveTreeDrop(event, target)
-  if (!result) {
-    drag.resetDragState(false)
-    return
-  }
-  try {
-    if (result.kind === 'move') {
-      await treeStore.moveNote(result.sourceId, result.targetFolderId)
-    } else if (result.kind === 'move-root') {
-      await treeStore.moveNote(result.sourceId, null)
-    } else if (result.kind === 'move-position') {
-      ensureManualSort()
-      await treeStore.moveNoteToPosition(result.sourceId, result.targetId, result.position, result.parentId)
-    } else {
-      ensureManualSort()
-      await treeStore.reorderItem(result.sourceId, result.targetId, result.position, result.parentId)
-    }
-  } finally {
-    drag.resetDragState(true)
-  }
-}
-
-function onTreeNodeDragEnter(targetId: string) {
-  drag.onDragEnterRow(targetId)
-}
-
-function onTreeNodeDragLeave(targetId: string) {
-  drag.onDragLeaveRow(targetId)
-}
-
-function onTreeNodeDragOver(target: SidebarDragTarget, isFolderTarget: boolean, event: DragEvent) {
-  rootDropActive.value = false
-  drag.onDragOverRow(event, target, isFolderTarget)
-}
-
-function onTreeRootDragOver(event: DragEvent) {
-  if (!dragEnabled.value) return
-  rootDropActive.value = drag.onDragOverRoot(event)
-}
-
-function onTreeRootDragLeave() {
-  rootDropActive.value = false
-}
-
-async function onTreeRootDrop(event: DragEvent) {
-  rootDropActive.value = false
-  const result = drag.resolveRootDrop(event)
-  if (!result) {
-    drag.resetDragState(false)
-    return
-  }
-  try {
+async function onTreeDrop(result: SidebarDropResult) {
+  if (result.kind === 'move') {
+    await treeStore.moveNote(result.sourceId, result.targetFolderId)
+  } else if (result.kind === 'move-root') {
     await treeStore.moveNote(result.sourceId, null)
-  } finally {
-    drag.resetDragState(true)
+  } else if (result.kind === 'move-position') {
+    ensureManualSort()
+    await treeStore.moveNoteToPosition(result.sourceId, result.targetId, result.position, result.parentId)
+  } else {
+    ensureManualSort()
+    await treeStore.reorderItem(result.sourceId, result.targetId, result.position, result.parentId)
   }
-}
-
-function resetTreeDragState() {
-  rootDropActive.value = false
-  drag.resetDragState(false)
 }
 
 /** Tag-preview: переупорядочивание плоского списка заметок. */
@@ -451,6 +396,14 @@ function runImportIntoNote() {
   contextMenu.target = null
 }
 
+function runCreateSubfolder() {
+  const target = contextMenu.target
+  if (!target || target.kind !== 'folder') return
+  emit('create-folder', target.id)
+  contextMenu.open = false
+  contextMenu.target = null
+}
+
 function runImportIntoFolder() {
   const target = contextMenu.target
   if (!target || target.kind !== 'folder') return
@@ -564,7 +517,7 @@ function toggleGenericHome() {
         :drag-enabled="dragEnabled"
         :dragged-id="drag.draggedSource.value?.id ?? null"
         :drag-over="drag.dragOver.value"
-        :root-drop-active="rootDropActive"
+        :root-drop-active="drag.rootDropActive.value"
         @create-note="emit('create-note')"
         @create-notebook="emit('create-notebook')"
         @create-folder="emit('create-folder')"
@@ -573,15 +526,7 @@ function toggleGenericHome() {
         @open-note="emit('open-note', $event)"
         @create-note-in-folder="emit('create-note-in-folder', $event)"
         @context-menu="onContextMenu"
-        @drag-start="onTreeNodeDragStart"
-        @drag-over="onTreeNodeDragOver"
-        @drag-enter="onTreeNodeDragEnter"
-        @drag-leave="onTreeNodeDragLeave"
-        @drop="onTreeNodeDrop"
-        @root-drag-over="onTreeRootDragOver"
-        @root-drag-leave="onTreeRootDragLeave"
-        @root-drop="onTreeRootDrop"
-        @dragend="resetTreeDragState"
+        @drag-pointerdown="drag.onRowPointerDown"
       />
     </div>
 
@@ -639,6 +584,7 @@ function toggleGenericHome() {
     <NvMenuItem :icon="Trash2" :label="t('workspace.context.delete')" danger @select="runContextAction('delete')" />
     <NvMenuSeparator />
     <NvMenuItem :icon="Search" :label="t('workspace.context.search')" @select="runContextAction('search')" />
+    <NvMenuItem v-if="contextMenu.target?.kind === 'folder'" :icon="FolderPlus" :label="t('workspace.context.newSubfolder')" @select="runCreateSubfolder" />
     <NvMenuItem v-if="contextMenu.target?.kind === 'folder'" :icon="Upload" :label="t('workspace.context.importAsNote')" @select="runImportIntoFolder" />
     <NvMenuItem v-if="contextMenu.target?.kind === 'note'" :icon="Upload" :label="t('workspace.context.importIntoNote')" @select="runImportIntoNote" />
     <NvMenuItem v-if="contextMenu.target?.kind === 'note'" :icon="History" :label="t('workspace.system.history')" @select="runContextAction('history')" />

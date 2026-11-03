@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
 import { EditorState, TextSelection } from 'prosemirror-state'
-import { EditorView } from 'prosemirror-view'
 import { history, undo } from 'prosemirror-history'
 import { nevoBaseSchema } from '../schema'
 import { createNevoEditorState } from '../state'
@@ -13,6 +12,7 @@ import {
   setVoiceRecordingPlaceholderPhase,
   showVoiceRecordingPlaceholder,
 } from '../plugins/voice-recording-placeholder'
+import { createTestView } from '../../test-utils/editorView'
 
 const schema = nevoBaseSchema
 
@@ -24,7 +24,7 @@ function makeView(paragraphs: string[], cursorInParagraph = 0) {
   let offset = 1
   for (let i = 0; i < cursorInParagraph; i++) offset += doc.child(i).nodeSize
   state = state.apply(state.tr.setSelection(TextSelection.create(state.doc, offset)))
-  const view = new EditorView(document.createElement('div'), { state })
+  const view = createTestView(document.createElement('div'), { state })
   return { view, options }
 }
 
@@ -107,7 +107,7 @@ describe('voice recording placeholder', () => {
       getElapsedMs: () => 0,
     })] })
     state = state.apply(state.tr.setSelection(TextSelection.create(state.doc, 2)))
-    const view = new EditorView(document.createElement('div'), { state })
+    const view = createTestView(document.createElement('div'), { state })
     showVoiceRecordingPlaceholder(view, 'r1')
     const slotPos = view.state.doc.child(0).nodeSize
     view.dispatch(view.state.tr.delete(slotPos, slotPos + 2))
@@ -167,7 +167,7 @@ describe('voice recording placeholder', () => {
       schema.node('paragraph', null, [schema.text(text)])))
     const options = { t: (k: string) => k, onStop: vi.fn(), onCancel: vi.fn(), getElapsedMs: () => 0 }
     const state = EditorState.create({ doc, plugins: [history(), createVoiceRecordingPlaceholderPlugin(options)] })
-    const view = new EditorView(document.createElement('div'), { state })
+    const view = createTestView(document.createElement('div'), { state })
 
     showVoiceRecordingPlaceholder(view, 'r1')
     expect(undo(view.state, tr => view.dispatch(tr))).toBe(false)
@@ -231,7 +231,7 @@ describe('voice recording placeholder', () => {
     })
     const cursorPos = itemParagraphPos + 1 + 'item'.length // end of 'item' text
     state = state.apply(state.tr.setSelection(TextSelection.create(state.doc, cursorPos)))
-    const view = new EditorView(document.createElement('div'), { state })
+    const view = createTestView(document.createElement('div'), { state })
 
     showVoiceRecordingPlaceholder(view, 'r1')
     expect(replaceVoiceRecordingPlaceholder(view, 'r1', audioNode())).toBe(true)

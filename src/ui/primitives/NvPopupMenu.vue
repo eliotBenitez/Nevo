@@ -46,7 +46,6 @@ const { position, reposition } = usePopupPosition({
 })
 
 watch(() => props.open, (val) => {
-  console.log('NvPopupMenu watch(props.open) triggered! val =', val)
   if (val !== undefined) {
     if (val) openMenu()
     else closeMenu(false)

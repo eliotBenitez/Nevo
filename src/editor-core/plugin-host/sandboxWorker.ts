@@ -17,6 +17,7 @@ import {
   type SandboxWorkerResponse,
 } from './sandboxProtocol'
 import { lockDownSandboxGlobals } from './sandboxLockdown'
+import { createPluginTranslator, type PluginTranslator } from './pluginTranslator'
 
 type JsonRecord = Record<string, unknown>
 type Handler = (
@@ -37,6 +38,7 @@ interface WorkerPluginDefinition {
 interface WorkerSetupApi {
   pluginId: string
   capabilities: ReadonlySet<NevoPluginCapability>
+  i18n: PluginTranslator
   register(kind: NevoSandboxContributionKind, descriptor: JsonRecord, handler?: Handler): string | undefined
   command(descriptor: JsonRecord, handler: Handler): string
   keymap(descriptor: JsonRecord, handler: Handler): string
@@ -124,6 +126,7 @@ function registrationApi(
   pluginId: string,
   capabilities: NevoPluginCapability[],
   contributions: NevoSandboxContribution[],
+  i18n: PluginTranslator,
 ): WorkerSetupApi {
   const hostCall = (method: string, args: unknown): Promise<unknown> => {
     const id = `${pluginId}:host:${++sequence}`
@@ -166,6 +169,7 @@ function registrationApi(
   return Object.freeze({
     pluginId,
     capabilities: Object.freeze(new Set(capabilities)),
+    i18n,
     register,
     command: requiredHandler('command'),
     keymap: requiredHandler('keymap'),
@@ -259,6 +263,7 @@ async function initialize(message: Extract<SandboxWorkerRequest, { type: 'initia
     message.pluginId,
     message.capabilities,
     contributions,
+    createPluginTranslator(message.i18n?.messages ?? {}, message.i18n?.locale ?? 'en'),
   ))
   if (returned) contributions.push(...returned)
   const definition: NevoSandboxPluginDefinition = {

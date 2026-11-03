@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { EditorState } from 'prosemirror-state'
-import { EditorView } from 'prosemirror-view'
 import { nevoBaseSchema } from '../../../editor-core/schema'
 
 const createNoteMock = vi.fn()
@@ -17,13 +16,14 @@ vi.mock('../../../stores/note', () => ({
 
 import { clearActiveEditor, notifyActiveEditorTransaction, registerActiveEditor } from '../editor/activeEditorRegistry'
 import { titleFromQuestion, useAiChatActions } from './useAiChatActions'
+import { createTestView } from '../../../test-utils/editorView'
 
 function openEditor(noteId: string, text = '') {
   const state = EditorState.create({
     doc: nevoBaseSchema.node('doc', null, [nevoBaseSchema.node('paragraph', null, text ? [nevoBaseSchema.text(text)] : [])]),
     schema: nevoBaseSchema,
   })
-  const view = new EditorView(document.createElement('div'), {
+  const view = createTestView(document.createElement('div'), {
     state,
     dispatchTransaction(tr) {
       view.updateState(view.state.apply(tr))

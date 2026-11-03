@@ -16,6 +16,8 @@ export interface PdfExportOptions {
   tableOfContents: boolean
   /** Localized table-of-contents heading; omitted falls back to Typst's English default. */
   tocTitle?: string
+  /** Localized audio transcript heading; omitted falls back to English. */
+  transcriptLabel?: string
   titlePage: boolean
   runningHeader: boolean
 }

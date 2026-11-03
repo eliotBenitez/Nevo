@@ -1,11 +1,11 @@
 import type { Node as PMNode } from 'prosemirror-model'
 import type { EditorView, NodeView } from 'prosemirror-view'
+import { isPluginFrameUrl } from './pluginFrameUrl'
 import type { SandboxedPluginSession } from './sandbox'
 
 const FRAME_PROTOCOL_VERSION = '2.0'
 const MAX_FRAME_PAYLOAD_BYTES = 256 * 1024
 const MAX_FRAME_TYPE_LENGTH = 120
-const FRAME_URL_PATTERN = /^nevoplugin:\/\/[a-f0-9]{32}\/[A-Za-z0-9._/-]+$/i
 
 export interface SandboxFrameNodeViewOptions {
   pluginId: string
@@ -33,7 +33,7 @@ export interface SandboxFrameNodeViewOptions {
 export function createSandboxFrameNodeView(
   options: SandboxFrameNodeViewOptions,
 ): (node: PMNode, view: EditorView, getPos: () => number | undefined) => NodeView {
-  if (!FRAME_URL_PATTERN.test(options.frameUrl) || options.frameUrl.includes('..')) {
+  if (!isPluginFrameUrl(options.frameUrl)) {
     throw new Error('Sandbox block frame URL is invalid')
   }
   return (node, view, getPos) => {

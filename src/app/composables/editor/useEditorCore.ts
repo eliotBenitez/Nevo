@@ -44,6 +44,7 @@ import { createDatabaseRepository } from '../../../features/database/databaseRep
 import { createDatabaseCleanup, collectRemovedAssetSrcs } from './documentCleanup'
 import { createIdleTaskScheduler } from './idleTaskScheduler'
 import { resolveBlockRef } from '../../../core/blockRef/resolveBlockRef'
+import { isPluginAvailableForApp } from '../../../core/plugins/runtimeAvailability'
 import { isTranscriptionSupported, transcribeAudio } from '../../../tauri/transcription'
 import { slashGridColumns } from '../../../utils/slashMenuLayout'
 import type { EmbedUrlMode } from './useEmbedUrlPopover'
@@ -254,6 +255,7 @@ function toEditorPluginManifest(manifest: PluginManifest): NevoEditorPluginManif
     workspaceCapabilities: manifest.workspaceCapabilities ?? [],
     network: manifest.network,
     nevoVersionRange: manifest.nevoVersionRange,
+    defaultLocale: manifest.defaultLocale,
     priority: manifest.priority,
   }
 }
@@ -502,7 +504,9 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
     return true
   }
 
-  async function initPluginHost(workspacePath: string | null, pluginManifests: PluginManifest[]) {
+  async function initPluginHost(workspacePath: string | null, installedManifests: PluginManifest[]) {
+    // Plugins that do not support this runtime are not registered at all.
+    const pluginManifests = installedManifests.filter(plugin => isPluginAvailableForApp(plugin, workspaceStore.appMetadata))
     core.workspacePath = workspacePath
     core.systemPlugins = {
       templates: pluginManifests.find(plugin => plugin.id === 'nevo.templates')?.enabled === true,
@@ -830,17 +834,13 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
             return handleInternalLinkClick(view, event)
           },
           contextmenu(view, event) {
-            console.log('contextmenu event fired in ProseMirror!', { shiftKey: event.shiftKey, defaultPrevented: event.defaultPrevented, callbacksHasContextMenuRequest: !!callbacks.onContextMenuRequest })
             if (event.shiftKey) return false
             if (event.defaultPrevented) return false
             
             handleTableContextMenu(view, event)
             
             if (callbacks.onContextMenuRequest) {
-               console.log('Calling callbacks.onContextMenuRequest')
-               const result = callbacks.onContextMenuRequest(view, event)
-               console.log('callbacks.onContextMenuRequest returned', result)
-               return result
+               return callbacks.onContextMenuRequest(view, event)
             }
             return false
           },

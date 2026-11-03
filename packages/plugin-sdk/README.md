@@ -143,9 +143,19 @@ sanitizers, iframes, network, assets, lifecycle, or migrations.
 | `operations` | Helpers for common editor operations |
 | `ui` | Build host-owned declarative UI |
 | `defineBlockView()` | Run the Tier 2 iframe-side bridge |
+| `createTranslator()` | Translate with a plugin's `locales/<locale>.json` catalog; `api.i18n` is one |
 | Protocol types/constants | JSON, snapshot, capability, and contribution contracts |
 | `@nevo/plugin-sdk/test-host` | Unit-test plugin setup and handlers |
 | `nevo-plugin-conformance` | Validate a built module's export shape |
+
+## Localization
+
+Ship `locales/<locale>.json` next to `manifest.json` (optional `defaultLocale`,
+`en` when omitted). Inside `setup`, `api.i18n.t('key', { name })` returns the
+string for the app locale, and the host localizes `manifest.name`,
+`manifest.description` and `settings.<field>.*` keys on its own. In tests pass
+`{ locale, messages }` as the fourth argument of `createTestPluginHost`. See
+[Localization](https://github.com/eliotBenitez/Nevo/blob/main/docs/plugin-sdk/localization.md).
 
 ## Capabilities
 
@@ -182,6 +192,7 @@ See the full documentation for method-specific limits.
 - [Editor transactions](https://github.com/eliotBenitez/Nevo/blob/main/docs/plugin-sdk/editor.md)
 - [UI and custom blocks](https://github.com/eliotBenitez/Nevo/blob/main/docs/plugin-sdk/ui.md)
 - [Host services](https://github.com/eliotBenitez/Nevo/blob/main/docs/plugin-sdk/services.md)
+- [Localization](https://github.com/eliotBenitez/Nevo/blob/main/docs/plugin-sdk/localization.md)
 - [Testing and debugging](https://github.com/eliotBenitez/Nevo/blob/main/docs/plugin-sdk/testing.md)
 - [Capabilities](https://github.com/eliotBenitez/Nevo/blob/main/docs/plugin-capabilities.md)
 - [Security model](https://github.com/eliotBenitez/Nevo/blob/main/docs/plugin-security.md)

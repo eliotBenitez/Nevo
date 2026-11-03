@@ -258,12 +258,30 @@ describe('serializeNoteToHtml', () => {
     expect(html).toContain('</span> after</p>')
     expect(html).toContain('katex-display')
     expect(html).toContain('.katex')
+    // KaTeX 0.18 prefixed some internal classes; the inline export CSS must target the rendered ones.
+    for (const cls of ['katex-base', 'katex-strut']) {
+      expect(html).toContain(`class="${cls}"`)
+      expect(html).toContain(`.katex .${cls} {`)
+    }
     expect(html).not.toContain('KaTeX_Main-Regular.woff2')
     expect(html).not.toContain('url(fonts/')
     expect(withCover.assetSrcs).toEqual(['.nevo/assets/cover.jpg'])
     expect(withCover.html).toContain('class="note-cover"')
     expect(withCover.html).toContain('Cover doc_assets/cover.jpg')
     expect(assetSrcs).toEqual([])
+  })
+
+  it('styles only KaTeX classes the bundled KaTeX actually renders', async () => {
+    const { html } = await serializeNoteToHtml(note({
+      type: 'doc',
+      content: [{ type: 'math_block', attrs: { latex: '\\Large \\sum_{i}^{n} \\frac{a}{b} + (x, y) = z \\quad x_i^2' } }],
+    }, 'Math doc'), 'Math doc_assets')
+
+    const rendered = new Set([...html.matchAll(/class="([^"]*)"/g)].flatMap(match => match[1].split(/\s+/)))
+    const styled = new Set([...html.matchAll(/\.katex \.([\w-]+)/g)].map(match => match[1]))
+    expect(styled.size).toBeGreaterThan(15)
+    // A KaTeX upgrade that renames an internal class must fail here, not silently unstyle exports.
+    expect([...styled].filter(cls => !rendered.has(cls))).toEqual([])
   })
 })
 

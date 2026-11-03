@@ -781,6 +781,7 @@
       "search": "Search",
       "export": "Export",
       "importIntoNote": "Import .md into note",
+      "newSubfolder": "New subfolder",
       "importAsNote": "Import .md as note",
       "renamePrompt": "New name",
       "deleteConfirm": "Delete this item?",
@@ -1823,14 +1824,43 @@
       },
       "manifestIssue": "Manifest issue",
       "manifestValid": "Manifest valid",
+      "unavailableOnDevice": "Not available on this device",
       "emptyTitle": "No plugins found.",
       "emptyDescription": "Drop plugin folders into `.nevo/plugins` and rescan this workspace.",
       "settings": {
         "configure": "Configure",
-        "hide": "Hide",
         "secretSet": "Set",
         "secretPlaceholder": "Enter value",
-        "saved": "Saved"
+        "saved": "Saved",
+        "modalTitle": "{plugin} settings",
+        "done": "Done"
+      },
+      "page": {
+        "back": "All plugins",
+        "enabled": "Enabled",
+        "readmeLoading": "Loading README…",
+        "readmeEmpty": "This plugin has no README.",
+        "readmeError": "Couldn't load the README.",
+        "retry": "Try again",
+        "open": "Open {plugin}",
+        "facts": {
+          "details": "Details",
+          "version": "Version",
+          "installedVersion": "Installed",
+          "source": "Source",
+          "execution": "Runs in",
+          "dataVersion": "Data version",
+          "devices": "Devices",
+          "permissions": "Permissions",
+          "network": "Network",
+          "methods": "Methods"
+        },
+        "runtimes": {
+          "desktop": "Desktop",
+          "android": "Android",
+          "ios": "iOS",
+          "all": "All devices"
+        }
       }
     },
     "mcp": {

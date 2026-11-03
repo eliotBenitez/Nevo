@@ -98,7 +98,7 @@ onBeforeUnmount(() => {
     </form>
 
     <template #footer>
-      <footer class="nv-confirm-dialog__footer tw:flex tw:justify-end tw:gap-2 tw:max-[480px]:flex-col-reverse">
+      <footer class="nv-confirm-dialog__footer tw:flex tw:justify-end tw:gap-2">
         <NvButton variant="ghost" class="nv-confirm-dialog__button" @click="cancel">
           <X :size="14" aria-hidden="true" />
           {{ cancelLabel }}
@@ -162,9 +162,9 @@ onBeforeUnmount(() => {
 
 @media (max-width: 480px) {
   .nv-confirm-dialog__footer :deep(.nv-btn) {
+    flex: 1 1 0;
+    min-width: 0;
     min-height: 44px;
-    width: 100%;
-    justify-content: center;
   }
 }
 </style>

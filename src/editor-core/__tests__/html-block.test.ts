@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
-import { EditorState, NodeSelection } from 'prosemirror-state'
+import { EditorState, NodeSelection, TextSelection } from 'prosemirror-state'
 import type { Command } from 'prosemirror-state'
 import { DOMParser as PMDOMParser, DOMSerializer } from 'prosemirror-model'
+import { CellSelection } from 'prosemirror-tables'
 import type { EditorView } from 'prosemirror-view'
 import { nevoBaseSchema } from '../schema'
 import { createCoreCommands } from '../commands'
-import { createUpdateHtmlCommand } from '../commands/html'
+import { createInsertHtmlCommand, createUpdateHtmlCommand } from '../commands/html'
 import { createHtmlNodeView } from '../node-views/html'
 import { MAX_EMBED_SOURCE_CHARS } from '../node-views/embedLimits'
 import { clampHtmlBlockHeight, HTML_BLOCK_DEFAULT_CODE } from '../schema/htmlBlock'
@@ -132,5 +133,29 @@ describe('html_block node view', () => {
     const { view } = make('x'.repeat(MAX_EMBED_SOURCE_CHARS + 1))
     expect(view.dom.querySelector('iframe')).toBeNull()
     expect(view.dom.querySelector('.nv-html-block-placeholder')).not.toBeNull()
+  })
+})
+
+describe('html block insertion in text', () => {
+  it.each([['end', 4], ['middle', 2], ['start', 0]])('inserts and selects the block at the %s of a non-empty paragraph', (_label, offset) => {
+    const doc = nevoBaseSchema.node('doc', null, [nevoBaseSchema.node('paragraph', null, [nevoBaseSchema.text('abcd')])])
+    let state = EditorState.create({ doc, selection: TextSelection.create(doc, 1 + offset) })
+    createInsertHtmlCommand(nevoBaseSchema.nodes.html_block)(state, tr => { state = state.apply(tr) })
+    const { selection } = state
+    expect(selection instanceof NodeSelection && selection.node.type.name).toBe('html_block')
+    expect(state.doc.textContent).toBe('abcd')
+  })
+
+  it('selects the block inserted over a multi-cell selection', () => {
+    const s = nevoBaseSchema
+    const cell = (text: string) => s.node('table_cell', null, [s.node('paragraph', null, [s.text(text)])])
+    const doc = s.node('doc', null, [s.node('table', null, [s.node('table_row', null, [cell('a'), cell('b')])])])
+    let state = EditorState.create({ doc })
+    const cells: number[] = []
+    state.doc.descendants((node, pos) => { if (node.type.name === 'table_cell') cells.push(pos) })
+    state = state.apply(state.tr.setSelection(CellSelection.create(state.doc, cells[0], cells[1])))
+    createInsertHtmlCommand(s.nodes.html_block)(state, tr => { state = state.apply(tr) })
+    const { selection } = state
+    expect(selection instanceof NodeSelection && selection.node.type.name).toBe('html_block')
   })
 })

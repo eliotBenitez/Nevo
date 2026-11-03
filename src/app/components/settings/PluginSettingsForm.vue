@@ -4,11 +4,12 @@ import { useI18n } from 'vue-i18n'
 import { useWorkspaceStore } from '../../../stores/workspace'
 import { pluginSecretKey, secureStore } from '../../../tauri/secureStore'
 import type { PluginManifest, PluginSettingField } from '../../../types/workspace'
+import { pluginText, type PluginCatalogMessages } from '../../../core/plugins/pluginMessages'
 import NvNumberInput from '../../../ui/primitives/NvNumberInput.vue'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import NvToggle from '../../../ui/primitives/NvToggle.vue'
 
-const props = defineProps<{ plugin: PluginManifest }>()
+const props = defineProps<{ plugin: PluginManifest; messages?: PluginCatalogMessages }>()
 
 const { t, te } = useI18n()
 const workspaceStore = useWorkspaceStore()
@@ -24,10 +25,25 @@ function label(value: string | undefined, fallback: string): string {
   return value ?? fallback
 }
 
+// Plugin catalog (`locales/<locale>.json`) wins, then app keys, then raw manifest text.
+function catalogText(key: string): string {
+  return pluginText(props.messages, key, '')
+}
+
+function fieldLabel(field: PluginSettingField): string {
+  return catalogText(`settings.${field.key}.label`) || label(field.label, field.key)
+}
+
+function fieldDescription(field: PluginSettingField): string | undefined {
+  return catalogText(`settings.${field.key}.description`)
+    || (field.description ? label(field.description, field.description) : undefined)
+}
+
 function selectOptions(field: PluginSettingField): { value: string; label: string }[] {
   return (field.options ?? []).map(option => ({
     value: option.value,
-    label: label(option.label, option.value),
+    label: catalogText(`settings.${field.key}.options.${option.value}`)
+      || label(option.label, option.value),
   }))
 }
 
@@ -63,12 +79,12 @@ async function updateSetting(field: PluginSettingField, value: unknown) {
 
 function secretPlaceholder(field: PluginSettingField): string {
   if (secretHasValue[field.key]) return '••••••••'
-  if (field.placeholder) return label(field.placeholder, field.placeholder)
-  return t('settings.plugins.settings.secretPlaceholder')
+  return placeholderText(field) ?? t('settings.plugins.settings.secretPlaceholder')
 }
 
 function placeholderText(field: PluginSettingField): string | undefined {
-  return field.placeholder ? label(field.placeholder, field.placeholder) : undefined
+  return catalogText(`settings.${field.key}.placeholder`)
+    || (field.placeholder ? label(field.placeholder, field.placeholder) : undefined)
 }
 
 function onSecretInput(field: PluginSettingField, value: string) {
@@ -122,13 +138,13 @@ onMounted(async () => {
         : 'tw:grid-cols-[minmax(0,1fr)_auto] tw:items-center tw:gap-5 tw:max-[980px]:grid-cols-[minmax(0,1fr)] tw:max-[980px]:items-stretch tw:max-[980px]:gap-2'"
     >
       <div class="row-copy tw:min-w-0">
-        <div class="row-title tw:text-content-primary tw:text-[13.5px] tw:font-[550] tw:[overflow-wrap:anywhere]">{{ label(field.label, field.key) }}</div>
-        <div v-if="field.description" class="row-sub tw:mt-0.5 tw:text-content-muted tw:text-xs tw:leading-[1.45] tw:[overflow-wrap:anywhere]">{{ label(field.description, field.description) }}</div>
+        <div class="row-title tw:text-content-primary tw:text-[13.5px] tw:font-[550] tw:[overflow-wrap:anywhere]">{{ fieldLabel(field) }}</div>
+        <div v-if="fieldDescription(field)" class="row-sub tw:mt-0.5 tw:text-content-muted tw:text-xs tw:leading-[1.45] tw:[overflow-wrap:anywhere]">{{ fieldDescription(field) }}</div>
       </div>
 
       <NvToggle
         v-if="field.type === 'checkbox'"
-        :aria-label="label(field.label, field.key)"
+        :aria-label="fieldLabel(field)"
         :model-value="boolValue(field)"
         @update:model-value="v => updateSetting(field, v)"
       />

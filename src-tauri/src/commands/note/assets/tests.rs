@@ -12,7 +12,7 @@ use super::remote::{
     validate_remote_asset_url,
 };
 use crate::commands::note::{assets_dir_path, create_note_impl, save_note_impl};
-use crate::commands::workspace::create_workspace;
+use crate::commands::workspace::create_workspace_sync;
 
 #[test]
 fn derive_download_file_name_uses_url_extension() {
@@ -67,7 +67,7 @@ struct TestWorkspace {
 impl TestWorkspace {
     fn new() -> Self {
         let path = std::env::temp_dir().join(format!("nevo-assets-{}", Uuid::new_v4()));
-        create_workspace(
+        create_workspace_sync(
             path.to_string_lossy().into_owned(),
             "Assets".to_string(),
             "N".to_string(),
@@ -396,4 +396,31 @@ fn import_image_asset_accepts_payload_at_the_size_limit() {
     let result = import_image_asset_impl(workspace.path_string(), "max.png".to_string(), at_limit);
 
     assert!(result.is_ok());
+}
+
+#[test]
+fn store_asset_bytes_ignores_leftover_temp_file_and_writes_final_asset() {
+    use super::naming::hash_bytes;
+    use super::store::store_asset_bytes;
+
+    let workspace = TestWorkspace::new();
+    let bytes = b"fresh-asset-bytes";
+    let hash = hash_bytes(bytes);
+    let assets_dir = assets_dir_path(&workspace.path_string());
+    std::fs::create_dir_all(&assets_dir).expect("create assets dir");
+    // Shape of a crashed `write_atomic` temp sibling: `.<final-name>.<uuid>.tmp`.
+    std::fs::write(
+        assets_dir.join(format!(".{hash}-photo.png.{}.tmp", Uuid::new_v4())),
+        b"trunc",
+    )
+    .expect("write leftover temp");
+
+    let stored = store_asset_bytes(&workspace.path_string(), "photo.png", bytes).expect("store");
+    assert!(!stored.deduplicated);
+    let final_path = assets_dir.join(format!("{hash}-photo.png"));
+    assert_eq!(std::fs::read(final_path).expect("read asset"), bytes);
+
+    let again = store_asset_bytes(&workspace.path_string(), "photo.png", bytes).expect("store");
+    assert!(again.deduplicated);
+    assert_eq!(again.src, stored.src);
 }

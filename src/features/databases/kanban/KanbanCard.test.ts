@@ -146,6 +146,21 @@ describe('KanbanCard', () => {
     wrapper.unmount()
   })
 
+  it('starts the pointer drag from the card body and the handle, without HTML5 draggable', () => {
+    const i18n = createI18n({ legacy: false, locale: 'en', messages: { en: enMessages } })
+    const wrapper = mount(KanbanCard, {
+      props: { card: makeCard(), board: makeBoard() },
+      global: { plugins: [i18n] },
+    })
+
+    expect(wrapper.get('.kb-card').attributes('draggable')).toBeUndefined()
+    wrapper.get('.kb-card__title').element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }))
+    wrapper.get('.kb-card__handle').element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }))
+
+    expect(wrapper.emitted('handle-pointerdown')).toHaveLength(2)
+    wrapper.unmount()
+  })
+
   it('renders only visible properties from board display settings', () => {
     const i18n = createI18n({
       legacy: false,

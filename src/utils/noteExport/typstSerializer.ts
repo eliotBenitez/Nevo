@@ -17,6 +17,7 @@ import { summarizeQueryBlockFilters } from '../../features/query/queryBlockSumma
 import { formatAudioTime, readAudioBookmarks } from '../../core/media/audioBookmarks'
 import { readAudioTranscript } from '../../core/media/audioTranscript'
 import { htmlBlockAsCodeNode } from './htmlBlockCode'
+import { formatDateOnly } from '../dateOnly'
 
 export interface TypstImageAsset {
   /** Filename referenced inside the Typst source via `image("name")`. */
@@ -78,6 +79,7 @@ interface SerializeCtx {
   vegaSeq: number
   drawSeq: number
   assetPathPrefix: string
+  transcriptLabel: string
 }
 
 /** Escape a literal string for a Typst double-quoted string token. */
@@ -303,7 +305,7 @@ function nodeToTypst(node: BlockNode, ctx: SerializeCtx): string {
       })
       const transcript = readAudioTranscript(node.attrs?.transcript)
       if (transcript.length) {
-        entries.push('#linebreak()#strong[Transcript]', ...transcript.map(segment =>
+        entries.push(`#linebreak()#strong[${escapeText(ctx.transcriptLabel)}]`, ...transcript.map(segment =>
           `#linebreak()${escapeText(formatAudioTime(segment.start))} — ${escapeText(segment.text.replace(/\s+/g, ' '))}`))
       }
       return [title, ...entries].join(' ')
@@ -403,10 +405,6 @@ function registerDraw(svg: string, ctx: SerializeCtx): string {
   return `${ctx.assetPathPrefix}${name}`
 }
 
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
 function buildPreamble(title: string, options: PdfExportOptions): string {
   const paper = options.paperFormat === 'Letter' ? 'us-letter' : 'a4'
   const flipped = options.orientation === 'landscape'
@@ -415,7 +413,7 @@ function buildPreamble(title: string, options: PdfExportOptions): string {
   const numbering = options.pageNumbers ? ', numbering: "1"' : ''
   // Running header: note title (left) + export date (right), small and muted.
   const header = options.runningHeader
-    ? `, header: [#text(8pt, fill: luma(120))[${escapeText(title)} #h(1fr) ${todayIso()}]]`
+    ? `, header: [#text(8pt, fill: luma(120))[${escapeText(title)} #h(1fr) ${formatDateOnly(new Date())}]]`
     : ''
   // Chosen system font, falling back to the embedded font for missing glyphs;
   // empty selection uses the embedded font directly.
@@ -437,7 +435,7 @@ function buildPreamble(title: string, options: PdfExportOptions): string {
 
   if (options.titlePage) {
     lines.push(
-      `#align(center + horizon)[#text(26pt, weight: "bold")[${escapeText(title)}]\n#v(0.8em)\n#text(11pt, fill: luma(120))[${todayIso()}]]`,
+      `#align(center + horizon)[#text(26pt, weight: "bold")[${escapeText(title)}]\n#v(0.8em)\n#text(11pt, fill: luma(120))[${formatDateOnly(new Date())}]]`,
       '#pagebreak()',
     )
   } else {
@@ -471,6 +469,7 @@ export function serializeNoteToTypst(
     vegaSeq: 0,
     drawSeq: 0,
     assetPathPrefix: serializeOptions.assetPathPrefix ?? '',
+    transcriptLabel: options.transcriptLabel || 'Transcript',
   }
   const body = nodeToTypst(note.content, ctx)
   const source = `${buildPreamble(note.title, options)}\n\n${body}\n`
@@ -524,6 +523,7 @@ export async function serializeNoteToTypstAsync(
     vegaSeq: 0,
     drawSeq: 0,
     assetPathPrefix: serializeOptions.assetPathPrefix ?? '',
+    transcriptLabel: options.transcriptLabel || 'Transcript',
   }
   const replacements = new Map<string, string>()
   const resolved = await resolveAsyncTypstPlugins(note.content, ctx, replacements, { value: 0 })

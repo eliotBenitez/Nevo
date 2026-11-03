@@ -10,7 +10,7 @@ pub(super) const MARKETPLACE_REPO: &str = "eliotBenitez/nevo-marketplace";
 pub(super) const MARKETPLACE_BRANCH: &str = "main";
 const MARKETPLACE_TREE_URL: &str =
     "https://api.github.com/repos/eliotBenitez/nevo-marketplace/git/trees/main?recursive=1";
-const MARKETPLACE_RAW_BASE: &str =
+pub(super) const MARKETPLACE_RAW_BASE: &str =
     "https://raw.githubusercontent.com/eliotBenitez/nevo-marketplace/main";
 pub(super) const MARKETPLACE_META_FILE: &str = ".nevo-marketplace.json";
 
@@ -34,8 +34,16 @@ pub(super) struct MarketplaceFile {
     pub(super) sha: String,
 }
 
+pub(super) fn catalog_client() -> Result<reqwest::Client, String> {
+    reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(10))
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|error| error.to_string())
+}
+
 pub(super) async fn fetch_catalog_tree() -> Result<Vec<GitHubTreeEntry>, String> {
-    let client = reqwest::Client::new();
+    let client = catalog_client()?;
     let response = client
         .get(MARKETPLACE_TREE_URL)
         .header(reqwest::header::USER_AGENT, "Nevo Marketplace")
@@ -62,7 +70,7 @@ pub(super) async fn build_catalog_from_remote_tree(
     workspace_path: &str,
 ) -> Result<MarketplaceCatalog, String> {
     let grouped = group_marketplace_files(tree).0;
-    let client = reqwest::Client::new();
+    let client = catalog_client()?;
     let mut manifests = BTreeMap::new();
 
     for (plugin_id, files) in &grouped {
@@ -77,17 +85,37 @@ pub(super) async fn build_catalog_from_remote_tree(
             MARKETPLACE_RAW_BASE,
             encode_raw_path(&format!("plugins/{}/manifest.json", plugin_id))
         );
-        let response = client
-            .get(manifest_url)
-            .header(reqwest::header::USER_AGENT, "Nevo Marketplace")
-            .send()
-            .await
-            .map_err(|error| error.to_string())?;
-        if !response.status().is_success() {
-            continue;
+        // A single unreachable plugin manifest must not abort the whole catalog.
+        let fetched = async {
+            let response = client
+                .get(manifest_url)
+                .header(reqwest::header::USER_AGENT, "Nevo Marketplace")
+                .send()
+                .await?;
+            if !response.status().is_success() {
+                return Ok(None);
+            }
+            response.text().await.map(Some)
         }
-        let content = response.text().await.map_err(|error| error.to_string())?;
-        manifests.insert(plugin_id.clone(), content);
+        .await;
+        match fetched {
+            Ok(Some(content)) => {
+                manifests.insert(plugin_id.clone(), content);
+            }
+            Ok(None) => {}
+            Err(error) => {
+                let _ = crate::logging::logger().warn(
+                    "tauri.workspace",
+                    "marketplace_catalog",
+                    "Skipped plugin manifest after a network error",
+                    true,
+                    crate::logging::LogContext::default().with_payload(serde_json::json!({
+                        "pluginId": plugin_id,
+                        "error": error.to_string(),
+                    })),
+                );
+            }
+        }
     }
 
     Ok(build_catalog_from_tree(
@@ -203,7 +231,7 @@ pub(super) fn safe_relative_path(path: &str) -> Result<PathBuf, String> {
     Ok(candidate.to_path_buf())
 }
 
-fn encode_raw_path(path: &str) -> String {
+pub(super) fn encode_raw_path(path: &str) -> String {
     path.split('/')
         .map(|segment| segment.replace(' ', "%20"))
         .collect::<Vec<_>>()

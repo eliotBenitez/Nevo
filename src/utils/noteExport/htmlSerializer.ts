@@ -23,6 +23,8 @@ export interface HtmlSerializeResult {
 export interface SerializeCtx {
   assetSrcs: string[]
   assetsSubfolderName: string
+  /** Localized audio transcript heading; omitted falls back to English. */
+  transcriptLabel?: string
 }
 
 const VOID_SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i
@@ -59,12 +61,12 @@ const KATEX_EXPORT_CSS = `.katex {
 .katex .katex-html {
   display: inline-block;
 }
-.katex .base {
+.katex .katex-base {
   display: inline-block;
   position: relative;
   white-space: nowrap;
 }
-.katex .strut {
+.katex .katex-strut {
   display: inline-block;
 }
 .katex .mord,
@@ -122,7 +124,7 @@ const KATEX_EXPORT_CSS = `.katex {
 .katex .mathnormal {
   font-style: italic;
 }
-.katex .sizing {
+.katex .katex-sizing {
   display: inline-block;
 }`
 
@@ -503,7 +505,7 @@ export async function blockNode(node: BlockNode, ctx: SerializeCtx): Promise<str
         : ''
       const transcript = kind === 'audio' ? readAudioTranscript(node.attrs?.transcript) : []
       const transcriptList = transcript.length
-        ? `<section class="audio-transcript"><h3>Transcript</h3><ol>${transcript.map(segment =>
+        ? `<section class="audio-transcript"><h3>${escapeHtml(ctx.transcriptLabel || 'Transcript')}</h3><ol>${transcript.map(segment =>
           `<li>${escapeHtml(formatAudioTime(segment.start))} — ${escapeHtml(segment.text)}</li>`).join('')}</ol></section>`
         : ''
       return `<figure class="media-block">${media}<figcaption>${escapeHtml(name)}</figcaption>${bookmarkList}${transcriptList}</figure>`
@@ -828,8 +830,9 @@ figcaption {
 export function serializeNoteToHtml(
   note: NoteDocument,
   assetsSubfolderName: string,
+  transcriptLabel?: string,
 ): Promise<HtmlSerializeResult> {
-  const ctx: SerializeCtx = { assetSrcs: [], assetsSubfolderName }
+  const ctx: SerializeCtx = { assetSrcs: [], assetsSubfolderName, transcriptLabel }
   return serializeNoteToHtmlWithContext(note, ctx)
 }
 

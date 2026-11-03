@@ -2,6 +2,7 @@ use serde_json::Value;
 use tauri::ipc::{InvokeBody, Request};
 
 use super::{validate_note_for_write, DocumentFormat};
+use crate::commands::ipc_request::decoded_header;
 use crate::commands::note::{crud::save_note_impl, NoteDocument};
 
 enum NotebookSaveBody {
@@ -11,15 +12,7 @@ enum NotebookSaveBody {
 
 #[tauri::command]
 pub async fn save_notebook_note(request: Request<'_>) -> Result<(), String> {
-    let header = request
-        .headers()
-        .get("nv-workspace-path")
-        .and_then(|value| value.to_str().ok())
-        .ok_or_else(|| "Missing notebook workspace path".to_string())?;
-    let workspace_path = percent_encoding::percent_decode_str(header)
-        .decode_utf8()
-        .map_err(|_| "Invalid notebook workspace path encoding".to_string())?
-        .into_owned();
+    let workspace_path = decoded_header(&request, "nv-workspace-path")?;
     let body = prepare_notebook_save_body(request.body(), super::validation::MAX_NOTEBOOK_BYTES)?;
     tauri::async_runtime::spawn_blocking(move || {
         let bytes = notebook_save_body_bytes(body, super::validation::MAX_NOTEBOOK_BYTES)?;

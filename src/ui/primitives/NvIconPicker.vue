@@ -88,7 +88,6 @@ const progressive = useIconPickerProgressiveItems(
   allProgressiveItems,
   computed(() => `${activeTab.value}:${normalizedQuery.value}`),
 )
-const scrollContainer = progressive.scrollContainer
 
 const visibleEmojiCategories = computed(() => {
   const categoryItems = new Map<string, PickerEmojiItem[]>()
@@ -192,7 +191,7 @@ onBeforeUnmount(() => {
     />
 
     <div
-      ref="scrollContainer"
+      :ref="progressive.scrollContainer"
       class="nv-icon-picker__body tw:flex tw:max-h-[300px] tw:min-h-[180px] tw:flex-col tw:gap-2.5 tw:overflow-auto tw:pr-0.5"
       @scroll="progressive.onScroll"
       @focusin="progressive.onFocusIn"

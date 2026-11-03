@@ -6,6 +6,7 @@ import {
   Info,
   PanelsTopLeft,
   Share2,
+  Trash2,
 } from '../../../ui/icons'
 import { useI18n } from 'vue-i18n'
 import NvMenuItem from '../../../ui/primitives/NvMenuItem.vue'
@@ -24,6 +25,7 @@ const emit = defineEmits<{
   back: []
   export: []
   details: []
+  delete: []
   'change-mode': [mode: 'document' | 'canvas']
 }>()
 
@@ -41,6 +43,10 @@ function onExport() {
 
 function onDetails() {
   emit('details')
+}
+
+function onDelete() {
+  emit('delete')
 }
 
 function showDocument() {
@@ -108,6 +114,13 @@ function showCanvas() {
             :icon="Info"
             :label="t('workspace.mobile.editor.noteDetails')"
             :action="onDetails"
+          />
+          <NvMenuSeparator />
+          <NvMenuItem
+            :icon="Trash2"
+            :label="t('workspace.context.delete')"
+            danger
+            :action="onDelete"
           />
         </div>
       </NvPopupMenu>

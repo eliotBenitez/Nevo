@@ -159,8 +159,8 @@ export function createAudioTranscriptView(node: PMNode, options: AudioTranscript
     update,
     stopEvent: (target: Node) => root.contains(target),
     destroy() {
+      // No generation bump: a pending transcription must still reach the recreated block.
       destroyed = true
-      generation++
       renderVNode(null, languageContainer)
     },
   }

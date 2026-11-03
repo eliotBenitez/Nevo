@@ -2,6 +2,8 @@ import { readonly, ref } from 'vue'
 import { isTauri } from '@tauri-apps/api/core'
 import type { DownloadEvent, Update } from '@tauri-apps/plugin-updater'
 import { appLogger } from '../utils/logger'
+import { resolveRuntimeCapabilities } from '../utils/runtime'
+import { useWorkspaceStore } from '../stores/workspace'
 
 export type UpdaterStatus =
   | 'idle'
@@ -72,6 +74,8 @@ async function fetchGithubReleaseBody(version: string): Promise<string | null> {
  */
 async function check({ silent = false }: { silent?: boolean } = {}): Promise<boolean> {
   if (!isTauri()) return false
+  // The updater plugin and its ACL grant exist only in desktop builds.
+  if (resolveRuntimeCapabilities(useWorkspaceStore().appMetadata).isMobileRuntime) return false
   if (status.value === 'checking' || status.value === 'downloading') {
     return availableVersion.value != null
   }

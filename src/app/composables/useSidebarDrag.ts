@@ -1,4 +1,5 @@
 import { onBeforeUnmount, ref } from 'vue'
+import { trackPointerDrag } from '../../utils/pointerDrag'
 import { resolveDropPosition, type DropPosition } from '../../utils/sidebar/reorder'
 
 export type SidebarDragKind = 'note' | 'folder'
@@ -50,16 +51,14 @@ function resolveRowOffset(event: DragEvent): { offsetY: number; rowHeight: numbe
 }
 
 /**
- * Надёжное состояние HTML5 drag-and-drop для сайдбара.
- *
- * Источник хранится в двух местах: реактивный `draggedSource` (для визуальной
- * обратной связи) и в `dataTransfer` (переживает гонки dragleave/drop, работает
- * между разными экземплярами рекурсивного компонента). Счётчик enter/leave пар
- * защищает от ложных dragleave при проходе курсора по дочерним элементам строки.
+ * Состояние перетаскивания сайдбара. Дерево двигается pointer-событиями
+ * (`onRowPointerDown`); HTML5-часть (`onDragStart`/`onDragOverRow`/...) осталась
+ * только для tag-preview.
  */
-export function useSidebarDrag() {
+export function useSidebarDrag(options: { onTreeDrop?: (result: SidebarDropResult) => unknown } = {}) {
   const draggedSource = ref<SidebarDragSource | null>(null)
   const dragOver = ref<SidebarDragOver | null>(null)
+  const rootDropActive = ref(false)
   const suppressNextClick = ref(false)
   let suppressTimer: ReturnType<typeof setTimeout> | null = null
   // Счётчик пар dragenter/dragleave для каждой строки — HTML5 DnD порождает
@@ -125,11 +124,9 @@ export function useSidebarDrag() {
     }
   }
 
-  /** Разрешает итоговое действие сброса для tree-режима (читает источник из ref и dataTransfer). */
-  function resolveTreeDrop(event: DragEvent, target: SidebarDragTarget): SidebarDropResult | null {
-    const source = draggedSource.value ?? readSourceFromTransfer(event)
-    if (!source || source.id === target.id) return null
-    const position = dragOver.value?.position ?? (target.kind === 'folder' ? 'into' : 'after')
+  /** Разрешает итоговое действие сброса для tree-режима. */
+  function resolveTreeDrop(source: SidebarDragSource, target: SidebarDragTarget, position: DropPosition): SidebarDropResult | null {
+    if (source.id === target.id) return null
 
     // Переупорядочивание соседей одного родителя (before/after).
     if (source.parentId === target.parentId && (position === 'before' || position === 'after')) {
@@ -151,22 +148,67 @@ export function useSidebarDrag() {
     return null
   }
 
-  function onDragOverRoot(event: DragEvent): boolean {
-    event.preventDefault()
-    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
-    if (!draggedSource.value) {
-      draggedSource.value = readSourceFromTransfer(event)
-    }
-    const source = draggedSource.value
-    if (!source || source.kind !== 'note' || source.parentId === null) return false
-    dragOver.value = null
-    return true
+  function canDropToRoot(source: SidebarDragSource | null): boolean {
+    return !!source && source.kind === 'note' && source.parentId !== null
   }
 
-  function resolveRootDrop(event: DragEvent): SidebarDropResult | null {
-    const source = draggedSource.value ?? readSourceFromTransfer(event)
-    if (!source || source.kind !== 'note' || source.parentId === null) return null
-    return { kind: 'move-root', sourceId: source.id }
+  function hitTest(x: number, y: number) {
+    const el = document.elementFromPoint?.(x, y)
+    const row = el?.closest<HTMLElement>('[data-tree-row-id]')
+    if (row) {
+      const target: SidebarDragTarget = {
+        id: row.dataset.treeRowId ?? '',
+        kind: row.dataset.treeRowKind === 'folder' ? 'folder' : 'note',
+        parentId: row.dataset.treeRowParent || null,
+      }
+      const rect = row.getBoundingClientRect()
+      const position = resolveDropPosition(y - rect.top, rect.height || ROW_HEIGHT_FALLBACK, target.kind === 'folder')
+      return { target, position, root: false }
+    }
+    return { target: null, position: null, root: !!el?.closest('[data-tree-root-drop]') }
+  }
+
+  function updateHover(x: number, y: number) {
+    const hit = hitTest(x, y)
+    const source = draggedSource.value
+    rootDropActive.value = hit.root && canDropToRoot(source)
+    if (!hit.target || !source || source.id === hit.target.id) {
+      dragOver.value = null
+      return hit
+    }
+    const current = dragOver.value
+    if (!current || current.id !== hit.target.id || current.position !== hit.position) {
+      dragOver.value = { id: hit.target.id, position: hit.position }
+    }
+    return hit
+  }
+
+  let cancelPointerDrag: (() => void) | null = null
+
+  function finishPointerDrag(result: SidebarDropResult | null) {
+    if (!result) {
+      resetDragState(false)
+      return
+    }
+    return Promise.resolve(options.onTreeDrop?.(result)).finally(() => resetDragState(false))
+  }
+
+  /** pointerdown на строке дерева: взводит перетаскивание, оно стартует после порога движения. */
+  function onRowPointerDown(event: PointerEvent, source: SidebarDragSource) {
+    if (event.button !== 0 || event.isPrimary === false || cancelPointerDrag) return
+    cancelPointerDrag = trackPointerDrag(event, {
+      onStart: () => { draggedSource.value = source },
+      onMove: (e) => { updateHover(e.clientX, e.clientY) },
+      onEnd: (e) => {
+        const hit = updateHover(e.clientX, e.clientY)
+        let result: SidebarDropResult | null = null
+        if (hit.target) result = resolveTreeDrop(source, hit.target, hit.position)
+        else if (hit.root && canDropToRoot(source)) result = { kind: 'move-root', sourceId: source.id }
+        void finishPointerDrag(result)
+      },
+      onAbort: () => resetDragState(false),
+      onFinish: () => { cancelPointerDrag = null },
+    })
   }
 
   /** Разрешает итоговое действие сброса для tag-preview (только переупорядочивание). */
@@ -179,6 +221,7 @@ export function useSidebarDrag() {
   function resetDragState(suppressClick = false) {
     draggedSource.value = null
     dragOver.value = null
+    rootDropActive.value = false
     enterCounters.clear()
     if (suppressClick) {
       suppressNextClick.value = true
@@ -203,6 +246,7 @@ export function useSidebarDrag() {
   }
 
   onBeforeUnmount(() => {
+    cancelPointerDrag?.()
     if (suppressTimer) clearTimeout(suppressTimer)
   })
 
@@ -211,11 +255,10 @@ export function useSidebarDrag() {
     dragOver,
     onDragStart,
     onDragOverRow,
-    onDragOverRoot,
     onDragEnterRow,
     onDragLeaveRow,
-    resolveTreeDrop,
-    resolveRootDrop,
+    rootDropActive,
+    onRowPointerDown,
     resolveFlatDrop,
     resetDragState,
     shouldSuppressClick,

@@ -377,6 +377,26 @@ fn trashed_notes_can_be_listed_and_restored() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
+/// Gate used by `notes.restoreSnapshot` (and the open/edit/rename tools):
+/// a live note passes, the same note fails once it is in the trash.
+#[test]
+fn reject_trashed_blocks_only_trashed_notes() {
+    let root = temp_workspace("auto");
+    let path = root.to_string_lossy().into_owned();
+    assert!(editor::reject_trashed(&path, "note-1").is_ok());
+
+    blocking(
+        &root,
+        "notes.delete",
+        serde_json::json!({ "noteId": "note-1" }),
+    )
+    .expect("delete note");
+    let error = editor::reject_trashed(&path, "note-1").expect_err("trashed note");
+    assert_eq!(error.code, "not_found");
+
+    let _ = std::fs::remove_dir_all(&root);
+}
+
 #[test]
 fn snapshots_can_be_listed_and_read() {
     let root = temp_workspace("auto");

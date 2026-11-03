@@ -8,4 +8,6 @@ allowBuilds:
   vue-demi: true
 overrides:
   dompurify: ^3.4.11
+  # mermaid, markmap-lib and remark-math still ask for 0.16; one copy keeps vendor-katex single.
+  katex: 0.19.1
   'undici@>=6.0.0 <7.0.0': ^6.27.0

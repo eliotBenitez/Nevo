@@ -188,6 +188,13 @@ pub fn run() {
             }
         })
         .setup(|app| {
+            commands::workspace::set_custom_scheme_https(
+                app.config()
+                    .app
+                    .windows
+                    .first()
+                    .is_some_and(|window| window.use_https_scheme),
+            );
             #[cfg(desktop)]
             {
                 app.manage(std::sync::Arc::new(
@@ -306,6 +313,10 @@ pub fn run() {
             workspace::marketplace_abort_plugin,
             workspace::marketplace_remove_plugin,
             workspace::marketplace_refresh_cache,
+            workspace::marketplace_plugin_readme,
+            workspace::plugin_readme_read,
+            workspace::marketplace_plugin_messages,
+            workspace::plugin_messages_read,
             workspace::get_workspace_diagnostics,
             workspace::prune_workspace_snapshots,
             workspace::cleanup_orphaned_assets,

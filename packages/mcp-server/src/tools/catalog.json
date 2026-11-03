@@ -81,7 +81,7 @@
   {
     "name": "nevo_create_note",
     "title": "Create a Nevo note",
-    "description": "Create an empty note in the open workspace, optionally inside a folder. Returns the new note id. To write its body, open it with nevo_open_note and then use nevo_write_markdown or nevo_apply_edit.",
+    "description": "Create an empty note in the open workspace, optionally inside a folder. Returns the new note id. Write its body with nevo_write_markdown or nevo_apply_edit; it does not need to be opened.",
     "method": "notes.create",
     "access": "write",
     "inputSchema": {
@@ -108,8 +108,8 @@
   },
   {
     "name": "nevo_editor_snapshot",
-    "title": "Read the open Nevo note",
-    "description": "Read the note currently open in the editor, including unsaved changes, plus the revision number to quote in nevo_apply_edit. Call this immediately before editing.",
+    "title": "Read a Nevo note for editing",
+    "description": "Read a note for editing, plus the revision number to quote in nevo_apply_edit or a nevo_write_markdown replace. Without noteId, reads the note open in the editor. For the open note the document includes unsaved changes; for any other note it is the saved copy, read without opening it. Call this immediately before editing.",
     "method": "notes.editorSnapshot",
     "access": "read",
     "inputSchema": {
@@ -117,7 +117,7 @@
       "properties": {
         "noteId": {
           "type": "string",
-          "description": "Fail unless this note is the one currently open."
+          "description": "Note to read; omit for the note open in the editor."
         }
       },
       "additionalProperties": false
@@ -126,7 +126,7 @@
   {
     "name": "nevo_open_note",
     "title": "Open a Nevo note",
-    "description": "Open a note in the Nevo editor so it can be edited, and return its snapshot (noteId, revision, document) like nevo_editor_snapshot. This switches the note the user sees. Handwritten notebooks cannot be opened for editing.",
+    "description": "Open a note in the Nevo editor and return its snapshot (noteId, revision, document) like nevo_editor_snapshot. This switches the note the user sees; editing does not require it. Handwritten notebooks cannot be opened for editing.",
     "method": "notes.open",
     "access": "read",
     "inputSchema": {
@@ -144,8 +144,8 @@
   },
   {
     "name": "nevo_apply_edit",
-    "title": "Edit the open Nevo note",
-    "description": "Apply ProseMirror operations to the note open in the editor. Only the open note can be edited; open another one with nevo_open_note. For plain content, nevo_write_markdown is simpler. Quote the revision from nevo_editor_snapshot: if the document changed since then, operations with absolute positions are refused and you must re-read and retry. Positions are ProseMirror document positions, not character offsets. To add new content, omit insertText.from or insertNode.at: Nevo appends it after the existing document blocks.",
+    "title": "Edit a Nevo note",
+    "description": "Apply ProseMirror operations to a note, whether or not it is open in the editor; a note that is not open is edited and saved without switching what the user sees. For plain content, nevo_write_markdown is simpler. Quote the revision from nevo_editor_snapshot: if the document changed since then, operations with absolute positions are refused and you must re-read and retry. Positions are ProseMirror document positions, not character offsets. To add new content, omit insertText.from or insertNode.at: Nevo appends it after the existing document blocks.",
     "method": "notes.applyEdit",
     "access": "write",
     "inputSchema": {
@@ -177,8 +177,8 @@
   },
   {
     "name": "nevo_write_markdown",
-    "title": "Write Markdown into the open Nevo note",
-    "description": "Write Markdown into the note open in the editor (open it first with nevo_open_note). mode \"append\" adds the content after the existing blocks; mode \"replace\" replaces the whole body and requires the revision from nevo_editor_snapshot or nevo_open_note, refusing if the note changed since. Supports headings, lists, task lists, quotes, code blocks, tables, links, and inline formatting. A leading \"# Heading\" stays in the body; it does not rename the note.",
+    "title": "Write Markdown into a Nevo note",
+    "description": "Write Markdown into a note, whether or not it is open in the editor. mode \"append\" adds the content after the existing blocks; mode \"replace\" replaces the whole body and requires the revision from nevo_editor_snapshot for that note, refusing if the note changed since. Supports headings, lists, task lists, quotes, code blocks, tables, links, and inline formatting. A leading \"# Heading\" stays in the body; it does not rename the note.",
     "method": "notes.writeMarkdown",
     "access": "write",
     "inputSchema": {

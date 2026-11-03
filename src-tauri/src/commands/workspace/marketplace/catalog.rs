@@ -1,4 +1,6 @@
-use super::super::plugins::{list_plugins, validate_plugin_id};
+use super::super::plugins::{
+    list_plugins_sync, validate_plugin_default_locale, validate_plugin_id, validate_plugin_runtimes,
+};
 use super::super::types::{PluginExecutionMode, PluginManifest};
 use super::repository::{
     safe_relative_path, split_plugin_tree_path, GitHubTreeEntry, MarketplaceFile,
@@ -304,6 +306,8 @@ pub(super) fn validate_marketplace_manifest(
             }
         }
     }
+    validate_plugin_runtimes(&manifest.runtimes)?;
+    validate_plugin_default_locale(&manifest.default_locale)?;
     if manifest.entry_point.trim().is_empty() {
         return Err("entryPoint is required".to_string());
     }
@@ -343,7 +347,7 @@ fn grouped_contains(items: &[MarketplaceCatalogItem], plugin_id: &str) -> bool {
 }
 
 pub(super) fn installed_plugin_map(workspace_path: &str) -> BTreeMap<String, PluginManifest> {
-    list_plugins(workspace_path.to_string())
+    list_plugins_sync(workspace_path.to_string())
         .unwrap_or_default()
         .into_iter()
         .map(|plugin| (plugin.id.clone(), plugin))

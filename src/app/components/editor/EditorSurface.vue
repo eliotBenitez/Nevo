@@ -671,7 +671,9 @@ const pluginSignature = computed(() => props.pluginManifests
     manifest.enabled,
     manifest.entryPoint,
     manifest.priority ?? 0,
+    manifest.defaultLocale ?? '',
     (manifest.editorCapabilities ?? []).join(','),
+    (manifest.runtimes ?? []).join(','),
   ].join(':'))
   .join('|'))
 
@@ -679,6 +681,8 @@ watch(
   () => ({
     workspacePath: props.workspacePath,
     pluginSignature: pluginSignature.value,
+    pluginRevision: workspaceStore.pluginRevision,
+    locale: locale.value,
     slashCommands: props.settings.editor.slashCommands,
     markdownShortcuts: props.settings.editor.markdownShortcuts,
     tabKeyBehavior: props.settings.editor.tabKeyBehavior,

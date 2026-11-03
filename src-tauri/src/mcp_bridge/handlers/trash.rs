@@ -6,7 +6,7 @@ use serde_json::{json, Value};
 
 use super::{parse_params, RpcError};
 use crate::commands::folder::load_manifest;
-use crate::commands::note::restore_from_trash;
+use crate::commands::note::restore_from_trash_sync;
 use crate::commands::path_utils::validate_id;
 
 pub fn list_trash(workspace_path: &str) -> Result<Value, RpcError> {
@@ -56,7 +56,7 @@ pub fn restore(workspace_path: &str, params: Value) -> Result<Value, RpcError> {
         ));
     }
 
-    restore_from_trash(workspace_path.to_string(), params.item_id.clone())
+    restore_from_trash_sync(workspace_path.to_string(), params.item_id.clone())
         .map_err(RpcError::internal)?;
     Ok(json!({ "itemId": params.item_id, "restored": true }))
 }

@@ -27,6 +27,15 @@ vi.mock('../../tauri/mcp', () => ({
   respondToMcpRequest: vi.fn().mockResolvedValue(undefined),
 }))
 
+const closedNotes = vi.hoisted(() => ({
+  isOpenInEditor: vi.fn(() => false),
+  readClosedNoteSnapshot: vi.fn(async (noteId: string) => ({ noteId, revision: 7 })),
+  applyClosedNoteEdit: vi.fn(async () => ({ applied: true, noteId: 'note-2', revision: 8 })),
+  writeClosedNoteMarkdown: vi.fn(async () => ({ applied: true, noteId: 'note-2', revision: 9 })),
+}))
+
+vi.mock('./editor/mcpClosedNoteEdits', () => closedNotes)
+
 vi.mock('../../utils/logger', () => ({
   appLogger: {
     error: vi.fn().mockResolvedValue(undefined),
@@ -121,6 +130,29 @@ describe('useMcpBridgeHost', () => {
       { noteId: 'note-1', recoverySnapshotId: 'recovery-1', warnings: [] },
       null,
     )
+    wrapper.unmount()
+  })
+
+  it('routes content calls for a note that is not open to the closed-note path', async () => {
+    const wrapper = mount(Host, { global: { plugins: [i18n] } })
+    await flushPromises()
+    const send = (requestId: string, kind: string, payload: Record<string, unknown>) =>
+      eventMocks.listeners.get('mcp-bridge-request')?.({ payload: { requestId, kind, payload } })
+
+    send('s1', 'editor.snapshot', { noteId: 'note-2' })
+    const edit = { noteId: 'note-2', revision: 7, operations: [{ type: 'insertText', text: 'x' }] }
+    send('e1', 'editor.applyEdit', edit)
+    const markdown = { noteId: 'note-2', markdown: '# Hi', mode: 'append' }
+    send('m1', 'editor.writeMarkdown', markdown)
+    await flushPromises()
+
+    expect(closedNotes.isOpenInEditor).toHaveBeenCalledWith('note-2')
+    expect(closedNotes.readClosedNoteSnapshot).toHaveBeenCalledWith('note-2')
+    expect(closedNotes.applyClosedNoteEdit).toHaveBeenCalledWith(edit)
+    expect(closedNotes.writeClosedNoteMarkdown).toHaveBeenCalledWith(markdown)
+    expect(respondToMcpRequest).toHaveBeenCalledWith('s1', { noteId: 'note-2', revision: 7 }, null)
+    expect(respondToMcpRequest).toHaveBeenCalledWith('e1', { applied: true, noteId: 'note-2', revision: 8 }, null)
+    expect(respondToMcpRequest).toHaveBeenCalledWith('m1', { applied: true, noteId: 'note-2', revision: 9 }, null)
     wrapper.unmount()
   })
 })

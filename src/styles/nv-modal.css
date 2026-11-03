@@ -25,7 +25,8 @@
   .nv-modal-leave-to .nv-modal__panel { transform: none; }
 }
 
+/* Phones keep dialogs centered; only full-size previews go edge to edge. */
 @media (max-width: 560px) {
-  .nv-modal { place-items: end stretch; padding: 0; }
-  .nv-modal__panel { border-radius: 0; }
+  .nv-modal--full { padding: 0; }
+  .nv-modal--full .nv-modal__panel { border-radius: 0; }
 }

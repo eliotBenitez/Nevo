@@ -84,8 +84,13 @@ describe('media node view source lifecycle', () => {
     try {
       await tick()
       editor.mount.querySelector<HTMLButtonElement>('.nv-audio-transcribe')!.click()
-      // A new nodeViews object forces every node view to be destroyed and rebuilt.
-      editor.view.setProps({ nodeViews: { ...editor.view.props.nodeViews } })
+      // New constructor functions force every node view to be destroyed and rebuilt;
+      // a plain spread keeps the same functions and ProseMirror reuses the views.
+      const before = editor.mount.querySelector('.nv-media-block')
+      const rebuilt = Object.fromEntries(Object.entries(editor.view.props.nodeViews ?? {})
+        .map(([name, create]) => [name, (...args: Parameters<typeof create>) => create(...args)]))
+      editor.view.setProps({ nodeViews: rebuilt })
+      expect(editor.mount.querySelector('.nv-media-block')).not.toBe(before)
       resolve([{ start: 0, end: 1, text: 'Kept' }])
       await tick()
       expect(editor.view.state.doc.firstChild?.attrs.transcript).toEqual([{ start: 0, end: 1, text: 'Kept' }])
@@ -268,17 +273,15 @@ describe('media node view source lifecycle', () => {
       // The block is draggable, so a drag beginning on a slider must be cancelled
       // or the control loses pointer capture after its first move.
       const seek = editor.mount.querySelector<HTMLInputElement>('.nv-audio-seek')!
-      // Metadata never loads in jsdom, which keeps the seek control disabled;
-      // enable it so it is focusable like a ready player.
-      seek.disabled = false
-      seek.focus()
-      expect(document.activeElement).toBe(seek)
+      // Pressing is what counts: WebKit does not focus a range input on pointerdown.
+      seek.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+      expect(document.activeElement).not.toBe(seek)
       const sliderDrag = new Event('dragstart', { bubbles: true, cancelable: true })
       block.dispatchEvent(sliderDrag)
       expect(sliderDrag.defaultPrevented).toBe(true)
 
       // A drag from anywhere else still reaches the block handle.
-      seek.blur()
+      block.dispatchEvent(new Event('pointerdown', { bubbles: true }))
       const blockDrag = new Event('dragstart', { bubbles: true, cancelable: true })
       block.dispatchEvent(blockDrag)
       expect(blockDrag.defaultPrevented).toBe(false)

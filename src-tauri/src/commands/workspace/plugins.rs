@@ -106,6 +106,8 @@ fn bundled_system_plugins() -> Vec<(PluginManifest, &'static str)> {
                 ],
                 network: None,
                 nevo_version_range: Some("^1.0.0".to_string()),
+                runtimes: None,
+                default_locale: None,
                 priority: Some(40),
                 settings_schema: vec![],
             },
@@ -134,6 +136,8 @@ fn bundled_system_plugins() -> Vec<(PluginManifest, &'static str)> {
                 ],
                 network: None,
                 nevo_version_range: Some("^1.0.0".to_string()),
+                runtimes: None,
+                default_locale: None,
                 priority: Some(30),
                 settings_schema: vec![],
             },
@@ -158,6 +162,8 @@ fn bundled_system_plugins() -> Vec<(PluginManifest, &'static str)> {
                 workspace_capabilities: vec![],
                 network: None,
                 nevo_version_range: Some("^1.0.0".to_string()),
+                runtimes: None,
+                default_locale: None,
                 priority: Some(20),
                 settings_schema: vec![],
             },
@@ -182,6 +188,8 @@ fn bundled_system_plugins() -> Vec<(PluginManifest, &'static str)> {
                 workspace_capabilities: vec![],
                 network: None,
                 nevo_version_range: Some("^1.0.0".to_string()),
+                runtimes: None,
+                default_locale: None,
                 priority: Some(20),
                 settings_schema: vec![],
             },
@@ -206,6 +214,8 @@ fn bundled_system_plugins() -> Vec<(PluginManifest, &'static str)> {
                 workspace_capabilities: vec![],
                 network: None,
                 nevo_version_range: Some("^1.0.0".to_string()),
+                runtimes: None,
+                default_locale: None,
                 priority: Some(10),
                 settings_schema: vec![
                     serde_json::json!({
@@ -293,7 +303,13 @@ pub(crate) fn ensure_bundled_system_plugins(workspace_path: &str) -> Result<(), 
 }
 
 #[tauri::command]
-pub fn list_plugins(workspace_path: String) -> Result<Vec<PluginManifest>, String> {
+pub async fn list_plugins(workspace_path: String) -> Result<Vec<PluginManifest>, String> {
+    tauri::async_runtime::spawn_blocking(move || list_plugins_sync(workspace_path))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+pub fn list_plugins_sync(workspace_path: String) -> Result<Vec<PluginManifest>, String> {
     let logger = crate::logging::logger();
     let workspace_path = normalize_workspace_path(&workspace_path).inspect_err(|message| {
         let _ = logger.error(
@@ -372,6 +388,48 @@ pub(crate) fn validate_plugin_id(plugin_id: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// `None` means every runtime; a provided list must be non-empty, known and unique.
+pub(crate) fn validate_plugin_runtimes(runtimes: &Option<Vec<String>>) -> Result<(), String> {
+    let Some(runtimes) = runtimes else {
+        return Ok(());
+    };
+    if runtimes.is_empty() {
+        return Err("runtimes must not be empty when provided".to_string());
+    }
+    let mut unique = std::collections::BTreeSet::new();
+    for runtime in runtimes {
+        if !["desktop", "android", "ios"].contains(&runtime.as_str()) {
+            return Err(format!("unknown plugin runtime: {runtime}"));
+        }
+        if !unique.insert(runtime) {
+            return Err(format!("duplicate plugin runtime: {runtime}"));
+        }
+    }
+    Ok(())
+}
+
+/// Language (2-3 lowercase letters) with an optional region/script suffix, e.g. `ru`, `pt-BR`.
+pub(crate) fn validate_plugin_locale(value: &str) -> Result<(), String> {
+    let (language, region) = match value.split_once('-') {
+        Some((language, region)) => (language, Some(region)),
+        None => (value, None),
+    };
+    let language_ok =
+        (2..=3).contains(&language.len()) && language.chars().all(|c| c.is_ascii_lowercase());
+    let region_ok = region
+        .map(|r| (2..=4).contains(&r.len()) && r.chars().all(|c| c.is_ascii_alphabetic()))
+        .unwrap_or(true);
+    if language_ok && region_ok {
+        Ok(())
+    } else {
+        Err(format!("invalid plugin locale: {value}"))
+    }
+}
+
+pub(crate) fn validate_plugin_default_locale(value: &Option<String>) -> Result<(), String> {
+    value.as_deref().map_or(Ok(()), validate_plugin_locale)
+}
+
 #[tauri::command]
 pub fn validate_plugin_manifest(
     workspace_path: String,
@@ -416,6 +474,8 @@ pub fn validate_plugin_manifest(
         );
         message
     })?;
+    validate_plugin_runtimes(&manifest.runtimes)?;
+    validate_plugin_default_locale(&manifest.default_locale)?;
     let _ = logger.debug(
         "tauri.workspace",
         "validate_plugin_manifest",
@@ -429,7 +489,19 @@ pub fn validate_plugin_manifest(
 }
 
 #[tauri::command]
-pub fn set_plugin_enabled(
+pub async fn set_plugin_enabled(
+    workspace_path: String,
+    plugin_id: String,
+    enabled: bool,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        set_plugin_enabled_sync(workspace_path, plugin_id, enabled)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+pub fn set_plugin_enabled_sync(
     workspace_path: String,
     plugin_id: String,
     enabled: bool,
@@ -509,7 +581,10 @@ pub fn set_plugin_enabled(
 
 #[cfg(test)]
 mod tests {
-    use super::{ensure_bundled_system_plugins, validate_plugin_id};
+    use super::{
+        ensure_bundled_system_plugins, validate_plugin_id, validate_plugin_locale,
+        validate_plugin_runtimes,
+    };
     use crate::commands::workspace::paths::plugins_dir_path;
     use crate::commands::workspace::types::{PluginExecutionMode, PluginManifest};
     use std::path::PathBuf;
@@ -558,6 +633,47 @@ mod tests {
         assert_eq!(manifest.execution_mode, PluginExecutionMode::TrustedWebview);
         let serialized = serde_json::to_value(manifest).expect("serialize manifest");
         assert_eq!(serialized["executionMode"], "trusted-webview");
+    }
+
+    fn manifest_with_runtimes(runtimes: &str) -> PluginManifest {
+        serde_json::from_str(&format!(
+            r#"{{
+  "id": "plugin.runtimes",
+  "name": "Runtimes",
+  "version": "1.0.0",
+  "enabled": true,
+  "entryPoint": "index.js",
+  "runtimes": {runtimes}
+}}"#
+        ))
+        .expect("malformed runtimes must not fail the manifest parse")
+    }
+
+    #[test]
+    fn malformed_runtimes_parse_and_fail_validation() {
+        for runtimes in [r#""desktop""#, r#"["desktop", 1]"#, "[]", r#"["Desktop"]"#] {
+            let manifest = manifest_with_runtimes(runtimes);
+            assert!(
+                validate_plugin_runtimes(&manifest.runtimes).is_err(),
+                "{runtimes}"
+            );
+        }
+        assert!(validate_plugin_runtimes(
+            &manifest_with_runtimes(r#"["desktop", "desktop"]"#).runtimes
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn valid_or_missing_runtimes_pass_validation() {
+        let manifest = manifest_with_runtimes(r#"["desktop", "ios"]"#);
+        assert_eq!(
+            manifest.runtimes,
+            Some(vec!["desktop".to_string(), "ios".to_string()])
+        );
+        assert!(validate_plugin_runtimes(&manifest.runtimes).is_ok());
+        assert_eq!(manifest_with_runtimes("null").runtimes, None);
+        assert!(validate_plugin_runtimes(&None).is_ok());
     }
 
     #[test]
@@ -640,5 +756,17 @@ mod tests {
         assert!(!plugin_dir.join("index.js").exists());
 
         std::fs::remove_dir_all(workspace).expect("cleanup");
+    }
+
+    #[test]
+    fn plugin_locale_validation() {
+        for ok in ["en", "ru", "pt-BR", "zh-Hans", "fil"] {
+            assert!(validate_plugin_locale(ok).is_ok(), "{ok}");
+        }
+        for bad in [
+            "", "e", "EN", "en_US", "en-", "en-B", "english", "../x", "en-US-x",
+        ] {
+            assert!(validate_plugin_locale(bad).is_err(), "{bad}");
+        }
     }
 }

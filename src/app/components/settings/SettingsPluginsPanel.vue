@@ -10,11 +10,20 @@ import { systemCommands, workspaceCommands } from '../../../tauri/commands'
 import type { MarketplaceCatalogItem, PluginManifest } from '../../../types/workspace'
 import { getEnabledPluginCount, getTotalPluginCount } from '../../../utils/plugin-counts'
 import { sortPluginsByKind } from '../../../utils/system-plugins'
+import { isPluginAvailableForApp } from '../../../core/plugins/runtimeAvailability'
+import { installedRemovalItem } from '../../../core/plugins/installedCatalogItem'
 import { appLogger } from '../../../utils/logger'
 import NvButton from '../../../ui/primitives/NvButton.vue'
 import SettingsSectionHeader from './ui/SettingsSectionHeader.vue'
 import PluginCard from './plugins/PluginCard.vue'
 import PluginCatalogCard from './plugins/PluginCatalogCard.vue'
+import PluginPage from './plugins/PluginPage.vue'
+import PluginSettingsModal from './plugins/PluginSettingsModal.vue'
+import { pluginCapabilities } from './plugins/pluginDisplay'
+import { usePluginMessages } from '../../composables/settings/usePluginMessages'
+import { usePluginPageState } from '../../composables/settings/usePluginPageState'
+import { clearPluginReadmeCache } from '../../composables/settings/usePluginReadme'
+import { clearPluginMessagesCache } from '../../../core/plugins/pluginMessages'
 
 type PanelTab = 'installed' | 'catalog'
 type MarketplaceAction = 'install' | 'update' | 'remove'
@@ -27,7 +36,7 @@ const pluginPath = computed(() => activePath.value)
 
 const activeTab = ref<PanelTab>('installed')
 const pluginValidation = ref<Record<string, 'valid' | 'invalid'>>({})
-const expandedSettings = ref<Record<string, boolean>>({})
+const settingsPluginId = ref<string | null>(null)
 const loadingPluginId = ref<string | null>(null)
 const catalogLoading = ref(false)
 const catalogError = ref<string | null>(null)
@@ -35,19 +44,44 @@ const catalogError = ref<string | null>(null)
 const pluginTotalCount = computed(() => getTotalPluginCount(plugins.value))
 const pluginEnabledCount = computed(() => getEnabledPluginCount(plugins.value))
 const pluginIssueCount = computed(() => Object.values(pluginValidation.value).filter(s => s === 'invalid').length)
+const panelBody = ref<HTMLElement | null>(null)
 const orderedPlugins = computed(() => sortPluginsByKind(plugins.value))
 const catalogItems = computed(() => marketplaceCatalog.value?.plugins ?? [])
+const { messages: pluginMessages, remoteMessages, reload: reloadPluginMessages } = usePluginMessages(() => plugins.value, () => activePath.value)
+
+// Rescan also picks up catalogs and READMEs edited in place without a version bump.
+async function rescanPlugins() {
+  clearPluginMessagesCache()
+  clearPluginReadmeCache()
+  await workspaceStore.reloadPlugins()
+  await reloadPluginMessages()
+  // The open page's README key is unchanged, so its watch would not reload it.
+  if (page.value) await retryReadme()
+}
+const {
+  page,
+  pageInstalled,
+  pageCatalog,
+  pageManifest,
+  pageActionItem,
+  pageMessages,
+  readmeStatus,
+  readmeBlocks,
+  retryReadme,
+  openPage,
+  closePage,
+} = usePluginPageState({
+  plugins,
+  catalogItems,
+  workspacePath: activePath,
+  installedMessages: pluginMessages,
+  remoteMessages,
+  panelBody,
+})
 const invalidCatalogCount = computed(() => catalogItems.value.filter(item => item.status === 'invalid' || item.status === 'conflict').length)
 
 function capabilityList(plugin: PluginManifest): string[] {
-  if (plugin.executionMode === 'sandboxed-worker') {
-    return (plugin.capabilities ?? []).slice(0, 6)
-  }
-  return [
-    ...plugin.editorCapabilities,
-    ...(plugin.uiCapabilities ?? []),
-    ...(plugin.workspaceCapabilities ?? []),
-  ].slice(0, 6)
+  return pluginCapabilities(plugin).slice(0, 6)
 }
 
 function catalogManifest(item: MarketplaceCatalogItem): PluginManifest | null {
@@ -102,6 +136,8 @@ function catalogTitle(item: MarketplaceCatalogItem): string {
 
 function canRunMarketplaceAction(item: MarketplaceCatalogItem, action: MarketplaceAction): boolean {
   if (loadingPluginId.value === item.pluginId || item.status === 'invalid' || item.status === 'conflict') return false
+  // Do not install or update (and so migrate) a plugin on a runtime it does not support.
+  if (action !== 'remove' && item.manifest && !isPluginAvailableForApp(item.manifest, workspaceStore.appMetadata)) return false
   if (action === 'install') return item.status === 'notInstalled'
   if (action === 'update') return item.status === 'updateAvailable'
   return item.status === 'installed' || item.status === 'disabled' || item.status === 'updateAvailable'
@@ -212,9 +248,7 @@ async function runMarketplaceAction(item: MarketplaceCatalogItem, action: Market
   }
 }
 
-function toggleSettingsExpanded(pluginId: string) {
-  expandedSettings.value[pluginId] = !expandedSettings.value[pluginId]
-}
+const settingsPlugin = computed(() => plugins.value.find(p => p.id === settingsPluginId.value) ?? null)
 
 async function openPluginFolder(pluginId: string) {
   const path = pluginPath.value
@@ -240,7 +274,7 @@ onMounted(async () => {
     >
       <template #actions>
         <div class="header-actions tw:flex tw:flex-wrap tw:items-center tw:gap-2">
-          <NvButton variant="ghost" @click="workspaceStore.reloadPlugins()">
+          <NvButton variant="ghost" @click="rescanPlugins">
             <RefreshCw :size="14" />
             {{ t('settings.plugins.rescan') }}
           </NvButton>
@@ -252,8 +286,33 @@ onMounted(async () => {
       </template>
     </SettingsSectionHeader>
 
-    <div class="panel-body tw:flex tw:min-h-0 tw:flex-1 tw:flex-col tw:gap-5 tw:overflow-auto tw:overscroll-contain tw:px-[30px] tw:pt-[18px] tw:pb-[30px]">
-      <div class="plugin-tabs tw:flex tw:flex-wrap tw:items-center tw:gap-2" role="tablist" :aria-label="t('settings.plugins.tabs.label')">
+    <div ref="panelBody" class="panel-body tw:flex tw:min-h-0 tw:flex-1 tw:flex-col tw:gap-5 tw:overflow-auto tw:overscroll-contain tw:px-[30px] tw:pt-[18px] tw:pb-[30px]">
+      <PluginPage
+        v-if="page"
+        :manifest="pageManifest"
+        :catalog-item="pageCatalog"
+        :installed="pageInstalled"
+        :is-valid="!pageInstalled || pluginValidation[pageInstalled.id] !== 'invalid'"
+        :is-loading="loadingPluginId === page.id"
+        :is-available-on-device="!pageManifest || isPluginAvailableForApp(pageManifest, workspaceStore.appMetadata)"
+        :can-install="!!pageActionItem && canRunMarketplaceAction(pageActionItem, 'install')"
+        :can-update="!!pageActionItem && canRunMarketplaceAction(pageActionItem, 'update')"
+        :can-remove="!!pageActionItem && canRunMarketplaceAction(pageActionItem, 'remove')"
+        :readme-status="readmeStatus"
+        :readme-blocks="readmeBlocks"
+        :messages="pageMessages"
+        @back="closePage"
+        @toggle="pageInstalled && togglePlugin(pageInstalled, $event)"
+        @open-settings="settingsPluginId = page.id"
+        @open-folder="openPluginFolder(page.id)"
+        @open-source="pageCatalog && openExternalSource(pageCatalog.sourceUrl)"
+        @install="pageActionItem && runMarketplaceAction(pageActionItem, 'install')"
+        @update="pageActionItem && runMarketplaceAction(pageActionItem, 'update')"
+        @remove="pageActionItem && runMarketplaceAction(pageActionItem, 'remove')"
+        @retry-readme="retryReadme"
+      />
+
+      <div v-if="!page" class="plugin-tabs tw:flex tw:flex-wrap tw:items-center tw:gap-2" role="tablist" :aria-label="t('settings.plugins.tabs.label')">
         <NvButton size="sm" :active="activeTab === 'installed'" role="tab" :aria-selected="activeTab === 'installed'" @click="activeTab = 'installed'">
           {{ t('settings.plugins.tabs.installed', { count: pluginTotalCount }) }}
         </NvButton>
@@ -262,7 +321,7 @@ onMounted(async () => {
         </NvButton>
       </div>
 
-      <template v-if="activeTab === 'installed'">
+      <template v-if="!page && activeTab === 'installed'">
         <div class="plugin-metrics tw:grid tw:grid-cols-3 tw:gap-2.5 tw:max-[980px]:grid-cols-1" :aria-label="t('settings.plugins.summary.label')">
           <div class="plugin-metric tw:grid tw:min-w-0 tw:min-h-[58px] tw:grid-cols-[auto_minmax(0,1fr)_auto] tw:items-center tw:gap-2.5 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-transparent tw:bg-surface-subtle tw:p-3 tw:text-content-muted">
             <PackageCheck :size="15" class="tw:text-accent" aria-hidden="true" />
@@ -299,12 +358,13 @@ onMounted(async () => {
             :key="plugin.id"
             :plugin="plugin"
             :is-valid="pluginValidation[plugin.id] !== 'invalid'"
-            :is-expanded="Boolean(expandedSettings[plugin.id])"
             :is-loading="loadingPluginId === plugin.id"
+            :messages="pluginMessages[plugin.id]"
             @toggle="togglePlugin(plugin, $event)"
-            @toggle-settings="toggleSettingsExpanded(plugin.id)"
+            @open="openPage('installed', plugin.id)"
+            @open-settings="settingsPluginId = plugin.id"
             @open-folder="openPluginFolder(plugin.id)"
-            @remove="runMarketplaceAction({ pluginId: plugin.id, pluginPath: `plugins/${plugin.id}`, treeSha: '', status: 'installed', manifest: plugin, manifestError: null, installedVersion: plugin.version, sourceUrl: `https://github.com/eliotBenitez/nevo-marketplace/tree/main/plugins/${plugin.id}`, files: [], permissionFingerprint: null }, 'remove')"
+            @remove="runMarketplaceAction(installedRemovalItem(plugin), 'remove')"
           />
         </div>
 
@@ -314,7 +374,7 @@ onMounted(async () => {
         </div>
       </template>
 
-      <template v-else>
+      <template v-else-if="!page">
         <div class="plugin-metrics tw:grid tw:grid-cols-3 tw:gap-2.5 tw:max-[980px]:grid-cols-1" :aria-label="t('settings.plugins.summary.label')">
           <div class="plugin-metric tw:grid tw:min-w-0 tw:min-h-[58px] tw:grid-cols-[auto_minmax(0,1fr)_auto] tw:items-center tw:gap-2.5 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-transparent tw:bg-surface-subtle tw:p-3 tw:text-content-muted">
             <Download :size="15" class="tw:text-accent" aria-hidden="true" />
@@ -361,6 +421,8 @@ onMounted(async () => {
             :can-install="canRunMarketplaceAction(item, 'install')"
             :can-update="canRunMarketplaceAction(item, 'update')"
             :can-remove="canRunMarketplaceAction(item, 'remove')"
+            :messages="pluginMessages[item.pluginId]"
+            @open="openPage('catalog', item.pluginId)"
             @install="runMarketplaceAction(item, 'install')"
             @update="runMarketplaceAction(item, 'update')"
             @remove="runMarketplaceAction(item, 'remove')"
@@ -375,5 +437,12 @@ onMounted(async () => {
         </div>
       </template>
     </div>
+
+    <PluginSettingsModal
+      :open="!!settingsPlugin"
+      :plugin="settingsPlugin"
+      :messages="settingsPlugin ? pluginMessages[settingsPlugin.id] : undefined"
+      @close="settingsPluginId = null"
+    />
   </section>
 </template>

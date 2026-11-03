@@ -119,6 +119,11 @@
   gap: 6px;
 }
 
+.plugin-title-button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
 .plugin-loading-icon {
   animation: nv-btn-spin 0.8s linear infinite;
 }

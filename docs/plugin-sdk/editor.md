@@ -1,8 +1,8 @@
-# Работа с редактором
+# Working with the editor
 
-SDK V2 не передаёт плагину `EditorView`, `EditorState` или ProseMirror
-`Transaction`. Handler получает immutable JSON snapshot и возвращает намерение,
-которое host проверяет и применяет атомарно.
+SDK V2 does not hand the plugin an `EditorView`, `EditorState` or a ProseMirror
+`Transaction`. A handler receives an immutable JSON snapshot and returns an
+intent, which the host validates and applies atomically.
 
 ## Editor snapshot
 
@@ -27,14 +27,15 @@ interface PluginEditorSnapshot {
 }
 ```
 
-- `revision` увеличивается после каждой применённой transaction;
-- selection positions относятся к документу этого revision;
-- `schema` позволяет проверить наличие node/mark type;
-- `doc` добавляется только с capability `editor.read`;
-- `now`, `locale`, `timeZone` задаёт host для воспроизводимого formatting.
+- `revision` increases after every applied transaction;
+- selection positions refer to the document of this revision;
+- `schema` lets you check whether a node/mark type exists;
+- `doc` is included only with the `editor.read` capability;
+- `now`, `locale` and `timeZone` are set by the host for reproducible
+  formatting.
 
-Не используйте `Date.now()`, browser locale или системную timezone, когда
-результат должен соответствовать настройкам Nevo. Используйте поля snapshot:
+Do not use `Date.now()`, the browser locale or the system timezone when the
+result must match the Nevo settings. Use the snapshot fields:
 
 ```ts
 function formatHostDate(editor: PluginEditorSnapshot): string {
@@ -66,11 +67,11 @@ return transaction(editor.revision, [
 })
 ```
 
-Один intent содержит до 100 operations. Host проверяет operation types,
-positions, schema names и payload, затем строит одну ProseMirror transaction.
-Если любая operation невалидна, intent целиком не применяется.
+A single intent contains up to 100 operations. The host validates operation
+types, positions, schema names and payload, then builds one ProseMirror
+transaction. If any operation is invalid, the whole intent is not applied.
 
-## Позиции и stale state
+## Positions and stale state
 
 Transaction position:
 
@@ -81,18 +82,19 @@ type TransactionPosition =
   | 'selection.to'
 ```
 
-Symbolic positions разрешаются против актуального selection в момент применения.
-Абсолютная numeric position относится к snapshot revision.
+Symbolic positions are resolved against the current selection at the moment of
+application. An absolute numeric position refers to the snapshot revision.
 
-Если документ изменился, пока handler работал:
+If the document changed while the handler was running:
 
-- intent только с symbolic positions можно применить к актуальному selection;
-- intent хотя бы с одной absolute position отклоняется с
+- an intent with only symbolic positions can be applied to the current
+  selection;
+- an intent with at least one absolute position is rejected with
   `STALE_EDITOR_STATE`.
 
-Поэтому используйте numeric positions только когда операция действительно
-привязана к прочитанной структуре документа. Не пытайтесь «исправить» stale
-position вручную без нового snapshot.
+So use numeric positions only when the operation is really bound to the
+document structure you read. Do not try to "fix" a stale position by hand
+without a new snapshot.
 
 ## Operations
 
@@ -107,8 +109,8 @@ position вручную без нового snapshot.
 }
 ```
 
-`from` и `to` по умолчанию равны границам selection. Максимальный text payload —
-256 KiB.
+`from` and `to` default to the selection boundaries. The maximum text payload
+is 256 KiB.
 
 ### `insertNode`
 
@@ -124,10 +126,11 @@ position вручную без нового snapshot.
 }
 ```
 
-Host ищет `nodeType` в актуальной schema и вызывает `createAndFill`. Неизвестный
-тип или attrs/content, с которыми нельзя создать node, отклоняют intent.
+The host looks up `nodeType` in the current schema and calls `createAndFill`.
+An unknown type, or attrs/content a node cannot be created with, rejects the
+intent.
 
-Перед возвратом можно проверить snapshot:
+You can check the snapshot before returning:
 
 ```ts
 if (!editor.schema.nodes.includes('acme_badge')) {
@@ -147,8 +150,8 @@ if (!editor.schema.nodes.includes('acme_badge')) {
 }
 ```
 
-`content` — один node JSON или массив nodes. Host парсит каждый через актуальную
-schema.
+`content` is a single node JSON or an array of nodes. The host parses each one
+through the current schema.
 
 ### `setNodeAttrs`
 
@@ -162,13 +165,13 @@ schema.
 }
 ```
 
-Attrs объединяются с текущими attrs node. Numeric position делает intent
-revision-sensitive.
+Attrs are merged with the node's current attrs. A numeric position makes the
+intent revision-sensitive.
 
-Для Tier 2 frame используйте `api.patchAttrs()` — он уже ограничен собственной
-нодой и не требует absolute position.
+For a Tier 2 frame, use `api.patchAttrs()` — it is already scoped to its own
+node and needs no absolute position.
 
-### `addMark` и `removeMark`
+### `addMark` and `removeMark`
 
 ```ts
 {
@@ -188,7 +191,7 @@ revision-sensitive.
 }
 ```
 
-Для `addMark` можно передать `attrs`.
+`addMark` accepts `attrs`.
 
 ### `wrap`
 
@@ -201,8 +204,8 @@ revision-sensitive.
 }
 ```
 
-Host использует актуальный block range и schema wrapping rules. Если selection
-нельзя обернуть в указанный node type, intent отклоняется.
+The host uses the current block range and the schema wrapping rules. If the
+selection cannot be wrapped in the given node type, the intent is rejected.
 
 ### `setSelection`
 
@@ -214,11 +217,11 @@ Host использует актуальный block range и schema wrapping ru
 }
 ```
 
-При отсутствии `to` создаётся collapsed text selection.
+If `to` is omitted, a collapsed text selection is created.
 
 ## Helpers
 
-`operations` сокращает частые простые операции:
+`operations` shortens common simple operations:
 
 ```ts
 import { operations, transaction } from '@nevo/plugin-sdk'
@@ -229,17 +232,17 @@ return transaction(editor.revision, [
 ])
 ```
 
-Для `setNodeAttrs` helper принимает position:
+For `setNodeAttrs`, the helper takes a position:
 
 ```ts
 operations.setNodeAttrs('selection.from', { tone: 'warning' })
 ```
 
-Helpers возвращают обычный JSON и не выполняют editor mutation.
+Helpers return plain JSON and do not mutate the editor.
 
-## Чтение документа
+## Reading the document
 
-С `editor.read` snapshot содержит ProseMirror JSON:
+With `editor.read`, the snapshot contains ProseMirror JSON:
 
 ```ts
 api.command(descriptor, (_input, { editor }) => {
@@ -255,7 +258,7 @@ api.command(descriptor, (_input, { editor }) => {
 })
 ```
 
-Рекурсивный helper остаётся framework-agnostic:
+A recursive helper stays framework-agnostic:
 
 ```ts
 function countNodes(value: JsonValue, type: string): number {
@@ -268,47 +271,47 @@ function countNodes(value: JsonValue, type: string): number {
 }
 ```
 
-Не сохраняйте весь `editor.doc` в plugin storage. Snapshot может быть большим,
-быстро устаревает и дублирует источник истины Nevo.
+Do not store the whole `editor.doc` in plugin storage. A snapshot can be large,
+goes stale quickly and duplicates Nevo's source of truth.
 
-## Паттерны надёжного handler
+## Patterns for a reliable handler
 
-### Проверяйте наличие editor
+### Check that an editor exists
 
-Некоторые handlers вызываются вне editor context:
+Some handlers are invoked outside an editor context:
 
 ```ts
 if (!editor) throw new Error('This action requires an open editor')
 ```
 
-### Проверяйте schema
+### Check the schema
 
 ```ts
 if (!editor.schema.marks.includes('strong')) return null
 ```
 
-### Используйте host time context
+### Use the host time context
 
-Это делает результат одинаковым на разных OS и webview.
+This makes the result identical across OSes and webviews.
 
-### Возвращайте один intent
+### Return a single intent
 
-Не разбивайте логическое изменение на несколько UI actions. Один intent
-атомарен и создаёт один undo step.
+Do not split a logical change across several UI actions. A single intent is
+atomic and creates one undo step.
 
-### Учитывайте повтор invocation
+### Account for invocation retries
 
-Worker может быть перезапущен один раз после fatal failure, после чего host
-повторит handler. Чистое вычисление + один возвращаемый intent безопаснее
-side effects до результата.
+A Worker may be restarted once after a fatal failure, after which the host
+retries the handler. Pure computation plus a single returned intent is safer
+than side effects before the result.
 
-## Типичные ошибки
+## Common errors
 
-| Ошибка | Причина | Исправление |
+| Error | Cause | Fix |
 | --- | --- | --- |
-| `Plugin handler must return a transaction intent` | Editor action вернул обычный JSON или `null` | Верните `transaction(...)` |
-| `STALE_EDITOR_STATE` | Использована absolute position со старым revision | Используйте symbolic position или запросите новое действие пользователя |
-| `Unknown node type` | Node не зарегистрирован или имя изменено | Объявите `editor.schema`, schema contribution и стабильное name |
-| `Cannot create node` | Attrs/content не соответствуют schema | Добавьте defaults или корректный node JSON |
-| `Transaction position ... is outside the document` | Numeric position некорректна | Рассчитывайте по текущему snapshot и сохраняйте revision |
-| `Transaction intent must contain at most 100 operations` | Слишком крупная batch | Упростите изменение или пересмотрите UX |
+| `Plugin handler must return a transaction intent` | The editor action returned plain JSON or `null` | Return `transaction(...)` |
+| `STALE_EDITOR_STATE` | An absolute position was used with an old revision | Use a symbolic position or wait for a new user action |
+| `Unknown node type` | The node is not registered or its name changed | Declare `editor.schema`, the schema contribution and a stable name |
+| `Cannot create node` | Attrs/content do not match the schema | Add defaults or valid node JSON |
+| `Transaction position ... is outside the document` | The numeric position is invalid | Compute it from the current snapshot and keep the revision |
+| `Transaction intent must contain at most 100 operations` | The batch is too large | Simplify the change or rethink the UX |
