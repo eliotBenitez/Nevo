@@ -15,9 +15,11 @@ import {
   SANDBOX_PROTOCOL_VERSION,
   assertSandboxMessageSize,
   isSandboxWorkerResponse,
+  type SandboxI18nCatalog,
   type SandboxWorkerRequest,
   type SandboxWorkerResponse,
 } from './sandboxProtocol'
+import { sanitizePluginMessages } from './pluginTranslator'
 
 const LOAD_TIMEOUT_MS = 10_000
 const MAX_REGISTRATIONS = 200
@@ -36,7 +38,7 @@ interface PendingRequest {
 }
 
 type SandboxRequestPayload =
-  | { type: 'initialize'; pluginUrl: string; pluginId: string; capabilities: NevoPluginCapability[]; dataVersion: number }
+  | { type: 'initialize'; pluginUrl: string; pluginId: string; capabilities: NevoPluginCapability[]; dataVersion: number; i18n: SandboxI18nCatalog }
   | { type: 'invoke'; invocation: { handlerId: string; input: unknown; editor?: NevoSandboxEditorSnapshot } }
   | { type: 'lifecycle'; phase: 'activate' | 'deactivate' | 'dispose' }
   | { type: 'ping' }
@@ -311,13 +313,20 @@ export class SandboxedPluginSession {
   private active = false
   private disposed = false
   private quarantined = false
+  private readonly i18n: SandboxI18nCatalog
 
   constructor(
     private readonly manifest: NevoEditorPluginManifest,
     private readonly pluginUrl: string,
     private readonly workerFactory?: SandboxWorkerFactory,
     private readonly hostBroker?: SandboxHostBroker,
-  ) {}
+    i18n?: SandboxI18nCatalog | null,
+  ) {
+    this.i18n = {
+      locale: i18n?.locale || 'en',
+      messages: sanitizePluginMessages(i18n?.messages),
+    }
+  }
 
   get isQuarantined(): boolean {
     return this.quarantined
@@ -429,6 +438,7 @@ export class SandboxedPluginSession {
       pluginId: this.manifest.id,
       capabilities: manifestCapabilities(this.manifest),
       dataVersion: this.manifest.dataVersion ?? 1,
+      i18n: this.i18n,
     }, LOAD_TIMEOUT_MS)
   }
 
@@ -616,8 +626,9 @@ export async function loadSandboxedPluginDefinition(
   pluginUrl: string,
   workerFactory?: SandboxWorkerFactory,
   hostBroker?: SandboxHostBroker,
+  i18n?: SandboxI18nCatalog | null,
 ): Promise<{ definition: NevoSandboxPluginDefinition; session: SandboxedPluginSession }> {
-  const session = new SandboxedPluginSession(manifest, pluginUrl, workerFactory, hostBroker)
+  const session = new SandboxedPluginSession(manifest, pluginUrl, workerFactory, hostBroker, i18n)
   const definition = await session.initialize()
   return { definition, session }
 }

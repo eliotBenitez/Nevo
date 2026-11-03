@@ -26,6 +26,8 @@ If you are writing your first plugin, read the pages in this order:
    assets, network, scheduling, and workspace commands.
 6. [Testing and debugging](./plugin-sdk/testing.md) — unit tests, conformance,
    manual checks, and common mistakes.
+7. [Localization](./plugin-sdk/localization.md) — ship translations, localized
+   settings and READMEs, and use `api.i18n`.
 
 Reference materials:
 

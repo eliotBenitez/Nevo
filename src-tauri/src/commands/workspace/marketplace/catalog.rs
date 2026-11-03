@@ -1,4 +1,6 @@
-use super::super::plugins::{list_plugins_sync, validate_plugin_id, validate_plugin_runtimes};
+use super::super::plugins::{
+    list_plugins_sync, validate_plugin_default_locale, validate_plugin_id, validate_plugin_runtimes,
+};
 use super::super::types::{PluginExecutionMode, PluginManifest};
 use super::repository::{
     safe_relative_path, split_plugin_tree_path, GitHubTreeEntry, MarketplaceFile,
@@ -305,6 +307,7 @@ pub(super) fn validate_marketplace_manifest(
         }
     }
     validate_plugin_runtimes(&manifest.runtimes)?;
+    validate_plugin_default_locale(&manifest.default_locale)?;
     if manifest.entry_point.trim().is_empty() {
         return Err("entryPoint is required".to_string());
     }

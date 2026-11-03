@@ -21,7 +21,7 @@ interface SandboxContributionRegistryDeps {
   registries: NevoEditorRegistries
   runtime: EditorPluginHostOptions['runtime']
   errors: string[]
-  codeTokens: ReadonlyMap<string, string>
+  codeSessions: ReadonlyMap<string, { token: string; entryUrl: string }>
   events: SandboxEditorEvents
   bridge: SandboxEditorBridge
   recordError: (pluginId: string, phase: string, error: unknown) => void
@@ -32,7 +32,7 @@ export class SandboxContributionRegistry {
   private readonly registries: NevoEditorRegistries
   private readonly runtime: EditorPluginHostOptions['runtime']
   private readonly errors: string[]
-  private readonly codeTokens: ReadonlyMap<string, string>
+  private readonly codeSessions: ReadonlyMap<string, { token: string; entryUrl: string }>
   private readonly events: SandboxEditorEvents
   private readonly bridge: SandboxEditorBridge
   private readonly recordError: SandboxContributionRegistryDeps['recordError']
@@ -44,7 +44,7 @@ export class SandboxContributionRegistry {
     this.registries = deps.registries
     this.runtime = deps.runtime
     this.errors = deps.errors
-    this.codeTokens = deps.codeTokens
+    this.codeSessions = deps.codeSessions
     this.events = deps.events
     this.bridge = deps.bridge
     this.recordError = deps.recordError
@@ -439,10 +439,9 @@ export class SandboxContributionRegistry {
 
   private sandboxIframeUrl(pluginId: string, source: unknown): string {
     if (typeof source !== 'string') throw new Error('Sandbox iframe source is required')
-    const token = this.codeTokens.get(pluginId)
-    if (!token) throw new Error('Sandbox iframe requires a plugin-scoped code session')
-    const encodedPath = source.split('/').map(encodeURIComponent).join('/')
-    return `nevoplugin://${token}/${encodedPath}`
+    const codeSession = this.codeSessions.get(pluginId)
+    if (!codeSession) throw new Error('Sandbox iframe requires a plugin-scoped code session')
+    return pluginCodeUrl(codeSession, source)
   }
 
   private sandboxContributionRoute(pluginId: string, contributionId: string, route: unknown): string {

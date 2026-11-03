@@ -37,7 +37,7 @@ export class EditorPluginHost {
   private readonly runtimePlugins = new Map<string, NevoEditorRuntimePlugin>()
   private readonly contexts = new Map<string, NevoEditorContext>()
   private readonly sandboxedSessions = new Map<string, SandboxedPluginSession>()
-  private readonly sandboxedCodeTokens = new Map<string, string>()
+  private readonly sandboxedCodeSessions = new Map<string, { token: string; entryUrl: string }>()
   private editorRevision = 0
   private pluginRegistry: {
     version: 1
@@ -103,7 +103,7 @@ export class EditorPluginHost {
       registries: this.registries,
       runtime: this.runtime,
       errors: this.errors,
-      codeTokens: this.sandboxedCodeTokens,
+      codeSessions: this.sandboxedCodeSessions,
       events: this.sandboxEvents,
       bridge: new SandboxEditorBridge({
         runtime: this.runtime,
@@ -195,14 +195,14 @@ export class EditorPluginHost {
     this.sandboxedSessions.clear()
     this.sandboxEvents.dispose()
     this.sandboxBroker.clearAllSchedules()
-    for (const token of this.sandboxedCodeTokens.values()) {
+    for (const { token } of this.sandboxedCodeSessions.values()) {
       try {
         await this.runtime?.revokePluginCodeSession?.(token)
       } catch (error) {
         this.errors.push(`Plugin code session revoke failed: ${normalizeErrorMessage(error)}`)
       }
     }
-    this.sandboxedCodeTokens.clear()
+    this.sandboxedCodeSessions.clear()
     this.sandboxContributions.dispose()
   }
 
@@ -429,24 +429,39 @@ export class EditorPluginHost {
     const codeSession = this.runtime?.createPluginCodeSession
       ? await this.runtime.createPluginCodeSession(manifest.id, manifest.entryPoint)
       : null
+    const i18n = await this.loadMessages(manifest)
     const { definition, session } = await loadSandboxedPluginDefinition(
       manifest,
       codeSession?.entryUrl ?? this.pluginUrl(manifest),
       this.workerFactory,
       (method, args) => this.sandboxBroker.execute(manifest, method, args),
+      i18n,
     )
     try {
-      if (codeSession) this.sandboxedCodeTokens.set(manifest.id, codeSession.token)
+      if (codeSession) this.sandboxedCodeSessions.set(manifest.id, codeSession)
       this.sandboxContributions.registerDefinition(manifest, definition, session)
       this.sandboxedSessions.set(manifest.id, session)
       await this.cacheSandboxSchemas(manifest, definition)
     } catch (error) {
       await session.dispose()
       if (codeSession) {
-        this.sandboxedCodeTokens.delete(manifest.id)
+        this.sandboxedCodeSessions.delete(manifest.id)
         await this.runtime?.revokePluginCodeSession?.(codeSession.token)
       }
       throw error
+    }
+  }
+
+  private async loadMessages(
+    manifest: NevoEditorPluginManifest,
+  ): Promise<{ locale: string; messages: Record<string, string> }> {
+    const fallback = { locale: this.runtime?.locale?.() ?? 'en', messages: {} }
+    if (!this.runtime?.loadPluginMessages) return fallback
+    try {
+      return (await this.runtime.loadPluginMessages(manifest)) ?? fallback
+    } catch (error) {
+      this.errors.push(`Plugin ${manifest.id} messages failed to load: ${normalizeErrorMessage(error)}`)
+      return fallback
     }
   }
 

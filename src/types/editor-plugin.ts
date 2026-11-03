@@ -5,7 +5,7 @@ import type { NodeSpec, MarkSpec } from 'prosemirror-model'
 import type { Decoration, DecorationSet } from 'prosemirror-view'
 
 export const NEVO_EDITOR_SDK_VERSION = '1.0.0'
-export const NEVO_SANDBOX_SDK_VERSION = '2.1.0'
+export const NEVO_SANDBOX_SDK_VERSION = '2.2.0'
 
 export type NevoPluginExecutionMode = 'trusted-webview' | 'sandboxed-worker'
 
@@ -65,6 +65,8 @@ export interface NevoEditorPluginManifest {
   source?: 'bundled' | 'folder' | 'marketplace'
   nevoVersionRange?: string
   runtimes?: NevoPluginRuntime[]
+  /** Locale of the plugin's fallback catalog (`locales/<defaultLocale>.json`). Absent means `en`. */
+  defaultLocale?: string
   /** SDK V2 source of truth. Legacy capability arrays are V1-only. */
   capabilities?: NevoPluginCapability[]
   editorCapabilities: NevoEditorCapability[]

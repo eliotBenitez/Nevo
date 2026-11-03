@@ -3,6 +3,7 @@ import type { EditorPluginHostOptions } from '../../../editor-core/plugin-host/u
 import { workspaceCommands } from '../../../tauri/commands'
 import { pluginSecretKey, secureStore } from '../../../tauri/secureStore'
 import { i18n } from '../../../i18n'
+import { loadLocalPluginMessages } from '../../../core/plugins/pluginMessages'
 import type { useWorkspaceStore } from '../../../stores/workspace'
 
 type WorkspaceStore = ReturnType<typeof useWorkspaceStore>
@@ -25,6 +26,10 @@ export function buildPluginRuntime(
     getPluginSetting: (pluginId, key) => workspaceStore.getPluginSetting(pluginId, key),
     setPluginSetting: (pluginId, key, value) => { void workspaceStore.setPluginSetting(pluginId, key, value) },
     locale: () => String(i18n.global.locale.value),
+    loadPluginMessages: async (manifest) => {
+      const locale = String(i18n.global.locale.value)
+      return { locale, messages: await loadLocalPluginMessages(workspacePath, manifest, locale) }
+    },
     timeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
     ...(typeof workspaceCommands.createPluginCodeSession === 'function'
       ? {

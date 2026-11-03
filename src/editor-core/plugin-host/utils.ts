@@ -58,6 +58,9 @@ export interface EditorPluginHostOptions {
     getPluginSetting?: <T = unknown>(pluginId: string, key: string) => T | undefined
     setPluginSetting?: (pluginId: string, key: string, value: unknown) => void
     locale?: () => string
+    loadPluginMessages?: (
+      manifest: NevoEditorPluginManifest,
+    ) => Promise<{ locale: string; messages: Record<string, string> } | null>
     timeZone?: () => string
     theme?: () => 'light' | 'dark'
     createPluginCodeSession?: (

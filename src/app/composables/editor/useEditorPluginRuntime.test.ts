@@ -3,6 +3,7 @@ import { effectScope, nextTick } from 'vue'
 import type { EditorCore } from './useEditorCore'
 import { createDefaultWorkspaceSettings } from '../../../utils/workspace-settings'
 import { useEditorPluginRuntime } from './useEditorPluginRuntime'
+import { i18n } from '../../../i18n'
 
 const runtimeGuardMock = vi.hoisted(() => ({
   guard: null as null | { pause: () => Promise<void>; resume: () => Promise<void> },
@@ -113,5 +114,38 @@ describe('useEditorPluginRuntime', () => {
 
     expect(host.deactivateAll).toHaveBeenCalledOnce()
     expect(host.dispose).toHaveBeenCalledOnce()
+  })
+
+  it('rebuilds the plugin host when the app locale changes', async () => {
+    const original = i18n.global.locale.value
+    i18n.global.locale.value = 'en'
+    const core = { pluginHost: null } as EditorCore
+    const initPluginHost = vi.fn(async () => {
+      core.pluginHost = pluginHost() as unknown as EditorCore['pluginHost']
+    })
+    const scope = effectScope()
+    scopes.push(scope)
+    scope.run(() => useEditorPluginRuntime({
+      core,
+      editorSetup: { initPluginHost, destroyEditorView: vi.fn() },
+      getWorkspacePath: () => '/workspace',
+      getPluginManifests: () => [],
+      getSettings: createDefaultWorkspaceSettings,
+      flushPendingContent: vi.fn(),
+      unmountNotePreload: vi.fn(),
+      unmountBlockHandle: vi.fn(),
+      closeEditorUi: vi.fn(),
+      reinitializeEditor: vi.fn(async () => undefined),
+      emitContributions: vi.fn(),
+    }))
+    try {
+      await flushRuntime()
+      expect(initPluginHost).toHaveBeenCalledTimes(1)
+      i18n.global.locale.value = 'de'
+      await flushRuntime()
+      expect(initPluginHost).toHaveBeenCalledTimes(2)
+    } finally {
+      i18n.global.locale.value = original
+    }
   })
 })

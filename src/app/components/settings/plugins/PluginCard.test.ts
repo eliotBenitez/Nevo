@@ -73,4 +73,20 @@ describe('PluginCard', () => {
     await configure!.trigger('click')
     expect(wrapper.emitted('openSettings')).toHaveLength(1)
   })
+
+  it('shows manifest.name and manifest.description from plugin messages', () => {
+    setActivePinia(createPinia())
+    const wrapper = mount(PluginCard, {
+      props: {
+        plugin: desktopOnlyPlugin(),
+        isValid: true,
+        isLoading: false,
+        messages: { 'manifest.name': 'Локальное имя', 'manifest.description': 'Локальное описание' },
+      },
+      global: { plugins: [i18n] },
+    })
+    expect(wrapper.text()).toContain('Локальное имя')
+    expect(wrapper.text()).toContain('Локальное описание')
+    expect(wrapper.text()).not.toContain('Desktop plugin')
+  })
 })

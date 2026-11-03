@@ -753,6 +753,13 @@ pub struct PluginManifest {
         skip_serializing_if = "Option::is_none"
     )]
     pub runtimes: Option<Vec<String>>,
+    /// Locale of the plugin's fallback catalog and README; absent means `en`.
+    #[serde(
+        rename = "defaultLocale",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub default_locale: Option<String>,
     #[serde(default)]
     pub priority: Option<i32>,
     #[serde(

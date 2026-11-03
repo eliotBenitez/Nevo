@@ -14,10 +14,12 @@ describe('pluginReadmeCommands', () => {
 
   it('reads a local README with camelCase args', async () => {
     invokeMock.mockResolvedValue('# Hi')
-    await expect(pluginReadmeCommands.readLocal('/ws', 'p')).resolves.toBe('# Hi')
+    await expect(pluginReadmeCommands.readLocal('/ws', 'p', 'ru', 'en')).resolves.toBe('# Hi')
     expect(invokeMock).toHaveBeenCalledWith('plugin_readme_read', {
       workspacePath: '/ws',
       pluginId: 'p',
+      locale: 'ru',
+      defaultLocale: 'en',
     })
   })
 

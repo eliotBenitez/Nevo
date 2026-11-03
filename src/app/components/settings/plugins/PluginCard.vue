@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { ChevronRight, FolderOpen, Settings, Trash2 } from '../../../../ui/icons'
 import type { PluginManifest } from '../../../../types/workspace'
 import { useWorkspaceStore } from '../../../../stores/workspace'
+import type { PluginCatalogMessages } from '../../../../core/plugins/pluginMessages'
 import { isPluginAvailableForApp } from '../../../../core/plugins/runtimeAvailability'
 import NvButton from '../../../../ui/primitives/NvButton.vue'
 import NvToggle from '../../../../ui/primitives/NvToggle.vue'
@@ -14,6 +15,7 @@ const props = defineProps<{
   plugin: PluginManifest
   isValid: boolean
   isLoading: boolean
+  messages?: PluginCatalogMessages
 }>()
 
 const emit = defineEmits<{
@@ -29,8 +31,8 @@ const workspaceStore = useWorkspaceStore()
 
 const isAvailableOnDevice = computed(() => isPluginAvailableForApp(props.plugin, workspaceStore.appMetadata))
 
-const title = computed(() => pluginTitle(props.plugin, t))
-const description = computed(() => pluginDescription(props.plugin, t))
+const title = computed(() => pluginTitle(props.plugin, t, props.messages))
+const description = computed(() => pluginDescription(props.plugin, t, props.messages))
 const capabilities = computed(() => pluginCapabilities(props.plugin).slice(0, 6))
 const icon = computed(() => systemPluginIcons[props.plugin.id] ?? null)
 
@@ -44,7 +46,7 @@ const icon = computed(() => systemPluginIcons[props.plugin.id] ?? null)
     <template #icon>
       <div class="plugin-card__icon tw:grid tw:size-9 tw:place-items-center tw:rounded-[calc(10px*var(--radius-scale,1))] tw:bg-accent tw:text-content-on-accent tw:[font-family:var(--font-serif)] tw:italic" :class="{ 'plugin-card__icon--system': plugin.kind === 'system' }">
         <component :is="icon" v-if="icon" :size="16" />
-        <span v-else>{{ plugin.name.charAt(0).toUpperCase() }}</span>
+        <span v-else>{{ (title || plugin.name).charAt(0).toUpperCase() }}</span>
       </div>
     </template>
 

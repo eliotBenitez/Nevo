@@ -324,6 +324,7 @@ export interface PluginManifest {
   }
   nevoVersionRange?: string
   runtimes?: NevoPluginRuntime[]
+  defaultLocale?: string
   priority?: number
   settingsSchema?: PluginSettingField[]
 }

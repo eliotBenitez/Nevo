@@ -7,9 +7,11 @@ import {
   type PluginContributionKind,
   type PluginHandler,
   type PluginRegistrationDescriptor,
+  type PluginMessages,
   type PluginSetupApi,
   type PluginStorage,
 } from './index'
+import { createTranslator } from './i18n'
 
 export interface TestPluginHostResult {
   contributions: PluginContribution[]
@@ -24,6 +26,7 @@ export async function createTestPluginHost(
   pluginId: string,
   definition: NevoPluginDefinition,
   capabilities: PluginCapability[] = [],
+  i18n: { locale?: string; messages?: PluginMessages } = {},
 ): Promise<TestPluginHostResult> {
   const contributions: PluginContribution[] = []
   const handlers = new Map<string, PluginHandler>()
@@ -71,6 +74,7 @@ export async function createTestPluginHost(
   const api: PluginSetupApi = {
     pluginId,
     capabilities: new Set(capabilities),
+    i18n: createTranslator(i18n.messages ?? {}, i18n.locale ?? 'en'),
     register,
     command: handlerRegistration('command'),
     keymap: handlerRegistration('keymap'),

@@ -291,7 +291,9 @@ state.
 
 `defineBlockView()` provides:
 
-- `onNode(listener)` — attrs, editable flag, theme and locale;
+- `onNode(listener)` — attrs, editable flag, theme and locale (a frame has no
+  `api.i18n`; bundle your catalogs and use `createTranslator`, see
+  [Localization](./localization.md));
 - `patchAttrs(attrs)` — a node-scoped merge patch;
 - `invoke(handlerId, input?)` — calls a Worker handler.
 

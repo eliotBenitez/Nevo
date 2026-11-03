@@ -5,6 +5,7 @@ import { ChevronRight, Download, ExternalLink, RefreshCw, Trash2 } from '../../.
 import type { MarketplaceCatalogItem, MarketplacePluginStatus, PluginManifest } from '../../../../types/workspace'
 import { useWorkspaceStore } from '../../../../stores/workspace'
 import { isPluginAvailableForApp } from '../../../../core/plugins/runtimeAvailability'
+import { pluginText, type PluginCatalogMessages } from '../../../../core/plugins/pluginMessages'
 import { pluginCapabilities } from './pluginDisplay'
 import NvButton from '../../../../ui/primitives/NvButton.vue'
 import SettingsObjectCard from '../ui/SettingsObjectCard.vue'
@@ -17,6 +18,8 @@ const props = defineProps<{
   canInstall: boolean
   canUpdate: boolean
   canRemove: boolean
+  /** Messages of the installed copy; catalog-only items keep their manifest text. */
+  messages?: PluginCatalogMessages
 }>()
 
 const emit = defineEmits<{
@@ -33,10 +36,16 @@ function catalogManifest(item: MarketplaceCatalogItem): PluginManifest | null {
   return item.manifest
 }
 
-const title = computed(() => catalogManifest(props.item)?.name ?? props.item.pluginId)
+const title = computed(() => pluginText(
+  props.messages,
+  'manifest.name',
+  catalogManifest(props.item)?.name ?? props.item.pluginId,
+))
 
-const description = computed(() => (
-  catalogManifest(props.item)?.description || props.item.manifestError || t('settings.plugins.noDescription')
+const description = computed(() => pluginText(
+  props.messages,
+  'manifest.description',
+  catalogManifest(props.item)?.description || props.item.manifestError || t('settings.plugins.noDescription'),
 ))
 
 const capabilities = computed(() => (props.item.manifest ? pluginCapabilities(props.item.manifest).slice(0, 6) : []))

@@ -115,4 +115,10 @@ describe('PluginPage', () => {
     await click(w, 'All plugins')
     expect(w.emitted('back')).toHaveLength(1)
   })
+
+  it('uses manifest.name and manifest.description from plugin messages', () => {
+    const w = mountPage({ messages: { 'manifest.name': 'Демо', 'manifest.description': 'Описание' } })
+    expect(w.find('.plugin-page__title').text()).toBe('Демо')
+    expect(w.text()).toContain('Описание')
+  })
 })

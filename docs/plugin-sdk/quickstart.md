@@ -143,6 +143,7 @@ outside the plugin directory. The SDK must be included in the bundle.
 | `network` | When using the network | Allowed HTTPS hosts and methods |
 | `nevoVersionRange` | No | Exact version, `^major`, `*` or `latest` |
 | `runtimes` | No | Where the plugin runs: any of `desktop`, `android`, `ios`. Omitted means all runtimes; on other runtimes the plugin is not loaded |
+| `defaultLocale` | No | Locale of the fallback catalog `locales/<defaultLocale>.json`; `en` when omitted. See [Localization](./localization.md) |
 | `priority` | No | Load order; a higher value loads earlier |
 | `settingsSchema` | No | Fields of the plugin settings UI |
 
@@ -272,7 +273,8 @@ For local testing, copy the contents of `dist/` into:
 <workspace>/.nevo/plugins/acme.hello/
 ├── index.js
 ├── manifest.json
-└── README.md        (optional)
+├── locales/         (optional, <locale>.json translations)
+└── README.md        (optional, also README.<locale>.md)
 ```
 
 The directory name must exactly match `manifest.id`. After copying, restart Nevo
@@ -283,6 +285,9 @@ the plugin folder is shown on the plugin's page in Settings → Plugins, both fo
 installed plugins and for marketplace entries. It is rendered as plain
 Markdown: links show as text, images show their alt text, and raw HTML is not
 rendered.
+
+Translations in `locales/` and per-locale READMEs are described in
+[Localization](./localization.md).
 
 Do not publish a development bundle as a trusted/folder V1 plugin. For the
 marketplace, the package must keep `apiVersion: "2.0.0"` and

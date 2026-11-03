@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import quickDate from '../examples/nevo.quick-date/index'
 import callout from '../examples/nevo.callout/index'
 import { createTestPluginHost } from './test-host'
+import { definePlugin } from './index'
 import type { PluginEditorSnapshot } from './protocol'
 
 function editor(now: string, locale: string, timeZone: string): PluginEditorSnapshot {
@@ -76,5 +77,29 @@ describe('marketplace SDK V2 examples', () => {
       children: 'Nested **rich** content',
     })
     expect(serialized).toContain('> ⚠️ **warning**: Nested **rich** content')
+  })
+})
+
+describe('api.i18n in the test host', () => {
+  const plugin = definePlugin({
+    setup(api) {
+      api.slashItem({
+        id: `${api.pluginId}.hello`,
+        title: api.i18n.t('slash.hello', { name: 'Nevo' }),
+      }, () => null)
+    },
+  })
+
+  it('translates registered descriptors from the provided catalog', async () => {
+    const host = await createTestPluginHost('acme.hello', plugin, [], {
+      locale: 'ru',
+      messages: { 'slash.hello': 'Привет, {name}' },
+    })
+    expect(host.contributions[0]?.descriptor.title).toBe('Привет, Nevo')
+  })
+
+  it('defaults to an empty en catalog that returns keys', async () => {
+    const host = await createTestPluginHost('acme.hello', plugin)
+    expect(host.contributions[0]?.descriptor.title).toBe('slash.hello')
   })
 })

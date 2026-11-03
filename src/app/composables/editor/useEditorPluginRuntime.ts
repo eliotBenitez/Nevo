@@ -3,6 +3,7 @@ import type { EditorCore } from './useEditorCore'
 import type { PluginManifest, WorkspaceSettings } from '../../../types/workspace'
 import type { NevoSandboxUiContributionSnapshot } from '../../../types/editor-plugin'
 import { registerMarketplaceRuntimeGuard } from '../../../core/plugins/marketplaceRuntime'
+import { i18n } from '../../../i18n'
 
 const EMPTY_PLUGIN_CONTRIBUTIONS: NevoSandboxUiContributionSnapshot = {
   workspaceViews: [],
@@ -40,6 +41,7 @@ function pluginManifestSignature(manifests: PluginManifest[]): string {
       manifest.executionMode ?? 'trusted-webview',
       manifest.dataVersion ?? 1,
       manifest.priority ?? 0,
+      manifest.defaultLocale ?? '',
       (manifest.capabilities ?? []).join(','),
       (manifest.editorCapabilities ?? []).join(','),
       (manifest.uiCapabilities ?? []).join(','),
@@ -92,6 +94,7 @@ export function useEditorPluginRuntime(options: EditorPluginRuntimeOptions) {
       return {
         workspacePath: options.getWorkspacePath(),
         pluginSignature: pluginManifestSignature(options.getPluginManifests()),
+        locale: i18n.global.locale.value,
         slashCommands: settings.editor.slashCommands,
         markdownShortcuts: settings.editor.markdownShortcuts,
         tabKeyBehavior: settings.editor.tabKeyBehavior,

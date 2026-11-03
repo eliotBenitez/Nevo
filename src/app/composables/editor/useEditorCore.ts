@@ -255,6 +255,7 @@ function toEditorPluginManifest(manifest: PluginManifest): NevoEditorPluginManif
     workspaceCapabilities: manifest.workspaceCapabilities ?? [],
     network: manifest.network,
     nevoVersionRange: manifest.nevoVersionRange,
+    defaultLocale: manifest.defaultLocale,
     priority: manifest.priority,
   }
 }

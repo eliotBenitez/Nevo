@@ -308,6 +308,8 @@ pub fn run() {
             workspace::marketplace_refresh_cache,
             workspace::marketplace_plugin_readme,
             workspace::plugin_readme_read,
+            workspace::marketplace_plugin_messages,
+            workspace::plugin_messages_read,
             workspace::get_workspace_diagnostics,
             workspace::prune_workspace_snapshots,
             workspace::cleanup_orphaned_assets,

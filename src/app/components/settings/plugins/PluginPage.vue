@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { ArrowLeft, Download, ExternalLink, FolderOpen, RefreshCw, Settings, Trash2 } from '../../../../ui/icons'
 import type { ChatBlock } from '../../../../core/ai-chat/markdown'
 import type { MarketplaceCatalogItem, MarketplacePluginStatus, PluginManifest } from '../../../../types/workspace'
+import type { PluginCatalogMessages } from '../../../../core/plugins/pluginMessages'
 import type { ReadmeStatus } from '../../../composables/settings/usePluginReadme'
 import NvButton from '../../../../ui/primitives/NvButton.vue'
 import NvToggle from '../../../../ui/primitives/NvToggle.vue'
@@ -24,6 +25,7 @@ const props = defineProps<{
   canRemove: boolean
   readmeStatus: ReadmeStatus
   readmeBlocks: ChatBlock[]
+  messages?: PluginCatalogMessages
 }>()
 
 const emit = defineEmits<{
@@ -50,12 +52,12 @@ const factTerm = 'tw:text-[11.5px] tw:text-content-muted'
 const factValue = 'tw:m-0 tw:text-[12.5px] tw:text-content-primary'
 
 const pluginId = computed(() => props.manifest?.id ?? props.catalogItem?.pluginId ?? '')
-const title = computed(() => (props.manifest ? pluginTitle(props.manifest, t) : pluginId.value))
+const title = computed(() => (props.manifest ? pluginTitle(props.manifest, t, props.messages) : pluginId.value))
 const description = computed(() => (
-  props.manifest ? pluginDescription(props.manifest, t) : props.catalogItem?.manifestError || t('settings.plugins.noDescription')
+  props.manifest ? pluginDescription(props.manifest, t, props.messages) : props.catalogItem?.manifestError || t('settings.plugins.noDescription')
 ))
 const icon = computed(() => (props.manifest ? systemPluginIcons[props.manifest.id] ?? null : null))
-const initial = computed(() => (props.manifest?.name ?? pluginId.value).charAt(0).toUpperCase())
+const initial = computed(() => (title.value || pluginId.value).charAt(0).toUpperCase())
 const source = computed(() => props.manifest?.source ?? (props.catalogItem ? 'marketplace' : 'folder'))
 const installedVersion = computed(() => {
   const version = props.catalogItem?.installedVersion

@@ -818,7 +818,7 @@ describe('sandboxed plugin host', () => {
     expect(() => validateManifest(manifest({ capabilities: undefined }), '1.0.0'))
       .toThrow('requires a unified capabilities array')
     expect(() => validateManifest(manifest({ apiVersion: '1.0.0' }), '1.0.0'))
-      .toThrow('expected 2.1.0 for sandboxed-worker')
+      .toThrow('expected 2.2.0 for sandboxed-worker')
     expect(() => validateManifest(manifest({
       apiVersion: '2.0.0',
       executionMode: 'trusted-webview',

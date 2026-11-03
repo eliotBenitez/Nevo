@@ -107,6 +107,7 @@ fn bundled_system_plugins() -> Vec<(PluginManifest, &'static str)> {
                 network: None,
                 nevo_version_range: Some("^1.0.0".to_string()),
                 runtimes: None,
+                default_locale: None,
                 priority: Some(40),
                 settings_schema: vec![],
             },
@@ -136,6 +137,7 @@ fn bundled_system_plugins() -> Vec<(PluginManifest, &'static str)> {
                 network: None,
                 nevo_version_range: Some("^1.0.0".to_string()),
                 runtimes: None,
+                default_locale: None,
                 priority: Some(30),
                 settings_schema: vec![],
             },
@@ -161,6 +163,7 @@ fn bundled_system_plugins() -> Vec<(PluginManifest, &'static str)> {
                 network: None,
                 nevo_version_range: Some("^1.0.0".to_string()),
                 runtimes: None,
+                default_locale: None,
                 priority: Some(20),
                 settings_schema: vec![],
             },
@@ -186,6 +189,7 @@ fn bundled_system_plugins() -> Vec<(PluginManifest, &'static str)> {
                 network: None,
                 nevo_version_range: Some("^1.0.0".to_string()),
                 runtimes: None,
+                default_locale: None,
                 priority: Some(20),
                 settings_schema: vec![],
             },
@@ -211,6 +215,7 @@ fn bundled_system_plugins() -> Vec<(PluginManifest, &'static str)> {
                 network: None,
                 nevo_version_range: Some("^1.0.0".to_string()),
                 runtimes: None,
+                default_locale: None,
                 priority: Some(10),
                 settings_schema: vec![
                     serde_json::json!({
@@ -403,6 +408,28 @@ pub(crate) fn validate_plugin_runtimes(runtimes: &Option<Vec<String>>) -> Result
     Ok(())
 }
 
+/// Language (2-3 lowercase letters) with an optional region/script suffix, e.g. `ru`, `pt-BR`.
+pub(crate) fn validate_plugin_locale(value: &str) -> Result<(), String> {
+    let (language, region) = match value.split_once('-') {
+        Some((language, region)) => (language, Some(region)),
+        None => (value, None),
+    };
+    let language_ok =
+        (2..=3).contains(&language.len()) && language.chars().all(|c| c.is_ascii_lowercase());
+    let region_ok = region
+        .map(|r| (2..=4).contains(&r.len()) && r.chars().all(|c| c.is_ascii_alphabetic()))
+        .unwrap_or(true);
+    if language_ok && region_ok {
+        Ok(())
+    } else {
+        Err(format!("invalid plugin locale: {value}"))
+    }
+}
+
+pub(crate) fn validate_plugin_default_locale(value: &Option<String>) -> Result<(), String> {
+    value.as_deref().map_or(Ok(()), validate_plugin_locale)
+}
+
 #[tauri::command]
 pub fn validate_plugin_manifest(
     workspace_path: String,
@@ -448,6 +475,7 @@ pub fn validate_plugin_manifest(
         message
     })?;
     validate_plugin_runtimes(&manifest.runtimes)?;
+    validate_plugin_default_locale(&manifest.default_locale)?;
     let _ = logger.debug(
         "tauri.workspace",
         "validate_plugin_manifest",
@@ -553,7 +581,10 @@ pub fn set_plugin_enabled_sync(
 
 #[cfg(test)]
 mod tests {
-    use super::{ensure_bundled_system_plugins, validate_plugin_id, validate_plugin_runtimes};
+    use super::{
+        ensure_bundled_system_plugins, validate_plugin_id, validate_plugin_locale,
+        validate_plugin_runtimes,
+    };
     use crate::commands::workspace::paths::plugins_dir_path;
     use crate::commands::workspace::types::{PluginExecutionMode, PluginManifest};
     use std::path::PathBuf;
@@ -725,5 +756,17 @@ mod tests {
         assert!(!plugin_dir.join("index.js").exists());
 
         std::fs::remove_dir_all(workspace).expect("cleanup");
+    }
+
+    #[test]
+    fn plugin_locale_validation() {
+        for ok in ["en", "ru", "pt-BR", "zh-Hans", "fil"] {
+            assert!(validate_plugin_locale(ok).is_ok(), "{ok}");
+        }
+        for bad in [
+            "", "e", "EN", "en_US", "en-", "en-B", "english", "../x", "en-US-x",
+        ] {
+            assert!(validate_plugin_locale(bad).is_err(), "{bad}");
+        }
     }
 }

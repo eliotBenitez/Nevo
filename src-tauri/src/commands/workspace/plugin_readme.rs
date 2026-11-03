@@ -1,36 +1,48 @@
 use super::paths::plugins_dir_path;
+use super::plugin_locale::locale_chain;
 use super::plugins::validate_plugin_id;
 use crate::commands::path_utils::normalize_workspace_path;
 
 pub(crate) const MAX_PLUGIN_README_BYTES: usize = 256 * 1024;
 
 /// Enforces the size limit, decodes strict UTF-8 and strips a leading BOM.
-pub(crate) fn decode_readme(bytes: Vec<u8>) -> Result<String, String> {
-    if bytes.len() > MAX_PLUGIN_README_BYTES {
-        return Err("README exceeds the size limit".to_string());
+pub(crate) fn decode_text(bytes: Vec<u8>, limit: usize, what: &str) -> Result<String, String> {
+    if bytes.len() > limit {
+        return Err(format!("{what} exceeds the size limit"));
     }
-    let text = String::from_utf8(bytes).map_err(|_| "README is not valid UTF-8".to_string())?;
+    let text = String::from_utf8(bytes).map_err(|_| format!("{what} is not valid UTF-8"))?;
     Ok(match text.strip_prefix('\u{feff}') {
         Some(stripped) => stripped.to_string(),
         None => text,
     })
 }
 
+pub(crate) fn decode_readme(bytes: Vec<u8>) -> Result<String, String> {
+    decode_text(bytes, MAX_PLUGIN_README_BYTES, "README")
+}
+
 #[tauri::command]
 pub async fn plugin_readme_read(
     workspace_path: String,
     plugin_id: String,
+    locale: String,
+    default_locale: String,
 ) -> Result<Option<String>, String> {
-    tauri::async_runtime::spawn_blocking(move || plugin_readme_read_sync(workspace_path, plugin_id))
-        .await
-        .map_err(|error| error.to_string())?
+    tauri::async_runtime::spawn_blocking(move || {
+        plugin_readme_read_sync(workspace_path, plugin_id, locale, default_locale)
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 pub fn plugin_readme_read_sync(
     workspace_path: String,
     plugin_id: String,
+    locale: String,
+    default_locale: String,
 ) -> Result<Option<String>, String> {
     validate_plugin_id(&plugin_id)?;
+    let chain = locale_chain(&locale, &default_locale)?;
     let workspace = normalize_workspace_path(&workspace_path)?;
     let plugin_dir = plugins_dir_path(&workspace.to_string_lossy()).join(&plugin_id);
     let entries = match std::fs::read_dir(&plugin_dir) {
@@ -38,24 +50,28 @@ pub fn plugin_readme_read_sync(
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         Err(error) => return Err(error.to_string()),
     };
+    let mut files = Vec::new();
     for entry in entries {
         let entry = entry.map_err(|error| error.to_string())?;
-        if !entry
-            .file_name()
-            .to_string_lossy()
-            .eq_ignore_ascii_case("readme.md")
-        {
-            continue;
-        }
+        let name = entry.file_name().to_string_lossy().to_ascii_lowercase();
         let metadata =
             std::fs::symlink_metadata(entry.path()).map_err(|error| error.to_string())?;
-        if !metadata.is_file() {
-            continue;
+        if metadata.is_file() {
+            files.push((name, entry.path(), metadata.len()));
         }
-        if metadata.len() > MAX_PLUGIN_README_BYTES as u64 {
+    }
+    let candidates = chain
+        .iter()
+        .map(|loc| format!("readme.{}.md", loc.to_ascii_lowercase()))
+        .chain(std::iter::once("readme.md".to_string()));
+    for candidate in candidates {
+        let Some((_, path, len)) = files.iter().find(|(name, _, _)| *name == candidate) else {
+            continue;
+        };
+        if *len > MAX_PLUGIN_README_BYTES as u64 {
             return Err("README exceeds the size limit".to_string());
         }
-        let bytes = std::fs::read(entry.path()).map_err(|error| error.to_string())?;
+        let bytes = std::fs::read(path).map_err(|error| error.to_string())?;
         return decode_readme(bytes).map(Some);
     }
     Ok(None)
@@ -82,8 +98,22 @@ mod tests {
         dir
     }
 
+    fn read_locale(
+        workspace: &PathBuf,
+        id: &str,
+        locale: &str,
+        default_locale: &str,
+    ) -> Result<Option<String>, String> {
+        plugin_readme_read_sync(
+            workspace.to_string_lossy().into_owned(),
+            id.to_string(),
+            locale.to_string(),
+            default_locale.to_string(),
+        )
+    }
+
     fn read(workspace: &PathBuf, id: &str) -> Result<Option<String>, String> {
-        plugin_readme_read_sync(workspace.to_string_lossy().into_owned(), id.to_string())
+        read_locale(workspace, id, "en", "en")
     }
 
     #[test]
@@ -148,5 +178,60 @@ mod tests {
     fn decode_enforces_limit() {
         assert!(decode_readme(vec![b'a'; MAX_PLUGIN_README_BYTES]).is_ok());
         assert!(decode_readme(vec![b'a'; MAX_PLUGIN_README_BYTES + 1]).is_err());
+    }
+
+    #[test]
+    fn picks_readme_for_locale() {
+        let ws = temp_workspace("loc-ru");
+        let dir = plugin_dir(&ws, "p");
+        std::fs::write(dir.join("README.md"), "default").unwrap();
+        std::fs::write(dir.join("README.ru.md"), "russian").unwrap();
+        assert_eq!(
+            read_locale(&ws, "p", "ru", "en"),
+            Ok(Some("russian".into()))
+        );
+        assert_eq!(
+            read_locale(&ws, "p", "de", "en"),
+            Ok(Some("default".into()))
+        );
+    }
+
+    #[test]
+    fn locale_part_is_case_insensitive() {
+        let ws = temp_workspace("loc-case");
+        std::fs::write(plugin_dir(&ws, "p").join("readme.RU.MD"), "russian").unwrap();
+        assert_eq!(
+            read_locale(&ws, "p", "ru", "en"),
+            Ok(Some("russian".into()))
+        );
+    }
+
+    #[test]
+    fn region_falls_back_to_base_language() {
+        let ws = temp_workspace("loc-base");
+        let dir = plugin_dir(&ws, "p");
+        std::fs::write(dir.join("README.md"), "default").unwrap();
+        std::fs::write(dir.join("README.pt.md"), "portuguese").unwrap();
+        assert_eq!(
+            read_locale(&ws, "p", "pt-BR", "en"),
+            Ok(Some("portuguese".into()))
+        );
+    }
+
+    #[test]
+    fn falls_back_to_default_locale_then_plain_readme() {
+        let ws = temp_workspace("loc-default");
+        let dir = plugin_dir(&ws, "p");
+        std::fs::write(dir.join("README.md"), "plain").unwrap();
+        std::fs::write(dir.join("README.fr.md"), "french").unwrap();
+        assert_eq!(read_locale(&ws, "p", "ru", "fr"), Ok(Some("french".into())));
+        assert_eq!(read_locale(&ws, "p", "ru", "de"), Ok(Some("plain".into())));
+    }
+
+    #[test]
+    fn rejects_invalid_locale() {
+        let ws = temp_workspace("loc-bad");
+        assert!(read_locale(&ws, "p", "../x", "en").is_err());
+        assert!(read_locale(&ws, "p", "ru", "EN").is_err());
     }
 }
