@@ -37,6 +37,7 @@ fn manifest(id: &str, version: &str, enabled: bool, kind: &str, source: &str) ->
         workspace_capabilities: vec![],
         network: None,
         nevo_version_range: None,
+        runtimes: None,
         priority: None,
         settings_schema: vec![],
     }
@@ -206,6 +207,13 @@ fn validate_marketplace_manifest_requires_marketplace_source_and_entry() {
     sandboxed.api_version = "2.0.0".to_string();
     sandboxed.capabilities = Some(vec!["editor.write".to_string()]);
     sandboxed.editor_capabilities.clear();
+    assert!(validate_marketplace_manifest(&sandboxed, "plugin.v2", &files).is_ok());
+
+    sandboxed.runtimes = Some(vec![]);
+    assert!(validate_marketplace_manifest(&sandboxed, "plugin.v2", &files).is_err());
+    sandboxed.runtimes = Some(vec!["desktop".to_string(), "bsd".to_string()]);
+    assert!(validate_marketplace_manifest(&sandboxed, "plugin.v2", &files).is_err());
+    sandboxed.runtimes = Some(vec!["desktop".to_string(), "android".to_string()]);
     assert!(validate_marketplace_manifest(&sandboxed, "plugin.v2", &files).is_ok());
 }
 

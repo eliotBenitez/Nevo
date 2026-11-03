@@ -1824,6 +1824,7 @@
       },
       "manifestIssue": "Manifest-Problem",
       "manifestValid": "Manifest gültig",
+      "unavailableOnDevice": "Auf diesem Gerät nicht verfügbar",
       "emptyTitle": "Keine Plugins gefunden.",
       "emptyDescription": "Legen Sie Plugin-Ordner in `.nevo/plugins` ab und scannen Sie diesen Arbeitsbereich neu.",
       "settings": {

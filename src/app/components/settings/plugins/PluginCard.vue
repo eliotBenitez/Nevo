@@ -4,6 +4,9 @@ import type { Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { FolderOpen, GitBranch, Kanban, LayoutTemplate, Network, BarChart3, Settings, Trash2 } from '../../../../ui/icons'
 import type { PluginManifest } from '../../../../types/workspace'
+import { useWorkspaceStore } from '../../../../stores/workspace'
+import { isPluginAvailableOnRuntime } from '../../../../core/plugins/runtimeAvailability'
+import { resolveRuntimeCapabilities } from '../../../../utils/runtime'
 import { isSystemPluginId, SYSTEM_PLUGIN_SHORT_IDS } from '../../../../utils/system-plugins'
 import NvButton from '../../../../ui/primitives/NvButton.vue'
 import NvToggle from '../../../../ui/primitives/NvToggle.vue'
@@ -26,6 +29,11 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const workspaceStore = useWorkspaceStore()
+
+const isAvailableOnDevice = computed(() =>
+  isPluginAvailableOnRuntime(props.plugin, resolveRuntimeCapabilities(workspaceStore.appMetadata).runtime),
+)
 
 const systemPluginIcons: Record<string, Component> = {
   'nevo.kanban': markRaw(Kanban),
@@ -62,7 +70,7 @@ const capabilities = computed(() => {
 <template>
   <SettingsObjectCard
     class="plugin-card"
-    :tone="isValid ? 'default' : 'warning'"
+    :tone="isValid && isAvailableOnDevice ? 'default' : 'warning'"
   >
     <template #icon>
       <div class="plugin-card__icon tw:grid tw:size-9 tw:place-items-center tw:rounded-[calc(10px*var(--radius-scale,1))] tw:bg-accent tw:text-content-on-accent tw:[font-family:var(--font-serif)] tw:italic" :class="{ 'plugin-card__icon--system': plugin.kind === 'system' }">
@@ -118,6 +126,12 @@ const capabilities = computed(() => {
         {{ t('settings.plugins.remove') }}
       </NvButton>
       <div class="spacer" />
+      <span
+        v-if="!isAvailableOnDevice"
+        class="status-chip tw:inline-flex tw:h-5 tw:items-center tw:justify-center tw:rounded-full tw:border tw:border-transparent tw:px-2 tw:text-[10.5px] tw:font-semibold tw:bg-[var(--surface-warning)] tw:text-[var(--warning)]"
+      >
+        {{ t('settings.plugins.unavailableOnDevice') }}
+      </span>
       <span
         class="status-chip tw:inline-flex tw:h-5 tw:items-center tw:justify-center tw:rounded-full tw:border tw:border-transparent tw:px-2 tw:text-[10.5px] tw:font-semibold"
         :class="isValid ? 'status-chip--functional tw:bg-[var(--accent-soft)] tw:text-accent' : 'status-chip--coming tw:bg-[var(--surface-warning)] tw:text-[var(--warning)]'"

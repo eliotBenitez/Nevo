@@ -1824,6 +1824,7 @@
       },
       "manifestIssue": "Problème de manifeste",
       "manifestValid": "Manifeste valide",
+      "unavailableOnDevice": "Indisponible sur cet appareil",
       "emptyTitle": "Aucun plugin trouvé.",
       "emptyDescription": "Déposez des dossiers de plugins dans `.nevo/plugins` et rescannez cet espace.",
       "settings": {

@@ -304,6 +304,16 @@ pub(super) fn validate_marketplace_manifest(
             }
         }
     }
+    if let Some(runtimes) = &manifest.runtimes {
+        if runtimes.is_empty() {
+            return Err("runtimes must not be empty when provided".to_string());
+        }
+        for runtime in runtimes {
+            if !["desktop", "android", "ios"].contains(&runtime.as_str()) {
+                return Err(format!("unknown plugin runtime: {runtime}"));
+            }
+        }
+    }
     if manifest.entry_point.trim().is_empty() {
         return Err("entryPoint is required".to_string());
     }

@@ -746,6 +746,9 @@ pub struct PluginManifest {
     pub network: Option<PluginNetworkPolicy>,
     #[serde(rename = "nevoVersionRange")]
     pub nevo_version_range: Option<String>,
+    /// Runtimes the plugin supports (`desktop`, `android`, `ios`). `None` means all.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runtimes: Option<Vec<String>>,
     #[serde(default)]
     pub priority: Option<i32>,
     #[serde(

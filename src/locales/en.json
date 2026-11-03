@@ -1824,6 +1824,7 @@
       },
       "manifestIssue": "Manifest issue",
       "manifestValid": "Manifest valid",
+      "unavailableOnDevice": "Not available on this device",
       "emptyTitle": "No plugins found.",
       "emptyDescription": "Drop plugin folders into `.nevo/plugins` and rescan this workspace.",
       "settings": {

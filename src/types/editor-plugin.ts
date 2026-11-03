@@ -9,6 +9,9 @@ export const NEVO_SANDBOX_SDK_VERSION = '2.1.0'
 
 export type NevoPluginExecutionMode = 'trusted-webview' | 'sandboxed-worker'
 
+/** Runtimes a plugin can run on. Omitted in a manifest means all of them. */
+export type NevoPluginRuntime = 'desktop' | 'android' | 'ios'
+
 export type NevoEditorCapability =
   | 'editor.read'
   | 'editor.write'
@@ -61,6 +64,7 @@ export interface NevoEditorPluginManifest {
   kind?: 'system' | 'user' | 'marketplace'
   source?: 'bundled' | 'folder' | 'marketplace'
   nevoVersionRange?: string
+  runtimes?: NevoPluginRuntime[]
   /** SDK V2 source of truth. Legacy capability arrays are V1-only. */
   capabilities?: NevoPluginCapability[]
   editorCapabilities: NevoEditorCapability[]

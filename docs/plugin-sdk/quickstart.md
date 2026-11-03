@@ -142,6 +142,7 @@ outside the plugin directory. The SDK must be included in the bundle.
 | `capabilities` | Yes | Single SDK V2 permission list |
 | `network` | When using the network | Allowed HTTPS hosts and methods |
 | `nevoVersionRange` | No | Exact version, `^major`, `*` or `latest` |
+| `runtimes` | No | Where the plugin runs: any of `desktop`, `android`, `ios`. Omitted means all runtimes; on other runtimes the plugin is not loaded |
 | `priority` | No | Load order; a higher value loads earlier |
 | `settingsSchema` | No | Fields of the plugin settings UI |
 

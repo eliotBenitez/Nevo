@@ -1824,6 +1824,7 @@
       },
       "manifestIssue": "Ошибка манифеста",
       "manifestValid": "Манифест корректен",
+      "unavailableOnDevice": "Недоступен на этом устройстве",
       "emptyTitle": "Плагины не найдены.",
       "emptyDescription": "Добавьте папки плагинов в `.nevo/plugins` и пересканируйте это пространство.",
       "settings": {
