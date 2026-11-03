@@ -114,7 +114,10 @@ fn create_code_session(
         },
     );
     Ok(PluginCodeSessionResponse {
-        entry_url: format!("nevoplugin://{token}/{}", relative.to_string_lossy()),
+        entry_url: super::custom_scheme_url(
+            "nevoplugin",
+            &format!("{token}/{}", relative.to_string_lossy()),
+        ),
         token,
     })
 }
@@ -141,8 +144,7 @@ fn code_content_type(path: &Path) -> &'static str {
 }
 
 fn resolve_code_uri(uri: &str) -> Result<(PathBuf, &'static str), String> {
-    let without_scheme = uri
-        .strip_prefix("nevoplugin://")
+    let without_scheme = super::strip_custom_scheme(uri, "nevoplugin")
         .ok_or_else(|| "Invalid plugin protocol".to_string())?;
     let (token, encoded_path) = without_scheme
         .split_once('/')

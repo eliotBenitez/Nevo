@@ -132,6 +132,9 @@ fn asset_urls_sniff_images_confine_to_the_session_and_reject_non_images() {
     let (path, content_type) = resolve_asset_uri(&uri).expect("resolve image asset");
     assert_eq!(content_type, "image/png");
     assert!(path.starts_with(&root));
+    // Windows/Android requests arrive as `<scheme>://localhost/<token>/...`.
+    let localhost_uri = format!("nevoplugin-asset://localhost/{token}/{asset_id}");
+    assert_eq!(resolve_asset_uri(&localhost_uri).expect("resolve").0, path);
 
     // A malformed id and an unknown token are both refused.
     assert!(resolve_asset_uri(&format!("nevoplugin-asset://{token}/../escape")).is_err());

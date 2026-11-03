@@ -1,4 +1,5 @@
 import { pluginMessagesCommands } from '../../tauri/pluginMessages'
+import { createPluginTranslator } from '../../editor-core/plugin-host/pluginTranslator'
 import type { MarketplaceCatalogItem, PluginManifest } from '../../types/workspace'
 
 export type PluginCatalogMessages = Record<string, string>
@@ -20,7 +21,8 @@ export function localeChain(locale: string, defaultLocale: string): string[] {
     if (trimmed && !chain.some(item => item.toLowerCase() === trimmed.toLowerCase())) chain.push(trimmed)
   }
   add(locale)
-  add(locale.split(/[-_]/)[0] ?? '')
+  // Same rule as the Rust `locale_chain`: only `-` separates the region.
+  add(locale.split('-')[0] ?? '')
   add(defaultLocale || DEFAULT_LOCALE)
   return chain
 }
@@ -49,9 +51,7 @@ export function pluginText(
     ? messages[key]
     : undefined
   if (typeof template !== 'string' || !template) return fallback
-  if (!params) return template
-  return template.replace(/\{([A-Za-z0-9_.-]+)\}/g, (match, name: string) =>
-    Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match)
+  return createPluginTranslator(messages!, '').t(key, params)
 }
 
 export async function loadLocalPluginMessages(

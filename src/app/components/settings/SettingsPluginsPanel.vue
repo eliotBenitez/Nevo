@@ -55,6 +55,8 @@ async function rescanPlugins() {
   clearPluginReadmeCache()
   await workspaceStore.reloadPlugins()
   await reloadPluginMessages()
+  // The open page's README key is unchanged, so its watch would not reload it.
+  if (page.value) await retryReadme()
 }
 const {
   page,

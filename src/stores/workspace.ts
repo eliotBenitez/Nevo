@@ -57,6 +57,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   // deeply proxying this large object on every nested read while staying reactive.
   const settings = shallowRef<WorkspaceSettings>(createDefaultWorkspaceSettings())
   const plugins = ref<PluginManifest[]>([])
+  /** Incremented on every plugin rescan; plugin hosts rebuild on change. */
+  const pluginRevision = ref(0)
   const sidebarNotePreviews = ref<SidebarNotePreview[]>([])
   const marketplaceCatalog = ref<MarketplaceCatalog | null>(null)
   const recents = ref<RecentWorkspace[]>([])
@@ -595,6 +597,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (!backend.value) return
     try {
       plugins.value = await backend.value.listPlugins()
+      pluginRevision.value += 1
       await loadDiagnostics()
     } catch (error) {
       await appLogger.error({
@@ -795,6 +798,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     manifest,
     settings,
     plugins,
+    pluginRevision,
     availablePlugins,
     sidebarNotePreviews,
     marketplaceCatalog,

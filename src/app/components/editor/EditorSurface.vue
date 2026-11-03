@@ -681,6 +681,7 @@ watch(
   () => ({
     workspacePath: props.workspacePath,
     pluginSignature: pluginSignature.value,
+    pluginRevision: workspaceStore.pluginRevision,
     locale: locale.value,
     slashCommands: props.settings.editor.slashCommands,
     markdownShortcuts: props.settings.editor.markdownShortcuts,

@@ -9,6 +9,7 @@ import type {
   NevoSandboxPluginDefinition,
 } from '../../types/editor-plugin'
 import { nevoBaseSchema } from '../schema'
+import { pluginCodeUrl } from './pluginFrameUrl'
 import { manifestCapabilities, type SandboxedPluginSession } from './sandbox'
 import type { SandboxEditorBridge } from './sandboxEditorBridge'
 import type { SandboxEditorEvents } from './sandboxEditorEvents'

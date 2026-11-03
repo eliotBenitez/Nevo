@@ -1,8 +1,8 @@
 // Rust mints plugin code URLs per platform: `nevoplugin://<token>/…` on macOS/Linux,
-// `http://nevoplugin.localhost/<token>/…` where WebView2/Android WebView only route
-// custom schemes through `http://<scheme>.localhost`.
+// `http(s)://nevoplugin.localhost/<token>/…` where WebView2/Android WebView only route
+// custom schemes through `<protocol>://<scheme>.localhost` (https with `useHttpsScheme`).
 const PLUGIN_FRAME_URL_PATTERN =
-  /^(?:nevoplugin:\/\/|http:\/\/nevoplugin\.localhost\/)[a-f0-9]{32}\/[A-Za-z0-9._/-]+$/i
+  /^(?:nevoplugin:\/\/|https?:\/\/nevoplugin\.localhost\/)[a-f0-9]{32}\/[A-Za-z0-9._/-]+$/i
 
 export function isPluginFrameUrl(value: string): boolean {
   return PLUGIN_FRAME_URL_PATTERN.test(value) && !value.includes('..')

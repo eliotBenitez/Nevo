@@ -62,7 +62,10 @@ pub async fn plugin_asset_url(
         }
         let canonical_root = root.canonicalize().map_err(|error| error.to_string())?;
         let token = asset_url_token_for(&plugin_id, &canonical_root);
-        Ok(format!("nevoplugin-asset://{token}/{asset_id}"))
+        Ok(super::super::custom_scheme_url(
+            "nevoplugin-asset",
+            &format!("{token}/{asset_id}"),
+        ))
     })
     .await
     .map_err(|error| error.to_string())?
@@ -92,8 +95,7 @@ pub(super) fn sniff_image_content_type(bytes: &[u8]) -> Option<&'static str> {
 }
 
 pub(super) fn resolve_asset_uri(uri: &str) -> Result<(PathBuf, &'static str), String> {
-    let without_scheme = uri
-        .strip_prefix("nevoplugin-asset://")
+    let without_scheme = super::super::strip_custom_scheme(uri, "nevoplugin-asset")
         .ok_or_else(|| "Invalid plugin asset protocol".to_string())?;
     let (token, encoded_id) = without_scheme
         .split_once('/')

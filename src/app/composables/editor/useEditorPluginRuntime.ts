@@ -21,6 +21,8 @@ interface EditorPluginRuntimeOptions {
   editorSetup: PluginRuntimeEditorSetup
   getWorkspacePath: () => string | null
   getPluginManifests: () => PluginManifest[]
+  /** Bumped by a plugin rescan so edited catalogs re-run `setup` without a version change. */
+  getPluginRevision?: () => number
   getSettings: () => WorkspaceSettings
   flushPendingContent: () => void
   unmountNotePreload: () => void
@@ -69,6 +71,8 @@ export function useEditorPluginRuntime(options: EditorPluginRuntimeOptions) {
 
   async function rebuild(): Promise<void> {
     if (paused.value || disposed) return
+    // The rebuild remounts the editor from saved content, so persist pending edits first.
+    options.flushPendingContent()
     await options.editorSetup.initPluginHost(
       options.getWorkspacePath(),
       options.getPluginManifests(),
@@ -94,6 +98,7 @@ export function useEditorPluginRuntime(options: EditorPluginRuntimeOptions) {
       return {
         workspacePath: options.getWorkspacePath(),
         pluginSignature: pluginManifestSignature(options.getPluginManifests()),
+        pluginRevision: options.getPluginRevision?.() ?? 0,
         locale: i18n.global.locale.value,
         slashCommands: settings.editor.slashCommands,
         markdownShortcuts: settings.editor.markdownShortcuts,

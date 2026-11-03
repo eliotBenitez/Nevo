@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { isPluginFrameUrl } from '../../../editor-core/plugin-host/pluginFrameUrl'
 
 const props = withDefaults(defineProps<{
   src: string
@@ -20,7 +21,7 @@ const emit = defineEmits<{
 const frame = ref<HTMLIFrameElement | null>(null)
 
 function assertPluginFrameUrl(value: string): void {
-  if (!/^nevoplugin:\/\/[a-f0-9]{32}\/[A-Za-z0-9._/-]+$/i.test(value) || value.includes('..')) {
+  if (!isPluginFrameUrl(value)) {
     throw new Error('Sandbox plugin iframe URL is invalid')
   }
 }

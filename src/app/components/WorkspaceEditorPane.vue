@@ -751,6 +751,7 @@ pluginRuntime = useEditorPluginRuntime({
   editorSetup,
   getWorkspacePath: () => props.workspacePath,
   getPluginManifests: () => props.pluginManifests,
+  getPluginRevision: () => workspaceStore.pluginRevision,
   getSettings: () => props.settings,
   flushPendingContent,
   unmountNotePreload: notePreload.unmount,

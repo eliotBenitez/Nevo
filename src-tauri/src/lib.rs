@@ -188,6 +188,13 @@ pub fn run() {
             }
         })
         .setup(|app| {
+            commands::workspace::set_custom_scheme_https(
+                app.config()
+                    .app
+                    .windows
+                    .first()
+                    .is_some_and(|window| window.use_https_scheme),
+            );
             #[cfg(desktop)]
             {
                 app.manage(std::sync::Arc::new(
