@@ -138,6 +138,10 @@ fn try_merge_graph_index(
     // return `None` for those and `merge_edge_map` filters them out.
     merge_edge_map(&source, &mut dest, "forward", maps, remap_edge);
     merge_edge_map(&source, &mut dest, "backward", maps, remap_backlink);
+    // The archive's index may predate link backfill; rebuild from note.json on next read.
+    if let Some(dest) = dest.as_object_mut() {
+        dest.insert("linksBackfilled".to_string(), Value::Bool(false));
+    }
 
     if let Some(parent) = dest_path.parent() {
         std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;

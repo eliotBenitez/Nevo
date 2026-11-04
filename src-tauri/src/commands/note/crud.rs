@@ -384,6 +384,17 @@ pub(crate) fn save_note_impl(workspace_path: String, note: NoteDocument) -> Resu
             note_error_context(&workspace_path, "note_index", message),
         );
     }
+    if let Err(message) =
+        crate::commands::graph::index_note_links(&workspace_path, &note.id, &note.content)
+    {
+        let _ = logger.warn(
+            "tauri.note",
+            "save_note",
+            "Failed to update note graph links",
+            diagnostics_enabled,
+            note_error_context(&workspace_path, "graph", message),
+        );
+    }
 
     Ok(())
 }

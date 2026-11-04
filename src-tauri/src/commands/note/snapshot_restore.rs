@@ -265,6 +265,17 @@ pub(crate) fn restore_note_snapshot_impl(
             );
         }
     }
+    if let Err(message) =
+        crate::commands::graph::index_note_links(&workspace_path, &note_id, &restored.content)
+    {
+        let _ = logger.warn(
+            "tauri.note",
+            "restore_note_snapshot",
+            "Failed to update note graph links after a restore",
+            diagnostics_enabled,
+            note_error_context(&workspace_path, "graph", message),
+        );
+    }
 
     let _ = logger.info(
         "tauri.note",
