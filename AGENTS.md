@@ -20,7 +20,7 @@ This file defines how to behave. These define how the system works — read the 
 | What is persisted, in what shape, and how a migration is written | `docs/data-model.md` |
 | How this repo is tested, which suites are load-bearing | `docs/testing.md` |
 | Why the system is the way it is; what was removed and why | `docs/decisions/` |
-| What shipped, when | `changes.md` |
+| What changed since the last release (earlier history: GitHub releases) | `changes.md` |
 | Plugin SDK, capabilities, sandbox security | `docs/plugins.md`, `docs/plugin-capabilities.md`, `docs/plugin-security.md`, `docs/plugin-sdk-v2-migration.md` |
 | MCP bridge for external agents | `docs/mcp-bridge.md` |
 ## Design Before Implementation
@@ -55,9 +55,10 @@ If the repository already has unrelated lint or test failures, do not expand the
 Record only changes directly related to the application in `changes.md`, such as application features, bug fixes, and refactors. Do not record project-only maintenance, development tooling or configuration, agent instructions or workflows, or other changes that do not affect the application. Do not update it for read-only analysis, explanations, diagnostics, or abandoned work.
 
 - Write entries in English, concisely, and in the past tense.
-- Preserve existing history and keep exactly one top-level section of each kind: `## 🆕 Added`, `## 🛠️ Fixed`, and `## 🔄 Updated / Improved`.
+- Preserve unreleased entries and keep exactly one top-level section of each kind: `## 🆕 Added`, `## 🛠️ Fixed`, and `## 🔄 Updated / Improved`.
 - Insert new entries at the top of the matching section. Use `### Feature Name` under `Added` when grouping several related items.
 - Use `* **Detail**: Description` for entries.
+- `changes.md` holds only unreleased changes. When a release is cut, its contents become the GitHub release notes and `changes.md` is reset to the three empty section headers; entries already published in a release must not be carried over. History lives in the GitHub releases, not in this file.
 
 ## Architecture and Module Boundaries
 
