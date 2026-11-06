@@ -630,9 +630,6 @@ export const graphCommands = {
   getOutlinks: (workspacePath: string, noteId: string) =>
     invokeCommand<GraphEdge[]>('graph_get_outlinks', { workspacePath, noteId }),
 
-  removeNote: (workspacePath: string, noteId: string) =>
-    invokeCommand<void>('graph_remove_note', { workspacePath, noteId }),
-
   getAllEdges: (workspacePath: string) =>
     invokeCommand<GraphEdge[]>('graph_get_all_edges', { workspacePath }),
 }

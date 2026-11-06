@@ -71,6 +71,9 @@ pub(super) fn prune_expired_trash(
         if let Err(message) = note_index::remove_note(Path::new(workspace_path), id) {
             failures.push(message);
         }
+        if let Err(message) = crate::commands::graph::purge_note(workspace_path, id) {
+            failures.push(message);
+        }
         if !failures.is_empty() {
             let _ = logger.warn(
                 "tauri.workspace",

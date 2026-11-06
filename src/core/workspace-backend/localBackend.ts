@@ -239,9 +239,6 @@ export class LocalBackend implements WorkspaceBackend {
   graphGetOutlinks(noteId: string): Promise<GraphEdge[]> {
     return graphCommands.getOutlinks(this.path, noteId)
   }
-  graphRemoveNote(noteId: string): Promise<void> {
-    return graphCommands.removeNote(this.path, noteId)
-  }
   graphGetAllEdges(): Promise<GraphEdge[]> {
     return graphCommands.getAllEdges(this.path)
   }

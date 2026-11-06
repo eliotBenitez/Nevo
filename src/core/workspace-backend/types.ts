@@ -158,7 +158,6 @@ export interface WorkspaceBackend {
   // --- graph ---
   graphGetBacklinks(noteId: string): Promise<BacklinkRef[]>
   graphGetOutlinks(noteId: string): Promise<GraphEdge[]>
-  graphRemoveNote(noteId: string): Promise<void>
   graphGetAllEdges(): Promise<GraphEdge[]>
 
   // --- cross-note query (query_block) ---

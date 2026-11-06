@@ -413,7 +413,6 @@ pub fn run() {
             mcp::disconnect_mcp_agent,
             graph::graph_get_backlinks,
             graph::graph_get_outlinks,
-            graph::graph_remove_note,
             graph::graph_get_all_edges,
             fonts::list_system_fonts,
             kanban::kanban_list_boards,

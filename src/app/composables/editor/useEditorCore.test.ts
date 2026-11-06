@@ -50,7 +50,6 @@ function createCallbacks() {
     onCloseOverlays: vi.fn(),
     onContentUpdate: vi.fn(),
     onDocDirty: vi.fn(),
-    onDocChanged: vi.fn(),
     onInternalLinkOpen: vi.fn(),
     onLinkPickerEnter: vi.fn(() => false),
     onImagePickerRequest: vi.fn(),

@@ -256,6 +256,16 @@ pub(crate) fn delete_folder_sync(
     // already re-upserts it via note::trash::restore_from_trash, so a
     // failure here must not fail the folder delete.
     for note_id in &trashed_note_ids {
+        if let Err(message) = super::graph::remove_note_links(&workspace_path, note_id) {
+            let _ = crate::logging::logger().warn(
+                "tauri.folder",
+                "delete_folder",
+                "Failed to remove note graph links",
+                true,
+                note_error_context(&workspace_path, "graph", message)
+                    .with_payload(serde_json::json!({ "noteId": note_id, "folderId": folder_id })),
+            );
+        }
         if let Err(message) = note_index::remove_note(Path::new(&workspace_path), note_id) {
             let _ = crate::logging::logger().warn(
                 "tauri.folder",

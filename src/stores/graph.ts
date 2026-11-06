@@ -78,25 +78,6 @@ export const useGraphStore = defineStore('graph', () => {
     }
   }
 
-  async function removeNote(noteId: string) {
-    const backend = workspaceStore.backend
-    if (!backend) return
-    try {
-      await backend.graphRemoveNote(noteId)
-      if (activeNoteId.value === noteId) {
-        backlinks.value = []
-        outlinks.value = []
-      }
-    } catch (error) {
-      await appLogger.error({
-        source: 'frontend.graph',
-        event: 'remove_note',
-        message: 'Failed to remove note from graph',
-        error,
-      })
-    }
-  }
-
   function clear() {
     loadGeneration++
     backlinks.value = []
@@ -110,7 +91,6 @@ export const useGraphStore = defineStore('graph', () => {
     activeNoteId,
     loadNoteGraph,
     refreshOutlinks,
-    removeNote,
     clear,
   }
 })

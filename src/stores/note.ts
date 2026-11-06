@@ -606,6 +606,8 @@ export const useNoteStore = defineStore('note', () => {
     } finally {
       if (isActive && sessionToken === noteSessionToken && workspaceStore.backend === backend) {
         await loadNote(noteId, { force: true })
+        // The restore re-indexed the note's links on the backend.
+        void useGraphStore().refreshOutlinks(noteId)
       }
     }
   }

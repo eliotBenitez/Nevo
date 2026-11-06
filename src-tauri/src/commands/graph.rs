@@ -19,8 +19,17 @@ pub(crate) fn normalized_workspace(workspace_path: &str) -> Result<String, Strin
 /// Serializes graph.json access per workspace and guards its parsed cache.
 /// Expects a path from `normalized_workspace`.
 pub(crate) fn graph_lock(workspace_path: &str) -> Arc<Mutex<GraphSlot>> {
-    GRAPH_LOCKS
-        .get_or_init(DashMap::new)
+    let locks = GRAPH_LOCKS.get_or_init(DashMap::new);
+    // Only the workspace in use keeps its parsed index resident; idle slots
+    // drop theirs (a busy slot is skipped, never waited on).
+    for entry in locks.iter() {
+        if entry.key() != workspace_path {
+            if let Ok(mut slot) = entry.value().try_lock() {
+                slot.invalidate();
+            }
+        }
+    }
+    locks
         .entry(workspace_path.to_string())
         .or_insert_with(|| Arc::new(Mutex::new(GraphSlot::default())))
         .clone()
@@ -72,6 +81,11 @@ impl GraphSlot {
         Ok(())
     }
 
+    #[cfg(test)]
+    fn is_empty(&self) -> bool {
+        self.0.is_none()
+    }
+
     /// For writers that replace graph.json directly (workspace merge).
     pub(crate) fn invalidate(&mut self) {
         self.0 = None;
@@ -119,13 +133,6 @@ struct GraphIndex {
     links_backfilled: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct EdgeInput {
-    pub target: String,
-    pub kind: EdgeKind,
-    pub anchor: Option<String>,
-}
-
 fn index_path(workspace_path: &str) -> Result<std::path::PathBuf, String> {
     let base = normalize_workspace_path(workspace_path).map_err(|e| e.to_string())?;
     if !base.join(".nevo/workspace.json").is_file() {
@@ -140,7 +147,9 @@ fn load_index(workspace_path: &str) -> Result<GraphIndex, String> {
         return Ok(GraphIndex::default());
     }
     let raw = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
-    serde_json::from_str(&raw).map_err(|e| e.to_string())
+    // An unparseable cache starts empty with `linksBackfilled` false, so the
+    // next read rebuilds it from note.json instead of failing forever.
+    Ok(serde_json::from_str(&raw).unwrap_or_default())
 }
 
 fn save_index(path: &std::path::Path, index: &GraphIndex) -> Result<(), String> {
@@ -187,13 +196,12 @@ fn update_backward_for_source(
     }
 }
 
-/// Internal-link edges of a note body, matching the editor's `extractLinks`:
-/// only text nodes reached through `content` count, never marks on inline
-/// atoms or JSON inside node attrs. Unresolved links (empty or invalid
-/// `noteId`) are skipped later, not rejected, so one broken `[[Title]]` cannot
-/// drop the note's other edges.
-pub(crate) fn extract_link_edges(content: &serde_json::Value) -> Vec<EdgeInput> {
-    fn walk(node: &serde_json::Value, edges: &mut Vec<EdgeInput>) {
+/// Internal-link edges of a note body: only text nodes reached through
+/// `content` count, never marks on inline atoms or JSON inside node attrs.
+/// Unresolved links (empty or invalid `noteId`) are skipped, not rejected, so
+/// one broken `[[Title]]` cannot drop the note's other edges.
+fn extract_link_edges(note_id: &str, content: &serde_json::Value) -> Vec<GraphEdge> {
+    fn walk(note_id: &str, node: &serde_json::Value, edges: &mut Vec<GraphEdge>) {
         if node.get("type").and_then(|t| t.as_str()) == Some("text") {
             let attrs = node
                 .get("marks")
@@ -205,8 +213,10 @@ pub(crate) fn extract_link_edges(content: &serde_json::Value) -> Vec<EdgeInput> 
                 })
                 .and_then(|mark| mark.get("attrs"));
             if let Some(attrs) = attrs {
-                if let Some(target) = attrs.get("noteId").and_then(|id| id.as_str()) {
-                    edges.push(EdgeInput {
+                let target = attrs.get("noteId").and_then(|id| id.as_str());
+                if let Some(target) = target.filter(|id| validate_id(id).is_ok()) {
+                    edges.push(GraphEdge {
+                        source: note_id.to_string(),
                         target: target.to_string(),
                         kind: EdgeKind::Link,
                         anchor: attrs
@@ -218,25 +228,14 @@ pub(crate) fn extract_link_edges(content: &serde_json::Value) -> Vec<EdgeInput> 
             }
         }
         if let Some(children) = node.get("content").and_then(|c| c.as_array()) {
-            children.iter().for_each(|child| walk(child, edges));
+            children
+                .iter()
+                .for_each(|child| walk(note_id, child, edges));
         }
     }
     let mut edges = Vec::new();
-    walk(content, &mut edges);
+    walk(note_id, content, &mut edges);
     edges
-}
-
-fn to_graph_edges(note_id: &str, edges: Vec<EdgeInput>) -> Vec<GraphEdge> {
-    edges
-        .into_iter()
-        .filter(|edge| validate_id(&edge.target).is_ok())
-        .map(|e| GraphEdge {
-            source: note_id.to_string(),
-            target: e.target,
-            kind: e.kind,
-            anchor: e.anchor,
-        })
-        .collect()
 }
 
 fn replace_outgoing(index: &mut GraphIndex, note_id: &str, outgoing: Vec<GraphEdge>) {
@@ -280,11 +279,7 @@ fn backfill_links(workspace_path: &str, index: &mut GraphIndex) -> Result<bool, 
         else {
             continue;
         };
-        replace_outgoing(
-            index,
-            note_id,
-            to_graph_edges(note_id, extract_link_edges(&content)),
-        );
+        replace_outgoing(index, note_id, extract_link_edges(note_id, &content));
     }
     index.links_backfilled = true;
     Ok(true)
@@ -324,7 +319,7 @@ fn with_backfilled_index<R>(
 fn update_note_edges(
     workspace_path: &str,
     note_id: &str,
-    edges: Vec<EdgeInput>,
+    outgoing: Vec<GraphEdge>,
 ) -> Result<(), String> {
     validate_id(note_id)?;
     let workspace_path = normalized_workspace(workspace_path)?;
@@ -332,7 +327,6 @@ fn update_note_edges(
     let mut slot = lock.lock().map_err(|error| error.to_string())?;
     let index = slot.index_mut(&workspace_path)?;
 
-    let outgoing = to_graph_edges(note_id, edges);
     // Every autosave reaches this; skip rewriting graph.json when nothing changed.
     let unchanged = index
         .forward
@@ -342,18 +336,39 @@ fn update_note_edges(
         return Ok(());
     }
     replace_outgoing(index, note_id, outgoing);
-    slot.save()
+    save_or_invalidate(&mut slot)
 }
 
-/// Refreshes a note's link edges from its saved body. The Rust write paths
-/// (save, restore, trash restore, plugin migration) are the graph's only
-/// writers; the editor just re-reads outlinks after a save.
+/// A failed write must not leave the change only in memory: later identical
+/// updates would look unchanged and never retry. Dropping the cache makes the
+/// next update re-read disk and write again.
+fn save_or_invalidate(slot: &mut GraphSlot) -> Result<(), String> {
+    let saved = slot.save();
+    if saved.is_err() {
+        slot.invalidate();
+    }
+    saved
+}
+
+/// Refreshes a note's link edges from its saved body. The graph is maintained
+/// next to `note_index` in the Rust note lifecycle (save, snapshot and trash
+/// restore, plugin migration, trash, purge); the editor only re-reads it.
 pub(crate) fn index_note_links(
     workspace_path: &str,
     note_id: &str,
     content: &serde_json::Value,
 ) -> Result<(), String> {
-    update_note_edges(workspace_path, note_id, extract_link_edges(content))
+    update_note_edges(
+        workspace_path,
+        note_id,
+        extract_link_edges(note_id, content),
+    )
+}
+
+/// Drops a trashed note's outgoing edges. Edges pointing at it stay, so they
+/// are still there if the note is restored from trash.
+pub(crate) fn remove_note_links(workspace_path: &str, note_id: &str) -> Result<(), String> {
+    update_note_edges(workspace_path, note_id, Vec::new())
 }
 
 #[tauri::command]
@@ -386,29 +401,23 @@ pub async fn graph_get_outlinks(
     .map_err(|error| error.to_string())?
 }
 
-fn graph_remove_note_sync(workspace_path: String, note_id: String) -> Result<(), String> {
-    validate_id(&note_id)?;
-    let workspace_path = normalized_workspace(&workspace_path)?;
+/// Removes a permanently deleted note as both source and target.
+pub(crate) fn purge_note(workspace_path: &str, note_id: &str) -> Result<(), String> {
+    validate_id(note_id)?;
+    let workspace_path = normalized_workspace(workspace_path)?;
     let lock = graph_lock(&workspace_path);
     let mut slot = lock.lock().map_err(|error| error.to_string())?;
     let index = slot.index_mut(&workspace_path)?;
-    replace_outgoing(index, &note_id, Vec::new());
+    replace_outgoing(index, note_id, Vec::new());
 
     // A deleted note cannot remain as a target. Removing those inbound edges
     // also prevents its backlink bucket from being recreated on later writes.
-    index.backward.remove(&note_id);
+    index.backward.remove(note_id);
     for edges in index.forward.values_mut() {
         edges.retain(|edge| edge.target != note_id);
     }
     index.forward.retain(|_, edges| !edges.is_empty());
-    slot.save()
-}
-
-#[tauri::command]
-pub async fn graph_remove_note(workspace_path: String, note_id: String) -> Result<(), String> {
-    tauri::async_runtime::spawn_blocking(move || graph_remove_note_sync(workspace_path, note_id))
-        .await
-        .map_err(|error| error.to_string())?
+    save_or_invalidate(&mut slot)
 }
 
 #[tauri::command]
@@ -425,8 +434,9 @@ pub async fn graph_get_all_edges(workspace_path: String) -> Result<Vec<GraphEdge
 #[cfg(test)]
 mod tests {
     use super::{
-        extract_link_edges, graph_remove_note_sync, index_note_links, load_index,
-        update_note_edges, with_backfilled_index, EdgeInput, EdgeKind, GraphIndex,
+        extract_link_edges, graph_lock, index_note_links, load_index, normalized_workspace,
+        purge_note, remove_note_links, update_note_edges, with_backfilled_index, EdgeKind,
+        GraphEdge, GraphIndex,
     };
     use serde_json::json;
 
@@ -444,6 +454,15 @@ mod tests {
         json!({ "type": "doc", "content": paragraphs })
     }
 
+    fn edge(source: &str, target: &str, kind: EdgeKind) -> GraphEdge {
+        GraphEdge {
+            source: source.into(),
+            target: target.into(),
+            kind,
+            anchor: None,
+        }
+    }
+
     fn workspace() -> std::path::PathBuf {
         let root = std::env::temp_dir().join(format!("nevo_graph_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(root.join(".nevo")).unwrap();
@@ -459,27 +478,15 @@ mod tests {
             &path,
             "source-a",
             vec![
-                EdgeInput {
-                    target: "target-a".into(),
-                    kind: EdgeKind::Link,
-                    anchor: None,
-                },
-                EdgeInput {
-                    target: "target-a".into(),
-                    kind: EdgeKind::Mention,
-                    anchor: None,
-                },
+                edge("source-a", "target-a", EdgeKind::Link),
+                edge("source-a", "target-a", EdgeKind::Mention),
             ],
         )
         .unwrap();
         update_note_edges(
             &path,
             "source-b",
-            vec![EdgeInput {
-                target: "target-b".into(),
-                kind: EdgeKind::Link,
-                anchor: None,
-            }],
+            vec![edge("source-b", "target-b", EdgeKind::Link)],
         )
         .unwrap();
 
@@ -487,7 +494,7 @@ mod tests {
         assert_eq!(index.backward["target-a"][0].count, 2);
         assert_eq!(index.backward["target-b"][0].source_id, "source-b");
 
-        graph_remove_note_sync(path.clone(), "target-b".into()).unwrap();
+        purge_note(&path, "target-b").unwrap();
         let index = load_index(&path).unwrap();
         assert!(!index.backward.contains_key("target-b"));
         assert!(!index.forward.contains_key("source-b"));
@@ -500,7 +507,6 @@ mod tests {
         let root = workspace();
         let path = root.to_string_lossy().into_owned();
         let content = linked_content(&["target-a", "", "bad id"]);
-        assert_eq!(extract_link_edges(&content).len(), 3);
 
         index_note_links(&path, "source-a", &content).unwrap();
         let index = load_index(&path).unwrap();
@@ -557,7 +563,7 @@ mod tests {
             { "type": "plugin_block", "attrs": { "doc": { "type": "text", "text": "x", "marks": link } } },
             { "type": "text", "text": "x", "marks": link }
         ] }] });
-        assert_eq!(extract_link_edges(&content).len(), 1);
+        assert_eq!(extract_link_edges("source", &content).len(), 1);
     }
 
     #[test]
@@ -585,17 +591,80 @@ mod tests {
         let root = workspace();
         let path = root.to_string_lossy().into_owned();
         index_note_links(&path, "source-a", &linked_content(&["target-a"])).unwrap();
-        // A merge or another writer replaces graph.json behind the cache.
-        std::fs::write(
-            root.join(".nevo/index/graph.json"),
-            r#"{"forward":{},"backward":{},"linksBackfilled":true}"#,
-        )
-        .unwrap();
+        // Another writer replaces graph.json behind the cache with a version of
+        // the same length, so only the mtime tells them apart.
+        let graph_file = root.join(".nevo/index/graph.json");
+        let original_len = std::fs::read(&graph_file).unwrap().len();
+        let mut replacement =
+            String::from(r#"{"forward":{},"backward":{},"linksBackfilled":true}"#);
+        replacement.push_str(&" ".repeat(original_len - replacement.len()));
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        std::fs::write(&graph_file, replacement).unwrap();
 
         let index = with_backfilled_index(&path, GraphIndex::clone).unwrap();
         assert!(index.forward.is_empty());
 
         std::fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn a_failed_write_is_retried_by_the_next_identical_update() {
+        let root = workspace();
+        let path = root.to_string_lossy().into_owned();
+        let content = linked_content(&["target-a"]);
+        // `.nevo/index` as a file makes the graph.json write fail.
+        std::fs::write(root.join(".nevo/index"), "").unwrap();
+        assert!(index_note_links(&path, "source-a", &content).is_err());
+
+        std::fs::remove_file(root.join(".nevo/index")).unwrap();
+        index_note_links(&path, "source-a", &content).unwrap();
+        assert_eq!(load_index(&path).unwrap().forward["source-a"].len(), 1);
+
+        std::fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn trashing_drops_outgoing_edges_and_keeps_incoming_ones() {
+        let root = workspace();
+        let path = root.to_string_lossy().into_owned();
+        index_note_links(&path, "a", &linked_content(&["b"])).unwrap();
+        index_note_links(&path, "c", &linked_content(&["a"])).unwrap();
+
+        remove_note_links(&path, "a").unwrap();
+        let index = load_index(&path).unwrap();
+        assert!(!index.forward.contains_key("a"));
+        assert!(!index.backward.contains_key("b"));
+        assert_eq!(index.backward["a"][0].source_id, "c");
+
+        std::fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn an_unparseable_index_is_rebuilt_instead_of_failing() {
+        let root = workspace();
+        let path = root.to_string_lossy().into_owned();
+        std::fs::create_dir_all(root.join(".nevo/index")).unwrap();
+        std::fs::write(root.join(".nevo/index/graph.json"), "{ truncated").unwrap();
+
+        index_note_links(&path, "a", &linked_content(&["b"])).unwrap();
+        assert_eq!(load_index(&path).unwrap().forward["a"][0].target, "b");
+
+        std::fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn opening_another_workspace_drops_the_idle_cache() {
+        let first = workspace();
+        let second = workspace();
+        let first_path = first.to_string_lossy().into_owned();
+        index_note_links(&first_path, "a", &linked_content(&["b"])).unwrap();
+        index_note_links(&second.to_string_lossy(), "c", &linked_content(&["d"])).unwrap();
+
+        let key = normalized_workspace(&first_path).unwrap();
+        assert!(graph_lock(&key).lock().unwrap().is_empty());
+
+        std::fs::remove_dir_all(first).ok();
+        std::fs::remove_dir_all(second).ok();
     }
 
     #[test]

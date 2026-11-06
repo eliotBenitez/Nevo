@@ -490,6 +490,15 @@ pub(crate) fn delete_note_impl(workspace_path: String, note_id: String) -> Resul
 
         // Best-effort: trashed notes should not surface in query_notes; the
         // index is rebuildable via note_index::reindex_all if this fails.
+        if let Err(message) = crate::commands::graph::remove_note_links(&workspace_path, &note_id) {
+            let _ = logger.warn(
+                "tauri.note",
+                "delete_note",
+                "Failed to remove note graph links",
+                diagnostics_enabled,
+                note_error_context(&workspace_path, "graph", message),
+            );
+        }
         if let Err(message) =
             note_index::remove_note(std::path::Path::new(&workspace_path), &note_id)
         {

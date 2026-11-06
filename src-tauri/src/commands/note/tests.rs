@@ -906,3 +906,23 @@ fn save_note_indexes_its_internal_links_in_the_graph() {
         note.id.as_str()
     );
 }
+
+#[test]
+fn trashing_a_note_drops_its_graph_links() {
+    let workspace = TestWorkspace::new();
+    let workspace_path = workspace.path_string();
+    let mut note = create_saved_note(&workspace_path);
+    note.content = json!({ "type": "doc", "content": [{ "type": "paragraph", "content": [{
+        "type": "text", "text": "link",
+        "marks": [{ "type": "internal_link", "attrs": { "noteId": "target-note", "anchor": null } }]
+    }] }] });
+    save_note_impl(workspace_path.clone(), note.clone()).expect("save linked note");
+
+    delete_note_impl(workspace_path.clone(), note.id.clone()).expect("trash note");
+
+    let raw = std::fs::read_to_string(workspace.path.join(".nevo/index/graph.json"))
+        .expect("graph index written");
+    let index: serde_json::Value = serde_json::from_str(&raw).expect("graph index json");
+    assert!(index["forward"].get(&note.id).is_none());
+    assert!(index["backward"].get("target-note").is_none());
+}

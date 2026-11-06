@@ -76,9 +76,20 @@ pub fn restore_from_trash_sync(workspace_path: String, item_id: String) -> Resul
             })),
         );
 
-        // Best-effort: the link backfill drops trashed notes' edges, so a
+        // Best-effort: trashing dropped the note's outgoing edges, so a
         // restored note re-adds its own.
-        let _ = crate::commands::graph::index_note_links(&workspace_path, &item_id, &note.content);
+        if let Err(message) =
+            crate::commands::graph::index_note_links(&workspace_path, &item_id, &note.content)
+        {
+            let _ = logger.warn(
+                "tauri.note",
+                "restore_from_trash",
+                "Failed to update note graph links",
+                true,
+                note_error_context(&workspace_path, "graph", message)
+                    .with_payload(serde_json::json!({ "itemId": item_id })),
+            );
+        }
         // Best-effort: a restored note is active again and should reappear
         // in query_notes. The index is a rebuildable cache
         // (note_index::reindex_all), so a failure here must not fail the
@@ -138,6 +149,17 @@ pub fn permanently_delete_from_trash_sync(
                 std::fs::remove_dir_all(snap_dir).map_err(|error| error.to_string())?;
             }
 
+            // Best-effort: a deleted note leaves the graph as source and target.
+            if let Err(message) = crate::commands::graph::purge_note(&workspace_path, &item.id) {
+                let _ = logger.warn(
+                    "tauri.note",
+                    "permanently_delete_from_trash",
+                    "Failed to remove note from graph index",
+                    true,
+                    note_error_context(&workspace_path, "graph", message)
+                        .with_payload(serde_json::json!({ "itemId": item.id })),
+                );
+            }
             // Best-effort: already removed on trashing via delete_note_impl,
             // but idempotent cleanup here covers any index entry that
             // survived (e.g. a failed removal at trash time).
@@ -202,9 +224,20 @@ pub fn empty_trash_sync(workspace_path: String) -> Result<(), String> {
             if let Err(error) = result {
                 errors.push(format!("{}: {error}", item.id));
                 retained.push(item);
-            } else if let Err(message) =
-                note_index::remove_note(Path::new(&workspace_path), &item.id)
-            {
+                continue;
+            }
+            // Best-effort: a deleted note leaves the graph as source and target.
+            if let Err(message) = crate::commands::graph::purge_note(&workspace_path, &item.id) {
+                let _ = logger.warn(
+                    "tauri.note",
+                    "empty_trash",
+                    "Failed to remove note from graph index",
+                    true,
+                    note_error_context(&workspace_path, "graph", message)
+                        .with_payload(serde_json::json!({ "itemId": item.id })),
+                );
+            }
+            if let Err(message) = note_index::remove_note(Path::new(&workspace_path), &item.id) {
                 let _ = logger.warn(
                     "tauri.note",
                     "empty_trash",
