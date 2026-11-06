@@ -149,8 +149,12 @@ pub fn permanently_delete_from_trash_sync(
                 std::fs::remove_dir_all(snap_dir).map_err(|error| error.to_string())?;
             }
 
-            // Best-effort: a deleted note leaves the graph as source and target.
-            if let Err(message) = crate::commands::graph::purge_note(&workspace_path, &item.id) {
+            // Best-effort: already dropped on trashing; idempotent cleanup for
+            // a removal that failed then.
+            if let Err(message) = crate::commands::graph::remove_notes_links(
+                &workspace_path,
+                std::slice::from_ref(&item.id),
+            ) {
                 let _ = logger.warn(
                     "tauri.note",
                     "permanently_delete_from_trash",
@@ -208,6 +212,7 @@ pub fn empty_trash_sync(workspace_path: String) -> Result<(), String> {
 
     let mut retained = Vec::new();
     let mut errors = Vec::new();
+    let mut purged_note_ids = Vec::new();
     for item in manifest.trash.drain(..) {
         if item.item_type == "note" {
             let result = (|| -> Result<(), String> {
@@ -226,17 +231,7 @@ pub fn empty_trash_sync(workspace_path: String) -> Result<(), String> {
                 retained.push(item);
                 continue;
             }
-            // Best-effort: a deleted note leaves the graph as source and target.
-            if let Err(message) = crate::commands::graph::purge_note(&workspace_path, &item.id) {
-                let _ = logger.warn(
-                    "tauri.note",
-                    "empty_trash",
-                    "Failed to remove note from graph index",
-                    true,
-                    note_error_context(&workspace_path, "graph", message)
-                        .with_payload(serde_json::json!({ "itemId": item.id })),
-                );
-            }
+            purged_note_ids.push(item.id.clone());
             if let Err(message) = note_index::remove_note(Path::new(&workspace_path), &item.id) {
                 let _ = logger.warn(
                     "tauri.note",
@@ -248,6 +243,20 @@ pub fn empty_trash_sync(workspace_path: String) -> Result<(), String> {
                 );
             }
         }
+    }
+
+    // Best-effort, one graph write: already dropped on trashing; idempotent
+    // cleanup for a removal that failed then.
+    if let Err(message) =
+        crate::commands::graph::remove_notes_links(&workspace_path, &purged_note_ids)
+    {
+        let _ = logger.warn(
+            "tauri.note",
+            "empty_trash",
+            "Failed to remove notes from graph index",
+            true,
+            note_error_context(&workspace_path, "graph", message),
+        );
     }
 
     manifest.trash = retained;

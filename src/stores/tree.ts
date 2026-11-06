@@ -4,6 +4,7 @@ import type { FolderMeta, NoteMeta, TreeNode } from '../types/note'
 import type { TemplateFieldValues } from '../types/template'
 import type { NotebookPaperKind } from '../core/notebook/types'
 import { useWorkspaceStore } from './workspace'
+import { useGraphStore } from './graph'
 import { moveItemInArray } from '../utils/sidebar/reorder'
 
 export const useTreeStore = defineStore('tree', () => {
@@ -79,6 +80,13 @@ export const useTreeStore = defineStore('tree', () => {
     if (folder) folder.title = title
   }
 
+  // Trash and restore change which notes are backlink sources on the
+  // backend; re-read the open note's graph so its panels match.
+  function refreshActiveGraph() {
+    const graphStore = useGraphStore()
+    if (graphStore.activeNoteId) void graphStore.loadNoteGraph(graphStore.activeNoteId)
+  }
+
   async function deleteFolder(folderId: string, recursive = false) {
     const backend = workspaceStore.backend
     if (!backend || !workspaceStore.manifest) return
@@ -103,6 +111,7 @@ export const useTreeStore = defineStore('tree', () => {
     }
     _removeFolderFromTree(workspaceStore.manifest.tree, folderId)
     workspaceStore.manifest.rootOrder = workspaceStore.manifest.rootOrder.filter(id => id !== folderId)
+    if (nestedNotes.length > 0) refreshActiveGraph()
   }
 
   async function createNote(folderId: string | null, title = 'Untitled', icon = '📄') {
@@ -193,6 +202,7 @@ export const useTreeStore = defineStore('tree', () => {
     manifest.rootOrder = manifest.rootOrder.filter(id => id !== noteId)
     _removeNoteFromTree(manifest.tree, noteId)
     void workspaceStore.refreshSidebarNotePreviews()
+    refreshActiveGraph()
   }
 
   async function moveNote(noteId: string, targetFolderId: string | null) {
@@ -303,6 +313,7 @@ export const useTreeStore = defineStore('tree', () => {
     const manifest = workspaceStore.manifest
     if (!backend || !manifest) return
     await backend.restoreFromTrash(itemId)
+    refreshActiveGraph()
     
     manifest.trash ??= []
     const trashIdx = manifest.trash.findIndex(i => i.id === itemId)

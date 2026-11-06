@@ -71,9 +71,6 @@ pub(super) fn prune_expired_trash(
         if let Err(message) = note_index::remove_note(Path::new(workspace_path), id) {
             failures.push(message);
         }
-        if let Err(message) = crate::commands::graph::purge_note(workspace_path, id) {
-            failures.push(message);
-        }
         if !failures.is_empty() {
             let _ = logger.warn(
                 "tauri.workspace",
@@ -84,6 +81,19 @@ pub(super) fn prune_expired_trash(
                     .with_payload(serde_json::json!({ "itemId": id })),
             );
         }
+    }
+
+    // One graph write for every expired note: already dropped on trashing;
+    // idempotent cleanup for a removal that failed then.
+    if let Err(message) = crate::commands::graph::remove_notes_links(workspace_path, &expired_notes)
+    {
+        let _ = logger.warn(
+            "tauri.workspace",
+            "open_workspace",
+            "Failed to remove expired notes from graph index",
+            true,
+            workspace_error_context(workspace_path, "graph", message),
+        );
     }
 
     let _ = logger.info(

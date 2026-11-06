@@ -926,3 +926,60 @@ fn trashing_a_note_drops_its_graph_links() {
     assert!(index["forward"].get(&note.id).is_none());
     assert!(index["backward"].get("target-note").is_none());
 }
+
+fn save_note_linking_to(workspace_path: &str, folder_id: Option<String>, target: &str) -> String {
+    let mut note = create_note_impl(
+        workspace_path.to_string(),
+        folder_id,
+        "Linked".to_string(),
+        "📄".to_string(),
+    )
+    .expect("create note");
+    note.content = json!({ "type": "doc", "content": [{ "type": "paragraph", "content": [{
+        "type": "text", "text": "link",
+        "marks": [{ "type": "internal_link", "attrs": { "noteId": target, "anchor": null } }]
+    }] }] });
+    save_note_impl(workspace_path.to_string(), note.clone()).expect("save linked note");
+    note.id
+}
+
+fn graph_index(workspace: &TestWorkspace) -> serde_json::Value {
+    let raw = std::fs::read_to_string(workspace.path.join(".nevo/index/graph.json"))
+        .expect("graph index written");
+    serde_json::from_str(&raw).expect("graph index json")
+}
+
+#[test]
+fn deleting_a_folder_drops_the_graph_links_of_every_cascaded_note() {
+    let workspace = TestWorkspace::new();
+    let workspace_path = workspace.path_string();
+    let folder = create_folder_sync(workspace_path.clone(), None, "F".into(), "📁".into())
+        .expect("create folder");
+    let first = save_note_linking_to(&workspace_path, Some(folder.id.clone()), "target-a");
+    let second = save_note_linking_to(&workspace_path, Some(folder.id.clone()), "target-b");
+
+    delete_folder_sync(workspace_path.clone(), folder.id, true).expect("delete folder");
+
+    let index = graph_index(&workspace);
+    assert!(index["forward"].get(&first).is_none());
+    assert!(index["forward"].get(&second).is_none());
+    assert!(index["backward"].get("target-a").is_none());
+}
+
+#[test]
+fn purging_trash_leaves_no_graph_links_behind() {
+    let workspace = TestWorkspace::new();
+    let workspace_path = workspace.path_string();
+    let single = save_note_linking_to(&workspace_path, None, "target-a");
+    let bulk = save_note_linking_to(&workspace_path, None, "target-b");
+    delete_note_impl(workspace_path.clone(), single.clone()).expect("trash single");
+    delete_note_impl(workspace_path.clone(), bulk.clone()).expect("trash bulk");
+
+    trash::permanently_delete_from_trash_sync(workspace_path.clone(), single.clone())
+        .expect("permanently delete");
+    trash::empty_trash_sync(workspace_path.clone()).expect("empty trash");
+
+    let index = graph_index(&workspace);
+    assert!(index["forward"].get(&single).is_none());
+    assert!(index["forward"].get(&bulk).is_none());
+}

@@ -19,20 +19,24 @@ pub(crate) fn normalized_workspace(workspace_path: &str) -> Result<String, Strin
 /// Serializes graph.json access per workspace and guards its parsed cache.
 /// Expects a path from `normalized_workspace`.
 pub(crate) fn graph_lock(workspace_path: &str) -> Arc<Mutex<GraphSlot>> {
-    let locks = GRAPH_LOCKS.get_or_init(DashMap::new);
-    // Only the workspace in use keeps its parsed index resident; idle slots
-    // drop theirs (a busy slot is skipped, never waited on).
-    for entry in locks.iter() {
-        if entry.key() != workspace_path {
-            if let Ok(mut slot) = entry.value().try_lock() {
-                slot.invalidate();
-            }
-        }
-    }
-    locks
+    GRAPH_LOCKS
+        .get_or_init(DashMap::new)
         .entry(workspace_path.to_string())
         .or_insert_with(|| Arc::new(Mutex::new(GraphSlot::default())))
         .clone()
+}
+
+/// Drops every parsed index when the user opens a workspace, so only the one
+/// in use is re-read and kept resident. A busy slot is skipped, never waited on.
+pub(crate) fn evict_cached_indexes() {
+    let Some(locks) = GRAPH_LOCKS.get() else {
+        return;
+    };
+    for entry in locks.iter() {
+        if let Ok(mut slot) = entry.value().try_lock() {
+            slot.invalidate();
+        }
+    }
 }
 
 type FileStamp = Option<(std::time::SystemTime, u64)>;
@@ -50,8 +54,10 @@ struct CachedIndex {
 
 /// The parsed graph.json, so autosave does not re-parse the whole workspace
 /// index on every save. Re-read whenever the file's mtime/size differs from
-/// the last read or write here. After a failed write the in-memory index stays
-/// authoritative until the next successful one.
+/// the last read or write here. A failed write by an update drops the cache
+/// (`save_or_invalidate`) so the next update retries from disk; only the
+/// backfill read path keeps its unsaved rebuild in memory, to avoid rescanning
+/// every note on each read of an unwritable workspace.
 #[derive(Default)]
 pub(crate) struct GraphSlot(Option<CachedIndex>);
 
@@ -149,7 +155,20 @@ fn load_index(workspace_path: &str) -> Result<GraphIndex, String> {
     let raw = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
     // An unparseable cache starts empty with `linksBackfilled` false, so the
     // next read rebuilds it from note.json instead of failing forever.
-    Ok(serde_json::from_str(&raw).unwrap_or_default())
+    Ok(serde_json::from_str(&raw).unwrap_or_else(|error| {
+        let _ = crate::logging::logger().warn(
+            "tauri.graph",
+            "load_index",
+            "Unreadable link graph index; rebuilding it from notes",
+            true,
+            crate::logging::LogContext::default().with_error(crate::logging::LogError {
+                kind: Some("serde".to_string()),
+                message: error.to_string(),
+                details: None,
+            }),
+        );
+        GraphIndex::default()
+    }))
 }
 
 fn save_index(path: &std::path::Path, index: &GraphIndex) -> Result<(), String> {
@@ -365,10 +384,29 @@ pub(crate) fn index_note_links(
     )
 }
 
-/// Drops a trashed note's outgoing edges. Edges pointing at it stay, so they
-/// are still there if the note is restored from trash.
-pub(crate) fn remove_note_links(workspace_path: &str, note_id: &str) -> Result<(), String> {
-    update_note_edges(workspace_path, note_id, Vec::new())
+/// Drops the outgoing edges of trashed or deleted notes with one write, and
+/// none when they had none. Edges pointing at them stay: they come from live
+/// notes' content (a save would re-add them anyway) and are still right if a
+/// note is restored; readers hide targets that are not live notes.
+pub(crate) fn remove_notes_links(workspace_path: &str, note_ids: &[String]) -> Result<(), String> {
+    for note_id in note_ids {
+        validate_id(note_id)?;
+    }
+    let workspace_path = normalized_workspace(workspace_path)?;
+    let lock = graph_lock(&workspace_path);
+    let mut slot = lock.lock().map_err(|error| error.to_string())?;
+    let index = slot.index_mut(&workspace_path)?;
+    let mut changed = false;
+    for note_id in note_ids {
+        if index.forward.contains_key(note_id) {
+            replace_outgoing(index, note_id, Vec::new());
+            changed = true;
+        }
+    }
+    if !changed {
+        return Ok(());
+    }
+    save_or_invalidate(&mut slot)
 }
 
 #[tauri::command]
@@ -401,25 +439,6 @@ pub async fn graph_get_outlinks(
     .map_err(|error| error.to_string())?
 }
 
-/// Removes a permanently deleted note as both source and target.
-pub(crate) fn purge_note(workspace_path: &str, note_id: &str) -> Result<(), String> {
-    validate_id(note_id)?;
-    let workspace_path = normalized_workspace(workspace_path)?;
-    let lock = graph_lock(&workspace_path);
-    let mut slot = lock.lock().map_err(|error| error.to_string())?;
-    let index = slot.index_mut(&workspace_path)?;
-    replace_outgoing(index, note_id, Vec::new());
-
-    // A deleted note cannot remain as a target. Removing those inbound edges
-    // also prevents its backlink bucket from being recreated on later writes.
-    index.backward.remove(note_id);
-    for edges in index.forward.values_mut() {
-        edges.retain(|edge| edge.target != note_id);
-    }
-    index.forward.retain(|_, edges| !edges.is_empty());
-    save_or_invalidate(&mut slot)
-}
-
 #[tauri::command]
 pub async fn graph_get_all_edges(workspace_path: String) -> Result<Vec<GraphEdge>, String> {
     tauri::async_runtime::spawn_blocking(move || {
@@ -434,9 +453,9 @@ pub async fn graph_get_all_edges(workspace_path: String) -> Result<Vec<GraphEdge
 #[cfg(test)]
 mod tests {
     use super::{
-        extract_link_edges, graph_lock, index_note_links, load_index, normalized_workspace,
-        purge_note, remove_note_links, update_note_edges, with_backfilled_index, EdgeKind,
-        GraphEdge, GraphIndex,
+        evict_cached_indexes, extract_link_edges, graph_lock, index_note_links, load_index,
+        normalized_workspace, remove_notes_links, update_note_edges, with_backfilled_index,
+        EdgeKind, GraphEdge, GraphIndex,
     };
     use serde_json::json;
 
@@ -494,7 +513,7 @@ mod tests {
         assert_eq!(index.backward["target-a"][0].count, 2);
         assert_eq!(index.backward["target-b"][0].source_id, "source-b");
 
-        purge_note(&path, "target-b").unwrap();
+        remove_notes_links(&path, &["source-b".to_string()]).unwrap();
         let index = load_index(&path).unwrap();
         assert!(!index.backward.contains_key("target-b"));
         assert!(!index.forward.contains_key("source-b"));
@@ -595,11 +614,18 @@ mod tests {
         // the same length, so only the mtime tells them apart.
         let graph_file = root.join(".nevo/index/graph.json");
         let original_len = std::fs::read(&graph_file).unwrap().len();
+        let original_mtime = std::fs::metadata(&graph_file).unwrap().modified().unwrap();
         let mut replacement =
             String::from(r#"{"forward":{},"backward":{},"linksBackfilled":true}"#);
         replacement.push_str(&" ".repeat(original_len - replacement.len()));
-        std::thread::sleep(std::time::Duration::from_millis(20));
         std::fs::write(&graph_file, replacement).unwrap();
+        // Set the mtime explicitly: coarse filesystem clocks must not decide it.
+        std::fs::File::options()
+            .write(true)
+            .open(&graph_file)
+            .unwrap()
+            .set_modified(original_mtime + std::time::Duration::from_secs(5))
+            .unwrap();
 
         let index = with_backfilled_index(&path, GraphIndex::clone).unwrap();
         assert!(index.forward.is_empty());
@@ -630,7 +656,7 @@ mod tests {
         index_note_links(&path, "a", &linked_content(&["b"])).unwrap();
         index_note_links(&path, "c", &linked_content(&["a"])).unwrap();
 
-        remove_note_links(&path, "a").unwrap();
+        remove_notes_links(&path, &["a".to_string()]).unwrap();
         let index = load_index(&path).unwrap();
         assert!(!index.forward.contains_key("a"));
         assert!(!index.backward.contains_key("b"));
@@ -653,18 +679,17 @@ mod tests {
     }
 
     #[test]
-    fn opening_another_workspace_drops_the_idle_cache() {
-        let first = workspace();
-        let second = workspace();
-        let first_path = first.to_string_lossy().into_owned();
-        index_note_links(&first_path, "a", &linked_content(&["b"])).unwrap();
-        index_note_links(&second.to_string_lossy(), "c", &linked_content(&["d"])).unwrap();
+    fn opening_a_workspace_drops_cached_indexes() {
+        let root = workspace();
+        let path = root.to_string_lossy().into_owned();
+        index_note_links(&path, "a", &linked_content(&["b"])).unwrap();
+        let key = normalized_workspace(&path).unwrap();
+        assert!(!graph_lock(&key).lock().unwrap().is_empty());
 
-        let key = normalized_workspace(&first_path).unwrap();
+        evict_cached_indexes();
         assert!(graph_lock(&key).lock().unwrap().is_empty());
 
-        std::fs::remove_dir_all(first).ok();
-        std::fs::remove_dir_all(second).ok();
+        std::fs::remove_dir_all(root).ok();
     }
 
     #[test]
