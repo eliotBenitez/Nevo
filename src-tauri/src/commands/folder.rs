@@ -210,6 +210,29 @@ pub(crate) fn delete_folder_sync(
 ) -> Result<(), String> {
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
+    // Same order as save_note_impl (note, then manifest): a cascaded trash
+    // cannot land between an in-flight save's manifest write and its graph
+    // update. Sorted, like collab's archive, so concurrent cascades agree.
+    let mut cascaded_ids = if recursive {
+        load_manifest(&workspace_path)
+            .ok()
+            .and_then(|manifest| find_in_tree(&manifest.tree, &folder_id).map(collect_notes_meta))
+            .unwrap_or_default()
+            .into_iter()
+            .map(|meta| meta.id)
+            .collect()
+    } else {
+        Vec::new()
+    };
+    cascaded_ids.sort();
+    let note_locks: Vec<_> = cascaded_ids
+        .iter()
+        .map(|id| super::note::note_lock(&workspace_path, id))
+        .collect();
+    let _note_guards = note_locks
+        .iter()
+        .map(|lock| lock.lock().map_err(|error| error.to_string()))
+        .collect::<Result<Vec<_>, _>>()?;
     let manifest_lock = manifest_lock(&workspace_path);
     let _manifest_guard = manifest_lock.lock().map_err(|error| error.to_string())?;
     let mut manifest = load_manifest(&workspace_path)?;

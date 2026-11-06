@@ -974,6 +974,14 @@ fn purging_trash_leaves_no_graph_links_behind() {
     let bulk = save_note_linking_to(&workspace_path, None, "target-b");
     delete_note_impl(workspace_path.clone(), single.clone()).expect("trash single");
     delete_note_impl(workspace_path.clone(), bulk.clone()).expect("trash bulk");
+    // Simulate a removal that failed at trash time, so the purge paths' own
+    // cleanup is what this test exercises.
+    let content = json!({ "type": "doc", "content": [{ "type": "paragraph", "content": [{
+        "type": "text", "text": "link",
+        "marks": [{ "type": "internal_link", "attrs": { "noteId": "target-c", "anchor": null } }]
+    }] }] });
+    crate::commands::graph::index_note_links(&workspace_path, &single, &content).unwrap();
+    crate::commands::graph::index_note_links(&workspace_path, &bulk, &content).unwrap();
 
     trash::permanently_delete_from_trash_sync(workspace_path.clone(), single.clone())
         .expect("permanently delete");

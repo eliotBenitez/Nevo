@@ -4,6 +4,7 @@ import type { FolderMeta, NoteMeta } from '../types/note'
 import type { WorkspaceManifest } from '../types/workspace'
 import { useTreeStore } from './tree'
 import { useWorkspaceStore } from './workspace'
+import { useGraphStore } from './graph'
 
 const mockBackend = vi.hoisted(() => ({
   deleteFolder: vi.fn(async () => {}),
@@ -128,6 +129,24 @@ describe('useTreeStore computeds', () => {
       expect.objectContaining({ id: 'n-child', type: 'note', originalParentId: null }),
     ])
     expect(treeStore.folderById.has('f1')).toBe(false)
+  })
+
+  it('refreshes the open note graph after a cascade, unless the open note was deleted', async () => {
+    const workspaceStore = useWorkspaceStore()
+    workspaceStore.activeHandle = { kind: 'local', path: '/workspace' }
+    workspaceStore.manifest = buildManifest()
+    const graphStore = useGraphStore()
+    const refresh = vi.spyOn(graphStore, 'refreshActiveNote').mockResolvedValue()
+    const treeStore = useTreeStore()
+
+    graphStore.activeNoteId = 'n-child'
+    await treeStore.deleteFolder('f1', true)
+    expect(refresh).not.toHaveBeenCalled()
+
+    workspaceStore.manifest = buildManifest()
+    graphStore.activeNoteId = 'rn1'
+    await treeStore.deleteFolder('f1', true)
+    expect(refresh).toHaveBeenCalledOnce()
   })
 
   describe('resolveNoteIdByTitle (wiki-link resolution)', () => {

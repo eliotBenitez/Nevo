@@ -219,7 +219,6 @@ pub fn activate_workspace_root(workspace_path: &Path) -> Result<(), String> {
         .write()
         .map_err(|_| "Active workspace lock is poisoned".to_string())?;
     *active = Some(canonical);
-    crate::commands::graph::evict_cached_indexes();
     Ok(())
 }
 

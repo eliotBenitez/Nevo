@@ -82,9 +82,11 @@ export const useTreeStore = defineStore('tree', () => {
 
   // Trash and restore change which notes are backlink sources on the
   // backend; re-read the open note's graph so its panels match.
-  function refreshActiveGraph() {
+  // A deleted note that is itself open is about to be closed: skip it.
+  function refreshActiveGraph(deletedNoteIds: readonly string[] = []) {
     const graphStore = useGraphStore()
-    if (graphStore.activeNoteId) void graphStore.loadNoteGraph(graphStore.activeNoteId)
+    if (!graphStore.activeNoteId || deletedNoteIds.includes(graphStore.activeNoteId)) return
+    void graphStore.refreshActiveNote()
   }
 
   async function deleteFolder(folderId: string, recursive = false) {
@@ -111,7 +113,7 @@ export const useTreeStore = defineStore('tree', () => {
     }
     _removeFolderFromTree(workspaceStore.manifest.tree, folderId)
     workspaceStore.manifest.rootOrder = workspaceStore.manifest.rootOrder.filter(id => id !== folderId)
-    if (nestedNotes.length > 0) refreshActiveGraph()
+    if (nestedNotes.length > 0) refreshActiveGraph(nestedNotes.map(meta => meta.id))
   }
 
   async function createNote(folderId: string | null, title = 'Untitled', icon = '📄') {
@@ -202,7 +204,7 @@ export const useTreeStore = defineStore('tree', () => {
     manifest.rootOrder = manifest.rootOrder.filter(id => id !== noteId)
     _removeNoteFromTree(manifest.tree, noteId)
     void workspaceStore.refreshSidebarNotePreviews()
-    refreshActiveGraph()
+    refreshActiveGraph([noteId])
   }
 
   async function moveNote(noteId: string, targetFolderId: string | null) {

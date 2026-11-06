@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { createPinia, setActivePinia } from 'pinia'
 import type { NoteMeta } from '../../../types/note'
 import type { GraphEdge } from '../../../types/graph'
-import type { WorkspaceManifest } from '../../../types/workspace'
-import { useWorkspaceStore } from '../../../stores/workspace'
-import { buildLocalSnapshot, useGraphData } from './useGraphData'
+import { buildLocalSnapshot } from './useGraphData'
 
 function meta(id: string, title: string, icon: string): NoteMeta {
   return { id, title, icon, folderId: 'folder-1', updatedAt: '2026-01-01T00:00:00.000Z' }
@@ -33,24 +30,5 @@ describe('buildLocalSnapshot', () => {
       ['center', 'outgoing'],
       ['incoming', 'center'],
     ])
-  })
-})
-
-describe('useGraphData.load', () => {
-  it('drops edges whose source or target is not a live note', async () => {
-    setActivePinia(createPinia())
-    const workspaceStore = useWorkspaceStore()
-    const edges: GraphEdge[] = [
-      { source: 'a', target: 'b', kind: 'link' },
-      { source: 'a', target: 'trashed', kind: 'link' },
-    ]
-    Object.defineProperty(workspaceStore, 'backend', { value: { graphGetAllEdges: async () => edges } })
-    const manifest = { rootNotes: [meta('a', 'A', ''), meta('b', 'B', '')], tree: [] } as unknown as WorkspaceManifest
-
-    const graph = useGraphData(manifest)
-    await graph.load()
-
-    expect(graph.snapshot.value?.edges).toEqual([edges[0]])
-    expect(graph.snapshot.value?.nodes.find(node => node.id === 'a')?.degree).toBe(1)
   })
 })

@@ -22,12 +22,9 @@ export function useGraphData(manifest: WorkspaceManifest) {
   async function load() {
     loading.value = true
     try {
+      // The backend already hides edges to or from trashed and deleted notes.
+      const edges = await workspaceStore.backend?.graphGetAllEdges() ?? []
       const allNotes = collectAllNotes(manifest)
-      // Trashed notes keep the edges pointing at them (for restore); only
-      // edges between live notes are shown and counted.
-      const liveIds = new Set(allNotes.map(note => note.id))
-      const edges = (await workspaceStore.backend?.graphGetAllEdges() ?? [])
-        .filter(edge => liveIds.has(edge.source) && liveIds.has(edge.target))
 
       const degreeMap = new Map<string, number>()
       for (const edge of edges) {

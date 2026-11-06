@@ -304,6 +304,28 @@ fn backfill_links(workspace_path: &str, index: &mut GraphIndex) -> Result<bool, 
     Ok(true)
 }
 
+/// Runs `read` on the backfilled index with the set of live (manifest) note
+/// ids, so every read command hides edges to or from trashed and deleted
+/// notes. `None` when the manifest is unreadable: then nothing is hidden.
+fn with_live_index<R>(
+    workspace_path: &str,
+    read: impl FnOnce(&GraphIndex, Option<&HashSet<String>>) -> R,
+) -> Result<R, String> {
+    let live: Option<HashSet<String>> = normalized_workspace(workspace_path)
+        .and_then(|path| super::folder::load_manifest(&path))
+        .ok()
+        .map(|manifest| {
+            super::folder::manifest_note_ids(&manifest)
+                .into_iter()
+                .collect()
+        });
+    with_backfilled_index(workspace_path, |index| read(index, live.as_ref()))
+}
+
+fn is_live(live: Option<&HashSet<String>>, note_id: &str) -> bool {
+    live.is_none_or(|ids| ids.contains(note_id))
+}
+
 /// Runs `read` on the workspace's index after the one-time link backfill.
 fn with_backfilled_index<R>(
     workspace_path: &str,
@@ -387,10 +409,16 @@ pub(crate) fn index_note_links(
 /// Drops the outgoing edges of trashed or deleted notes with one write, and
 /// none when they had none. Edges pointing at them stay: they come from live
 /// notes' content (a save would re-add them anyway) and are still right if a
-/// note is restored; readers hide targets that are not live notes.
+/// note is restored; the read commands hide endpoints that are not live notes
+/// (`with_live_index`).
 pub(crate) fn remove_notes_links(workspace_path: &str, note_ids: &[String]) -> Result<(), String> {
-    for note_id in note_ids {
-        validate_id(note_id)?;
+    // An invalid id cannot be a graph key; skip it instead of failing the batch.
+    let note_ids: Vec<&String> = note_ids
+        .iter()
+        .filter(|id| validate_id(id).is_ok())
+        .collect();
+    if note_ids.is_empty() {
+        return Ok(());
     }
     let workspace_path = normalized_workspace(workspace_path)?;
     let lock = graph_lock(&workspace_path);
@@ -398,7 +426,7 @@ pub(crate) fn remove_notes_links(workspace_path: &str, note_ids: &[String]) -> R
     let index = slot.index_mut(&workspace_path)?;
     let mut changed = false;
     for note_id in note_ids {
-        if index.forward.contains_key(note_id) {
+        if index.forward.contains_key(note_id.as_str()) {
             replace_outgoing(index, note_id, Vec::new());
             changed = true;
         }
@@ -409,19 +437,48 @@ pub(crate) fn remove_notes_links(workspace_path: &str, note_ids: &[String]) -> R
     save_or_invalidate(&mut slot)
 }
 
+fn live_backlinks(workspace_path: &str, note_id: &str) -> Result<Vec<BacklinkRef>, String> {
+    validate_id(note_id)?;
+    with_live_index(workspace_path, |index, live| {
+        let backlinks = index.backward.get(note_id).into_iter().flatten();
+        backlinks
+            .filter(|backlink| is_live(live, &backlink.source_id))
+            .cloned()
+            .collect()
+    })
+}
+
+fn live_outlinks(workspace_path: &str, note_id: &str) -> Result<Vec<GraphEdge>, String> {
+    validate_id(note_id)?;
+    with_live_index(workspace_path, |index, live| {
+        let outlinks = index.forward.get(note_id).into_iter().flatten();
+        outlinks
+            .filter(|edge| is_live(live, &edge.target))
+            .cloned()
+            .collect()
+    })
+}
+
+fn live_edges(workspace_path: &str) -> Result<Vec<GraphEdge>, String> {
+    with_live_index(workspace_path, |index, live| {
+        index
+            .forward
+            .values()
+            .flatten()
+            .filter(|edge| is_live(live, &edge.source) && is_live(live, &edge.target))
+            .cloned()
+            .collect()
+    })
+}
+
 #[tauri::command]
 pub async fn graph_get_backlinks(
     workspace_path: String,
     note_id: String,
 ) -> Result<Vec<BacklinkRef>, String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        validate_id(&note_id)?;
-        with_backfilled_index(&workspace_path, |index| {
-            index.backward.get(&note_id).cloned().unwrap_or_default()
-        })
-    })
-    .await
-    .map_err(|error| error.to_string())?
+    tauri::async_runtime::spawn_blocking(move || live_backlinks(&workspace_path, &note_id))
+        .await
+        .map_err(|error| error.to_string())?
 }
 
 #[tauri::command]
@@ -429,33 +486,24 @@ pub async fn graph_get_outlinks(
     workspace_path: String,
     note_id: String,
 ) -> Result<Vec<GraphEdge>, String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        validate_id(&note_id)?;
-        with_backfilled_index(&workspace_path, |index| {
-            index.forward.get(&note_id).cloned().unwrap_or_default()
-        })
-    })
-    .await
-    .map_err(|error| error.to_string())?
+    tauri::async_runtime::spawn_blocking(move || live_outlinks(&workspace_path, &note_id))
+        .await
+        .map_err(|error| error.to_string())?
 }
 
 #[tauri::command]
 pub async fn graph_get_all_edges(workspace_path: String) -> Result<Vec<GraphEdge>, String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        with_backfilled_index(&workspace_path, |index| {
-            index.forward.values().flatten().cloned().collect()
-        })
-    })
-    .await
-    .map_err(|error| error.to_string())?
+    tauri::async_runtime::spawn_blocking(move || live_edges(&workspace_path))
+        .await
+        .map_err(|error| error.to_string())?
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        evict_cached_indexes, extract_link_edges, graph_lock, index_note_links, load_index,
-        normalized_workspace, remove_notes_links, update_note_edges, with_backfilled_index,
-        EdgeKind, GraphEdge, GraphIndex,
+        evict_cached_indexes, extract_link_edges, graph_lock, index_note_links, live_backlinks,
+        live_edges, live_outlinks, load_index, normalized_workspace, remove_notes_links,
+        update_note_edges, with_backfilled_index, EdgeKind, GraphEdge, GraphIndex,
     };
     use serde_json::json;
 
@@ -688,6 +736,59 @@ mod tests {
 
         evict_cached_indexes();
         assert!(graph_lock(&key).lock().unwrap().is_empty());
+
+        std::fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn reads_hide_edges_to_and_from_notes_outside_the_manifest() {
+        let root = workspace();
+        let path = root.to_string_lossy().into_owned();
+        std::fs::write(
+            root.join(".nevo/workspace.json"),
+            json!({
+                "id": "ws", "name": "ws", "glyph": "", "gradient": "",
+                "schemaVersion": 2, "createdAt": "", "rootOrder": ["a", "b"], "tree": [],
+                "rootNotes": [
+                    { "id": "a", "title": "A", "icon": "", "folderId": null, "order": 0, "updatedAt": "" },
+                    { "id": "b", "title": "B", "icon": "", "folderId": null, "order": 1, "updatedAt": "" }
+                ]
+            })
+            .to_string(),
+        )
+        .unwrap();
+        index_note_links(&path, "a", &linked_content(&["b", "trashed"])).unwrap();
+        index_note_links(&path, "trashed", &linked_content(&["b"])).unwrap();
+        // Mark the index backfilled so the read keeps the edges above as-is.
+        with_backfilled_index(&path, |_| ()).unwrap();
+        index_note_links(&path, "trashed", &linked_content(&["b"])).unwrap();
+
+        let outlinks: Vec<_> = live_outlinks(&path, "a")
+            .unwrap()
+            .into_iter()
+            .map(|edge| edge.target)
+            .collect();
+        let backlinks: Vec<_> = live_backlinks(&path, "b")
+            .unwrap()
+            .into_iter()
+            .map(|backlink| backlink.source_id)
+            .collect();
+        let all = live_edges(&path).unwrap().len();
+        assert_eq!(outlinks, vec!["b"]);
+        assert_eq!(backlinks, vec!["a"]);
+        assert_eq!(all, 1);
+
+        std::fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn batch_removal_skips_invalid_ids() {
+        let root = workspace();
+        let path = root.to_string_lossy().into_owned();
+        index_note_links(&path, "a", &linked_content(&["b"])).unwrap();
+
+        remove_notes_links(&path, &["bad id".to_string(), "a".to_string()]).unwrap();
+        assert!(!load_index(&path).unwrap().forward.contains_key("a"));
 
         std::fs::remove_dir_all(root).ok();
     }
