@@ -6,7 +6,7 @@ use dashmap::DashMap;
 
 use super::path_utils::{normalize_workspace_path, validate_id, write_atomic};
 
-static GRAPH_LOCKS: OnceLock<DashMap<String, Arc<Mutex<()>>>> = OnceLock::new();
+static GRAPH_LOCKS: OnceLock<DashMap<String, Arc<Mutex<GraphSlot>>>> = OnceLock::new();
 
 /// Normalized workspace path: the `graph_lock` key and the base for every
 /// manifest/note read, so IPC commands and Rust write paths share one mutex.
@@ -16,13 +16,66 @@ pub(crate) fn normalized_workspace(workspace_path: &str) -> Result<String, Strin
         .into_owned())
 }
 
+/// Serializes graph.json access per workspace and guards its parsed cache.
 /// Expects a path from `normalized_workspace`.
-pub(crate) fn graph_lock(workspace_path: &str) -> Arc<Mutex<()>> {
+pub(crate) fn graph_lock(workspace_path: &str) -> Arc<Mutex<GraphSlot>> {
     GRAPH_LOCKS
         .get_or_init(DashMap::new)
         .entry(workspace_path.to_string())
-        .or_insert_with(|| Arc::new(Mutex::new(())))
+        .or_insert_with(|| Arc::new(Mutex::new(GraphSlot::default())))
         .clone()
+}
+
+type FileStamp = Option<(std::time::SystemTime, u64)>;
+
+fn file_stamp(path: &std::path::Path) -> FileStamp {
+    let meta = std::fs::metadata(path).ok()?;
+    Some((meta.modified().ok()?, meta.len()))
+}
+
+struct CachedIndex {
+    path: std::path::PathBuf,
+    stamp: FileStamp,
+    index: GraphIndex,
+}
+
+/// The parsed graph.json, so autosave does not re-parse the whole workspace
+/// index on every save. Re-read whenever the file's mtime/size differs from
+/// the last read or write here. After a failed write the in-memory index stays
+/// authoritative until the next successful one.
+#[derive(Default)]
+pub(crate) struct GraphSlot(Option<CachedIndex>);
+
+impl GraphSlot {
+    fn index_mut(&mut self, workspace_path: &str) -> Result<&mut GraphIndex, String> {
+        let path = index_path(workspace_path)?;
+        // Stat before reading: a write racing the read leaves a stale stamp,
+        // which only forces another re-read.
+        let stamp = file_stamp(&path);
+        let fresh = matches!(&self.0, Some(cached) if cached.path == path && cached.stamp == stamp);
+        if !fresh {
+            let index = load_index(workspace_path)?;
+            self.0 = Some(CachedIndex { path, stamp, index });
+        }
+        self.0
+            .as_mut()
+            .map(|cached| &mut cached.index)
+            .ok_or_else(|| "Graph index cache is empty".to_string())
+    }
+
+    fn save(&mut self) -> Result<(), String> {
+        let Some(cached) = self.0.as_mut() else {
+            return Ok(());
+        };
+        save_index(&cached.path, &cached.index)?;
+        cached.stamp = file_stamp(&cached.path);
+        Ok(())
+    }
+
+    /// For writers that replace graph.json directly (workspace merge).
+    pub(crate) fn invalidate(&mut self) {
+        self.0 = None;
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -90,13 +143,12 @@ fn load_index(workspace_path: &str) -> Result<GraphIndex, String> {
     serde_json::from_str(&raw).map_err(|e| e.to_string())
 }
 
-fn save_index(workspace_path: &str, index: &GraphIndex) -> Result<(), String> {
-    let path = index_path(workspace_path)?;
+fn save_index(path: &std::path::Path, index: &GraphIndex) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     let json = serde_json::to_string_pretty(index).map_err(|e| e.to_string())?;
-    write_atomic(&path, json.as_bytes()).map_err(|e| e.to_string())
+    write_atomic(path, json.as_bytes()).map_err(|e| e.to_string())
 }
 
 fn update_backward_for_source(
@@ -238,15 +290,18 @@ fn backfill_links(workspace_path: &str, index: &mut GraphIndex) -> Result<bool, 
     Ok(true)
 }
 
-fn load_backfilled_index(workspace_path: &str) -> Result<GraphIndex, String> {
+/// Runs `read` on the workspace's index after the one-time link backfill.
+fn with_backfilled_index<R>(
+    workspace_path: &str,
+    read: impl FnOnce(&GraphIndex) -> R,
+) -> Result<R, String> {
     let workspace_path = normalized_workspace(workspace_path)?;
     let lock = graph_lock(&workspace_path);
-    let _guard = lock.lock().map_err(|error| error.to_string())?;
-    let mut index = load_index(&workspace_path)?;
+    let mut slot = lock.lock().map_err(|error| error.to_string())?;
     // A failed rebuild or write must not fail the read: the in-memory index is
-    // still served, and an unsaved rebuild is retried on the next read.
-    let failure = match backfill_links(&workspace_path, &mut index) {
-        Ok(true) => save_index(&workspace_path, &index).err(),
+    // still served, and a rebuild that never ran is retried on the next read.
+    let failure = match backfill_links(&workspace_path, slot.index_mut(&workspace_path)?) {
+        Ok(true) => slot.save().err(),
         Ok(false) => None,
         Err(message) => Some(message),
     };
@@ -263,19 +318,7 @@ fn load_backfilled_index(workspace_path: &str) -> Result<GraphIndex, String> {
             }),
         );
     }
-    Ok(index)
-}
-
-fn graph_update_note_edges_sync(
-    workspace_path: String,
-    note_id: String,
-    edges: Vec<EdgeInput>,
-) -> Result<(), String> {
-    // IPC payload cap; Rust-extracted edges are bounded by the note itself.
-    if edges.len() > 10_000 {
-        return Err("Graph edge update exceeds the limit".to_string());
-    }
-    update_note_edges(&workspace_path, &note_id, edges)
+    Ok(read(slot.index_mut(&workspace_path)?))
 }
 
 fn update_note_edges(
@@ -286,8 +329,8 @@ fn update_note_edges(
     validate_id(note_id)?;
     let workspace_path = normalized_workspace(workspace_path)?;
     let lock = graph_lock(&workspace_path);
-    let _guard = lock.lock().map_err(|error| error.to_string())?;
-    let mut index = load_index(&workspace_path)?;
+    let mut slot = lock.lock().map_err(|error| error.to_string())?;
+    let index = slot.index_mut(&workspace_path)?;
 
     let outgoing = to_graph_edges(note_id, edges);
     // Every autosave reaches this; skip rewriting graph.json when nothing changed.
@@ -298,12 +341,13 @@ fn update_note_edges(
     if unchanged {
         return Ok(());
     }
-    replace_outgoing(&mut index, note_id, outgoing);
-    save_index(&workspace_path, &index)
+    replace_outgoing(index, note_id, outgoing);
+    slot.save()
 }
 
-/// Refreshes a note's link edges from its saved body. Called by the Rust write
-/// paths so notes saved without the editor open still reach the graph.
+/// Refreshes a note's link edges from its saved body. The Rust write paths
+/// (save, restore, trash restore, plugin migration) are the graph's only
+/// writers; the editor just re-reads outlinks after a save.
 pub(crate) fn index_note_links(
     workspace_path: &str,
     note_id: &str,
@@ -313,27 +357,15 @@ pub(crate) fn index_note_links(
 }
 
 #[tauri::command]
-pub async fn graph_update_note_edges(
-    workspace_path: String,
-    note_id: String,
-    edges: Vec<EdgeInput>,
-) -> Result<(), String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        graph_update_note_edges_sync(workspace_path, note_id, edges)
-    })
-    .await
-    .map_err(|error| error.to_string())?
-}
-
-#[tauri::command]
 pub async fn graph_get_backlinks(
     workspace_path: String,
     note_id: String,
 ) -> Result<Vec<BacklinkRef>, String> {
     tauri::async_runtime::spawn_blocking(move || {
         validate_id(&note_id)?;
-        let index = load_backfilled_index(&workspace_path)?;
-        Ok(index.backward.get(&note_id).cloned().unwrap_or_default())
+        with_backfilled_index(&workspace_path, |index| {
+            index.backward.get(&note_id).cloned().unwrap_or_default()
+        })
     })
     .await
     .map_err(|error| error.to_string())?
@@ -346,8 +378,9 @@ pub async fn graph_get_outlinks(
 ) -> Result<Vec<GraphEdge>, String> {
     tauri::async_runtime::spawn_blocking(move || {
         validate_id(&note_id)?;
-        let index = load_backfilled_index(&workspace_path)?;
-        Ok(index.forward.get(&note_id).cloned().unwrap_or_default())
+        with_backfilled_index(&workspace_path, |index| {
+            index.forward.get(&note_id).cloned().unwrap_or_default()
+        })
     })
     .await
     .map_err(|error| error.to_string())?
@@ -357,10 +390,9 @@ fn graph_remove_note_sync(workspace_path: String, note_id: String) -> Result<(),
     validate_id(&note_id)?;
     let workspace_path = normalized_workspace(&workspace_path)?;
     let lock = graph_lock(&workspace_path);
-    let _guard = lock.lock().map_err(|error| error.to_string())?;
-    let mut index = load_index(&workspace_path)?;
-    let old_outgoing = index.forward.remove(&note_id).unwrap_or_default();
-    update_backward_for_source(&mut index, &note_id, &old_outgoing, &[]);
+    let mut slot = lock.lock().map_err(|error| error.to_string())?;
+    let index = slot.index_mut(&workspace_path)?;
+    replace_outgoing(index, &note_id, Vec::new());
 
     // A deleted note cannot remain as a target. Removing those inbound edges
     // also prevents its backlink bucket from being recreated on later writes.
@@ -369,7 +401,7 @@ fn graph_remove_note_sync(workspace_path: String, note_id: String) -> Result<(),
         edges.retain(|edge| edge.target != note_id);
     }
     index.forward.retain(|_, edges| !edges.is_empty());
-    save_index(&workspace_path, &index)
+    slot.save()
 }
 
 #[tauri::command]
@@ -382,8 +414,9 @@ pub async fn graph_remove_note(workspace_path: String, note_id: String) -> Resul
 #[tauri::command]
 pub async fn graph_get_all_edges(workspace_path: String) -> Result<Vec<GraphEdge>, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let index = load_backfilled_index(&workspace_path)?;
-        Ok(index.forward.into_values().flatten().collect())
+        with_backfilled_index(&workspace_path, |index| {
+            index.forward.values().flatten().cloned().collect()
+        })
     })
     .await
     .map_err(|error| error.to_string())?
@@ -392,8 +425,8 @@ pub async fn graph_get_all_edges(workspace_path: String) -> Result<Vec<GraphEdge
 #[cfg(test)]
 mod tests {
     use super::{
-        extract_link_edges, graph_remove_note_sync, graph_update_note_edges_sync, index_note_links,
-        load_backfilled_index, load_index, EdgeInput, EdgeKind,
+        extract_link_edges, graph_remove_note_sync, index_note_links, load_index,
+        update_note_edges, with_backfilled_index, EdgeInput, EdgeKind, GraphIndex,
     };
     use serde_json::json;
 
@@ -422,9 +455,9 @@ mod tests {
     fn updates_only_the_changed_sources_backlinks_and_removes_deleted_targets() {
         let root = workspace();
         let path = root.to_string_lossy().into_owned();
-        graph_update_note_edges_sync(
-            path.clone(),
-            "source-a".into(),
+        update_note_edges(
+            &path,
+            "source-a",
             vec![
                 EdgeInput {
                     target: "target-a".into(),
@@ -439,9 +472,9 @@ mod tests {
             ],
         )
         .unwrap();
-        graph_update_note_edges_sync(
-            path.clone(),
-            "source-b".into(),
+        update_note_edges(
+            &path,
+            "source-b",
             vec![EdgeInput {
                 target: "target-b".into(),
                 kind: EdgeKind::Link,
@@ -505,7 +538,7 @@ mod tests {
         // A trashed or deleted note still in the index from an earlier build.
         index_note_links(&path, "ghost", &linked_content(&["n3"])).unwrap();
 
-        let index = load_backfilled_index(&path).unwrap();
+        let index = with_backfilled_index(&path, GraphIndex::clone).unwrap();
         assert_eq!(index.forward["toc"].len(), 2);
         assert_eq!(index.backward["n1"][0].source_id, "toc");
         assert!(!index.forward.contains_key("ghost"));
@@ -548,6 +581,24 @@ mod tests {
     }
 
     #[test]
+    fn cached_index_picks_up_external_rewrites() {
+        let root = workspace();
+        let path = root.to_string_lossy().into_owned();
+        index_note_links(&path, "source-a", &linked_content(&["target-a"])).unwrap();
+        // A merge or another writer replaces graph.json behind the cache.
+        std::fs::write(
+            root.join(".nevo/index/graph.json"),
+            r#"{"forward":{},"backward":{},"linksBackfilled":true}"#,
+        )
+        .unwrap();
+
+        let index = with_backfilled_index(&path, GraphIndex::clone).unwrap();
+        assert!(index.forward.is_empty());
+
+        std::fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
     fn a_failed_backfill_write_still_serves_the_read() {
         let root = workspace();
         let path = root.to_string_lossy().into_owned();
@@ -571,7 +622,7 @@ mod tests {
         // `.nevo/index` as a file makes every graph.json write fail.
         std::fs::write(root.join(".nevo/index"), "").unwrap();
 
-        let index = load_backfilled_index(&path).unwrap();
+        let index = with_backfilled_index(&path, GraphIndex::clone).unwrap();
         assert_eq!(index.forward["a"][0].target, "n1");
 
         std::fs::remove_dir_all(root).ok();

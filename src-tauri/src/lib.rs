@@ -411,7 +411,6 @@ pub fn run() {
             mcp::connect_mcp_agent,
             #[cfg(desktop)]
             mcp::disconnect_mcp_agent,
-            graph::graph_update_note_edges,
             graph::graph_get_backlinks,
             graph::graph_get_outlinks,
             graph::graph_remove_note,

@@ -109,7 +109,7 @@ const overlayMocks = vi.hoisted(() => ({
 }))
 
 const graphStoreMocks = vi.hoisted(() => ({
-  updateNoteEdges: vi.fn(),
+  refreshOutlinks: vi.fn(),
   loadNoteGraph: vi.fn(),
   clear: vi.fn(),
 }))

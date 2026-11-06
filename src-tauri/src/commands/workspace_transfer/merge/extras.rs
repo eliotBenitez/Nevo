@@ -120,7 +120,8 @@ fn try_merge_graph_index(
     // Same lock as note saves, which also rewrite graph.json.
     let workspace = graph::normalized_workspace(&current_root.to_string_lossy())?;
     let lock = graph::graph_lock(&workspace);
-    let _guard = lock.lock().map_err(|error| error.to_string())?;
+    let mut slot = lock.lock().map_err(|error| error.to_string())?;
+    slot.invalidate();
 
     let source_path = temp_dir.join(".nevo").join("index").join("graph.json");
     // A missing or unreadable archive index still resets the flag below.

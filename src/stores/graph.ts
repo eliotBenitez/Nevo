@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useWorkspaceStore } from './workspace'
 import { useTreeStore } from './tree'
-import type { BacklinkRef, GraphEdge, ExtractedEdge } from '../types/graph'
+import type { BacklinkRef, GraphEdge } from '../types/graph'
 import { appLogger } from '../utils/logger'
 
 export const useGraphStore = defineStore('graph', () => {
@@ -57,23 +57,22 @@ export const useGraphStore = defineStore('graph', () => {
     }
   }
 
-  async function updateNoteEdges(noteId: string, edges: ExtractedEdge[]) {
+  /** Re-reads the active note's outlinks after a save; the backend's save
+   *  path is the only writer of the link index. */
+  async function refreshOutlinks(noteId: string) {
     const generation = loadGeneration
     const backend = workspaceStore.backend
-    if (!backend) return
+    if (!backend || activeNoteId.value !== noteId) return
     try {
-      await backend.graphUpdateNoteEdges(noteId, edges)
+      const nextOutlinks = await backend.graphGetOutlinks(noteId)
       if (activeNoteId.value === noteId && generation === loadGeneration) {
-        const nextOutlinks = await backend.graphGetOutlinks(noteId)
-        if (activeNoteId.value === noteId && generation === loadGeneration) {
-          outlinks.value = nextOutlinks
-        }
+        outlinks.value = nextOutlinks
       }
     } catch (error) {
       await appLogger.error({
         source: 'frontend.graph',
-        event: 'update_note_edges',
-        message: 'Failed to update note edges',
+        event: 'refresh_outlinks',
+        message: 'Failed to refresh note outlinks',
         error,
       })
     }
@@ -110,7 +109,7 @@ export const useGraphStore = defineStore('graph', () => {
     outlinks,
     activeNoteId,
     loadNoteGraph,
-    updateNoteEdges,
+    refreshOutlinks,
     removeNote,
     clear,
   }

@@ -13,7 +13,7 @@ import type {
 } from '../types/workspace'
 import type { FolderMeta, ImportedImageAsset, NoteDocument, NoteSnapshotMeta, NoteSnapshotsEntry, PickedImportedAsset, RestoreNoteSnapshotResult, SidebarNotePreview, VaultManifest } from '../types/note'
 import type { WorkspaceBlockSearchItem } from '../types/search'
-import type { BacklinkRef, GraphEdge, ExtractedEdge } from '../types/graph'
+import type { BacklinkRef, GraphEdge } from '../types/graph'
 import type { NoteQueryRequest, NoteRow } from '../types/note-query'
 import type { KanbanBoard, KanbanCard } from '../types/kanban'
 import type { TemplateDocument, TemplateFieldValues } from '../types/template'
@@ -624,13 +624,6 @@ export const kanbanCommands = {
 }
 
 export const graphCommands = {
-  updateNoteEdges: (workspacePath: string, noteId: string, edges: ExtractedEdge[]) =>
-    invokeCommand<void>('graph_update_note_edges', {
-      workspacePath,
-      noteId,
-      edges: edges.map(e => ({ target: e.target, kind: e.kind, anchor: e.anchor })),
-    }),
-
   getBacklinks: (workspacePath: string, noteId: string) =>
     invokeCommand<BacklinkRef[]>('graph_get_backlinks', { workspacePath, noteId }),
 
