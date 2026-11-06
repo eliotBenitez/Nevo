@@ -286,7 +286,10 @@ fn write_migrated_note_content(
     note.updated_at = chrono::Utc::now().to_rfc3339();
 
     let bytes = serde_json::to_vec(&note).map_err(|error| error.to_string())?;
-    write_atomic(&target, &bytes).map_err(|error| error.to_string())
+    write_atomic(&target, &bytes).map_err(|error| error.to_string())?;
+    // Best-effort: the graph index is a rebuildable cache.
+    let _ = crate::commands::graph::index_note_links(workspace, note_id, &note.content);
+    Ok(())
 }
 
 fn prepare_transaction_backup(

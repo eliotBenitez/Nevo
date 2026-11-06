@@ -885,3 +885,24 @@ fn save_note_refuses_to_overwrite_malformed_or_unreadable_note_file() {
         assert_eq!(std::fs::read_to_string(&path).unwrap(), on_disk);
     }
 }
+
+#[test]
+fn save_note_indexes_its_internal_links_in_the_graph() {
+    let workspace = TestWorkspace::new();
+    let workspace_path = workspace.path_string();
+    let mut note = create_saved_note(&workspace_path);
+    note.content = json!({ "type": "doc", "content": [{ "type": "paragraph", "content": [{
+        "type": "text", "text": "link",
+        "marks": [{ "type": "internal_link", "attrs": { "noteId": "target-note", "anchor": null } }]
+    }] }] });
+    save_note_impl(workspace_path.clone(), note.clone()).expect("save linked note");
+
+    let raw = std::fs::read_to_string(workspace.path.join(".nevo/index/graph.json"))
+        .expect("graph index written");
+    let index: serde_json::Value = serde_json::from_str(&raw).expect("graph index json");
+    assert_eq!(index["forward"][&note.id][0]["target"], "target-note");
+    assert_eq!(
+        index["backward"]["target-note"][0]["sourceId"],
+        note.id.as_str()
+    );
+}

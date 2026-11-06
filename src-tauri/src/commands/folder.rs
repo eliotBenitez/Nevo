@@ -25,6 +25,20 @@ pub fn load_manifest(workspace_path: &str) -> Result<WorkspaceManifest, String> 
     serde_json::from_str(&content).map_err(|e| e.to_string())
 }
 
+/// Every active note id: `rootNotes` plus every folder's notes recursively.
+/// `trash` is excluded.
+pub(crate) fn manifest_note_ids(manifest: &WorkspaceManifest) -> Vec<String> {
+    fn walk(folders: &[FolderMeta], ids: &mut Vec<String>) {
+        for folder in folders {
+            ids.extend(folder.notes.iter().map(|note| note.id.clone()));
+            walk(&folder.children, ids);
+        }
+    }
+    let mut ids: Vec<String> = manifest.root_notes.iter().map(|n| n.id.clone()).collect();
+    walk(&manifest.tree, &mut ids);
+    ids
+}
+
 pub fn save_manifest(workspace_path: &str, manifest: &WorkspaceManifest) -> Result<(), String> {
     let path = Path::new(workspace_path).join(".nevo/workspace.json");
     let content = serde_json::to_string_pretty(manifest).map_err(|e| e.to_string())?;

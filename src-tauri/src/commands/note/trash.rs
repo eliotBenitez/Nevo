@@ -76,6 +76,9 @@ pub fn restore_from_trash_sync(workspace_path: String, item_id: String) -> Resul
             })),
         );
 
+        // Best-effort: the link backfill drops trashed notes' edges, so a
+        // restored note re-adds its own.
+        let _ = crate::commands::graph::index_note_links(&workspace_path, &item_id, &note.content);
         // Best-effort: a restored note is active again and should reappear
         // in query_notes. The index is a rebuildable cache
         // (note_index::reindex_all), so a failure here must not fail the

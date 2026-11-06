@@ -9,37 +9,13 @@ use crate::commands::note::notebook::{
 };
 use crate::commands::note::NoteDocument;
 use crate::commands::path_utils::write_atomic;
-use crate::commands::workspace::{FolderMeta, WorkspaceManifest};
+use crate::commands::workspace::WorkspaceManifest;
 
 use super::idmap::{remap_content, IdMaps};
 use super::TransferProgress;
 
 fn note_file_path(root: &Path, note_id: &str) -> PathBuf {
     root.join("notes").join(format!("note-{}.nevo", note_id))
-}
-
-fn collect_folder_note_ids(folder: &FolderMeta, ids: &mut Vec<String>) {
-    for note in &folder.notes {
-        ids.push(note.id.clone());
-    }
-    for child in &folder.children {
-        collect_folder_note_ids(child, ids);
-    }
-}
-
-/// Every note id in the imported manifest: `rootNotes` plus every
-/// `FolderMeta.notes` entry recursively. `trash` is deliberately excluded —
-/// trashed notes are never imported.
-fn all_old_note_ids(manifest: &WorkspaceManifest) -> Vec<String> {
-    let mut ids: Vec<String> = manifest
-        .root_notes
-        .iter()
-        .map(|note| note.id.clone())
-        .collect();
-    for folder in &manifest.tree {
-        collect_folder_note_ids(folder, &mut ids);
-    }
-    ids
 }
 
 /// Copies every note file from `temp_dir` into `current_root` under its new
@@ -53,7 +29,8 @@ pub(super) fn copy_and_remap_notes(
     maps: &mut IdMaps,
     on_event: &tauri::ipc::Channel<TransferProgress>,
 ) -> Result<u64, String> {
-    let old_ids = all_old_note_ids(imported_manifest);
+    // `trash` is excluded: trashed notes are never imported.
+    let old_ids = crate::commands::folder::manifest_note_ids(imported_manifest);
     let total = old_ids.len() as u64;
     let _ = on_event.send(TransferProgress::Started { total });
 

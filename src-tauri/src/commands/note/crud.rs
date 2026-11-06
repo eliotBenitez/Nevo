@@ -384,9 +384,18 @@ pub(crate) fn save_note_impl(workspace_path: String, note: NoteDocument) -> Resu
             note_error_context(&workspace_path, "note_index", message),
         );
     }
-    if let Err(message) =
+    // The graph update waits on `graph_lock`, which the one-time link backfill
+    // holds for a full scan; don't stall every manifest operation behind it.
+    // The note lock stays held so saves of this note index in order.
+    drop(_manifest_guard);
+    // Notebooks carry no internal links; a note missing from the manifest
+    // (trashed or deleted mid-save) must not reappear as a backlink source.
+    let indexed = if updated && format != DocumentFormat::Notebook {
         crate::commands::graph::index_note_links(&workspace_path, &note.id, &note.content)
-    {
+    } else {
+        Ok(())
+    };
+    if let Err(message) = indexed {
         let _ = logger.warn(
             "tauri.note",
             "save_note",

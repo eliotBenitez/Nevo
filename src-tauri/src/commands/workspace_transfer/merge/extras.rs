@@ -6,6 +6,7 @@ use std::path::Path;
 
 use serde_json::Value;
 
+use crate::commands::graph;
 use crate::commands::path_utils::write_atomic;
 
 use super::idmap::IdMaps;
@@ -116,12 +117,16 @@ fn try_merge_graph_index(
     current_root: &Path,
     maps: &IdMaps,
 ) -> Result<(), String> {
+    // Same lock as note saves, which also rewrite graph.json.
+    let workspace = graph::normalized_workspace(&current_root.to_string_lossy())?;
+    let lock = graph::graph_lock(&workspace);
+    let _guard = lock.lock().map_err(|error| error.to_string())?;
+
     let source_path = temp_dir.join(".nevo").join("index").join("graph.json");
-    if !source_path.is_file() {
-        return Ok(());
-    }
-    let source_raw = std::fs::read_to_string(&source_path).map_err(|error| error.to_string())?;
-    let source: Value = serde_json::from_str(&source_raw).map_err(|error| error.to_string())?;
+    // A missing or unreadable archive index still resets the flag below.
+    let source: Option<Value> = std::fs::read_to_string(&source_path)
+        .ok()
+        .and_then(|raw| serde_json::from_str(&raw).ok());
 
     let dest_path = current_root.join(".nevo").join("index").join("graph.json");
     let mut dest: Value = if dest_path.is_file() {
@@ -136,9 +141,12 @@ fn try_merge_graph_index(
     // Edges/backlinks whose target/source falls outside the imported note-id
     // map are dropped rather than left dangling — `remap_edge`/`remap_backlink`
     // return `None` for those and `merge_edge_map` filters them out.
-    merge_edge_map(&source, &mut dest, "forward", maps, remap_edge);
-    merge_edge_map(&source, &mut dest, "backward", maps, remap_backlink);
-    // The archive's index may predate link backfill; rebuild from note.json on next read.
+    if let Some(source) = &source {
+        merge_edge_map(source, &mut dest, "forward", maps, remap_edge);
+        merge_edge_map(source, &mut dest, "backward", maps, remap_backlink);
+    }
+    // The archive's index may be missing or predate link backfill; rebuild
+    // from note.json on next read.
     if let Some(dest) = dest.as_object_mut() {
         dest.insert("linksBackfilled".to_string(), Value::Bool(false));
     }
@@ -190,5 +198,32 @@ pub(super) fn copy_templates(temp_dir: &Path, current_root: &Path) {
             continue;
         }
         let _ = copy_one_template(&path, &dest_dir);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{try_merge_graph_index, IdMaps};
+
+    #[test]
+    fn merge_without_an_archive_index_still_requests_a_link_backfill() {
+        let root = std::env::temp_dir().join(format!("nevo_merge_graph_{}", uuid::Uuid::new_v4()));
+        let archive = root.join("archive");
+        let current = root.join("current");
+        std::fs::create_dir_all(archive.join(".nevo")).unwrap();
+        std::fs::create_dir_all(current.join(".nevo/index")).unwrap();
+        std::fs::write(
+            current.join(".nevo/index/graph.json"),
+            r#"{"forward":{},"backward":{},"linksBackfilled":true}"#,
+        )
+        .unwrap();
+
+        try_merge_graph_index(&archive, &current, &IdMaps::default()).unwrap();
+
+        let raw = std::fs::read_to_string(current.join(".nevo/index/graph.json")).unwrap();
+        let index: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        assert_eq!(index["linksBackfilled"], false);
+
+        std::fs::remove_dir_all(root).ok();
     }
 }
