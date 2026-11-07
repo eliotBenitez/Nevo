@@ -31,21 +31,28 @@ export const useGraphStore = defineStore('graph', () => {
   }
 
   async function loadNoteGraph(noteId: string) {
-    const generation = ++loadGeneration
+    ++loadGeneration
     activeNoteId.value = noteId
     backlinks.value = []
     outlinks.value = []
-    const backend = workspaceStore.backend
-    if (!backend) return
+    await refreshActiveNote()
+  }
 
+  /** Re-reads the active note's links in place, keeping the current lists
+   *  until the new ones arrive (no empty flash). The single fetch path for
+   *  opening a note, refreshing after a delete, and re-reading after a save. */
+  async function refreshActiveNote(options: { backlinks?: boolean } = {}) {
+    const noteId = activeNoteId.value
+    const generation = loadGeneration
+    const backend = workspaceStore.backend
+    if (!backend || !noteId) return
     try {
       const [bl, ol] = await Promise.all([
-        backend.graphGetBacklinks(noteId),
+        options.backlinks === false ? null : backend.graphGetBacklinks(noteId),
         backend.graphGetOutlinks(noteId),
       ])
-      if (generation !== loadGeneration) return
-      activeNoteId.value = noteId
-      backlinks.value = enrichBacklinks(bl)
+      if (activeNoteId.value !== noteId || generation !== loadGeneration) return
+      if (bl) backlinks.value = enrichBacklinks(bl)
       outlinks.value = ol
     } catch (error) {
       await appLogger.error({
@@ -57,50 +64,10 @@ export const useGraphStore = defineStore('graph', () => {
     }
   }
 
-  /** Re-reads the active note's backlinks and outlinks in place, keeping
-   *  the current lists until the new ones arrive (no empty flash). */
-  async function refreshActiveNote() {
-    const noteId = activeNoteId.value
-    const generation = loadGeneration
-    const backend = workspaceStore.backend
-    if (!backend || !noteId) return
-    try {
-      const [bl, ol] = await Promise.all([
-        backend.graphGetBacklinks(noteId),
-        backend.graphGetOutlinks(noteId),
-      ])
-      if (activeNoteId.value !== noteId || generation !== loadGeneration) return
-      backlinks.value = enrichBacklinks(bl)
-      outlinks.value = ol
-    } catch (error) {
-      await appLogger.error({
-        source: 'frontend.graph',
-        event: 'refresh_active_note',
-        message: 'Failed to refresh note graph',
-        error,
-      })
-    }
-  }
-
   /** Re-reads the active note's outlinks after a save; the backend's save
    *  path is the only writer of the link index. */
   async function refreshOutlinks(noteId: string) {
-    const generation = loadGeneration
-    const backend = workspaceStore.backend
-    if (!backend || activeNoteId.value !== noteId) return
-    try {
-      const nextOutlinks = await backend.graphGetOutlinks(noteId)
-      if (activeNoteId.value === noteId && generation === loadGeneration) {
-        outlinks.value = nextOutlinks
-      }
-    } catch (error) {
-      await appLogger.error({
-        source: 'frontend.graph',
-        event: 'refresh_outlinks',
-        message: 'Failed to refresh note outlinks',
-        error,
-      })
-    }
+    if (activeNoteId.value === noteId) await refreshActiveNote({ backlinks: false })
   }
 
   function clear() {

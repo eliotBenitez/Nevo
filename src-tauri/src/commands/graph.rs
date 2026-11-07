@@ -57,9 +57,13 @@ struct CachedIndex {
 /// the last read or write here. A failed write by an update drops the cache
 /// (`save_or_invalidate`) so the next update retries from disk; only the
 /// backfill read path keeps its unsaved rebuild in memory, to avoid rescanning
-/// every note on each read of an unwritable workspace.
+/// every note on each read of an unwritable workspace. `live` caches the
+/// manifest's note ids the same way, keyed by workspace.json's stamp.
 #[derive(Default)]
-pub(crate) struct GraphSlot(Option<CachedIndex>);
+pub(crate) struct GraphSlot {
+    index: Option<CachedIndex>,
+    live: Option<(FileStamp, HashSet<String>)>,
+}
 
 impl GraphSlot {
     fn index_mut(&mut self, workspace_path: &str) -> Result<&mut GraphIndex, String> {
@@ -67,19 +71,20 @@ impl GraphSlot {
         // Stat before reading: a write racing the read leaves a stale stamp,
         // which only forces another re-read.
         let stamp = file_stamp(&path);
-        let fresh = matches!(&self.0, Some(cached) if cached.path == path && cached.stamp == stamp);
+        let fresh =
+            matches!(&self.index, Some(cached) if cached.path == path && cached.stamp == stamp);
         if !fresh {
             let index = load_index(workspace_path)?;
-            self.0 = Some(CachedIndex { path, stamp, index });
+            self.index = Some(CachedIndex { path, stamp, index });
         }
-        self.0
+        self.index
             .as_mut()
             .map(|cached| &mut cached.index)
             .ok_or_else(|| "Graph index cache is empty".to_string())
     }
 
     fn save(&mut self) -> Result<(), String> {
-        let Some(cached) = self.0.as_mut() else {
+        let Some(cached) = self.index.as_mut() else {
             return Ok(());
         };
         save_index(&cached.path, &cached.index)?;
@@ -87,14 +92,31 @@ impl GraphSlot {
         Ok(())
     }
 
+    /// Refreshes the live note ids, re-parsing workspace.json only when its
+    /// mtime/size changed. On a read failure the set is dropped.
+    fn refresh_live(&mut self, workspace_path: &str) -> Result<(), String> {
+        let stamp = file_stamp(&std::path::Path::new(workspace_path).join(".nevo/workspace.json"));
+        if stamp.is_some() && matches!(&self.live, Some((cached, _)) if *cached == stamp) {
+            return Ok(());
+        }
+        self.live = None;
+        let manifest = super::folder::load_manifest(workspace_path)?;
+        let ids = super::folder::manifest_note_ids(&manifest)
+            .into_iter()
+            .collect();
+        self.live = Some((stamp, ids));
+        Ok(())
+    }
+
     #[cfg(test)]
     fn is_empty(&self) -> bool {
-        self.0.is_none()
+        self.index.is_none()
     }
 
     /// For writers that replace graph.json directly (workspace merge).
     pub(crate) fn invalidate(&mut self) {
-        self.0 = None;
+        self.index = None;
+        self.live = None;
     }
 }
 
@@ -269,13 +291,14 @@ fn replace_outgoing(index: &mut GraphIndex, note_id: &str, outgoing: Vec<GraphEd
 /// drops sources no longer in the manifest (trashed or deleted notes). Must
 /// run under `graph_lock` with a normalized path. Returns whether the index
 /// changed.
-fn backfill_links(workspace_path: &str, index: &mut GraphIndex) -> Result<bool, String> {
+fn backfill_links(
+    workspace_path: &str,
+    index: &mut GraphIndex,
+    live: &HashSet<String>,
+) -> Result<bool, String> {
     if index.links_backfilled {
         return Ok(false);
     }
-    let manifest = super::folder::load_manifest(workspace_path)?;
-    let note_ids = super::folder::manifest_note_ids(&manifest);
-    let live: HashSet<&str> = note_ids.iter().map(String::as_str).collect();
     let stale: Vec<String> = index
         .forward
         .keys()
@@ -285,7 +308,7 @@ fn backfill_links(workspace_path: &str, index: &mut GraphIndex) -> Result<bool, 
     for note_id in stale {
         replace_outgoing(index, &note_id, Vec::new());
     }
-    for note_id in &note_ids {
+    for note_id in live {
         let Ok(path) = super::note::note_path(workspace_path, note_id) else {
             continue;
         };
@@ -311,32 +334,26 @@ fn with_live_index<R>(
     workspace_path: &str,
     read: impl FnOnce(&GraphIndex, Option<&HashSet<String>>) -> R,
 ) -> Result<R, String> {
-    let live: Option<HashSet<String>> = normalized_workspace(workspace_path)
-        .and_then(|path| super::folder::load_manifest(&path))
-        .ok()
-        .map(|manifest| {
-            super::folder::manifest_note_ids(&manifest)
-                .into_iter()
-                .collect()
-        });
-    with_backfilled_index(workspace_path, |index| read(index, live.as_ref()))
-}
-
-fn is_live(live: Option<&HashSet<String>>, note_id: &str) -> bool {
-    live.is_none_or(|ids| ids.contains(note_id))
-}
-
-/// Runs `read` on the workspace's index after the one-time link backfill.
-fn with_backfilled_index<R>(
-    workspace_path: &str,
-    read: impl FnOnce(&GraphIndex) -> R,
-) -> Result<R, String> {
     let workspace_path = normalized_workspace(workspace_path)?;
     let lock = graph_lock(&workspace_path);
     let mut slot = lock.lock().map_err(|error| error.to_string())?;
+    slot.index_mut(&workspace_path)?;
+    let live_error = slot.refresh_live(&workspace_path).err();
     // A failed rebuild or write must not fail the read: the in-memory index is
     // still served, and a rebuild that never ran is retried on the next read.
-    let failure = match backfill_links(&workspace_path, slot.index_mut(&workspace_path)?) {
+    let rebuilt = {
+        let GraphSlot { index, live } = &mut *slot;
+        match (index.as_mut(), live.as_ref()) {
+            (Some(cached), Some((_, ids))) => {
+                backfill_links(&workspace_path, &mut cached.index, ids)
+            }
+            (Some(cached), None) if !cached.index.links_backfilled => {
+                Err(live_error.unwrap_or_else(|| "Workspace manifest is unreadable".to_string()))
+            }
+            _ => Ok(false),
+        }
+    };
+    let failure = match rebuilt {
         Ok(true) => slot.save().err(),
         Ok(false) => None,
         Err(message) => Some(message),
@@ -354,7 +371,26 @@ fn with_backfilled_index<R>(
             }),
         );
     }
-    Ok(read(slot.index_mut(&workspace_path)?))
+    slot.index_mut(&workspace_path)?;
+    let GraphSlot { index, live } = &*slot;
+    let index = index
+        .as_ref()
+        .map(|cached| &cached.index)
+        .ok_or_else(|| "Graph index cache is empty".to_string())?;
+    Ok(read(index, live.as_ref().map(|(_, ids)| ids)))
+}
+
+fn is_live(live: Option<&HashSet<String>>, note_id: &str) -> bool {
+    live.is_none_or(|ids| ids.contains(note_id))
+}
+
+/// Runs `read` on the workspace's index after the one-time link backfill.
+#[cfg(test)]
+fn with_backfilled_index<R>(
+    workspace_path: &str,
+    read: impl FnOnce(&GraphIndex) -> R,
+) -> Result<R, String> {
+    with_live_index(workspace_path, |index, _| read(index))
 }
 
 fn update_note_edges(
@@ -777,6 +813,32 @@ mod tests {
         assert_eq!(outlinks, vec!["b"]);
         assert_eq!(backlinks, vec!["a"]);
         assert_eq!(all, 1);
+
+        std::fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn live_ids_follow_manifest_changes() {
+        let root = workspace();
+        let path = root.to_string_lossy().into_owned();
+        let manifest = |notes: &[&str]| {
+            let root_notes: Vec<_> = notes
+                .iter()
+                .map(|id| json!({ "id": id, "title": id, "icon": "", "folderId": null, "order": 0, "updatedAt": "" }))
+                .collect();
+            json!({
+                "id": "ws", "name": "ws", "glyph": "", "gradient": "", "schemaVersion": 2,
+                "createdAt": "", "rootOrder": notes, "tree": [], "rootNotes": root_notes
+            })
+            .to_string()
+        };
+        std::fs::write(root.join(".nevo/workspace.json"), manifest(&["a", "b"])).unwrap();
+        index_note_links(&path, "a", &linked_content(&["b"])).unwrap();
+        assert_eq!(live_outlinks(&path, "a").unwrap().len(), 1);
+
+        // b is trashed: the manifest changes, so the cached live set must too.
+        std::fs::write(root.join(".nevo/workspace.json"), manifest(&["a"])).unwrap();
+        assert!(live_outlinks(&path, "a").unwrap().is_empty());
 
         std::fs::remove_dir_all(root).ok();
     }

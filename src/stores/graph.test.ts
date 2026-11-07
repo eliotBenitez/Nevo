@@ -161,4 +161,30 @@ describe('useGraphStore.loadNoteGraph backlink enrichment', () => {
     await graphStore.refreshOutlinks('a')
     expect(graphStore.outlinks).toEqual([{ source: 'a', target: 'b', kind: 'link' }])
   })
+
+  it('keeps the current lists while refreshing and drops a refresh made stale by a note switch', async () => {
+    openLocalWorkspace([])
+    const graphStore = useGraphStore()
+    graphStore.activeNoteId = 'a'
+    graphStore.outlinks = [{ source: 'a', target: 'old', kind: 'link' }]
+    let resolveOutlinks!: (edges: GraphEdge[]) => void
+    mockBackend.graphGetBacklinks.mockResolvedValue([])
+    mockBackend.graphGetOutlinks.mockImplementation(() => new Promise(resolve => { resolveOutlinks = resolve }))
+
+    const refresh = graphStore.refreshActiveNote()
+    await Promise.resolve()
+    expect(graphStore.outlinks).toEqual([{ source: 'a', target: 'old', kind: 'link' }])
+    resolveOutlinks([{ source: 'a', target: 'new', kind: 'link' }])
+    await refresh
+    expect(graphStore.outlinks).toEqual([{ source: 'a', target: 'new', kind: 'link' }])
+
+    const stale = graphStore.refreshActiveNote()
+    await Promise.resolve()
+    mockBackend.graphGetOutlinks.mockResolvedValue([])
+    await graphStore.loadNoteGraph('b')
+    resolveOutlinks([{ source: 'a', target: 'stale', kind: 'link' }])
+    await stale
+    expect(graphStore.activeNoteId).toBe('b')
+    expect(graphStore.outlinks).toEqual([])
+  })
 })

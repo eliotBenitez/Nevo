@@ -213,30 +213,56 @@ pub(crate) fn delete_folder_sync(
     // Same order as save_note_impl (note, then manifest): a cascaded trash
     // cannot land between an in-flight save's manifest write and its graph
     // update. Sorted, like collab's archive, so concurrent cascades agree.
-    let mut cascaded_ids = if recursive {
-        load_manifest(&workspace_path)
-            .ok()
-            .and_then(|manifest| find_in_tree(&manifest.tree, &folder_id).map(collect_notes_meta))
-            .unwrap_or_default()
-            .into_iter()
-            .map(|meta| meta.id)
-            .collect()
-    } else {
-        Vec::new()
+    let cascade_ids = |manifest: &WorkspaceManifest| -> Vec<String> {
+        let mut ids: Vec<String> = if recursive {
+            find_in_tree(&manifest.tree, &folder_id)
+                .map(collect_notes_meta)
+                .unwrap_or_default()
+                .into_iter()
+                .map(|meta| meta.id)
+                .collect()
+        } else {
+            Vec::new()
+        };
+        ids.sort();
+        ids
     };
-    cascaded_ids.sort();
-    let note_locks: Vec<_> = cascaded_ids
-        .iter()
-        .map(|id| super::note::note_lock(&workspace_path, id))
-        .collect();
-    let _note_guards = note_locks
-        .iter()
-        .map(|lock| lock.lock().map_err(|error| error.to_string()))
-        .collect::<Result<Vec<_>, _>>()?;
-    let manifest_lock = manifest_lock(&workspace_path);
-    let _manifest_guard = manifest_lock.lock().map_err(|error| error.to_string())?;
-    let mut manifest = load_manifest(&workspace_path)?;
+    let mut cascaded_ids = load_manifest(&workspace_path)
+        .map(|manifest| cascade_ids(&manifest))
+        .unwrap_or_default();
+    loop {
+        let note_locks: Vec<_> = cascaded_ids
+            .iter()
+            .map(|id| super::note::note_lock(&workspace_path, id))
+            .collect();
+        let _note_guards = note_locks
+            .iter()
+            .map(|lock| lock.lock().map_err(|error| error.to_string()))
+            .collect::<Result<Vec<_>, _>>()?;
+        let manifest_lock = manifest_lock(&workspace_path);
+        let _manifest_guard = manifest_lock.lock().map_err(|error| error.to_string())?;
+        let manifest = load_manifest(&workspace_path)?;
+        let current = cascade_ids(&manifest);
+        if current != cascaded_ids {
+            // A note entered or left the folder after the unlocked read:
+            // release everything and lock the current set instead.
+            cascaded_ids = current;
+            continue;
+        }
+        return delete_folder_locked(&workspace_path, &folder_id, recursive, manifest);
+    }
+}
 
+/// The body of `delete_folder_sync`, run once the cascaded notes' locks and
+/// the manifest lock are held.
+fn delete_folder_locked(
+    workspace_path: &str,
+    folder_id: &str,
+    recursive: bool,
+    mut manifest: WorkspaceManifest,
+) -> Result<(), String> {
+    let workspace_path = workspace_path.to_string();
+    let folder_id = folder_id.to_string();
     if !recursive {
         if let Some(folder) = find_in_tree(&manifest.tree, &folder_id) {
             if !folder_is_empty(folder) {
