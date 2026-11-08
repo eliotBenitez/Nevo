@@ -12,13 +12,11 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{
   'close': []
-  'update-automations': [automations: KanbanAutomation[]]
+  'toggle-automation': [id: string, enabled: boolean]
 }>()
 const { t } = useI18n()
 
-const localAutomations = ref<KanbanAutomation[]>(
-  JSON.parse(JSON.stringify(props.board.automations ?? [])) as KanbanAutomation[]
-)
+const automations = computed<KanbanAutomation[]>(() => props.board.automations ?? [])
 
 const DEFAULT_TEMPLATES = [
   { id: 't1', key: 'engineeringTicket', icon: '✦', shortcut: '⌘1' },
@@ -39,9 +37,8 @@ const templates = computed<KanbanTemplate[]>(() =>
     }))
 )
 
-function toggleAutomation(id: string) {
-  const a = localAutomations.value.find(a => a.id === id)
-  if (a) { a.enabled = !a.enabled; emit('update-automations', localAutomations.value) }
+function toggleAutomation(automation: KanbanAutomation) {
+  emit('toggle-automation', automation.id, !automation.enabled)
 }
 
 function triggerLabel(a: KanbanAutomation): string {
@@ -87,20 +84,20 @@ const selectedTemplate = ref<string | null>(null)
       <div class="ka-section tw:flex tw:flex-col tw:gap-2 tw:overflow-hidden tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle">
         <div class="ka-section__head tw:flex tw:items-center tw:gap-2 tw:bg-[var(--hover,var(--surface-overlay))] tw:px-3.5 tw:py-[11px]">
           <span class="ka-section__title tw:text-[10.5px] tw:font-semibold tw:tracking-[0.06em] tw:text-content-muted tw:uppercase">{{ t('kanban.automations.sectionAutomations') }}</span>
-          <span class="ka-section__count tw:font-nv-mono tw:text-[10.5px] tw:text-content-muted">{{ t('kanban.automations.active', { n: localAutomations.filter(a => a.enabled).length }) }}</span>
+          <span class="ka-section__count tw:font-nv-mono tw:text-[10.5px] tw:text-content-muted">{{ t('kanban.automations.active', { n: automations.filter(a => a.enabled).length }) }}</span>
           <div class="ka-section__spacer tw:flex-1" />
           <button type="button" class="nv-btn ka-section__action tw:inline-flex tw:h-6 tw:items-center tw:gap-1 tw:px-2 tw:text-[11px] tw:text-[var(--text-muted,var(--text-secondary))]">
             <Plus :size="10" /> {{ t('kanban.automations.newRule') }}
           </button>
         </div>
 
-        <div v-if="!localAutomations.length" class="ka-empty tw:flex tw:flex-col tw:gap-1 tw:px-4 tw:py-6 tw:text-center">
+        <div v-if="!automations.length" class="ka-empty tw:flex tw:flex-col tw:gap-1 tw:px-4 tw:py-6 tw:text-center">
           <div class="ka-empty-title tw:text-[13px] tw:font-[550] tw:text-content-secondary">{{ t('kanban.automations.noAutomations') }}</div>
           <div class="ka-empty-hint tw:mx-auto tw:max-w-[320px] tw:text-[11.5px] tw:leading-[1.5] tw:text-content-muted">{{ t('kanban.automations.noAutomationsHint') }}</div>
         </div>
 
         <div
-          v-for="auto in localAutomations"
+          v-for="auto in automations"
           :key="auto.id"
           class="ka-rule tw:flex tw:items-center tw:gap-3 tw:bg-[var(--hover,var(--surface-raised))] tw:px-3.5 tw:py-[11px] tw:transition-opacity tw:duration-150"
           :class="{ 'ka-rule--off tw:opacity-55': !auto.enabled }"
@@ -118,16 +115,20 @@ const selectedTemplate = ref<string | null>(null)
             <span v-if="auto.runCount" class="ka-rule__runs tw:shrink-0 tw:font-nv-mono tw:text-[10.5px] tw:text-content-muted">{{ t('kanban.automations.runCount', { n: auto.runCount }) }}</span>
           </div>
           <!-- Toggle -->
-          <div
-            class="ka-toggle tw:relative tw:h-[17px] tw:w-[30px] tw:shrink-0 tw:rounded-full tw:cursor-pointer tw:transition-colors tw:duration-200"
+          <button
+            type="button"
+            role="switch"
+            :aria-checked="auto.enabled"
+            :aria-label="`${triggerLabel(auto)} → ${actionLabel(auto)}`"
+            class="ka-toggle tw:relative tw:h-[17px] tw:w-[30px] tw:shrink-0 tw:rounded-full tw:border-none tw:p-0 tw:cursor-pointer tw:transition-colors tw:duration-200"
             :class="auto.enabled ? 'ka-toggle--on tw:bg-accent' : 'tw:bg-[var(--hover-strong,var(--surface-overlay))]'"
-            @click="toggleAutomation(auto.id)"
+            @click="toggleAutomation(auto)"
           >
-            <div
+            <span
               class="ka-toggle__thumb tw:absolute tw:top-0.5 tw:size-[13px] tw:rounded-full tw:bg-white tw:shadow-(--shadow-raised) tw:transition-[left] tw:duration-200"
               :class="auto.enabled ? 'tw:left-[15px]' : 'tw:left-0.5'"
             />
-          </div>
+          </button>
         </div>
       </div>
 

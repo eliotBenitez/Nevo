@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, markRaw, ref, watch, type CSSProperties } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { MoreHorizontal, Pencil, Plus, Trash2 } from '../../../ui/icons'
+import { Hash, MoreHorizontal, Pencil, Plus, Trash2 } from '../../../ui/icons'
 import type { KanbanBoard, KanbanBoardCardViewSettings, KanbanCard, KanbanPropertyOption } from '../../../types/kanban'
 import KanbanCardVue from './KanbanCard.vue'
 import { localizeDefaultKanbanLabel } from './kanbanFields'
@@ -33,6 +33,7 @@ const emit = defineEmits<{
   'card-handle-pointerdown': [event: PointerEvent, cardId: string, columnId: string]
   'rename-column': [columnId: string, name: string]
   'delete-column': [columnId: string]
+  'set-wip': [columnId: string, cap: number | null]
 }>()
 const { t } = useI18n()
 
@@ -73,6 +74,11 @@ const columnMenuItems = computed<NvMenuItemDef[]>(() => [
     action: startRename,
   },
   {
+    label: t('kanban.view.setWipLimit'),
+    icon: markRaw(Hash),
+    action: startWipEdit,
+  },
+  {
     label: t('kanban.view.deleteColumn'),
     icon: markRaw(Trash2),
     danger: true,
@@ -106,6 +112,32 @@ function submitRename() {
 function cancelRename() {
   isEditingName.value = false
   draftName.value = displayName.value
+}
+
+const isEditingWip = ref(false)
+const draftWip = ref('')
+const wipInputRef = ref<HTMLInputElement | null>(null)
+
+function startWipEdit() {
+  draftWip.value = props.wip === undefined ? '' : String(props.wip)
+  isEditingWip.value = true
+  // A macrotask, so it runs after the popup menu hands focus back to its trigger.
+  setTimeout(() => wipInputRef.value?.focus())
+}
+
+function submitWip() {
+  if (!isEditingWip.value) return
+  isEditingWip.value = false
+  const raw = String(draftWip.value).trim()
+  // Empty clears the cap; anything that is not a non-negative integer is ignored.
+  const cap = raw === '' ? null : Number(raw)
+  if (cap !== null && !(Number.isInteger(cap) && cap >= 0)) return
+  if ((cap ?? undefined) === props.wip) return
+  emit('set-wip', props.column.id, cap)
+}
+
+function cancelWip() {
+  isEditingWip.value = false
 }
 
 function requestDeleteColumn() {
@@ -156,7 +188,7 @@ function dropZoneClass(zoneIndex: number) {
     :data-card-count="cards.length"
   >
     <!-- Column header -->
-    <div class="kb-column__header tw:flex tw:min-h-[38px] tw:flex-wrap tw:items-center tw:gap-[7px] tw:px-[9px] tw:pt-2 tw:pb-[7px] tw:max-[760px]:min-h-9 tw:max-[760px]:gap-1 tw:max-[760px]:py-0 tw:max-[760px]:pr-1">
+    <div class="kb-column__header tw:flex tw:min-h-[38px] tw:items-center tw:gap-[7px] tw:px-[9px] tw:pt-2 tw:pb-[7px] tw:max-[760px]:min-h-9 tw:max-[760px]:gap-1 tw:max-[760px]:py-0 tw:max-[760px]:pr-1" :class="{ 'tw:flex-wrap': isEditingName }">
       <span
         class="kb-column__pill tw:inline-flex tw:h-[22px] tw:min-w-0 tw:max-w-[150px] tw:items-center tw:gap-1.5 tw:rounded-full tw:px-2"
         :style="column.color ? { '--kb-column-color': column.color } : {}"
@@ -172,8 +204,23 @@ function dropZoneClass(zoneIndex: number) {
         @keydown.esc.prevent="cancelRename"
         @blur="submitRename"
       />
+      <input
+        v-if="isEditingWip"
+        ref="wipInputRef"
+        v-model="draftWip"
+        type="number"
+        min="0"
+        step="1"
+        inputmode="numeric"
+        :placeholder="t('kanban.view.wipLimitPlaceholder')"
+        :aria-label="t('kanban.view.wipLimitLabel')"
+        class="kb-column__wip-input tw:h-7 tw:w-16 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--input-bg) tw:px-2 tw:text-content-primary"
+        @keydown.enter.prevent="submitWip"
+        @keydown.esc.prevent="cancelWip"
+        @blur="submitWip"
+      />
       <span
-        class="kb-column__count tw:font-nv-mono tw:text-[10.5px] tw:font-normal"
+        class="kb-column__count tw:shrink-0 tw:whitespace-nowrap tw:font-nv-mono tw:text-[10.5px] tw:font-normal"
         :class="isAtCap ? 'kb-column__count--cap tw:text-danger' : 'tw:text-content-muted'"
       >
         {{ cards.length }}{{ wip !== undefined ? ` / ${wip}` : '' }}
@@ -189,7 +236,7 @@ function dropZoneClass(zoneIndex: number) {
       </div>
 
       <!-- WIP cap warning -->
-      <span v-if="isAtCap" class="kb-column__cap-warn tw:inline-flex tw:h-[17px] tw:items-center tw:rounded-full tw:border tw:border-solid tw:border-transparent tw:bg-surface-danger tw:px-1.5 tw:text-[10px] tw:font-medium tw:text-danger">{{ t('kanban.board.wipCap') }}</span>
+      <span v-if="isAtCap" class="kb-column__cap-warn tw:inline-flex tw:shrink-0 tw:whitespace-nowrap tw:h-[17px] tw:items-center tw:rounded-full tw:border tw:border-solid tw:border-transparent tw:bg-surface-danger tw:px-1.5 tw:text-[10px] tw:font-medium tw:text-danger">{{ t('kanban.board.wipCap') }}</span>
 
       <div class="kb-column__spacer tw:flex-1" />
       <button

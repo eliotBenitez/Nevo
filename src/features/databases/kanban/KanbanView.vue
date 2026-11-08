@@ -418,6 +418,7 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
         @card-handle-pointerdown="(e, cardId, colId) => onCardHandlePointerDown(e, cardId, colId)"
         @rename-column="renameStatusColumn"
         @delete-column="deleteStatusColumn"
+        @set-wip="(colId, cap) => kanbanStore.setWipCap(props.boardId, colId, cap)"
       />
 
       <!-- Drop status change tooltip -->
@@ -500,7 +501,7 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
       v-if="showAutomations"
       :board="board"
       @close="showAutomations = false"
-      @update-automations="() => {}"
+      @toggle-automation="(id, enabled) => kanbanStore.updateAutomation(props.boardId, id, { enabled })"
     />
   </div>
 

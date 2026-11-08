@@ -102,6 +102,7 @@ describe('KanbanColumn', () => {
     const menuItems = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.nv-menu-item'))
     expect(menuItems.map(item => item.textContent?.trim())).toEqual([
       'Переименовать колонку',
+      'Задать WIP-лимит',
       'Удалить колонку',
     ])
     expect(document.activeElement).toBe(menuItems[0])
@@ -115,6 +116,37 @@ describe('KanbanColumn', () => {
     expect(wrapper.find('.kb-column__name-input').exists()).toBe(true)
     expect(document.body.querySelector('[role="menu"]')).toBeNull()
 
+    wrapper.unmount()
+  })
+
+  it('sets and clears the WIP limit from the popup action', async () => {
+    const wrapper = mountColumn()
+    const openWipEditor = async () => {
+      await wrapper.get('[aria-label="Меню колонки"]').trigger('click')
+      await flushPopup()
+      Array.from(document.body.querySelectorAll<HTMLButtonElement>('.nv-menu-item'))
+        .find(item => item.textContent?.includes('Задать WIP-лимит'))?.click()
+      await flushPopup()
+      return wrapper.get('.kb-column__wip-input')
+    }
+
+    let input = await openWipEditor()
+    await input.setValue('-2')
+    await input.trigger('keydown', { key: 'Enter' })
+    expect(wrapper.emitted('set-wip')).toBeUndefined()
+
+    input = await openWipEditor()
+    await input.setValue('4')
+    await input.trigger('keydown', { key: 'Enter' })
+    expect(wrapper.find('.kb-column__wip-input').exists()).toBe(false)
+
+    await wrapper.setProps({ wip: 4 })
+    input = await openWipEditor()
+    expect((input.element as HTMLInputElement).value).toBe('4')
+    await input.setValue('')
+    await input.trigger('blur')
+
+    expect(wrapper.emitted('set-wip')).toEqual([['todo', 4], ['todo', null]])
     wrapper.unmount()
   })
 
