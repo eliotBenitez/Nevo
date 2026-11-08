@@ -590,6 +590,8 @@ export const kanbanCommands = {
     statusPropertyId?: string
     propertyDefinitions?: unknown
     viewSettings?: unknown
+    wip?: Record<string, number>
+    automations?: unknown
   }) => invokeCommand<KanbanBoard>('kanban_update_board', { workspacePath, boardId, ...updates }),
 
   deleteBoard: (workspacePath: string, boardId: string) =>

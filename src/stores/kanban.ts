@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { KanbanBoard, KanbanCard, KanbanPropertyDef, KanbanAutomation, KanbanLink, KanbanPropertyOption, KanbanCardField, KanbanBoardCardViewSettings } from '../types/kanban'
+import type { KanbanBoardUpdate } from '../core/workspace-backend/types'
 import { useWorkspaceStore } from './workspace'
 import { getBoardColumns, getCardStatusValue, normalizeBoard, normalizeCard, normalizeViewSettings, serializeCardProperties } from '../features/databases/kanban/kanbanFields'
 import { appLogger } from '../utils/logger'
@@ -88,7 +89,7 @@ export const useKanbanStore = defineStore('kanban', () => {
     return normalized
   }
 
-  async function updateBoard(boardId: string, updates: { title?: string; icon?: string; viewSettings?: KanbanBoard['viewSettings'] }) {
+  async function updateBoard(boardId: string, updates: KanbanBoardUpdate) {
     const backend = workspaceStore.backend
     if (!backend) return
     const board = await backend.kanbanUpdateBoard(boardId, updates)
@@ -261,33 +262,44 @@ export const useKanbanStore = defineStore('kanban', () => {
     activeCardId.value = null
   }
 
+  // Optimistically applies a wip/automations change, persists it, and rolls back on failure.
+  async function persistBoardMeta(boardId: string, patch: (board: KanbanBoard) => Pick<KanbanBoardUpdate, 'wip' | 'automations'>) {
+    const board = boards.value.get(boardId)
+    if (!board) return
+    const updates = patch(board)
+    boards.value.set(boardId, { ...board, ...updates })
+    const backend = workspaceStore.backend
+    if (!backend) return
+    try {
+      const saved = await backend.kanbanUpdateBoard(boardId, updates)
+      boards.value.set(saved.id, normalizeBoard(saved))
+    } catch (error) {
+      const current = boards.value.get(boardId)
+      if (current) boards.value.set(boardId, { ...current, wip: board.wip, automations: board.automations })
+      boardsError.value = formatKanbanError(error, 'Failed to save board.')
+    }
+  }
+
   function setWipCap(boardId: string, columnId: string, cap: number | null) {
-    const board = boards.value.get(boardId)
-    if (!board) return
-    const wip = { ...(board.wip ?? {}) }
-    if (cap === null) { delete wip[columnId] } else { wip[columnId] = cap }
-    boards.value.set(boardId, { ...board, wip })
-  }
-
-  function addAutomation(boardId: string, automation: KanbanAutomation) {
-    const board = boards.value.get(boardId)
-    if (!board) return
-    boards.value.set(boardId, { ...board, automations: [...(board.automations ?? []), automation] })
-  }
-
-  function updateAutomation(boardId: string, automationId: string, patch: Partial<KanbanAutomation>) {
-    const board = boards.value.get(boardId)
-    if (!board) return
-    boards.value.set(boardId, {
-      ...board,
-      automations: (board.automations ?? []).map(a => a.id === automationId ? { ...a, ...patch } : a),
+    return persistBoardMeta(boardId, (board) => {
+      const wip = { ...(board.wip ?? {}) }
+      if (cap === null) { delete wip[columnId] } else { wip[columnId] = cap }
+      return { wip }
     })
   }
 
+  function addAutomation(boardId: string, automation: KanbanAutomation) {
+    return persistBoardMeta(boardId, board => ({ automations: [...(board.automations ?? []), automation] }))
+  }
+
+  function updateAutomation(boardId: string, automationId: string, patch: Partial<KanbanAutomation>) {
+    return persistBoardMeta(boardId, board => ({
+      automations: (board.automations ?? []).map(a => a.id === automationId ? { ...a, ...patch } : a),
+    }))
+  }
+
   function deleteAutomation(boardId: string, automationId: string) {
-    const board = boards.value.get(boardId)
-    if (!board) return
-    boards.value.set(boardId, { ...board, automations: (board.automations ?? []).filter(a => a.id !== automationId) })
+    return persistBoardMeta(boardId, board => ({ automations: (board.automations ?? []).filter(a => a.id !== automationId) }))
   }
 
   async function persistCardLinks(boardId: string, cardId: string, nextLinks: KanbanLink[]) {

@@ -24,6 +24,8 @@ export interface KanbanBoardUpdate {
   statusPropertyId?: string
   propertyDefinitions?: KanbanPropertyDef[]
   viewSettings?: KanbanBoard['viewSettings']
+  wip?: KanbanBoard['wip']
+  automations?: KanbanBoard['automations']
 }
 
 export interface KanbanCardUpdate {
