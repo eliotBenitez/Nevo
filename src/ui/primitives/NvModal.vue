@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, useId, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue'
 import { X } from '../icons'
 import { useI18n } from 'vue-i18n'
 import { useFocusTrap } from '../composables/useFocusTrap'
@@ -56,6 +56,20 @@ watch(() => props.open, (isOpen) => {
 function onScrimClick() {
   if (props.closeOnBackdrop) emit('close')
 }
+
+// Focus falls to <body> when the focused control is disabled or replaced (a form swapped for its
+// result), and the panel's own Escape listener never sees the key; the topmost open modal takes it.
+function onDocumentKeydown(event: KeyboardEvent) {
+  if (!props.open || event.key !== 'Escape' || event.defaultPrevented) return
+  if (document.activeElement && document.activeElement !== document.body) return
+  const panels = document.querySelectorAll('.nv-modal__panel')
+  if (panels[panels.length - 1] !== panelRef.value) return
+  event.preventDefault()
+  emit('close')
+}
+
+onMounted(() => document.addEventListener('keydown', onDocumentKeydown))
+onBeforeUnmount(() => document.removeEventListener('keydown', onDocumentKeydown))
 </script>
 
 <template>

@@ -24,6 +24,13 @@ export function useFocusTrap(containerRef: Ref<HTMLElement | null>, active: Ref<
     const first = focusable[0]
     const last = focusable[focusable.length - 1]
 
+    // Focus fell to <body> (the focused control was disabled or removed): bring it back.
+    if (!document.activeElement || document.activeElement === document.body) {
+      e.preventDefault()
+      ;(e.shiftKey ? last : first).focus()
+      return
+    }
+
     if (e.shiftKey) {
       if (document.activeElement === first) { e.preventDefault(); last.focus() }
     } else {
