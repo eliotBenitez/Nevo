@@ -3003,7 +3003,9 @@
       "addCardTitle": "Añadir tarjeta",
       "titlePlaceholder": "Título de la tarjeta…",
       "column": "Columna",
-      "add": "Añadir tarjeta"
+      "add": "Añadir tarjeta",
+      "template": "Plantilla",
+      "noTemplate": "Sin plantilla"
     },
     "toolbar": {
       "filter": "Filtrar",
@@ -3089,9 +3091,21 @@
       "depGraph": "Grafo de dependencias",
       "noDeps": "Sin dependencias registradas",
       "noDepsHint": "Vincula tarjetas como «bloquea» o «bloqueada por» en el modal para crear un grafo de dependencias.",
-      "templates": "Plantillas de tarjeta",
-      "saveAs": "Guardar la actual como…",
-      "insertTemplate": "Insertar desde plantilla",
+      "blocks": "{from} bloquea a {to}",
+      "templateSection": {
+        "title": "Plantillas de tarjeta",
+        "saveAs": "Guardar tarjeta como plantilla",
+        "saveAsDisabled": "Añade una tarjeta primero",
+        "card": "Tarjeta",
+        "name": "Nombre de la plantilla",
+        "save": "Guardar plantilla",
+        "create": "Crear tarjeta",
+        "delete": "Eliminar plantilla {name}",
+        "meta": "Sin campos | 1 campo | {n} campos",
+        "withContent": "con contenido",
+        "empty": "Aún no hay plantillas",
+        "emptyHint": "Guarda cualquier tarjeta como plantilla para reutilizar su contenido, campos y prioridad."
+      },
       "runCount": "ejecutada {n}× esta semana",
       "triggerPrefix": "Cuando",
       "deleteRule": "Eliminar regla: {rule}",
@@ -3124,26 +3138,8 @@
       },
       "trigger": {
         "subtasksDone": "todas las subtareas hechas",
-        "statusChange": "estado → {value}",
+        "statusChange": "una tarjeta entra en {value}",
         "dueDateNear": "vence en ≤ {n} d"
-      },
-      "templatesData": {
-        "engineeringTicket": {
-          "name": "Ticket de ingeniería",
-          "description": "5 campos · subtareas en 3 pasos"
-        },
-        "designReview": {
-          "name": "Revisión de diseño",
-          "description": "Cobertura + checklist de crítica"
-        },
-        "weeklyRetro": {
-          "name": "Retrospectiva semanal",
-          "description": "4 preguntas · precargadas"
-        },
-        "bugReport": {
-          "name": "Informe de error",
-          "description": "Reproducción + entorno + severidad"
-        }
       }
     },
     "groups": {

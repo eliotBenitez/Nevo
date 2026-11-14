@@ -3003,7 +3003,9 @@
       "addCardTitle": "Karte hinzufügen",
       "titlePlaceholder": "Kartentitel…",
       "column": "Spalte",
-      "add": "Karte hinzufügen"
+      "add": "Karte hinzufügen",
+      "template": "Vorlage",
+      "noTemplate": "Keine Vorlage"
     },
     "toolbar": {
       "filter": "Filtern",
@@ -3089,9 +3091,21 @@
       "depGraph": "Abhängigkeitsgraph",
       "noDeps": "Noch keine Abhängigkeiten erfasst",
       "noDepsHint": "Verknüpfen Sie Karten als „blockiert“ oder „blockiert durch“ im Karten-Dialog, um einen Abhängigkeitsgraphen aufzubauen.",
-      "templates": "Kartenvorlagen",
-      "saveAs": "Aktuelle speichern als…",
-      "insertTemplate": "Aus Vorlage einfügen",
+      "blocks": "{from} blockiert {to}",
+      "templateSection": {
+        "title": "Kartenvorlagen",
+        "saveAs": "Karte als Vorlage speichern",
+        "saveAsDisabled": "Zuerst eine Karte hinzufügen",
+        "card": "Karte",
+        "name": "Vorlagenname",
+        "save": "Vorlage speichern",
+        "create": "Karte erstellen",
+        "delete": "Vorlage {name} löschen",
+        "meta": "Keine Felder | 1 Feld | {n} Felder",
+        "withContent": "mit Inhalt",
+        "empty": "Noch keine Vorlagen",
+        "emptyHint": "Speichern Sie eine beliebige Karte als Vorlage, um Inhalt, Felder und Priorität wiederzuverwenden."
+      },
       "runCount": "{n}× diese Woche ausgeführt",
       "triggerPrefix": "Wenn",
       "deleteRule": "Regel löschen: {rule}",
@@ -3124,26 +3138,8 @@
       },
       "trigger": {
         "subtasksDone": "alle Unteraufgaben erledigt",
-        "statusChange": "Status → {value}",
+        "statusChange": "eine Karte in {value} gelangt",
         "dueDateNear": "fällig in ≤ {n} Tagen"
-      },
-      "templatesData": {
-        "engineeringTicket": {
-          "name": "Engineering-Ticket",
-          "description": "5 Felder · 3-stufige Unteraufgaben"
-        },
-        "designReview": {
-          "name": "Design-Review",
-          "description": "Cover + Kritik-Checkliste"
-        },
-        "weeklyRetro": {
-          "name": "Wöchentliche Retro",
-          "description": "4 Fragen · vorausgefüllt"
-        },
-        "bugReport": {
-          "name": "Fehlerbericht",
-          "description": "Reproduktion + Umgebung + Schweregrad"
-        }
       }
     },
     "groups": {

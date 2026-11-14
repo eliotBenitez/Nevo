@@ -68,6 +68,7 @@ const loadError = ref<string | null>(null)
 const showAutomations = ref(false)
 const showAddCardModal = ref(false)
 const addCardDefaultColumnId = ref<string | undefined>(undefined)
+const addCardTemplateId = ref<string | undefined>(undefined)
 
 let loadRequestId = 0
 const COLUMN_COLORS = ['#6b7280', '#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#a855f7', '#ec4899', '#14b8a6']
@@ -164,6 +165,7 @@ function cardsForColumn(columnId: string) {
 function addCard(columnId?: string) {
   if (!board.value) return
   addCardDefaultColumnId.value = columnId ?? columns.value[0]?.id
+  addCardTemplateId.value = undefined
   showAddCardModal.value = true
 }
 
@@ -192,9 +194,16 @@ async function deleteStatusColumn(columnId: string) {
   await kanbanStore.updateBoardColumns(props.boardId, nextColumns, { [columnId]: fallbackColumnId })
 }
 
-async function confirmAddCard(title: string, columnId: string) {
+async function confirmAddCard(title: string, columnId: string, templateId?: string) {
   showAddCardModal.value = false
-  await kanbanStore.createCard(props.boardId, title, columnId)
+  if (templateId) await kanbanStore.createCardFromTemplate(props.boardId, title, columnId, templateId)
+  else await kanbanStore.createCard(props.boardId, title, columnId)
+}
+
+function useTemplate(templateId: string) {
+  showAutomations.value = false
+  addCard()
+  addCardTemplateId.value = templateId
 }
 
 async function quickAddCard(columnId: string, title: string) {
@@ -500,6 +509,7 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
       v-if="showAddCardModal && board"
       :board="board"
       :default-column-id="addCardDefaultColumnId"
+      :default-template-id="addCardTemplateId"
       @confirm="confirmAddCard"
       @close="showAddCardModal = false"
     />
@@ -509,10 +519,14 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
       v-if="showAutomations"
       :board="board"
       :cards="boardCards"
+      :active-card-id="activeCardId"
       @close="showAutomations = false"
       @toggle-automation="(id, enabled) => kanbanStore.updateAutomation(props.boardId, id, { enabled })"
       @add-automation="automation => kanbanStore.addAutomation(props.boardId, automation)"
       @delete-automation="id => kanbanStore.deleteAutomation(props.boardId, id)"
+      @save-template="template => kanbanStore.addTemplate(props.boardId, template)"
+      @delete-template="id => kanbanStore.deleteTemplate(props.boardId, id)"
+      @use-template="useTemplate"
     />
   </div>
 

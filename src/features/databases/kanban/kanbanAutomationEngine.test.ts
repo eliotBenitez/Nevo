@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { KanbanAutomation, KanbanBoard, KanbanCard, KanbanCardField } from '../../../types/kanban'
-import { applyTagsToFields, bumpRunCount, planAutomations, weeklyRunCount } from './kanbanAutomations'
+import { applyTagsToFields, bumpRunCount, dependencyPairs, planAutomations, weeklyRunCount } from './kanbanAutomations'
 
 const board = (automations: KanbanAutomation[]): KanbanBoard => ({
   id: 'b', title: 'B', icon: 'K', folderId: null, statusPropertyId: 'st',
@@ -100,5 +100,18 @@ describe('weekly run count', () => {
     expect(bumpRunCount(first, new Date(2026, 10, 16))).toMatchObject({ runCount: 1, runWeek: '2026-11-16' })
     expect(weeklyRunCount(first, wed)).toBe(1)
     expect(weeklyRunCount(first, new Date(2026, 10, 16))).toBe(0)
+  })
+})
+
+describe('dependencyPairs', () => {
+  const linked = (id: string, links: KanbanCard['links']): KanbanCard => ({ ...card('todo'), id, title: id, links })
+
+  it('merges mirrored links, dedupes and skips missing cards', () => {
+    const cards = [
+      linked('a', [{ cardId: 'b', kind: 'blocks' }, { cardId: 'zz', kind: 'blocks' }, { cardId: 'c', kind: 'related' }]),
+      linked('b', [{ cardId: 'a', kind: 'blocked-by' }]),
+      linked('c', [{ cardId: 'a', kind: 'blocked-by' }]),
+    ]
+    expect(dependencyPairs(cards).map(p => `${p.from.id}>${p.to.id}`)).toEqual(['a>b', 'a>c'])
   })
 })

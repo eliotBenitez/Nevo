@@ -136,3 +136,30 @@ export function bumpRunCount(automation: KanbanAutomation, now: Date): KanbanAut
 export function weeklyRunCount(automation: KanbanAutomation, now: Date): number {
   return automation.runWeek === weekStart(now) ? automation.runCount ?? 0 : 0
 }
+
+export interface DependencyPair {
+  from: KanbanCard
+  to: KanbanCard
+}
+
+/** Unique blocker -> blocked pairs from `blocks` / `blocked-by` links; links to missing cards are skipped. */
+export function dependencyPairs(cards: KanbanCard[]): DependencyPair[] {
+  const byId = new Map(cards.map(card => [card.id, card]))
+  const seen = new Set<string>()
+  const pairs: DependencyPair[] = []
+  const add = (fromId: string, toId: string) => {
+    const from = byId.get(fromId)
+    const to = byId.get(toId)
+    const key = `${fromId}>${toId}`
+    if (!from || !to || seen.has(key)) return
+    seen.add(key)
+    pairs.push({ from, to })
+  }
+  for (const card of cards) {
+    for (const link of card.links ?? []) {
+      if (link.kind === 'blocks') add(card.id, link.cardId)
+      else if (link.kind === 'blocked-by') add(link.cardId, card.id)
+    }
+  }
+  return pairs
+}

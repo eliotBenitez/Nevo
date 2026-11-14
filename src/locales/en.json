@@ -3003,7 +3003,9 @@
       "addCardTitle": "Add card",
       "titlePlaceholder": "Card title…",
       "column": "Column",
-      "add": "Add card"
+      "add": "Add card",
+      "template": "Template",
+      "noTemplate": "No template"
     },
     "toolbar": {
       "filter": "Filter",
@@ -3089,9 +3091,21 @@
       "depGraph": "Dependency graph",
       "noDeps": "No dependencies tracked yet",
       "noDepsHint": "Link cards as \"blocks\" or \"blocked-by\" in the card modal to build a dependency graph.",
-      "templates": "Card templates",
-      "saveAs": "Save current as…",
-      "insertTemplate": "Insert from template",
+      "blocks": "{from} blocks {to}",
+      "templateSection": {
+        "title": "Card templates",
+        "saveAs": "Save card as template",
+        "saveAsDisabled": "Add a card first",
+        "card": "Card",
+        "name": "Template name",
+        "save": "Save template",
+        "create": "Create card",
+        "delete": "Delete template {name}",
+        "meta": "No fields | 1 field | {n} fields",
+        "withContent": "with content",
+        "empty": "No templates yet",
+        "emptyHint": "Save any card as a template to reuse its content, fields and priority."
+      },
       "runCount": "ran {n}× this week",
       "triggerPrefix": "When",
       "deleteRule": "Delete rule: {rule}",
@@ -3124,26 +3138,8 @@
       },
       "trigger": {
         "subtasksDone": "all subtasks done",
-        "statusChange": "status → {value}",
+        "statusChange": "a card enters {value}",
         "dueDateNear": "due in ≤ {n} days"
-      },
-      "templatesData": {
-        "engineeringTicket": {
-          "name": "Engineering ticket",
-          "description": "5 fields · 3-step subtasks"
-        },
-        "designReview": {
-          "name": "Design review",
-          "description": "Cover + critique checklist"
-        },
-        "weeklyRetro": {
-          "name": "Weekly retro",
-          "description": "4 questions · prefilled"
-        },
-        "bugReport": {
-          "name": "Bug report",
-          "description": "Repro + env + severity"
-        }
       }
     },
     "groups": {

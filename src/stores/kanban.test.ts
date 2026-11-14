@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useKanbanStore } from './kanban'
-import type { KanbanAutomation, KanbanBoard, KanbanCard } from '../types/kanban'
+import type { KanbanAutomation, KanbanBoard, KanbanCard, KanbanTemplate } from '../types/kanban'
 
 const backend = vi.hoisted(() => ({
   kanbanListBoards: vi.fn(),
@@ -9,6 +9,7 @@ const backend = vi.hoisted(() => ({
   kanbanUpdateBoard: vi.fn(),
   kanbanMoveCard: vi.fn(),
   kanbanUpdateCard: vi.fn(),
+  kanbanCreateCard: vi.fn(),
 }))
 vi.mock('./workspace', () => ({ useWorkspaceStore: () => ({ backend }) }))
 const notifications = vi.hoisted(() => ({ sendSystemNotification: vi.fn(async () => true) }))
@@ -212,5 +213,44 @@ describe('kanban store automations execution', () => {
       await store.runDueDateAutomations('b1', now)
       expect(store.boards.get('b1')!.automations![1].firedFor).toEqual({})
     })
+  })
+})
+
+describe('kanban store templates', () => {
+  const template = {
+    id: 't1', name: 'Bug', icon: 'B',
+    card: { priority: 'high', content: { type: 'doc', content: [{ type: 'paragraph' }] } },
+  } as KanbanTemplate
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    backend.kanbanUpdateBoard.mockReset()
+    backend.kanbanUpdateCard.mockReset()
+    backend.kanbanCreateCard.mockReset()
+  })
+
+  it('persists added and deleted templates', async () => {
+    const store = useKanbanStore()
+    store.boards = new Map([['b1', board('b1')]])
+    backend.kanbanUpdateBoard.mockImplementation(async (id: string, updates: Partial<KanbanBoard>) => ({ ...store.boards.get(id)!, ...updates }))
+
+    await store.addTemplate('b1', template)
+    expect(backend.kanbanUpdateBoard).toHaveBeenLastCalledWith('b1', { templates: [template] })
+    await store.deleteTemplate('b1', 't1')
+    expect(backend.kanbanUpdateBoard).toHaveBeenLastCalledWith('b1', { templates: [] })
+    expect(store.boards.get('b1')?.templates).toEqual([])
+  })
+
+  it('creates a card and applies the template snapshot through kanbanUpdateCard', async () => {
+    const store = useKanbanStore()
+    store.boards = new Map([['b1', board('b1', { templates: [template] })]])
+    const created = { id: 'c1', boardId: 'b1', title: 'New', content: { type: 'doc', content: [] }, properties: { st: 'todo' }, fields: [], columnOrder: 0, createdAt: 't', updatedAt: 't' }
+    backend.kanbanCreateCard.mockResolvedValue(created)
+    backend.kanbanUpdateCard.mockImplementation(async (_b: string, _c: string, updates: object) => ({ ...created, ...updates }))
+
+    const card = await store.createCardFromTemplate('b1', 'New', 'todo', 't1')
+
+    expect(backend.kanbanUpdateCard).toHaveBeenCalledWith('b1', 'c1', { content: template.card!.content, priority: 'high' })
+    expect(card).toMatchObject({ id: 'c1', priority: 'high' })
   })
 })

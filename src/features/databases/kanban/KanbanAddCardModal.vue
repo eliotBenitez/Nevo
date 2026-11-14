@@ -9,11 +9,12 @@ import { getBoardColumns, localizeDefaultKanbanLabel } from './kanbanFields'
 interface Props {
   board: KanbanBoard
   defaultColumnId?: string
+  defaultTemplateId?: string
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<{
-  'confirm': [title: string, columnId: string]
+  'confirm': [title: string, columnId: string, templateId?: string]
   'close': []
 }>()
 
@@ -29,10 +30,20 @@ const selectedColumnId = ref(
   props.defaultColumnId ?? columnOptions.value[0]?.value ?? ''
 )
 
+const templateOptions = computed(() => [
+  { value: '', label: t('kanban.modal.noTemplate') },
+  ...(props.board.templates ?? []).map(template => ({ value: template.id, label: `${template.icon} ${template.name}`.trim() })),
+])
+const selectedTemplateId = ref(
+  (props.board.templates ?? []).some(template => template.id === props.defaultTemplateId) ? props.defaultTemplateId! : ''
+)
+const selectedTemplate = computed(() => (props.board.templates ?? []).find(template => template.id === selectedTemplateId.value))
+// A selected template can name the card, so the title is only required without one.
+const resolvedTitle = computed(() => title.value.trim() || selectedTemplate.value?.name || '')
+
 function confirm() {
-  const t = title.value.trim()
-  if (!t || !selectedColumnId.value) return
-  emit('confirm', t, selectedColumnId.value)
+  if (!resolvedTitle.value || !selectedColumnId.value) return
+  emit('confirm', resolvedTitle.value, selectedColumnId.value, selectedTemplateId.value || undefined)
 }
 
 function onKeydown(e: KeyboardEvent) {
@@ -48,7 +59,7 @@ function onKeydown(e: KeyboardEvent) {
         v-model="title"
         type="text"
         class="kadd-title-input tw:box-border tw:w-full tw:h-9 tw:px-2.5 tw:rounded-[calc(7px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--input-bg) tw:text-content-primary tw:text-sm tw:outline-none tw:transition-colors tw:duration-[120ms] tw:focus:border-accent tw:placeholder:text-content-muted"
-        :placeholder="t('kanban.modal.titlePlaceholder')"
+        :placeholder="selectedTemplate?.name ?? t('kanban.modal.titlePlaceholder')"
         autofocus
         @keydown="onKeydown"
       />
@@ -61,6 +72,17 @@ function onKeydown(e: KeyboardEvent) {
           :options="columnOptions"
           :min-width="'100%'"
           @update:model-value="selectedColumnId = $event"
+        />
+      </div>
+
+      <!-- Template picker -->
+      <div v-if="board.templates?.length" class="kadd-field tw:flex tw:flex-col tw:gap-[5px]">
+        <span class="kadd-field__label tw:text-[11px] tw:font-semibold tw:tracking-[0.05em] tw:text-content-muted tw:uppercase">{{ t('kanban.modal.template') }}</span>
+        <NvSelect
+          v-model="selectedTemplateId"
+          :options="templateOptions"
+          :min-width="'100%'"
+          :aria-label="t('kanban.modal.template')"
         />
       </div>
     </div>
@@ -76,7 +98,7 @@ function onKeydown(e: KeyboardEvent) {
       <button
         type="button"
         class="kadd-btn kadd-btn--primary tw:inline-flex tw:h-[30px] tw:items-center tw:gap-[5px] tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-accent tw:px-3 tw:text-[12.5px] tw:text-white tw:cursor-pointer tw:transition-opacity tw:duration-100 tw:hover:opacity-88 tw:disabled:cursor-not-allowed tw:disabled:opacity-45"
-        :disabled="!title.trim()"
+        :disabled="!resolvedTitle"
         @click="confirm"
       >
         {{ t('kanban.modal.add') }}

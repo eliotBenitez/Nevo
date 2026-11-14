@@ -26,6 +26,7 @@ export interface KanbanBoardUpdate {
   viewSettings?: KanbanBoard['viewSettings']
   wip?: KanbanBoard['wip']
   automations?: KanbanBoard['automations']
+  templates?: KanbanBoard['templates']
 }
 
 export interface KanbanCardUpdate {

@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
 import { computed, ref, toRaw } from 'vue'
-import type { KanbanBoard, KanbanCard, KanbanPropertyDef, KanbanAutomation, KanbanLink, KanbanPropertyOption, KanbanCardField, KanbanBoardCardViewSettings } from '../types/kanban'
+import type { KanbanBoard, KanbanCard, KanbanPropertyDef, KanbanAutomation, KanbanLink, KanbanPropertyOption, KanbanCardField, KanbanBoardCardViewSettings, KanbanTemplate } from '../types/kanban'
 import type { KanbanBoardUpdate } from '../core/workspace-backend/types'
 import { useWorkspaceStore } from './workspace'
 import { getBoardColumns, getCardStatusValue, normalizeBoard, normalizeCard, normalizeViewSettings, serializeCardProperties } from '../features/databases/kanban/kanbanFields'
+import { templateCardUpdates } from '../features/databases/kanban/kanbanTemplates'
 import { createAutomationRunner } from './kanbanAutomationRunner'
 import { appLogger } from '../utils/logger'
 
@@ -278,7 +279,7 @@ export const useKanbanStore = defineStore('kanban', () => {
   const boardMetaQueues = new Map<string, Promise<void>>()
   const boardMetaPending = new Map<string, number>()
 
-  async function persistBoardMeta(boardId: string, patch: (board: KanbanBoard) => Pick<KanbanBoardUpdate, 'wip' | 'automations'>) {
+  async function persistBoardMeta(boardId: string, patch: (board: KanbanBoard) => Pick<KanbanBoardUpdate, 'wip' | 'automations' | 'templates'>) {
     const board = boards.value.get(boardId)
     if (!board) return
     const updates = patch(board)
@@ -299,6 +300,7 @@ export const useKanbanStore = defineStore('kanban', () => {
           const reverted = { ...current }
           if ('wip' in updates && toRaw(current.wip) === updates.wip) reverted.wip = board.wip
           if ('automations' in updates && toRaw(current.automations) === updates.automations) reverted.automations = board.automations
+          if ('templates' in updates && toRaw(current.templates) === updates.templates) reverted.templates = board.templates
           boards.value.set(boardId, reverted)
         }
         boardSaveError.value = formatKanbanError(error, 'Failed to save board.')
@@ -338,6 +340,25 @@ export const useKanbanStore = defineStore('kanban', () => {
 
   function deleteAutomation(boardId: string, automationId: string) {
     return persistBoardMeta(boardId, board => ({ automations: (board.automations ?? []).filter(a => a.id !== automationId) }))
+  }
+
+  function addTemplate(boardId: string, template: KanbanTemplate) {
+    return persistBoardMeta(boardId, board => ({ templates: [...(board.templates ?? []), template] }))
+  }
+
+  function deleteTemplate(boardId: string, templateId: string) {
+    return persistBoardMeta(boardId, board => ({ templates: (board.templates ?? []).filter(t => t.id !== templateId) }))
+  }
+
+  async function createCardFromTemplate(boardId: string, title: string, columnOptionId: string, templateId: string) {
+    const card = await createCard(boardId, title, columnOptionId)
+    const board = boards.value.get(boardId)
+    const template = board?.templates?.find(t => t.id === templateId)
+    if (!card || !board || !template) return card
+    const created = cards.value.get(boardId)?.find(c => c.id === card.id) ?? card
+    const updates = templateCardUpdates(board, created, template)
+    if (Object.keys(updates).length) await updateCard(boardId, card.id, updates)
+    return cards.value.get(boardId)?.find(c => c.id === card.id) ?? card
   }
 
   async function persistCardLinks(boardId: string, cardId: string, nextLinks: KanbanLink[]) {
@@ -388,7 +409,7 @@ export const useKanbanStore = defineStore('kanban', () => {
     loadBoards, createBoard, updateBoard, updateBoardViewSettings, saveSchema, updateBoardColumns, deleteBoard,
     loadCards, createCard, updateCard, moveCard, deleteCard,
     openCard, closeCard,
-    setWipCap, runDueDateAutomations, addAutomation, updateAutomation, deleteAutomation, linkCards, unlinkCards,
+    setWipCap, runDueDateAutomations, addAutomation, updateAutomation, deleteAutomation, addTemplate, deleteTemplate, createCardFromTemplate, linkCards, unlinkCards,
   }
 })
 

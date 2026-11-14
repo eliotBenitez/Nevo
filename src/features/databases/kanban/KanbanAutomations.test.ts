@@ -3,7 +3,7 @@ import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import KanbanAutomations from './KanbanAutomations.vue'
-import type { KanbanAutomation, KanbanBoard, KanbanCard } from '../../../types/kanban'
+import type { KanbanAutomation, KanbanBoard, KanbanCard, KanbanTemplate } from '../../../types/kanban'
 import enMessages from '../../../locales/en.json'
 
 function makeBoard(enabled: boolean): KanbanBoard {
@@ -51,7 +51,7 @@ describe('KanbanAutomations', () => {
 
   it('shows column names instead of ids and emits delete', async () => {
     const wrapper = mountModal(columnBoard())
-    expect(wrapper.text()).toContain('status → Review')
+    expect(wrapper.text()).toContain('a card enters Review')
     expect(wrapper.text()).toContain('move to To do')
     expect(wrapper.text()).not.toContain('col-2')
     await wrapper.get('.ka-rule__delete').trigger('click')
@@ -116,6 +116,50 @@ describe('KanbanAutomations', () => {
     const [automation] = wrapper.emitted('add-automation')![0] as [KanbanAutomation]
     expect(automation).toMatchObject({ trigger: 'due_date_near', triggerValue: '5', dateField: 'Due', action: 'notify', enabled: true })
     expect(automation.actionValue).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it('shows the templates empty state, then emits use and delete for a saved template', async () => {
+    const empty = mountModal(columnBoard())
+    expect(empty.text()).toContain('No templates yet')
+    empty.unmount()
+
+    const board = { ...columnBoard(), templates: [{ id: 't1', name: 'Bug report', icon: 'B', card: { fields: [] } }] }
+    const wrapper = mountModal(board)
+    expect(wrapper.text()).toContain('Bug report')
+    expect(wrapper.text()).toContain('No fields')
+    await wrapper.get('.ka-template__use').trigger('click')
+    expect(wrapper.emitted('use-template')).toEqual([['t1']])
+    await wrapper.get('.ka-template__delete').trigger('click')
+    expect(wrapper.emitted('delete-template')).toEqual([['t1']])
+    wrapper.unmount()
+  })
+
+  it('saves a card as a template named after it', async () => {
+    const i18n = createI18n({ legacy: false, locale: 'en', messages: { en: enMessages } })
+    const cards = [{ id: 'c1', title: 'Fix login', icon: '🐞', content: { type: 'doc', content: [] }, properties: {}, fields: [] }] as unknown as KanbanCard[]
+    const wrapper = mount(KanbanAutomations, {
+      props: { board: columnBoard(), cards },
+      attachTo: document.body,
+      global: { plugins: [i18n], stubs: { NvModal: { template: '<div><slot /></div>' } } },
+    })
+    await wrapper.get('.ka-templates__save-as').trigger('click')
+    expect((wrapper.get('.ka-templates__name').element as HTMLInputElement).value).toBe('Fix login')
+    await wrapper.get('.ka-templates__form').trigger('submit')
+    const [template] = wrapper.emitted('save-template')![0] as [KanbanTemplate]
+    expect(template).toMatchObject({ name: 'Fix login', icon: '🐞' })
+    wrapper.unmount()
+  })
+
+  it('lists dependencies from card links', () => {
+    const link = (id: string, links: KanbanCard['links']) => ({ id, title: id.toUpperCase(), links, fields: [] }) as unknown as KanbanCard
+    const i18n = createI18n({ legacy: false, locale: 'en', messages: { en: enMessages } })
+    const wrapper = mount(KanbanAutomations, {
+      props: { board: columnBoard(), cards: [link('a', [{ cardId: 'b', kind: 'blocks' }]), link('b', [])] },
+      global: { plugins: [i18n], stubs: { NvModal: { template: '<div><slot /></div>' } } },
+    })
+    expect(wrapper.get('.ka-dep').text()).toBe('A blocks B')
+    expect(wrapper.text()).not.toContain('No dependencies tracked yet')
     wrapper.unmount()
   })
 })

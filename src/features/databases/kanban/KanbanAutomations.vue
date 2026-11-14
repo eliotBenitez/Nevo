@@ -5,12 +5,15 @@ import { Zap, Plus, Trash2 } from '../../../ui/icons'
 import type { KanbanBoard, KanbanAutomation, KanbanCard, KanbanTemplate } from '../../../types/kanban'
 import NvModal from '../../../ui/primitives/NvModal.vue'
 import KanbanAutomationRuleForm from './KanbanAutomationRuleForm.vue'
+import KanbanDependencyList from './KanbanDependencyList.vue'
+import KanbanTemplatesSection from './KanbanTemplatesSection.vue'
 import { formatAutomationAction, formatAutomationTrigger } from './kanbanAutomationLabels'
 import { weeklyRunCount } from './kanbanAutomations'
 
 interface Props {
   board: KanbanBoard
   cards?: KanbanCard[]
+  activeCardId?: string | null
 }
 
 const props = defineProps<Props>()
@@ -19,29 +22,13 @@ const emit = defineEmits<{
   'toggle-automation': [id: string, enabled: boolean]
   'add-automation': [automation: KanbanAutomation]
   'delete-automation': [id: string]
+  'save-template': [template: KanbanTemplate]
+  'delete-template': [id: string]
+  'use-template': [id: string]
 }>()
 const { t } = useI18n()
 
 const automations = computed<KanbanAutomation[]>(() => props.board.automations ?? [])
-
-const DEFAULT_TEMPLATES = [
-  { id: 't1', key: 'engineeringTicket', icon: '✦', shortcut: '⌘1' },
-  { id: 't2', key: 'designReview', icon: '◐', shortcut: '⌘2' },
-  { id: 't3', key: 'weeklyRetro', icon: '◇', shortcut: '⌘3' },
-  { id: 't4', key: 'bugReport', icon: '◑', shortcut: '⌘4' },
-]
-
-const templates = computed<KanbanTemplate[]>(() =>
-  (props.board.templates ?? []).length
-    ? props.board.templates!
-    : DEFAULT_TEMPLATES.map(template => ({
-      id: template.id,
-      icon: template.icon,
-      shortcut: template.shortcut,
-      name: t(`kanban.automations.templatesData.${template.key}.name`),
-      description: t(`kanban.automations.templatesData.${template.key}.description`),
-    }))
-)
 
 function toggleAutomation(automation: KanbanAutomation) {
   emit('toggle-automation', automation.id, !automation.enabled)
@@ -68,15 +55,6 @@ const triggerHue: Record<string, string> = {
   status_change: 'oklch(0.7 0.10 145)',
   due_date_near: 'oklch(0.7 0.13 22)',
 }
-
-// Dependency graph nodes for illustration
-const depNodes = computed(() => {
-  const cards = [] as { id: string; title: string; x: number; y: number; hero?: boolean; blocker?: boolean }[]
-  // No real dep data yet — show placeholder
-  return cards
-})
-
-const selectedTemplate = ref<string | null>(null)
 </script>
 
 <template>
@@ -149,60 +127,16 @@ const selectedTemplate = ref<string | null>(null)
         </div>
       </div>
 
-      <!-- Dependency graph section -->
-      <div class="ka-section tw:flex tw:flex-col tw:gap-2 tw:overflow-hidden tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle">
-        <div class="ka-section__head tw:flex tw:items-center tw:gap-2 tw:bg-[var(--hover,var(--surface-overlay))] tw:px-3.5 tw:py-[11px]">
-          <span class="ka-section__title tw:text-[10.5px] tw:font-semibold tw:tracking-[0.06em] tw:text-content-muted tw:uppercase">{{ t('kanban.automations.depGraph') }}</span>
-        </div>
-        <div class="ka-dep-area tw:flex tw:min-h-20 tw:items-center tw:justify-center">
-          <div v-if="!depNodes.length" class="ka-empty ka-empty--compact tw:flex tw:flex-col tw:gap-1 tw:p-4 tw:text-center">
-            <div class="ka-empty-title tw:text-[13px] tw:font-[550] tw:text-content-secondary">{{ t('kanban.automations.noDeps') }}</div>
-            <div class="ka-empty-hint tw:mx-auto tw:max-w-[320px] tw:text-[11.5px] tw:leading-[1.5] tw:text-content-muted">{{ t('kanban.automations.noDepsHint') }}</div>
-          </div>
-        </div>
-      </div>
+      <KanbanDependencyList :cards="cards ?? []" />
 
-      <!-- Templates section -->
-      <div class="ka-section tw:flex tw:flex-col tw:gap-2 tw:overflow-hidden tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle">
-        <div class="ka-section__head tw:flex tw:items-center tw:gap-2 tw:bg-[var(--hover,var(--surface-overlay))] tw:px-3.5 tw:py-[11px]">
-          <span class="ka-section__title tw:text-[10.5px] tw:font-semibold tw:tracking-[0.06em] tw:text-content-muted tw:uppercase">{{ t('kanban.automations.templates') }}</span>
-          <div class="ka-section__spacer tw:flex-1" />
-          <button type="button" class="nv-btn ka-section__action tw:inline-flex tw:h-6 tw:items-center tw:gap-1 tw:px-2 tw:text-[11px] tw:text-[var(--text-muted,var(--text-secondary))]">
-            <Plus :size="10" /> {{ t('kanban.automations.saveAs') }}
-          </button>
-        </div>
-
-        <div class="ka-templates-grid tw:grid tw:grid-cols-2 tw:gap-2 tw:px-3.5 tw:py-2.5">
-          <div
-            v-for="tmpl in templates"
-            :key="tmpl.id"
-            class="ka-template tw:flex tw:items-center tw:gap-2.5 tw:rounded-[calc(9px*var(--radius-scale,1))] tw:border tw:border-solid tw:px-3 tw:py-2.5 tw:cursor-pointer tw:transition-[border-color,background-color] tw:duration-[120ms] tw:hover:border-accent"
-            :class="selectedTemplate === tmpl.id
-              ? 'ka-template--selected tw:border-[color-mix(in_oklab,var(--accent)_42%,transparent)] tw:bg-[var(--accent-soft,rgb(161_98_7/0.10))]'
-              : 'tw:border-transparent tw:bg-surface-subtle'"
-            @click="selectedTemplate = tmpl.id"
-          >
-            <div
-              class="ka-template__icon tw:grid tw:size-8 tw:shrink-0 tw:place-items-center tw:rounded-[calc(8px*var(--radius-scale,1))] tw:[font-family:var(--font-serif,Georgia,serif)] tw:text-sm tw:italic"
-              :class="selectedTemplate === tmpl.id ? 'ka-template__icon--selected tw:bg-accent tw:text-white' : 'tw:bg-[var(--hover-strong,var(--surface-overlay))]'"
-            >{{ tmpl.icon }}</div>
-            <div class="ka-template__info tw:min-w-0 tw:flex-1">
-              <div class="ka-template__name tw:text-[12.5px] tw:font-[550] tw:text-content-primary">{{ tmpl.name }}</div>
-              <div class="ka-template__desc tw:mt-0.5 tw:text-[10.5px] tw:text-content-muted">{{ tmpl.description }}</div>
-            </div>
-            <span v-if="tmpl.shortcut" class="ka-kbd tw:shrink-0 tw:rounded-[calc(4px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-[var(--hover-strong,var(--surface-overlay))] tw:px-1 tw:py-px tw:font-nv-mono tw:text-[10px] tw:text-content-muted">{{ tmpl.shortcut }}</span>
-          </div>
-        </div>
-
-        <div v-if="selectedTemplate" class="ka-template-action tw:flex tw:gap-1.5 tw:px-3.5 tw:py-2.5">
-          <button type="button" class="nv-btn nv-btn--primary">
-            <Plus :size="11" /> {{ t('kanban.automations.insertTemplate') }}
-          </button>
-          <button type="button" class="nv-btn" @click="selectedTemplate = null">
-            {{ t('kanban.common.cancel') }}
-          </button>
-        </div>
-      </div>
+      <KanbanTemplatesSection
+        :board="board"
+        :cards="cards ?? []"
+        :active-card-id="activeCardId"
+        @save-template="emit('save-template', $event)"
+        @delete-template="emit('delete-template', $event)"
+        @use-template="emit('use-template', $event)"
+      />
     </div>
   </NvModal>
 </template>

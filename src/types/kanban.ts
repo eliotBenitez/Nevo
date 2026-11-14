@@ -48,12 +48,19 @@ export interface KanbanAutomation {
   firedFor?: Record<string, string>
 }
 
+export interface KanbanTemplateCard {
+  icon?: string
+  content?: BlockNode
+  fields?: KanbanCardField[]
+  priority?: KanbanCardPriority
+}
+
 export interface KanbanTemplate {
   id: string
   name: string
   icon: string
-  description: string
-  shortcut?: string
+  description?: string
+  card?: KanbanTemplateCard
 }
 
 export type KanbanCardDensity = 'compact' | 'comfortable'

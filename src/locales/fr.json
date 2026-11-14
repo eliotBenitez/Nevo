@@ -3003,7 +3003,9 @@
       "addCardTitle": "Ajouter une carte",
       "titlePlaceholder": "Titre de la carte…",
       "column": "Colonne",
-      "add": "Ajouter la carte"
+      "add": "Ajouter la carte",
+      "template": "Modèle",
+      "noTemplate": "Aucun modèle"
     },
     "toolbar": {
       "filter": "Filtrer",
@@ -3089,9 +3091,21 @@
       "depGraph": "Graphe de dépendances",
       "noDeps": "Aucune dépendance suivie",
       "noDepsHint": "Liez les cartes comme « bloque » ou « bloqué par » dans la modale pour construire un graphe de dépendances.",
-      "templates": "Modèles de carte",
-      "saveAs": "Enregistrer la courante comme…",
-      "insertTemplate": "Insérer depuis un modèle",
+      "blocks": "{from} bloque {to}",
+      "templateSection": {
+        "title": "Modèles de carte",
+        "saveAs": "Enregistrer la carte comme modèle",
+        "saveAsDisabled": "Ajoutez d'abord une carte",
+        "card": "Carte",
+        "name": "Nom du modèle",
+        "save": "Enregistrer le modèle",
+        "create": "Créer une carte",
+        "delete": "Supprimer le modèle {name}",
+        "meta": "Aucun champ | 1 champ | {n} champs",
+        "withContent": "avec contenu",
+        "empty": "Aucun modèle pour l'instant",
+        "emptyHint": "Enregistrez n'importe quelle carte comme modèle pour réutiliser son contenu, ses champs et sa priorité."
+      },
       "runCount": "exécutée {n}× cette semaine",
       "triggerPrefix": "Quand",
       "deleteRule": "Supprimer la règle : {rule}",
@@ -3124,26 +3138,8 @@
       },
       "trigger": {
         "subtasksDone": "toutes les sous-tâches terminées",
-        "statusChange": "statut → {value}",
+        "statusChange": "une carte entre dans {value}",
         "dueDateNear": "échéance dans ≤ {n} j"
-      },
-      "templatesData": {
-        "engineeringTicket": {
-          "name": "Ticket d'ingénierie",
-          "description": "5 champs · sous-tâches en 3 étapes"
-        },
-        "designReview": {
-          "name": "Revue de design",
-          "description": "Couverture + checklist de critique"
-        },
-        "weeklyRetro": {
-          "name": "Rétro hebdomadaire",
-          "description": "4 questions · pré-remplies"
-        },
-        "bugReport": {
-          "name": "Rapport de bug",
-          "description": "Reproduction + env + sévérité"
-        }
       }
     },
     "groups": {

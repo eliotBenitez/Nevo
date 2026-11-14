@@ -261,6 +261,7 @@ pub async fn kanban_update_board(
     view_settings: Option<Value>,
     wip: Option<Value>,
     automations: Option<Value>,
+    templates: Option<Value>,
 ) -> Result<KanbanBoard, String> {
     tauri::async_runtime::spawn_blocking(move || {
         kanban_update_board_sync(
@@ -273,6 +274,7 @@ pub async fn kanban_update_board(
             view_settings,
             wip,
             automations,
+            templates,
         )
     })
     .await
@@ -289,6 +291,7 @@ fn kanban_update_board_sync(
     view_settings: Option<Value>,
     wip: Option<Value>,
     automations: Option<Value>,
+    templates: Option<Value>,
 ) -> Result<KanbanBoard, String> {
     validate_id(&board_id)?;
     if let Some(w) = &wip {
@@ -296,6 +299,9 @@ fn kanban_update_board_sync(
     }
     if let Some(a) = &automations {
         validate_automations(a)?;
+    }
+    if let Some(t) = &templates {
+        validate_templates(t)?;
     }
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
@@ -327,6 +333,9 @@ fn kanban_update_board_sync(
     }
     if automations.is_some() {
         board.automations = automations;
+    }
+    if templates.is_some() {
+        board.templates = templates;
     }
     board.updated_at = Utc::now().to_rfc3339();
 
@@ -360,6 +369,22 @@ fn validate_automations(automations: &Value) -> Result<(), String> {
         Ok(())
     } else {
         Err("each automation needs string id, trigger, action and a boolean enabled".into())
+    }
+}
+
+/// Templates: an array of `{ id: string, name: string, card?: object, .. }`.
+fn validate_templates(templates: &Value) -> Result<(), String> {
+    let list = templates.as_array().ok_or("templates must be an array")?;
+    let valid = list.iter().all(|template| {
+        ["id", "name"]
+            .iter()
+            .all(|key| template.get(key).is_some_and(Value::is_string))
+            && template.get("card").is_none_or(Value::is_object)
+    });
+    if valid {
+        Ok(())
+    } else {
+        Err("each template needs a string id and name, and an object card".into())
     }
 }
 
@@ -828,6 +853,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         )
         .is_err());
         assert!(kanban_create_card_sync(
@@ -961,6 +987,7 @@ mod tests {
             None,
             wip,
             automations,
+            None,
         )
     }
 
@@ -983,6 +1010,7 @@ mod tests {
             ws.clone(),
             board.id.clone(),
             Some("Renamed".into()),
+            None,
             None,
             None,
             None,
@@ -1045,6 +1073,57 @@ mod tests {
             serde_json::json!([{ "id": 1, "trigger": "t", "action": "x", "enabled": true }]),
         ] {
             assert!(update_board_meta(&ws, &board.id, None, Some(automations)).is_err());
+        }
+        assert_eq!(
+            std::fs::read_to_string(board_path(&ws, &board.id)).unwrap(),
+            before
+        );
+
+        std::fs::remove_dir_all(&base).ok();
+    }
+
+    #[test]
+    fn update_board_persists_templates() {
+        let base = std::env::temp_dir().join(format!("nevo-kanban-tpl-{}", Uuid::new_v4()));
+        let workspace = base.join("workspace");
+        std::fs::create_dir_all(&workspace).unwrap();
+        let ws = workspace.to_string_lossy().into_owned();
+        let board = kanban_create_board_sync(ws.clone(), "B".into(), "K".into(), None).unwrap();
+
+        let templates = serde_json::json!([{
+            "id": "t1", "name": "Bug", "icon": "B",
+            "card": { "priority": "high", "fields": [] }
+        }]);
+        let update = |templates: Option<Value>, title: Option<String>| {
+            kanban_update_board_sync(
+                ws.clone(),
+                board.id.clone(),
+                title,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                templates,
+            )
+        };
+        update(Some(templates.clone()), None).unwrap();
+        // A later update that omits them keeps them.
+        update(None, Some("Renamed".into())).unwrap();
+
+        let listed = kanban_list_boards_sync(ws.clone()).unwrap();
+        let stored = listed.iter().find(|b| b.id == board.id).unwrap();
+        assert_eq!(stored.templates.as_ref(), Some(&templates));
+
+        let before = std::fs::read_to_string(board_path(&ws, &board.id)).unwrap();
+        for bad in [
+            serde_json::json!({ "id": "t" }),
+            serde_json::json!([{ "id": "t" }]),
+            serde_json::json!([{ "id": 1, "name": "n" }]),
+            serde_json::json!([{ "id": "t", "name": "n", "card": "x" }]),
+        ] {
+            assert!(update(Some(bad), None).is_err());
         }
         assert_eq!(
             std::fs::read_to_string(board_path(&ws, &board.id)).unwrap(),
