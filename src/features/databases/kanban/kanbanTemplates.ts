@@ -7,13 +7,13 @@ const jsonClone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
 // The status column is deliberately not captured: a template never decides where its card lands.
 export function createTemplateFromCard(card: KanbanCard, name: string): KanbanTemplate {
-  const icon = card.icon || '📄'
   return {
     id: createKanbanId(),
     name,
-    icon,
+    // The fallback only labels the template tile; a card without an icon stays without one.
+    icon: card.icon || '📄',
     card: {
-      icon,
+      icon: card.icon || undefined,
       content: jsonClone(card.content),
       fields: cloneCardFields(card),
       priority: card.priority,

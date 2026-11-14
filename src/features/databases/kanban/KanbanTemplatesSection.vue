@@ -97,6 +97,7 @@ function meta(template: KanbanTemplate): string {
         type="text"
         class="ka-templates__name tw:box-border tw:h-8 tw:w-full tw:rounded-[calc(7px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--input-bg) tw:px-2.5 tw:text-[13px] tw:text-content-primary tw:outline-none tw:focus:border-accent"
         @input="nameEdited = true"
+        @keydown.enter.prevent="save"
       />
       <div class="tw:flex tw:gap-1.5">
         <button type="submit" class="nv-btn nv-btn--primary" :disabled="!name.trim()">{{ t('kanban.automations.templateSection.save') }}</button>

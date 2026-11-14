@@ -47,11 +47,13 @@ const { activate, deactivate } = useFocusTrap(panelRef, open)
 
 watch(() => props.open, (isOpen) => {
   if (isOpen) {
-    void nextTick(() => activate())
+    // Captured before the content mounts and may focus a control of its own.
+    const restoreTo = document.activeElement as HTMLElement | null
+    void nextTick(() => activate(restoreTo))
   } else {
     deactivate()
   }
-})
+}, { immediate: true })
 
 function onScrimClick() {
   if (props.closeOnBackdrop) emit('close')
@@ -68,7 +70,11 @@ function onDocumentKeydown(event: KeyboardEvent) {
 }
 
 onMounted(() => document.addEventListener('keydown', onDocumentKeydown))
-onBeforeUnmount(() => document.removeEventListener('keydown', onDocumentKeydown))
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onDocumentKeydown)
+  // Callers that unmount the modal with v-if never flip `open`, so focus is restored here.
+  if (props.open) deactivate()
+})
 </script>
 
 <template>

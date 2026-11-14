@@ -49,10 +49,11 @@ export function useFocusTrap(containerRef: Ref<HTMLElement | null>, active: Ref<
   onMounted(() => { document.addEventListener('keydown', onKeyDown) })
   onBeforeUnmount(() => { document.removeEventListener('keydown', onKeyDown) })
 
-  function activate() {
-    previousFocus = document.activeElement as HTMLElement | null
-    const focusable = getFocusable()
-    focusable[0]?.focus()
+  function activate(restoreTo = document.activeElement as HTMLElement | null) {
+    previousFocus = restoreTo
+    // Content that already focused its own primary control keeps that focus.
+    if (containerRef.value?.contains(document.activeElement)) return
+    getFocusable()[0]?.focus()
   }
 
   function deactivate() {

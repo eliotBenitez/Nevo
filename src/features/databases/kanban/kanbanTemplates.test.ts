@@ -24,6 +24,9 @@ describe('kanbanTemplates', () => {
     expect(template.card!.content).not.toBe(source.content)
     expect(template.card!.fields![0]).not.toBe(source.fields[0])
     expect(templateHasContent(template)).toBe(true)
+    const iconless = createTemplateFromCard({ ...source, icon: undefined }, 'Plain')
+    expect(iconless.icon).toBe('📄')
+    expect(iconless.card!.icon).toBeUndefined()
   })
 
   it('keeps the new card column in the update payload', () => {

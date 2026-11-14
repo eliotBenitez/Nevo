@@ -141,4 +141,16 @@ describe('NvModal', () => {
 
     expect(wrapper.element.ownerDocument.querySelector('.nv-modal__panel')?.contains(document.activeElement)).toBe(true)
   })
+
+  it('takes focus when mounted already open and restores it on unmount', async () => {
+    const trigger = document.createElement('button')
+    document.body.appendChild(trigger)
+    trigger.focus()
+    const wrapper = mount(NvModal, { props: { open: true, title: 'Mounted open' }, global: { plugins: [i18n] }, attachTo: document.body })
+    await nextTick()
+    await nextTick()
+    expect(document.querySelector('.nv-modal__panel')?.contains(document.activeElement)).toBe(true)
+    wrapper.unmount()
+    expect(document.activeElement).toBe(trigger)
+  })
 })
