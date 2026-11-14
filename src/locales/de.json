@@ -2882,6 +2882,7 @@
       "boardNotFound": "Board nicht gefunden.",
       "boardUnavailable": "Board ist nicht verfügbar.",
       "moveFailed": "Verschieben fehlgeschlagen: {message}",
+      "saveBoardFailed": "Board konnte nicht gespeichert werden: {message}",
       "cardCount": "{cards} Karte | {cards} Karten",
       "openAutomations": "Automatisierungen",
       "emptyTitle": "Ein leeres Board.",

@@ -128,6 +128,8 @@ function startWipEdit() {
 function submitWip() {
   if (!isEditingWip.value) return
   isEditingWip.value = false
+  // Unparseable text ('-', 'e') reads as '' from a number input; it must not clear the cap.
+  if (wipInputRef.value?.validity.badInput) return
   const raw = String(draftWip.value).trim()
   // Empty clears the cap; anything that is not a non-negative integer is ignored.
   const cap = raw === '' ? null : Number(raw)

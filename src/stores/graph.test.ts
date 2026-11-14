@@ -187,4 +187,33 @@ describe('useGraphStore.loadNoteGraph backlink enrichment', () => {
     expect(graphStore.activeNoteId).toBe('b')
     expect(graphStore.outlinks).toEqual([])
   })
+  it('keeps the newest outlinks when an older same-note request resolves last', async () => {
+    openLocalWorkspace([])
+    const graphStore = useGraphStore()
+    graphStore.activeNoteId = 'a'
+    const resolvers: Array<(edges: GraphEdge[]) => void> = []
+    mockBackend.graphGetBacklinks.mockResolvedValue([])
+    mockBackend.graphGetOutlinks.mockImplementation(() => new Promise(resolve => { resolvers.push(resolve) }))
+
+    const older = graphStore.refreshActiveNote()
+    const newer = graphStore.refreshOutlinks('a')
+    await Promise.resolve()
+    resolvers[1]([{ source: 'a', target: 'new', kind: 'link' }])
+    await newer
+    resolvers[0]([{ source: 'a', target: 'old', kind: 'link' }])
+    await older
+
+    expect(graphStore.outlinks).toEqual([{ source: 'a', target: 'new', kind: 'link' }])
+  })
+
+  it('skips the refresh after a save whose internal links did not change', async () => {
+    openLocalWorkspace([])
+    const graphStore = useGraphStore()
+    graphStore.activeNoteId = 'a'
+    const content = (text: string) => ({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] })
+
+    await graphStore.refreshOutlinks('a', content('one'))
+    await graphStore.refreshOutlinks('a', content('two'))
+    expect(mockBackend.graphGetOutlinks).toHaveBeenCalledOnce()
+  })
 })

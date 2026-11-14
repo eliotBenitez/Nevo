@@ -347,7 +347,7 @@ export const useNoteStore = defineStore('note', () => {
         return
       }
       // The save re-indexed this note's links on the backend.
-      void useGraphStore().refreshOutlinks(note.id)
+      void useGraphStore().refreshOutlinks(note.id, note.content)
 
       if (committedRevision >= dirtyRevision.value && isSameDraft(activeNote.value, note)) {
         activeNote.value = keepContentRaw(note)

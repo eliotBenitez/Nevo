@@ -2882,6 +2882,7 @@
       "boardNotFound": "Tableau introuvable.",
       "boardUnavailable": "Le tableau est indisponible.",
       "moveFailed": "Échec du déplacement : {message}",
+      "saveBoardFailed": "Impossible d’enregistrer le tableau : {message}",
       "cardCount": "{cards} carte | {cards} cartes",
       "openAutomations": "Automatisations",
       "emptyTitle": "Un tableau vide.",

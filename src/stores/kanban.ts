@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, toRaw } from 'vue'
 import type { KanbanBoard, KanbanCard, KanbanPropertyDef, KanbanAutomation, KanbanLink, KanbanPropertyOption, KanbanCardField, KanbanBoardCardViewSettings } from '../types/kanban'
 import type { KanbanBoardUpdate } from '../core/workspace-backend/types'
 import { useWorkspaceStore } from './workspace'
@@ -16,6 +16,7 @@ export const useKanbanStore = defineStore('kanban', () => {
   const activeCardId = ref<string | null>(null)
   const isLoading = ref(false)
   const boardsError = ref<string | null>(null)
+  const boardSaveError = ref<string | null>(null)
   const cardsError = ref<string | null>(null)
   const moveError = ref<string | null>(null)
   const cardsSaving = ref(false)
@@ -272,6 +273,11 @@ export const useKanbanStore = defineStore('kanban', () => {
   }
 
   // Optimistically applies a wip/automations change, persists it, and rolls back on failure.
+  // One save at a time per board: each patch is computed from the optimistic
+  // board, so a queued save already carries every earlier change.
+  const boardMetaQueues = new Map<string, Promise<void>>()
+  const boardMetaPending = new Map<string, number>()
+
   async function persistBoardMeta(boardId: string, patch: (board: KanbanBoard) => Pick<KanbanBoardUpdate, 'wip' | 'automations'>) {
     const board = boards.value.get(boardId)
     if (!board) return
@@ -279,14 +285,29 @@ export const useKanbanStore = defineStore('kanban', () => {
     boards.value.set(boardId, { ...board, ...updates })
     const backend = workspaceStore.backend
     if (!backend) return
-    try {
-      const saved = await backend.kanbanUpdateBoard(boardId, updates)
-      boards.value.set(saved.id, normalizeBoard(saved))
-    } catch (error) {
-      const current = boards.value.get(boardId)
-      if (current) boards.value.set(boardId, { ...current, wip: board.wip, automations: board.automations })
-      boardsError.value = formatKanbanError(error, 'Failed to save board.')
-    }
+    boardMetaPending.set(boardId, (boardMetaPending.get(boardId) ?? 0) + 1)
+    const run = (boardMetaQueues.get(boardId) ?? Promise.resolve()).then(async () => {
+      try {
+        // Only the last queued save adopts the server copy; an earlier one would hide newer optimistic edits.
+        if (boardMetaPending.get(boardId) === 1) await updateBoard(boardId, updates)
+        else await backend.kanbanUpdateBoard(boardId, updates)
+        boardSaveError.value = null
+      } catch (error) {
+        // Roll back only fields this call set and no later call replaced.
+        const current = boards.value.get(boardId)
+        if (current) {
+          const reverted = { ...current }
+          if ('wip' in updates && toRaw(current.wip) === updates.wip) reverted.wip = board.wip
+          if ('automations' in updates && toRaw(current.automations) === updates.automations) reverted.automations = board.automations
+          boards.value.set(boardId, reverted)
+        }
+        boardSaveError.value = formatKanbanError(error, 'Failed to save board.')
+      } finally {
+        boardMetaPending.set(boardId, (boardMetaPending.get(boardId) ?? 1) - 1)
+      }
+    })
+    boardMetaQueues.set(boardId, run)
+    await run
   }
 
   const { runAutomations, runDueDateAutomations } = createAutomationRunner({
@@ -361,7 +382,7 @@ export const useKanbanStore = defineStore('kanban', () => {
   }
 
   return {
-    boards, cards, activeBoardId, activeCardId, isLoading, boardsError, cardsError, moveError, cardsSaving,
+    boards, cards, activeBoardId, activeCardId, isLoading, boardsError, boardSaveError, cardsError, moveError, cardsSaving,
     boardsList, activeBoard, activeCard,
     columnsForBoard, cardsForColumn,
     loadBoards, createBoard, updateBoard, updateBoardViewSettings, saveSchema, updateBoardColumns, deleteBoard,

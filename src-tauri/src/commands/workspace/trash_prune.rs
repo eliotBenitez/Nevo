@@ -83,6 +83,9 @@ pub(super) fn prune_expired_trash(
         }
     }
 
+    // The graph update can wait on the one-time backfill; release the
+    // manifest first, like save_note_impl.
+    drop(_guard);
     // One graph write for every expired note: already dropped on trashing;
     // idempotent cleanup for a removal that failed then.
     if let Err(message) = crate::commands::graph::remove_notes_links(workspace_path, &expired_notes)

@@ -1,4 +1,4 @@
-//! Best-effort extras: merging the archive's link-index cache, copying
+//! Best-effort extras: requesting a link-index rebuild, copying
 //! templates under fresh ids, and counting the deferred artifacts (standalone
 //! kanban boards, note snapshot history) that v1 merge does not import.
 
@@ -8,8 +8,6 @@ use serde_json::Value;
 
 use crate::commands::graph;
 use crate::commands::path_utils::write_atomic;
-
-use super::idmap::IdMaps;
 
 /// Counts artifacts the merge deliberately does not import (standalone
 /// kanban boards under `.nevo/boards/*.json`, and per-note snapshot history
@@ -56,98 +54,21 @@ fn default_graph_index() -> Value {
     serde_json::json!({ "forward": {}, "backward": {} })
 }
 
-fn remap_edge(edge: &Value, maps: &IdMaps) -> Option<Value> {
-    let object = edge.as_object()?;
-    let target = object.get("target")?.as_str()?;
-    let new_target = maps.notes.get(target)?;
-    let mut next = object.clone();
-    next.insert("target".to_string(), Value::String(new_target.clone()));
-    if let Some(source) = object.get("source").and_then(Value::as_str) {
-        if let Some(new_source) = maps.notes.get(source) {
-            next.insert("source".to_string(), Value::String(new_source.clone()));
-        }
-    }
-    Some(Value::Object(next))
-}
-
-fn remap_backlink(backlink: &Value, maps: &IdMaps) -> Option<Value> {
-    let object = backlink.as_object()?;
-    let source_id = object.get("sourceId")?.as_str()?;
-    let new_source_id = maps.notes.get(source_id)?;
-    let mut next = object.clone();
-    next.insert("sourceId".to_string(), Value::String(new_source_id.clone()));
-    Some(Value::Object(next))
-}
-
-fn merge_edge_map(
-    source: &Value,
-    dest: &mut Value,
-    key: &str,
-    maps: &IdMaps,
-    remap: impl Fn(&Value, &IdMaps) -> Option<Value>,
-) {
-    let Some(entries) = source.get(key).and_then(Value::as_object) else {
-        return;
-    };
-    let Some(dest_map) = dest.as_object_mut().and_then(|obj| {
-        obj.entry(key)
-            .or_insert_with(|| Value::Object(Default::default()))
-            .as_object_mut()
-    }) else {
-        return;
-    };
-
-    for (old_note_id, values) in entries {
-        let Some(new_note_id) = maps.notes.get(old_note_id) else {
-            continue;
-        };
-        let Some(values) = values.as_array() else {
-            continue;
-        };
-        let remapped: Vec<Value> = values
-            .iter()
-            .filter_map(|value| remap(value, maps))
-            .collect();
-        dest_map.insert(new_note_id.clone(), Value::Array(remapped));
-    }
-}
-
-fn try_merge_graph_index(
-    temp_dir: &Path,
-    current_root: &Path,
-    maps: &IdMaps,
-) -> Result<(), String> {
+/// Requests a link rebuild for the merged notes. The archive's own index is
+/// not copied: the rebuild re-reads every manifest note's links from
+/// note.json and replaces whatever edges were there.
+fn try_reset_graph_index(current_root: &Path) -> Result<(), String> {
     // Same lock as note saves, which also rewrite graph.json.
     let workspace = graph::normalized_workspace(&current_root.to_string_lossy())?;
     let lock = graph::graph_lock(&workspace);
     let mut slot = lock.lock().map_err(|error| error.to_string())?;
     slot.invalidate();
 
-    let source_path = temp_dir.join(".nevo").join("index").join("graph.json");
-    // A missing or unreadable archive index still resets the flag below.
-    let source: Option<Value> = std::fs::read_to_string(&source_path)
-        .ok()
-        .and_then(|raw| serde_json::from_str(&raw).ok());
-
     let dest_path = current_root.join(".nevo").join("index").join("graph.json");
-    let mut dest: Value = if dest_path.is_file() {
-        std::fs::read_to_string(&dest_path)
-            .ok()
-            .and_then(|raw| serde_json::from_str(&raw).ok())
-            .unwrap_or_else(default_graph_index)
-    } else {
-        default_graph_index()
-    };
-
-    // Edges/backlinks whose target/source falls outside the imported note-id
-    // map are dropped rather than left dangling — `remap_edge`/`remap_backlink`
-    // return `None` for those and `merge_edge_map` filters them out.
-    if let Some(source) = &source {
-        merge_edge_map(source, &mut dest, "forward", maps, remap_edge);
-        merge_edge_map(source, &mut dest, "backward", maps, remap_backlink);
-    }
-    // The archive's index may be missing or predate link backfill; rebuild
-    // from note.json on next read.
+    let mut dest: Value = std::fs::read_to_string(&dest_path)
+        .ok()
+        .and_then(|raw| serde_json::from_str(&raw).ok())
+        .unwrap_or_else(default_graph_index);
     if let Some(dest) = dest.as_object_mut() {
         dest.insert("linksBackfilled".to_string(), Value::Bool(false));
     }
@@ -159,12 +80,10 @@ fn try_merge_graph_index(
     write_atomic(&dest_path, &serialized).map_err(|error| error.to_string())
 }
 
-/// Merges `.nevo/index/graph.json` into the current workspace's copy,
-/// remapping every note id it references. Best-effort: the graph index is a
-/// derived cache the app can rebuild, so a failure here is swallowed rather
-/// than aborting the whole merge.
-pub(super) fn merge_graph_index(temp_dir: &Path, current_root: &Path, maps: &IdMaps) {
-    let _ = try_merge_graph_index(temp_dir, current_root, maps);
+/// Best-effort: the graph index is a derived cache the app can rebuild, so a
+/// failure here is swallowed rather than aborting the whole merge.
+pub(super) fn reset_graph_index(current_root: &Path) {
+    let _ = try_reset_graph_index(current_root);
 }
 
 fn copy_one_template(source_path: &Path, dest_dir: &Path) -> Result<(), String> {
@@ -204,7 +123,7 @@ pub(super) fn copy_templates(temp_dir: &Path, current_root: &Path) {
 
 #[cfg(test)]
 mod tests {
-    use super::{try_merge_graph_index, IdMaps};
+    use super::try_reset_graph_index;
 
     #[test]
     fn merge_without_an_archive_index_still_requests_a_link_backfill() {
@@ -219,7 +138,7 @@ mod tests {
         )
         .unwrap();
 
-        try_merge_graph_index(&archive, &current, &IdMaps::default()).unwrap();
+        try_reset_graph_index(&current).unwrap();
 
         let raw = std::fs::read_to_string(current.join(".nevo/index/graph.json")).unwrap();
         let index: serde_json::Value = serde_json::from_str(&raw).unwrap();

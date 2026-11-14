@@ -2,6 +2,9 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::Path;
+use std::sync::{Arc, Mutex, OnceLock};
+
+use dashmap::DashMap;
 use uuid::Uuid;
 
 use super::kanban_paths::{
@@ -89,6 +92,19 @@ pub(crate) fn read_listed_card(path: &Path, board_id: &str) -> Option<KanbanCard
     }
 }
 
+static BOARD_LOCKS: OnceLock<DashMap<String, Arc<Mutex<()>>>> = OnceLock::new();
+
+/// Serializes read-modify-write of one board file (metadata updates, schema
+/// saves, `updated_at` touches), which otherwise race on parallel IPC threads
+/// and drop each other's changes. Expects a normalized workspace path.
+pub(crate) fn board_lock(workspace_path: &str, board_id: &str) -> Arc<Mutex<()>> {
+    BOARD_LOCKS
+        .get_or_init(DashMap::new)
+        .entry(format!("{workspace_path}\u{0}{board_id}"))
+        .or_insert_with(|| Arc::new(Mutex::new(())))
+        .clone()
+}
+
 /// Bumps a board's `updated_at` so the workspace home "recently modified"
 /// list reflects activity on its cards, not just direct board edits.
 ///
@@ -98,6 +114,8 @@ pub(crate) fn read_listed_card(path: &Path, board_id: &str) -> Option<KanbanCard
 /// command or lose the card edit.
 pub(crate) fn touch_board_updated_at(wp: &Path, board_id: &str) -> Result<(), String> {
     let workspace_path = wp.to_string_lossy().into_owned();
+    let lock = board_lock(&workspace_path, board_id);
+    let _guard = lock.lock().map_err(|error| error.to_string())?;
     validate_card_directory(&workspace_path, board_id)?;
     let path = board_path(&workspace_path, board_id);
     validate_unlinked_file(&path)?;
@@ -283,6 +301,8 @@ fn kanban_update_board_sync(
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     validate_boards_directory(&workspace_path)?;
     let path = board_path(&workspace_path, &board_id);
+    let lock = board_lock(&workspace_path, &board_id);
+    let _guard = lock.lock().map_err(|error| error.to_string())?;
     validate_unlinked_file(&path)?;
     let content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
     let mut board: KanbanBoard = serde_json::from_str(&content).map_err(|e| e.to_string())?;

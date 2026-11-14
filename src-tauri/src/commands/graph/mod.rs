@@ -1,124 +1,13 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex, OnceLock};
-
-use dashmap::DashMap;
 
 use super::path_utils::{normalize_workspace_path, validate_id, write_atomic};
 
-static GRAPH_LOCKS: OnceLock<DashMap<String, Arc<Mutex<GraphSlot>>>> = OnceLock::new();
+mod cache;
+mod extract;
 
-/// Normalized workspace path: the `graph_lock` key and the base for every
-/// manifest/note read, so IPC commands and Rust write paths share one mutex.
-pub(crate) fn normalized_workspace(workspace_path: &str) -> Result<String, String> {
-    Ok(normalize_workspace_path(workspace_path)?
-        .to_string_lossy()
-        .into_owned())
-}
-
-/// Serializes graph.json access per workspace and guards its parsed cache.
-/// Expects a path from `normalized_workspace`.
-pub(crate) fn graph_lock(workspace_path: &str) -> Arc<Mutex<GraphSlot>> {
-    GRAPH_LOCKS
-        .get_or_init(DashMap::new)
-        .entry(workspace_path.to_string())
-        .or_insert_with(|| Arc::new(Mutex::new(GraphSlot::default())))
-        .clone()
-}
-
-/// Drops every parsed index when the user opens a workspace, so only the one
-/// in use is re-read and kept resident. A busy slot is skipped, never waited on.
-pub(crate) fn evict_cached_indexes() {
-    let Some(locks) = GRAPH_LOCKS.get() else {
-        return;
-    };
-    for entry in locks.iter() {
-        if let Ok(mut slot) = entry.value().try_lock() {
-            slot.invalidate();
-        }
-    }
-}
-
-type FileStamp = Option<(std::time::SystemTime, u64)>;
-
-fn file_stamp(path: &std::path::Path) -> FileStamp {
-    let meta = std::fs::metadata(path).ok()?;
-    Some((meta.modified().ok()?, meta.len()))
-}
-
-struct CachedIndex {
-    path: std::path::PathBuf,
-    stamp: FileStamp,
-    index: GraphIndex,
-}
-
-/// The parsed graph.json, so autosave does not re-parse the whole workspace
-/// index on every save. Re-read whenever the file's mtime/size differs from
-/// the last read or write here. A failed write by an update drops the cache
-/// (`save_or_invalidate`) so the next update retries from disk; only the
-/// backfill read path keeps its unsaved rebuild in memory, to avoid rescanning
-/// every note on each read of an unwritable workspace. `live` caches the
-/// manifest's note ids the same way, keyed by workspace.json's stamp.
-#[derive(Default)]
-pub(crate) struct GraphSlot {
-    index: Option<CachedIndex>,
-    live: Option<(FileStamp, HashSet<String>)>,
-}
-
-impl GraphSlot {
-    fn index_mut(&mut self, workspace_path: &str) -> Result<&mut GraphIndex, String> {
-        let path = index_path(workspace_path)?;
-        // Stat before reading: a write racing the read leaves a stale stamp,
-        // which only forces another re-read.
-        let stamp = file_stamp(&path);
-        let fresh =
-            matches!(&self.index, Some(cached) if cached.path == path && cached.stamp == stamp);
-        if !fresh {
-            let index = load_index(workspace_path)?;
-            self.index = Some(CachedIndex { path, stamp, index });
-        }
-        self.index
-            .as_mut()
-            .map(|cached| &mut cached.index)
-            .ok_or_else(|| "Graph index cache is empty".to_string())
-    }
-
-    fn save(&mut self) -> Result<(), String> {
-        let Some(cached) = self.index.as_mut() else {
-            return Ok(());
-        };
-        save_index(&cached.path, &cached.index)?;
-        cached.stamp = file_stamp(&cached.path);
-        Ok(())
-    }
-
-    /// Refreshes the live note ids, re-parsing workspace.json only when its
-    /// mtime/size changed. On a read failure the set is dropped.
-    fn refresh_live(&mut self, workspace_path: &str) -> Result<(), String> {
-        let stamp = file_stamp(&std::path::Path::new(workspace_path).join(".nevo/workspace.json"));
-        if stamp.is_some() && matches!(&self.live, Some((cached, _)) if *cached == stamp) {
-            return Ok(());
-        }
-        self.live = None;
-        let manifest = super::folder::load_manifest(workspace_path)?;
-        let ids = super::folder::manifest_note_ids(&manifest)
-            .into_iter()
-            .collect();
-        self.live = Some((stamp, ids));
-        Ok(())
-    }
-
-    #[cfg(test)]
-    fn is_empty(&self) -> bool {
-        self.index.is_none()
-    }
-
-    /// For writers that replace graph.json directly (workspace merge).
-    pub(crate) fn invalidate(&mut self) {
-        self.index = None;
-        self.live = None;
-    }
-}
+pub(crate) use cache::{evict_cached_indexes, graph_lock, normalized_workspace, GraphSlot};
+use extract::extract_link_edges;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -237,48 +126,6 @@ fn update_backward_for_source(
     }
 }
 
-/// Internal-link edges of a note body: only text nodes reached through
-/// `content` count, never marks on inline atoms or JSON inside node attrs.
-/// Unresolved links (empty or invalid `noteId`) are skipped, not rejected, so
-/// one broken `[[Title]]` cannot drop the note's other edges.
-fn extract_link_edges(note_id: &str, content: &serde_json::Value) -> Vec<GraphEdge> {
-    fn walk(note_id: &str, node: &serde_json::Value, edges: &mut Vec<GraphEdge>) {
-        if node.get("type").and_then(|t| t.as_str()) == Some("text") {
-            let attrs = node
-                .get("marks")
-                .and_then(|marks| marks.as_array())
-                .and_then(|marks| {
-                    marks.iter().find(|mark| {
-                        mark.get("type").and_then(|t| t.as_str()) == Some("internal_link")
-                    })
-                })
-                .and_then(|mark| mark.get("attrs"));
-            if let Some(attrs) = attrs {
-                let target = attrs.get("noteId").and_then(|id| id.as_str());
-                if let Some(target) = target.filter(|id| validate_id(id).is_ok()) {
-                    edges.push(GraphEdge {
-                        source: note_id.to_string(),
-                        target: target.to_string(),
-                        kind: EdgeKind::Link,
-                        anchor: attrs
-                            .get("anchor")
-                            .and_then(|a| a.as_str())
-                            .map(str::to_string),
-                    });
-                }
-            }
-        }
-        if let Some(children) = node.get("content").and_then(|c| c.as_array()) {
-            children
-                .iter()
-                .for_each(|child| walk(note_id, child, edges));
-        }
-    }
-    let mut edges = Vec::new();
-    walk(note_id, content, &mut edges);
-    edges
-}
-
 fn replace_outgoing(index: &mut GraphIndex, note_id: &str, outgoing: Vec<GraphEdge>) {
     let old_outgoing = index.forward.remove(note_id).unwrap_or_default();
     update_backward_for_source(index, note_id, &old_outgoing, &outgoing);
@@ -371,7 +218,7 @@ fn with_live_index<R>(
             }),
         );
     }
-    slot.index_mut(&workspace_path)?;
+    // Still the index loaded above: nothing in between drops it.
     let GraphSlot { index, live } = &*slot;
     let index = index
         .as_ref()
@@ -768,7 +615,14 @@ mod tests {
         let path = root.to_string_lossy().into_owned();
         index_note_links(&path, "a", &linked_content(&["b"])).unwrap();
         let key = normalized_workspace(&path).unwrap();
-        assert!(!graph_lock(&key).lock().unwrap().is_empty());
+        {
+            // Fill and check under the lock: parallel tests that create a
+            // workspace evict too, but skip a busy slot.
+            let lock = graph_lock(&key);
+            let mut slot = lock.lock().unwrap();
+            slot.index_mut(&key).unwrap();
+            assert!(!slot.is_empty());
+        }
 
         evict_cached_indexes();
         assert!(graph_lock(&key).lock().unwrap().is_empty());

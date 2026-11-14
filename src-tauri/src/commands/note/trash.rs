@@ -76,6 +76,9 @@ pub fn restore_from_trash_sync(workspace_path: String, item_id: String) -> Resul
             })),
         );
 
+        // The graph update can wait on the one-time backfill; release the
+        // manifest first, like save_note_impl.
+        drop(_manifest_guard);
         // Best-effort: trashing dropped the note's outgoing edges, so a
         // restored note re-adds its own.
         if let Err(message) =
@@ -149,21 +152,6 @@ pub fn permanently_delete_from_trash_sync(
                 std::fs::remove_dir_all(snap_dir).map_err(|error| error.to_string())?;
             }
 
-            // Best-effort: already dropped on trashing; idempotent cleanup for
-            // a removal that failed then.
-            if let Err(message) = crate::commands::graph::remove_notes_links(
-                &workspace_path,
-                std::slice::from_ref(&item.id),
-            ) {
-                let _ = logger.warn(
-                    "tauri.note",
-                    "permanently_delete_from_trash",
-                    "Failed to remove note from graph index",
-                    true,
-                    note_error_context(&workspace_path, "graph", message)
-                        .with_payload(serde_json::json!({ "itemId": item.id })),
-                );
-            }
             // Best-effort: already removed on trashing via delete_note_impl,
             // but idempotent cleanup here covers any index entry that
             // survived (e.g. a failed removal at trash time).
@@ -181,6 +169,25 @@ pub fn permanently_delete_from_trash_sync(
 
         manifest.trash.remove(pos);
         save_manifest(&workspace_path, &manifest)?;
+        drop(_manifest_guard);
+        // Best-effort, outside the manifest lock (the graph update can wait on
+        // the one-time backfill): already dropped on trashing; idempotent
+        // cleanup for a removal that failed then.
+        if item.item_type == "note" {
+            if let Err(message) = crate::commands::graph::remove_notes_links(
+                &workspace_path,
+                std::slice::from_ref(&item.id),
+            ) {
+                let _ = logger.warn(
+                    "tauri.note",
+                    "permanently_delete_from_trash",
+                    "Failed to remove note from graph index",
+                    true,
+                    note_error_context(&workspace_path, "graph", message)
+                        .with_payload(serde_json::json!({ "itemId": item.id })),
+                );
+            }
+        }
         let _ = logger.info(
             "tauri.note",
             "permanently_delete_from_trash",
@@ -245,7 +252,12 @@ pub fn empty_trash_sync(workspace_path: String) -> Result<(), String> {
         }
     }
 
-    // Best-effort, one graph write: already dropped on trashing; idempotent
+    manifest.trash = retained;
+    save_manifest(&workspace_path, &manifest)?;
+    drop(_manifest_guard);
+
+    // Best-effort, one graph write, outside the manifest lock (it can wait on
+    // the one-time backfill): already dropped on trashing; idempotent
     // cleanup for a removal that failed then.
     if let Err(message) =
         crate::commands::graph::remove_notes_links(&workspace_path, &purged_note_ids)
@@ -258,9 +270,6 @@ pub fn empty_trash_sync(workspace_path: String) -> Result<(), String> {
             note_error_context(&workspace_path, "graph", message),
         );
     }
-
-    manifest.trash = retained;
-    save_manifest(&workspace_path, &manifest)?;
 
     if !errors.is_empty() {
         return Err(format!(

@@ -39,7 +39,7 @@ useFirstUseHint('kanbanViews')
 
 const kanbanStore = useKanbanStore()
 const workspaceStore = useWorkspaceStore()
-const { boards, cards, activeCardId, boardsError, cardsError, moveError } = storeToRefs(kanbanStore)
+const { boards, cards, activeCardId, boardsError, boardSaveError, cardsError, moveError } = storeToRefs(kanbanStore)
 const { appConfig } = storeToRefs(workspaceStore)
 
 const board = ref<KanbanBoard | null>(null)
@@ -342,6 +342,13 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
     <div v-if="moveError" class="kb-view__error-banner tw:flex tw:shrink-0 tw:items-center tw:justify-between tw:gap-2 tw:bg-surface-danger tw:px-4 tw:py-2 tw:text-xs tw:text-content-secondary">
       {{ t('kanban.view.moveFailed', { message: moveError }) }}
       <button type="button" class="nv-btn kb-view__error-close tw:grid tw:size-7 tw:shrink-0 tw:place-items-center tw:p-0" :aria-label="t('kanban.common.close')" @click="kanbanStore.moveError = null">
+        <X :size="14" />
+      </button>
+    </div>
+
+    <div v-if="boardSaveError" role="alert" class="kb-view__error-banner tw:flex tw:shrink-0 tw:items-center tw:justify-between tw:gap-2 tw:bg-surface-danger tw:px-4 tw:py-2 tw:text-xs tw:text-content-secondary">
+      {{ t('kanban.view.saveBoardFailed', { message: boardSaveError }) }}
+      <button type="button" class="nv-btn kb-view__error-close tw:grid tw:size-7 tw:shrink-0 tw:place-items-center tw:p-0" :aria-label="t('kanban.common.close')" @click="kanbanStore.boardSaveError = null">
         <X :size="14" />
       </button>
     </div>

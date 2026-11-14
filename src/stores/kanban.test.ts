@@ -50,6 +50,21 @@ describe('kanban store wip caps and automations', () => {
     expect(store.boards.get('b1')).toMatchObject({ wip: { doing: 2 }, automations: [], updatedAt: 'saved' })
   })
 
+  it('a failed save does not roll back a later queued change that carries it', async () => {
+    const store = useKanbanStore()
+    store.boards = new Map([['b1', board('b1', { wip: {} })]])
+    backend.kanbanUpdateBoard
+      .mockRejectedValueOnce(new Error('busy'))
+      .mockImplementationOnce(async (id: string, updates: Partial<KanbanBoard>) => ({ ...store.boards.get(id)!, ...updates }))
+
+    const first = store.setWipCap('b1', 'todo', 1)
+    const second = store.setWipCap('b1', 'doing', 2)
+    await Promise.all([first, second])
+
+    expect(backend.kanbanUpdateBoard).toHaveBeenLastCalledWith('b1', { wip: { todo: 1, doing: 2 } })
+    expect(store.boards.get('b1')?.wip).toEqual({ todo: 1, doing: 2 })
+  })
+
   it('applies the change optimistically and rolls it back when saving fails', async () => {
     const store = useKanbanStore()
     store.boards = new Map([['b1', board('b1', { wip: { todo: 3 }, automations: [rule] })]])
@@ -62,7 +77,8 @@ describe('kanban store wip caps and automations', () => {
     await pending
 
     expect(store.boards.get('b1')).toMatchObject({ wip: { todo: 3 }, automations: [rule] })
-    expect(store.boardsError).toBe('read-only')
+    expect(store.boardSaveError).toBe('read-only')
+    expect(store.boardsError).toBeNull()
   })
 })
 

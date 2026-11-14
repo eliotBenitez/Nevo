@@ -2882,6 +2882,7 @@
       "boardNotFound": "Доска не найдена.",
       "boardUnavailable": "Доска недоступна.",
       "moveFailed": "Не удалось переместить: {message}",
+      "saveBoardFailed": "Не удалось сохранить доску: {message}",
       "cardCount": "{cards} карточка | {cards} карточки | {cards} карточек",
       "openAutomations": "Автоматизации",
       "emptyTitle": "Пустая доска.",

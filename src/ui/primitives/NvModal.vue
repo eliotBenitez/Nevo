@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue'
 import { X } from '../icons'
 import { useI18n } from 'vue-i18n'
-import { useFocusTrap } from '../composables/useFocusTrap'
+import { isTopmostModal, useFocusTrap } from '../composables/useFocusTrap'
 
 interface Props {
   open: boolean
@@ -62,8 +62,7 @@ function onScrimClick() {
 function onDocumentKeydown(event: KeyboardEvent) {
   if (!props.open || event.key !== 'Escape' || event.defaultPrevented) return
   if (document.activeElement && document.activeElement !== document.body) return
-  const panels = document.querySelectorAll('.nv-modal__panel')
-  if (panels[panels.length - 1] !== panelRef.value) return
+  if (!isTopmostModal(panelRef.value)) return
   event.preventDefault()
   emit('close')
 }

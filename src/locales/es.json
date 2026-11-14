@@ -2882,6 +2882,7 @@
       "boardNotFound": "Tablero no encontrado.",
       "boardUnavailable": "El tablero no está disponible.",
       "moveFailed": "Error al mover: {message}",
+      "saveBoardFailed": "No se pudo guardar el tablero: {message}",
       "cardCount": "{cards} tarjeta | {cards} tarjetas",
       "openAutomations": "Automatizaciones",
       "emptyTitle": "Un tablero vacío.",

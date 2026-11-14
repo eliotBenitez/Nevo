@@ -4,6 +4,7 @@ import { useWorkspaceStore } from './workspace'
 import { useTreeStore } from './tree'
 import type { BacklinkRef, GraphEdge } from '../types/graph'
 import { appLogger } from '../utils/logger'
+import { internalLinkSignature } from '../utils/internalLinkSignature'
 
 export const useGraphStore = defineStore('graph', () => {
   const workspaceStore = useWorkspaceStore()
@@ -13,6 +14,12 @@ export const useGraphStore = defineStore('graph', () => {
   const outlinks = ref<GraphEdge[]>([])
   const activeNoteId = ref<string | null>(null)
   let loadGeneration = 0
+  // Per-list request counters: an older response for the same note must not
+  // overwrite a newer one that resolved first.
+  let backlinksRequest = 0
+  let outlinksRequest = 0
+  // Internal-link signature of the content each note last refreshed for.
+  const lastLinkSignature = new Map<string, string>()
 
   // The local Rust graph index stores empty title/icon for backlink sources
   // (only the cloud backend enriches them). Fill missing metadata from the
@@ -46,14 +53,16 @@ export const useGraphStore = defineStore('graph', () => {
     const generation = loadGeneration
     const backend = workspaceStore.backend
     if (!backend || !noteId) return
+    const backlinksTicket = options.backlinks === false ? null : ++backlinksRequest
+    const outlinksTicket = ++outlinksRequest
     try {
       const [bl, ol] = await Promise.all([
-        options.backlinks === false ? null : backend.graphGetBacklinks(noteId),
+        backlinksTicket === null ? null : backend.graphGetBacklinks(noteId),
         backend.graphGetOutlinks(noteId),
       ])
       if (activeNoteId.value !== noteId || generation !== loadGeneration) return
-      if (bl) backlinks.value = enrichBacklinks(bl)
-      outlinks.value = ol
+      if (bl && backlinksTicket === backlinksRequest) backlinks.value = enrichBacklinks(bl)
+      if (outlinksTicket === outlinksRequest) outlinks.value = ol
     } catch (error) {
       await appLogger.error({
         source: 'frontend.graph',
@@ -65,13 +74,21 @@ export const useGraphStore = defineStore('graph', () => {
   }
 
   /** Re-reads the active note's outlinks after a save; the backend's save
-   *  path is the only writer of the link index. */
-  async function refreshOutlinks(noteId: string) {
-    if (activeNoteId.value === noteId) await refreshActiveNote({ backlinks: false })
+   *  path is the only writer of the link index. With the saved `content`,
+   *  a save whose internal links match the last refresh skips the IPC. */
+  async function refreshOutlinks(noteId: string, content?: unknown) {
+    if (activeNoteId.value !== noteId) return
+    if (content !== undefined) {
+      const signature = internalLinkSignature(content)
+      if (lastLinkSignature.get(noteId) === signature) return
+      lastLinkSignature.set(noteId, signature)
+    }
+    await refreshActiveNote({ backlinks: false })
   }
 
   function clear() {
     loadGeneration++
+    lastLinkSignature.clear()
     backlinks.value = []
     outlinks.value = []
     activeNoteId.value = null

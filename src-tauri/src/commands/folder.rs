@@ -249,18 +249,24 @@ pub(crate) fn delete_folder_sync(
             cascaded_ids = current;
             continue;
         }
-        return delete_folder_locked(&workspace_path, &folder_id, recursive, manifest);
+        let trashed_note_ids =
+            delete_folder_locked(&workspace_path, &folder_id, recursive, manifest)?;
+        // Like save_note_impl: the graph update can wait on the one-time
+        // backfill, so release the manifest first. The note locks stay held.
+        drop(_manifest_guard);
+        unindex_trashed_notes(&workspace_path, &folder_id, &trashed_note_ids);
+        return Ok(());
     }
 }
 
 /// The body of `delete_folder_sync`, run once the cascaded notes' locks and
-/// the manifest lock are held.
+/// the manifest lock are held. Returns the notes it moved to trash.
 fn delete_folder_locked(
     workspace_path: &str,
     folder_id: &str,
     recursive: bool,
     mut manifest: WorkspaceManifest,
-) -> Result<(), String> {
+) -> Result<Vec<String>, String> {
     let workspace_path = workspace_path.to_string();
     let folder_id = folder_id.to_string();
     if !recursive {
@@ -297,38 +303,39 @@ fn delete_folder_locked(
         manifest.root_order.retain(|id| id != &folder_id);
     }
     save_manifest(&workspace_path, &manifest)?;
+    Ok(trashed_note_ids)
+}
 
+fn unindex_trashed_notes(workspace_path: &str, folder_id: &str, trashed_note_ids: &[String]) {
+    // One graph write for the whole cascade.
+    if let Err(message) = super::graph::remove_notes_links(workspace_path, trashed_note_ids) {
+        let _ = crate::logging::logger().warn(
+            "tauri.folder",
+            "delete_folder",
+            "Failed to remove note graph links",
+            true,
+            note_error_context(workspace_path, "graph", message)
+                .with_payload(serde_json::json!({ "folderId": folder_id })),
+        );
+    }
     // Best-effort: notes cascaded into trash by a recursive folder delete
     // should not surface in query_notes, mirroring note::delete_note_impl
     // (the index only tracks live notes). The index is a rebuildable cache
     // (note_index::reindex_all), and restoring one of these notes later
     // already re-upserts it via note::trash::restore_from_trash, so a
     // failure here must not fail the folder delete.
-    // One graph write for the whole cascade.
-    if let Err(message) = super::graph::remove_notes_links(&workspace_path, &trashed_note_ids) {
-        let _ = crate::logging::logger().warn(
-            "tauri.folder",
-            "delete_folder",
-            "Failed to remove note graph links",
-            true,
-            note_error_context(&workspace_path, "graph", message)
-                .with_payload(serde_json::json!({ "folderId": folder_id })),
-        );
-    }
-    for note_id in &trashed_note_ids {
-        if let Err(message) = note_index::remove_note(Path::new(&workspace_path), note_id) {
+    for note_id in trashed_note_ids {
+        if let Err(message) = note_index::remove_note(Path::new(workspace_path), note_id) {
             let _ = crate::logging::logger().warn(
                 "tauri.folder",
                 "delete_folder",
                 "Failed to remove note from metadata index",
                 true,
-                note_error_context(&workspace_path, "note_index", message)
+                note_error_context(workspace_path, "note_index", message)
                     .with_payload(serde_json::json!({ "noteId": note_id, "folderId": folder_id })),
             );
         }
     }
-
-    Ok(())
 }
 
 fn collect_notes_meta(folder: &FolderMeta) -> Vec<NoteMeta> {

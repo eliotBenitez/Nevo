@@ -492,6 +492,9 @@ pub(crate) fn delete_note_impl(workspace_path: String, note_id: String) -> Resul
             })),
         );
 
+        // Like save_note_impl: the graph update can wait on the one-time
+        // backfill, so release the manifest first. The note lock stays held.
+        drop(_manifest_guard);
         // Best-effort: a trashed note stops being a backlink source; restoring
         // it re-indexes its links.
         if let Err(message) = crate::commands::graph::remove_notes_links(

@@ -978,6 +978,23 @@ fn template_create_note_sync(
         let _ = std::fs::remove_file(&note_path);
         return Err(error);
     }
+    drop(_manifest_guard);
+    // Best-effort, like save_note_impl: template content can carry links.
+    if let Err(message) =
+        crate::commands::graph::index_note_links(&workspace_path, &note.id, &note.content)
+    {
+        let _ = crate::logging::logger().warn(
+            "tauri.templates",
+            "template_create_note",
+            "Failed to update note graph links",
+            true,
+            crate::logging::LogContext::default().with_error(crate::logging::LogError {
+                kind: Some("graph".to_string()),
+                message,
+                details: None,
+            }),
+        );
+    }
 
     Ok(note)
 }

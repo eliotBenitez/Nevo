@@ -226,6 +226,8 @@ fn kanban_save_board_schema_sync(
 
     let board_path = board_file(&wp, &board_id);
     validate_card_directory(&wp, &board_id)?;
+    let lock = super::kanban::board_lock(&wp, &board_id);
+    let _guard = lock.lock().map_err(|error| error.to_string())?;
     validate_unlinked_file(&board_path)?;
     let mut board: KanbanBoard =
         serde_json::from_str(&std::fs::read_to_string(&board_path).map_err(|e| e.to_string())?)

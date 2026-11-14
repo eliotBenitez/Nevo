@@ -116,6 +116,22 @@ describe('NvModal', () => {
     expect(wrapper.emitted('under')).toBeUndefined()
   })
 
+  it('moves Tab into the topmost of two stacked modals after focus fell to body', async () => {
+    mount(defineComponent({
+      setup: () => () => h('div', [
+        h(NvModal, { open: true, title: 'Under' }),
+        h(NvModal, { open: true, title: 'Top' }),
+      ]),
+    }), { global: { plugins: [i18n] }, attachTo: document.body })
+    await nextTick()
+    ;(document.activeElement as HTMLElement | null)?.blur()
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }))
+
+    const panels = document.querySelectorAll('.nv-modal__panel')
+    expect(panels[1].contains(document.activeElement)).toBe(true)
+  })
+
   it('moves Tab back into the modal after focus fell to body', async () => {
     const wrapper = mountModal()
     await nextTick()

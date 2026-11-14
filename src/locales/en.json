@@ -2882,6 +2882,7 @@
       "boardNotFound": "Board not found.",
       "boardUnavailable": "Board is unavailable.",
       "moveFailed": "Move failed: {message}",
+      "saveBoardFailed": "Couldn’t save the board: {message}",
       "cardCount": "{cards} card | {cards} cards",
       "openAutomations": "Automations",
       "emptyTitle": "An empty board.",

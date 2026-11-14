@@ -118,7 +118,7 @@ fn run_merge(
         manifest_merge::merge_manifest_tree(&current_root_string, &imported_manifest, &maps)?;
     // After the manifest merge: its `linksBackfilled` reset must not let a
     // concurrent graph read rebuild against a manifest lacking the new notes.
-    extras::merge_graph_index(temp_dir, current_root, &maps);
+    extras::reset_graph_index(current_root);
 
     let _ = on_event.send(TransferProgress::Finished);
 

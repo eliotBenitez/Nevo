@@ -9,6 +9,13 @@ const FOCUSABLE = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',')
 
+/** True unless `el` is an aria-modal dialog with another one stacked after it in the DOM. */
+export function isTopmostModal(el: HTMLElement | null): boolean {
+  if (!el || el.getAttribute('aria-modal') !== 'true') return true
+  const modals = document.querySelectorAll('[aria-modal="true"]')
+  return modals[modals.length - 1] === el
+}
+
 export function useFocusTrap(containerRef: Ref<HTMLElement | null>, active: Ref<boolean>) {
   let previousFocus: HTMLElement | null = null
 
@@ -17,7 +24,8 @@ export function useFocusTrap(containerRef: Ref<HTMLElement | null>, active: Ref<
   }
 
   function onKeyDown(e: KeyboardEvent) {
-    if (!active.value || e.key !== 'Tab') return
+    // Only the topmost dialog traps Tab; one underneath would steal focus from it.
+    if (!active.value || e.key !== 'Tab' || e.defaultPrevented || !isTopmostModal(containerRef.value)) return
     const focusable = getFocusable()
     if (!focusable.length) { e.preventDefault(); return }
 
