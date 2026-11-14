@@ -73,6 +73,19 @@ describe('EditorQueryPopover', () => {
 
     expect(onUpdateData).toHaveBeenCalledOnce()
     expect(onUpdateData.mock.calls[0]?.[0].filters.dateFrom).toBe('2026-08-06')
+    // The panel is an .editor-overlay (z-index 1300); the calendar must stack above it.
+    expect(calendar?.className).toContain('tw:z-[2000]')
+    wrapper.unmount()
+  })
+
+  it('adds a sort rule without submitting the popover form', async () => {
+    const onUpdateData = vi.fn()
+    const wrapper = mountPopover(onUpdateData)
+
+    await wrapper.get('.nv-menu-item').trigger('click')
+
+    expect(wrapper.emitted('apply')).toBeUndefined()
+    expect(onUpdateData.mock.calls[0]?.[0].sorts).toEqual([{ field: 'title', direction: 'asc' }])
     wrapper.unmount()
   })
 })

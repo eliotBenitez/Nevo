@@ -178,6 +178,7 @@ function resolveProps(item: NvMenuItemDef) {
 <template>
   <button
     ref="itemRef"
+    type="button"
     role="menuitem"
     class="nv-menu-item tw:group tw:flex tw:h-8 tw:w-full tw:shrink-0 tw:cursor-pointer tw:items-center tw:gap-[7px] tw:whitespace-nowrap tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:px-2 tw:text-left tw:font-nv-ui tw:text-[12.5px] tw:font-medium tw:tracking-normal tw:transition-[background-color,color] tw:duration-[80ms] tw:focus:outline-none tw:disabled:cursor-not-allowed tw:disabled:pointer-events-none tw:disabled:opacity-45"
     :class="[
