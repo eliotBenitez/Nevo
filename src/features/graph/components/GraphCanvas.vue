@@ -4,6 +4,7 @@ import type { GraphEdge, EdgeKind } from '../../../types/graph'
 import type { SimNode } from '../composables/useGraphSimulation'
 import type { CameraState } from '../composables/useGraphCamera'
 import { nodeRadius } from '../composables/useGraphSimulation'
+import { graphNodeColor } from '../nodeColor'
 
 interface Props {
   nodes: SimNode[]
@@ -49,13 +50,6 @@ function getVar(variable: string): string {
   }
   colorProbe.style.color = `var(${variable})`
   return getComputedStyle(colorProbe).color.trim()
-}
-
-function hashColor(folderId: string | null): string {
-  if (!folderId) return 'oklch(0.62 0.07 260)'
-  let h = 0
-  for (let i = 0; i < folderId.length; i++) h = (h * 31 + folderId.charCodeAt(i)) & 0xfffffff
-  return `oklch(0.68 0.14 ${h % 360})`
 }
 
 function matchesSearch(node: SimNode): boolean {
@@ -215,7 +209,7 @@ function draw() {
     const isAdjacent = isAdjacentNode(node)
     const dimmedBySearch = hasSearch && !matchesSearch(node)
     const dimmed = dimmedBySearch || isDimmedByFocus(node)
-    const fillColor = isFocused || isActive ? accentColor : hashColor(node.folderId)
+    const fillColor = isFocused || isActive ? accentColor : graphNodeColor(node.id, node.folderId)
 
     ctx.save()
     ctx.globalAlpha = dimmed ? 0.14 : isAdjacent ? 0.9 : 1
