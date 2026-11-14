@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { Plus, Trash2 } from '../../../../ui/icons'
 import NvPopupMenu from '../../../../ui/primitives/NvPopupMenu.vue'
 import DatabaseCell from './DatabaseCell.vue'
+import DatabaseCellReadonly from './DatabaseCellReadonly.vue'
 import DatabaseFieldMenu from './DatabaseFieldMenu.vue'
 import type { DbCellValue, DbField, DbRecord, DbViewStyle } from '../../../../types/database-block'
 
@@ -13,6 +14,8 @@ const props = defineProps<{
   recordOffset: number
   totalRecords: number
   style: DbViewStyle
+  /** Read-only projection (query block): no editing affordances; rows open their record. */
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -24,6 +27,7 @@ const emit = defineEmits<{
   'add-record': []
   'delete-record': [recordId: string]
   'request-range': [offset: number]
+  'open-record': [recordId: string]
 }>()
 
 const MIN_WIDTH = 80
@@ -44,8 +48,10 @@ const gridTemplateColumns = computed(() => {
   const cols: string[] = []
   if (props.style.showRowNumbers) cols.push(`${ROWNUM_WIDTH}px`)
   for (const field of props.fields) cols.push(`${widthFor(field)}px`)
-  cols.push(`${ADD_FIELD_WIDTH}px`)
-  cols.push(`${ACTIONS_WIDTH}px`)
+  if (!props.readonly) {
+    cols.push(`${ADD_FIELD_WIDTH}px`)
+    cols.push(`${ACTIONS_WIDTH}px`)
+  }
   return cols.join(' ')
 })
 
@@ -102,7 +108,7 @@ function startResize(field: DbField, event: PointerEvent) {
       </div>
       <div v-for="field in fields" :key="`h-${field.id}`" class="nv-db-cell-box nv-db-cell-box--head">
         <span class="nv-db-table__field-name tw:flex-1 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap">{{ field.name }}</span>
-        <NvPopupMenu placement="bottom-start" width="220px">
+        <NvPopupMenu v-if="!readonly" placement="bottom-start" width="220px">
           <template #trigger>
             <button type="button" class="nv-db-table__field-menu-trigger tw:shrink-0 tw:cursor-pointer tw:rounded-[calc(4px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:px-1 tw:py-0.5 tw:text-content-muted tw:hover:bg-[color-mix(in_oklab,var(--accent)_10%,var(--hover,var(--surface-overlay)))] tw:hover:text-content-primary">⋮</button>
           </template>
@@ -113,40 +119,62 @@ function startResize(field: DbField, event: PointerEvent) {
             @delete="emit('delete-field', field.id)"
           />
         </NvPopupMenu>
-        <div class="nv-db-table__resize-handle tw:absolute tw:top-0 tw:right-0 tw:h-full tw:w-1.5 tw:cursor-col-resize tw:touch-none tw:hover:bg-[color-mix(in_oklab,var(--accent)_40%,transparent)]" @pointerdown="startResize(field, $event)" />
+        <div v-if="!readonly" class="nv-db-table__resize-handle tw:absolute tw:top-0 tw:right-0 tw:h-full tw:w-1.5 tw:cursor-col-resize tw:touch-none tw:hover:bg-[color-mix(in_oklab,var(--accent)_40%,transparent)]" @pointerdown="startResize(field, $event)" />
       </div>
-      <div class="nv-db-cell-box nv-db-cell-box--head nv-db-cell-box--add-field">
+      <div v-if="!readonly" class="nv-db-cell-box nv-db-cell-box--head nv-db-cell-box--add-field">
         <button type="button" class="nv-db-table__add-field-btn tw:inline-flex tw:h-[22px] tw:w-[22px] tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:text-content-muted tw:hover:bg-(--hover) tw:hover:text-content-primary" :aria-label="t('database.table.addField')" @click="emit('add-field')">
           <Plus :size="14" />
         </button>
       </div>
-      <div class="nv-db-cell-box nv-db-cell-box--head nv-db-cell-box--actions" />
+      <div v-if="!readonly" class="nv-db-cell-box nv-db-cell-box--head nv-db-cell-box--actions" />
 
       <div v-if="topSpacer" class="nv-db-table__virtual-spacer tw:pointer-events-none tw:col-[1/-1]" :style="{ height: `${topSpacer}px` }" />
       <template v-for="(record, rowIndex) in records" :key="record.id">
         <div v-if="style.showRowNumbers" class="nv-db-cell-box nv-db-cell-box--rownum" :class="{ 'nv-db-cell-box--tinted': isTintedRow(rowIndex) }">
           {{ recordOffset + rowIndex + 1 }}
         </div>
+        <template v-if="readonly">
+          <div
+            v-for="(field, fieldIndex) in fields"
+            :key="`${record.id}-${field.id}`"
+            class="nv-db-cell-box nv-db-table__readonly-cell tw:cursor-pointer"
+            :class="{ 'nv-db-cell-box--tinted': isTintedRow(rowIndex) }"
+            @click="emit('open-record', record.id)"
+          >
+            <!-- One focusable target per row so keyboard users can open the record too. -->
+            <button
+              v-if="fieldIndex === 0"
+              type="button"
+              class="nv-db-table__open-record tw:w-full tw:min-w-0 tw:cursor-pointer tw:border-0 tw:bg-transparent tw:p-0 tw:text-left"
+              @click.stop="emit('open-record', record.id)"
+            >
+              <DatabaseCellReadonly :t="t" :field="field" :value="record.cells[field.id] ?? null" />
+            </button>
+            <DatabaseCellReadonly v-else :t="t" :field="field" :value="record.cells[field.id] ?? null" />
+          </div>
+        </template>
+        <template v-else>
         <div v-for="field in fields" :key="`${record.id}-${field.id}`" class="nv-db-cell-box" :class="{ 'nv-db-cell-box--tinted': isTintedRow(rowIndex) }">
-          <DatabaseCell
-            :t="t"
-            :field="field"
-            :value="record.cells[field.id] ?? null"
-            @update="(value, immediate) => emit('update-cell', record.id, field.id, value, immediate)"
-          />
-        </div>
-        <div class="nv-db-cell-box nv-db-cell-box--add-field" :class="{ 'nv-db-cell-box--tinted': isTintedRow(rowIndex) }" />
-        <div class="nv-db-cell-box nv-db-cell-box--actions" :class="{ 'nv-db-cell-box--tinted': isTintedRow(rowIndex) }">
-          <button type="button" class="nv-db-table__row-delete tw:inline-flex tw:h-[22px] tw:w-[22px] tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:text-content-muted tw:hover:bg-(--hover) tw:hover:text-content-primary" @click="emit('delete-record', record.id)">
-            <Trash2 :size="13" />
-          </button>
-        </div>
+            <DatabaseCell
+              :t="t"
+              :field="field"
+              :value="record.cells[field.id] ?? null"
+              @update="(value, immediate) => emit('update-cell', record.id, field.id, value, immediate)"
+            />
+          </div>
+          <div class="nv-db-cell-box nv-db-cell-box--add-field" :class="{ 'nv-db-cell-box--tinted': isTintedRow(rowIndex) }" />
+          <div class="nv-db-cell-box nv-db-cell-box--actions" :class="{ 'nv-db-cell-box--tinted': isTintedRow(rowIndex) }">
+            <button type="button" class="nv-db-table__row-delete tw:inline-flex tw:h-[22px] tw:w-[22px] tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-[calc(5px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:text-content-muted tw:hover:bg-(--hover) tw:hover:text-content-primary" @click="emit('delete-record', record.id)">
+              <Trash2 :size="13" />
+            </button>
+          </div>
+        </template>
       </template>
       <div v-if="bottomSpacer" class="nv-db-table__virtual-spacer tw:pointer-events-none tw:col-[1/-1]" :style="{ height: `${bottomSpacer}px` }" />
     </div>
     </div>
 
-    <button type="button" class="nv-db-table__add-row tw:flex tw:h-9 tw:w-full tw:cursor-pointer tw:items-center tw:gap-1.5 tw:border-0 tw:border-t tw:border-solid tw:border-t-(--db-border) tw:bg-transparent tw:px-3 tw:py-0 tw:text-left tw:text-[12px] tw:text-content-muted tw:hover:bg-[color-mix(in_oklab,var(--accent)_5%,var(--hover,var(--surface-overlay)))] tw:hover:text-content-primary" @click="emit('add-record')">
+    <button v-if="!readonly" type="button" class="nv-db-table__add-row tw:flex tw:h-9 tw:w-full tw:cursor-pointer tw:items-center tw:gap-1.5 tw:border-0 tw:border-t tw:border-solid tw:border-t-(--db-border) tw:bg-transparent tw:px-3 tw:py-0 tw:text-left tw:text-[12px] tw:text-content-muted tw:hover:bg-[color-mix(in_oklab,var(--accent)_5%,var(--hover,var(--surface-overlay)))] tw:hover:text-content-primary" @click="emit('add-record')">
       <Plus :size="13" />
       {{ t('database.table.addRow') }}
     </button>
