@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ArrowLeft, ChevronDown, MoreHorizontal, Settings2, Trash2, X } from '../../../ui/icons'
 import type { KanbanBoard, KanbanCard, KanbanCardField, KanbanCardPriority } from '../../../types/kanban'
@@ -66,10 +66,12 @@ function queueSnapshot() {
   saving.value = true
   const request = saveChain.then(() => store.updateCard(props.board.id, props.card.id, snapshot))
   saveChain = request.catch(() => undefined)
-  return request.then(() => {
+  return request.then(async () => {
     if (version === savedVersion) {
       dirty.value = false
       saveError.value = ''
+      await nextTick()
+      adoptStoreCard()
     }
   }).catch(error => {
     saveError.value = String(error)
@@ -169,6 +171,15 @@ function onDocumentPointerDown(event: PointerEvent) {
   if (target instanceof Element && target.closest('.nv-popup-menu__panel')) return
   if (!details.contains(target)) details.open = false
 }
+
+// Automations may move/tag the card after a save; adopt that so the next autosave does not undo it.
+function adoptStoreCard() {
+  if (dirty.value) return
+  status.value = getCardStatusValue(props.card, props.board)
+  propertiesCard.value = props.card
+}
+
+watch(() => props.card, adoptStoreCard)
 
 watch(() => props.card.id, () => {
   title.value = props.card.title

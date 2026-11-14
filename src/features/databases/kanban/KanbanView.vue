@@ -375,6 +375,7 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
       :card-property-options="cardPropertyOptions"
       @new-card="columns.length ? addCard(columns[0].id) : undefined"
       @add-column="addStatusColumn"
+      @open-automations="showAutomations = true"
       @update:board-settings="updateBoardDisplaySettings"
     />
 
@@ -502,6 +503,8 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
       :board="board"
       @close="showAutomations = false"
       @toggle-automation="(id, enabled) => kanbanStore.updateAutomation(props.boardId, id, { enabled })"
+      @add-automation="automation => kanbanStore.addAutomation(props.boardId, automation)"
+      @delete-automation="id => kanbanStore.deleteAutomation(props.boardId, id)"
     />
   </div>
 

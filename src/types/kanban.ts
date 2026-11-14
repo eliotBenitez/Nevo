@@ -40,6 +40,8 @@ export interface KanbanAutomation {
   actionValue?: string
   enabled: boolean
   runCount?: number
+  /** Monday (YYYY-MM-DD, local) of the week `runCount` belongs to. */
+  runWeek?: string
 }
 
 export interface KanbanTemplate {

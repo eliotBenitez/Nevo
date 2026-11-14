@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Zap, Plus } from '../../../ui/icons'
+import { Zap, Plus, Trash2 } from '../../../ui/icons'
 import type { KanbanBoard, KanbanAutomation, KanbanTemplate } from '../../../types/kanban'
 import NvModal from '../../../ui/primitives/NvModal.vue'
+import KanbanAutomationRuleForm from './KanbanAutomationRuleForm.vue'
+import { formatAutomationAction, formatAutomationTrigger } from './kanbanAutomationLabels'
+import { isAutomationSupported, weeklyRunCount } from './kanbanAutomations'
 
 interface Props {
   board: KanbanBoard
@@ -13,6 +16,8 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   'close': []
   'toggle-automation': [id: string, enabled: boolean]
+  'add-automation': [automation: KanbanAutomation]
+  'delete-automation': [id: string]
 }>()
 const { t } = useI18n()
 
@@ -41,19 +46,20 @@ function toggleAutomation(automation: KanbanAutomation) {
   emit('toggle-automation', automation.id, !automation.enabled)
 }
 
+const showForm = ref(false)
+const now = new Date()
+
 function triggerLabel(a: KanbanAutomation): string {
-  if (a.trigger === 'subtasks_done') return t('kanban.automations.trigger.subtasksDone')
-  if (a.trigger === 'status_change') return t('kanban.automations.trigger.statusChange', { value: a.triggerValue ?? '?' })
-  if (a.trigger === 'due_date_near') return t('kanban.automations.trigger.dueDateNear')
-  return a.trigger
+  return formatAutomationTrigger(props.board, a, t)
 }
 
 function actionLabel(a: KanbanAutomation): string {
-  if (a.action === 'move_to') return t('kanban.automations.action.moveTo', { value: a.actionValue ?? '?' })
-  if (a.action === 'set_progress') return t('kanban.automations.action.setProgress')
-  if (a.action === 'add_tag') return t('kanban.automations.action.addTag', { value: a.actionValue ?? 'urgent' })
-  if (a.action === 'notify') return t('kanban.automations.action.notify')
-  return a.action
+  return formatAutomationAction(props.board, a, t)
+}
+
+function saveRule(automation: KanbanAutomation) {
+  emit('add-automation', automation)
+  showForm.value = false
 }
 
 const triggerHue: Record<string, string> = {
@@ -86,12 +92,14 @@ const selectedTemplate = ref<string | null>(null)
           <span class="ka-section__title tw:text-[10.5px] tw:font-semibold tw:tracking-[0.06em] tw:text-content-muted tw:uppercase">{{ t('kanban.automations.sectionAutomations') }}</span>
           <span class="ka-section__count tw:font-nv-mono tw:text-[10.5px] tw:text-content-muted">{{ t('kanban.automations.active', { n: automations.filter(a => a.enabled).length }) }}</span>
           <div class="ka-section__spacer tw:flex-1" />
-          <button type="button" class="nv-btn ka-section__action tw:inline-flex tw:h-6 tw:items-center tw:gap-1 tw:px-2 tw:text-[11px] tw:text-[var(--text-muted,var(--text-secondary))]">
+          <button type="button" class="nv-btn ka-section__action tw:inline-flex tw:h-6 tw:items-center tw:gap-1 tw:px-2 tw:text-[11px] tw:text-[var(--text-muted,var(--text-secondary))]" :aria-expanded="showForm" @click="showForm = !showForm">
             <Plus :size="10" /> {{ t('kanban.automations.newRule') }}
           </button>
         </div>
 
-        <div v-if="!automations.length" class="ka-empty tw:flex tw:flex-col tw:gap-1 tw:px-4 tw:py-6 tw:text-center">
+        <KanbanAutomationRuleForm v-if="showForm" :board="board" @save="saveRule" @cancel="showForm = false" />
+
+        <div v-if="!automations.length && !showForm" class="ka-empty tw:flex tw:flex-col tw:gap-1 tw:px-4 tw:py-6 tw:text-center">
           <div class="ka-empty-title tw:text-[13px] tw:font-[550] tw:text-content-secondary">{{ t('kanban.automations.noAutomations') }}</div>
           <div class="ka-empty-hint tw:mx-auto tw:max-w-[320px] tw:text-[11.5px] tw:leading-[1.5] tw:text-content-muted">{{ t('kanban.automations.noAutomationsHint') }}</div>
         </div>
@@ -112,8 +120,17 @@ const selectedTemplate = ref<string | null>(null)
               <span class="ka-rule__then tw:text-content-muted"> → </span>
               {{ actionLabel(auto) }}
             </span>
-            <span v-if="auto.runCount" class="ka-rule__runs tw:shrink-0 tw:font-nv-mono tw:text-[10.5px] tw:text-content-muted">{{ t('kanban.automations.runCount', { n: auto.runCount }) }}</span>
+            <span v-if="weeklyRunCount(auto, now)" class="ka-rule__runs tw:shrink-0 tw:font-nv-mono tw:text-[10.5px] tw:text-content-muted">{{ t('kanban.automations.runCount', { n: weeklyRunCount(auto, now) }) }}</span>
+            <span v-if="!isAutomationSupported(auto)" class="ka-rule__unsupported tw:shrink-0 tw:text-[10.5px] tw:text-content-muted">{{ t('kanban.automations.unsupported') }}</span>
           </div>
+          <button
+            type="button"
+            class="ka-rule__delete tw:grid tw:size-7 tw:shrink-0 tw:place-items-center tw:rounded-md tw:border-0 tw:bg-transparent tw:text-content-muted tw:cursor-pointer tw:hover:bg-surface-subtle tw:focus-visible:outline-2 tw:focus-visible:outline-focus-ring"
+            :aria-label="t('kanban.automations.deleteRule', { rule: `${triggerLabel(auto)} → ${actionLabel(auto)}` })"
+            @click="emit('delete-automation', auto.id)"
+          >
+            <Trash2 :size="13" />
+          </button>
           <!-- Toggle -->
           <button
             type="button"
