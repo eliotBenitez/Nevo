@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useKanbanStore } from './kanban'
-import type { KanbanBoard, KanbanCard } from '../types/kanban'
+import type { KanbanBoard } from '../types/kanban'
 
 const backend = vi.hoisted(() => ({
   kanbanListBoards: vi.fn(),
