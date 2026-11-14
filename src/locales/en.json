@@ -2236,7 +2236,7 @@
         "dateFrom": "Date from",
         "dateTo": "Date to",
         "folder": "Folder",
-        "folderPlaceholder": "Folder path",
+        "folderPlaceholder": "Any folder",
         "includeSubtree": "Include subfolders"
       }
     },

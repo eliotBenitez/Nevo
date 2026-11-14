@@ -2236,7 +2236,7 @@
         "dateFrom": "Fecha desde",
         "dateTo": "Fecha hasta",
         "folder": "Carpeta",
-        "folderPlaceholder": "Ruta de la carpeta",
+        "folderPlaceholder": "Cualquier carpeta",
         "includeSubtree": "Incluir subcarpetas"
       }
     },

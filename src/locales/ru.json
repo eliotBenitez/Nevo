@@ -2236,7 +2236,7 @@
         "dateFrom": "Дата с",
         "dateTo": "Дата по",
         "folder": "Папка",
-        "folderPlaceholder": "Путь папки",
+        "folderPlaceholder": "Любая папка",
         "includeSubtree": "Включая подпапки"
       }
     },

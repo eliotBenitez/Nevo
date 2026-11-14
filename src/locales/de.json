@@ -2236,7 +2236,7 @@
         "dateFrom": "Datum von",
         "dateTo": "Datum bis",
         "folder": "Ordner",
-        "folderPlaceholder": "Ordnerpfad",
+        "folderPlaceholder": "Beliebiger Ordner",
         "includeSubtree": "Unterordner einbeziehen"
       }
     },

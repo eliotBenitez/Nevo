@@ -2236,7 +2236,7 @@
         "dateFrom": "Date de début",
         "dateTo": "Date de fin",
         "folder": "Dossier",
-        "folderPlaceholder": "Chemin du dossier",
+        "folderPlaceholder": "N'importe quel dossier",
         "includeSubtree": "Inclure les sous-dossiers"
       }
     },
