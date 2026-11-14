@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import type { HistoryPreviewBlock } from '../../utils/noteHistoryPreview'
 import { workspaceAssetUrl } from '../../utils/workspaceAssetUrl'
 import HistoryPreviewInline from './HistoryPreviewInline.vue'
+import { useHistoryBlockType } from './historyBlockType'
 
 /**
  * Renders one node of the "As note" read-only preview tree (see
@@ -20,6 +21,7 @@ interface Props {
 
 const props = defineProps<Props>()
 const { t } = useI18n()
+const { typeName } = useHistoryBlockType()
 
 const PARAGRAPH_CLASS = 'tw:m-0 tw:whitespace-pre-wrap tw:wrap-anywhere tw:leading-[1.55] tw:font-normal tw:text-content-secondary tw:[font-family:var(--font-serif)] tw:text-xl tw:max-[719px]:text-[17px]'
 const HEADING_CLASS = 'tw:m-0 tw:whitespace-pre-wrap tw:wrap-anywhere tw:[font-family:var(--font-serif)] tw:text-[clamp(28px,2.4vw,38px)] tw:leading-[1.15] tw:font-semibold tw:tracking-[-0.015em] tw:text-content-primary tw:max-[719px]:text-[27px]'
@@ -135,7 +137,7 @@ const resolvedImageSrc = computed(() => {
   </div>
 
   <div v-else-if="block.kind === 'unsupported'" class="history-preview-block history-preview-block--unsupported tw:rounded-nv-sm tw:border tw:border-dashed tw:border-(--border-subtle) tw:px-3 tw:py-2.5 tw:text-xs tw:text-content-muted">
-    <p class="tw:m-0 tw:font-medium">{{ t('workspace.history.preview.unsupported', { type: block.type }) }}</p>
+    <p class="tw:m-0 tw:font-medium">{{ t('workspace.history.preview.unsupported', { type: typeName(block.type) }) }}</p>
     <p v-if="block.text" class="tw:m-0 tw:mt-1 tw:whitespace-pre-wrap tw:wrap-anywhere">{{ block.text }}</p>
   </div>
 </template>

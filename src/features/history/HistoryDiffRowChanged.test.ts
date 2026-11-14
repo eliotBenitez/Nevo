@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import HistoryDiffRowChanged from './HistoryDiffRowChanged.vue'
+import HistoryDiffRow from './HistoryDiffRow.vue'
 import en from '../../locales/en.json'
+import ruMessages from '../../locales/ru.json'
 
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
@@ -37,5 +39,29 @@ describe('HistoryDiffRowChanged', () => {
     })
 
     expect(wrapper.find('.history-diff-row-changed__badge').text()).toBe('changed')
+  })
+})
+
+describe('history block type labels', () => {
+  const ru = createI18n({ legacy: false, locale: 'ru', messages: { ru: ruMessages } })
+
+  it('names an empty added block by its localized type instead of a generic label', () => {
+    const wrapper = mount(HistoryDiffRow, {
+      global: { plugins: [ru] },
+      props: { tone: 'added', caption: 'добавлено', block: { type: 'heading', text: '', signature: '', attrs: {} } },
+    })
+
+    expect(wrapper.find('.history-block-content--empty').text()).toBe('Заголовок (пусто)')
+    expect(wrapper.find('.history-diff-row__type').text()).toBe('· Заголовок')
+    expect(wrapper.text()).not.toContain('Changed block')
+  })
+
+  it('localizes block types in a type-change explanation', () => {
+    const wrapper = mount(HistoryDiffRowChanged, {
+      global: { plugins: [ru] },
+      props: { before: 'x', after: 'x', changes: ['type'], beforeType: 'paragraph', afterType: 'heading' },
+    })
+
+    expect(wrapper.text()).toContain('Абзац → Заголовок')
   })
 })

@@ -62,6 +62,8 @@ const changedRowCount = computed(() => {
 
 const hasAnyStat = computed(() => diffStats.value.added || diffStats.value.removed || diffStats.value.changed)
 
+const currentBlockCount = computed(() => (props.diff?.rows ?? []).filter(row => row.current).length)
+
 // A single non-zero kind (e.g. every row is "changed") reads as a lonely
 // number with no sense of scale — restate the total block count next to it.
 const showTotalBlocksContext = computed(() => {
@@ -140,7 +142,7 @@ function tabStateClass(mode: ViewMode) {
           {{ t('workspace.history.diffStat.changed', { count: diffStats.changed }) }}
         </span>
         <span v-if="showTotalBlocksContext" class="history-diff-pane__stat history-diff-pane__stat--total tw:font-nv-mono tw:text-[11.5px] tw:font-medium tw:text-content-muted">
-          · {{ t('workspace.history.diffStat.totalBlocks', { count: changedRowCount }) }}
+          · {{ t('workspace.history.diffStat.totalBlocks', { count: currentBlockCount }) }}
         </span>
       </div>
     </div>
@@ -189,7 +191,10 @@ function tabStateClass(mode: ViewMode) {
         <HistoryMetadataStrip :changes="diff?.metadata ?? []" />
         <HistoryNotebookPageDiff :changes="diff?.notebookPages ?? []" />
         <template v-for="(row, index) in diff?.rows ?? []" :key="index">
-          <HistoryBlockContent v-if="row.kind === 'unchanged' && row.current" :block="row.current" />
+          <template v-if="row.kind === 'unchanged'">
+            <!-- An unchanged empty paragraph is just spacing; a placeholder for it would be noise. -->
+            <HistoryBlockContent v-if="row.current && (row.current.text || row.current.type !== 'paragraph')" :block="row.current" />
+          </template>
           <HistoryDiffRow
             v-else-if="row.kind === 'added' && row.current"
             tone="added"
@@ -205,8 +210,8 @@ function tabStateClass(mode: ViewMode) {
           <template v-else-if="row.kind === 'changed'">
             <HistoryDiffRowChanged
               v-if="row.snapshot && row.current"
-              :before="row.snapshot.label"
-              :after="row.current.label"
+              :before="row.snapshot.text"
+              :after="row.current.text"
               :changes="row.changes"
               :changed-attrs="row.changedAttrs"
               :before-type="row.snapshot.type"

@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { HistoryComparableBlock } from '../../utils/noteHistory'
 import HistoryBlockContent from './HistoryBlockContent.vue'
+import { useHistoryBlockType } from './historyBlockType'
 
 interface Props {
   block: HistoryComparableBlock
@@ -14,6 +15,7 @@ interface Props {
 
 const props = defineProps<Props>()
 const { t } = useI18n()
+const { typeName } = useHistoryBlockType()
 
 // Border, background and padding utilities are mutually exclusive per tone —
 // each branch must own the full set of properties it touches so no idle
@@ -43,6 +45,7 @@ const captionToneClass = computed(() => (props.tone === 'added' ? 'tw:text-(--su
         class="history-diff-row__caption tw:font-nv-mono tw:text-[10.5px] tw:tracking-[0.06em] tw:uppercase"
         :class="captionToneClass"
       >{{ caption }}</span>
+      <span class="history-diff-row__type tw:font-nv-mono tw:text-[10.5px] tw:tracking-[0.06em] tw:text-content-muted tw:uppercase">· {{ typeName(block.type) }}</span>
     </div>
   </article>
 </template>

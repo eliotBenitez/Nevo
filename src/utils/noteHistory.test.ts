@@ -169,8 +169,8 @@ describe('buildNoteHistoryDiff', () => {
 
     expect(buildNoteHistoryDiff(current, snapshot).rows.map(row => ({
       kind: row.kind,
-      snapshot: row.snapshot?.label ?? null,
-      current: row.current?.label ?? null,
+      snapshot: row.snapshot?.text ?? null,
+      current: row.current?.text ?? null,
     }))).toEqual([
       { kind: 'changed', snapshot: 'Before', current: 'Before updated' },
       { kind: 'unchanged', snapshot: 'Shared context', current: 'Shared context' },
@@ -237,22 +237,22 @@ describe('buildNoteHistoryDiff', () => {
     expect(diff.rows.map(row => row.kind)).toEqual(['unchanged', 'removed', 'unchanged', 'changed', 'added'])
     expect(diff.rows[1]).toMatchObject({
       kind: 'removed',
-      snapshot: { label: 'Snapshot only paragraph' },
+      snapshot: { text: 'Snapshot only paragraph' },
       current: null,
     })
     expect(diff.rows[3]).toMatchObject({
       kind: 'changed',
-      snapshot: { label: 'Needs rewrite' },
-      current: { label: 'Rewritten paragraph' },
+      snapshot: { text: 'Needs rewrite' },
+      current: { text: 'Rewritten paragraph' },
     })
     expect(diff.rows[4]).toMatchObject({
       kind: 'added',
       snapshot: null,
-      current: { label: 'Current only paragraph' },
+      current: { text: 'Current only paragraph' },
     })
   })
 
-  it('uses stable fallback labels for complex blocks', () => {
+  it('keeps empty text for text-less complex blocks so the UI can name them', () => {
     const snapshot = createNote({
       content: {
         type: 'doc',
@@ -282,8 +282,8 @@ describe('buildNoteHistoryDiff', () => {
     expect(diff.rows).toHaveLength(1)
     expect(diff.rows[0]).toMatchObject({
       kind: 'changed',
-      snapshot: { label: 'Table block' },
-      current: { label: 'Table block' },
+      snapshot: { type: 'table' },
+      current: { type: 'table' },
     })
   })
 })
