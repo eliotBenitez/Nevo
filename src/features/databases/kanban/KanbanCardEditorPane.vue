@@ -101,6 +101,8 @@ async function goBack() {
   emit('back')
 }
 
+const moreMenuItems = computed(() => [{ icon: Trash2, label: t('kanban.common.delete'), danger: true, action: deleteCard }])
+
 async function deleteCard() {
   if (!await confirm({ message: t('kanban.card.deleteConfirm'), confirmLabel: t('confirmDialog.delete'), variant: 'danger' })) return
   if (!await flush()) return
@@ -214,9 +216,8 @@ defineExpose({ flush })
           <summary class="kb-editor-properties-trigger tw:box-border tw:inline-flex tw:min-h-8 tw:cursor-pointer tw:list-none tw:items-center tw:gap-1.5 tw:rounded-md tw:border tw:border-solid tw:border-[var(--border-subtle)] tw:bg-transparent tw:px-2.5 tw:text-xs tw:text-content-secondary tw:hover:bg-surface-subtle tw:focus-visible:rounded-[4px] tw:focus-visible:outline-2 tw:focus-visible:outline-offset-4 tw:focus-visible:outline-focus-ring tw:max-[760px]:min-h-11"><Settings2 :size="13" /><span>{{ t('kanban.card.properties') }}</span><ChevronDown :size="12" class="kb-editor-properties-chevron tw:group-open:rotate-180" /></summary>
           <div class="kb-editor-properties-popover tw:absolute tw:top-[calc(100%+8px)] tw:right-0 tw:z-20 tw:hidden tw:w-[min(360px,calc(100vw-32px))] tw:max-h-[min(70vh,620px)] tw:flex-col tw:gap-4 tw:overflow-auto tw:rounded-[10px] tw:border tw:border-solid tw:border-[var(--border-subtle)] tw:bg-surface-raised tw:p-3.5 tw:shadow-(--shadow-overlay) tw:group-open:flex tw:max-[760px]:-right-10"><KanbanCardProperties ref="propertiesRef" v-model:status-value="status" :card="propertiesCard" :board="board" :task-progress="taskProgress" :mark-dirty="changed" /></div>
         </details>
-        <NvPopupMenu placement="bottom-end" width="180px">
+        <NvPopupMenu placement="bottom-end" width="180px" :items="moreMenuItems">
           <template #trigger><button type="button" class="kb-editor-more tw:grid tw:size-8 tw:place-items-center tw:rounded-md tw:border-0 tw:bg-transparent tw:text-content-muted tw:cursor-pointer tw:hover:bg-surface-subtle" :aria-label="t('kanban.common.moreActions')"><MoreHorizontal :size="17" /></button></template>
-          <button type="button" class="kb-editor-delete-menu tw:flex tw:w-full tw:items-center tw:gap-2 tw:rounded-md tw:border-0 tw:bg-transparent tw:px-2.5 tw:py-2 tw:text-left tw:text-sm tw:text-content-danger tw:cursor-pointer tw:hover:bg-surface-subtle" @click="deleteCard"><Trash2 :size="14" />{{ t('kanban.common.delete') }}</button>
         </NvPopupMenu>
         <button type="button" class="kb-editor-close tw:grid tw:size-8 tw:shrink-0 tw:place-items-center tw:rounded-md tw:border-0 tw:bg-transparent tw:text-content-muted tw:cursor-pointer tw:hover:bg-surface-subtle tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-focus-ring tw:max-[1300px]:hidden" :aria-label="t('kanban.common.close')" :title="t('kanban.common.close')" @click="goBack"><X :size="17" /></button>
       </div>
