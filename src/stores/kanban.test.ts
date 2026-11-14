@@ -11,6 +11,8 @@ const backend = vi.hoisted(() => ({
   kanbanUpdateCard: vi.fn(),
 }))
 vi.mock('./workspace', () => ({ useWorkspaceStore: () => ({ backend }) }))
+const notifications = vi.hoisted(() => ({ sendSystemNotification: vi.fn(async () => true) }))
+vi.mock('../tauri/notifications', () => notifications)
 vi.mock('../utils/logger', () => ({ appLogger: { error: vi.fn(async () => undefined) } }))
 
 function board(id: string, extra: Partial<KanbanBoard> = {}): KanbanBoard {
@@ -95,6 +97,8 @@ describe('kanban store automations execution', () => {
     backend.kanbanUpdateBoard.mockReset()
     backend.kanbanMoveCard.mockReset()
     backend.kanbanUpdateCard.mockReset()
+    notifications.sendSystemNotification.mockReset()
+    notifications.sendSystemNotification.mockResolvedValue(true)
   })
 
   it('runs move_to and add_tag after a card enters a column and persists the run count', async () => {
@@ -132,5 +136,65 @@ describe('kanban store automations execution', () => {
 
     expect(store.cards.get('b1')![0].properties.st).toBe('doing')
     expect(store.moveError).toBeNull()
+  })
+
+  describe('due date rules', () => {
+    const now = new Date(2026, 10, 14, 12)
+    const dueRule = (patch: Partial<KanbanAutomation> = {}): KanbanAutomation =>
+      ({ id: 'd1', trigger: 'due_date_near', triggerValue: '3', action: 'add_tag', actionValue: 'soon', enabled: true, ...patch })
+    const withDue = (store: ReturnType<typeof useKanbanStore>, due: string) => {
+      server = server.map(c => ({ ...c, fields: [{ id: 'f', name: 'Due', type: 'date', value: due, order: 0 }] }))
+      store.cards = new Map([['b1', server]])
+    }
+
+    it('tags the card and persists firedFor plus runCount in one board write', async () => {
+      const store = setup([dueRule()])
+      withDue(store, '2026-11-15')
+      await store.runDueDateAutomations('b1', now)
+
+      expect(backend.kanbanUpdateCard).toHaveBeenCalledTimes(1)
+      expect(backend.kanbanUpdateBoard).toHaveBeenCalledTimes(1)
+      expect(store.boards.get('b1')!.automations![0]).toMatchObject({ firedFor: { c1: '2026-11-15' }, runCount: 1 })
+
+      await store.runDueDateAutomations('b1', now)
+      expect(backend.kanbanUpdateCard).toHaveBeenCalledTimes(1)
+      expect(backend.kanbanUpdateBoard).toHaveBeenCalledTimes(1)
+    })
+
+    it('notifies after the card writes and survives a failing notification', async () => {
+      const store = setup([dueRule(), dueRule({ id: 'd2', action: 'notify', actionValue: undefined })])
+      withDue(store, '2026-11-15')
+      notifications.sendSystemNotification.mockRejectedValueOnce(new Error('denied'))
+      await store.runDueDateAutomations('b1', now)
+
+      expect(backend.kanbanUpdateCard).toHaveBeenCalledTimes(1)
+      expect(notifications.sendSystemNotification).toHaveBeenCalledTimes(1)
+      expect(notifications.sendSystemNotification.mock.calls[0]).toEqual(['b1', expect.stringContaining('C')])
+      expect(store.boards.get('b1')!.automations!.map(a => a.firedFor)).toEqual([{ c1: '2026-11-15' }, { c1: '2026-11-15' }])
+    })
+
+    it('checks due dates right after a card edit changes its fields', async () => {
+      const store = setup([dueRule({ action: 'notify', actionValue: undefined })])
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      const pad = (n: number) => String(n).padStart(2, '0')
+      const due = `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}`
+      await store.updateCard('b1', 'c1', { fields: [{ id: 'f', name: 'Due', type: 'date', value: due, order: 0 }] })
+
+      expect(notifications.sendSystemNotification).toHaveBeenCalledTimes(1)
+      expect(store.boards.get('b1')!.automations![0].firedFor).toEqual({ c1: due })
+    })
+
+    it('notifies from event triggers and prunes deleted cards', async () => {
+      const store = setup([
+        { id: 'n1', trigger: 'status_change', triggerValue: 'doing', action: 'notify', enabled: true },
+        dueRule({ firedFor: { gone: '2026-11-01' } }),
+      ])
+      await store.moveCard('b1', 'c1', 'doing', 0)
+      expect(notifications.sendSystemNotification).toHaveBeenCalledTimes(1)
+
+      await store.runDueDateAutomations('b1', now)
+      expect(store.boards.get('b1')!.automations![1].firedFor).toEqual({})
+    })
   })
 })

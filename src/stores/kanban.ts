@@ -3,8 +3,8 @@ import { computed, ref } from 'vue'
 import type { KanbanBoard, KanbanCard, KanbanPropertyDef, KanbanAutomation, KanbanLink, KanbanPropertyOption, KanbanCardField, KanbanBoardCardViewSettings } from '../types/kanban'
 import type { KanbanBoardUpdate } from '../core/workspace-backend/types'
 import { useWorkspaceStore } from './workspace'
-import { cloneCardFields, getBoardColumns, getCardStatusValue, normalizeBoard, normalizeCard, normalizeViewSettings, serializeCardProperties } from '../features/databases/kanban/kanbanFields'
-import { applyTagsToFields, bumpRunCount, planAutomations, type AutomationPlan } from '../features/databases/kanban/kanbanAutomations'
+import { getBoardColumns, getCardStatusValue, normalizeBoard, normalizeCard, normalizeViewSettings, serializeCardProperties } from '../features/databases/kanban/kanbanFields'
+import { createAutomationRunner } from './kanbanAutomationRunner'
 import { appLogger } from '../utils/logger'
 
 export const useKanbanStore = defineStore('kanban', () => {
@@ -213,6 +213,8 @@ export const useKanbanStore = defineStore('kanban', () => {
       cards.value.set(boardId, current.map(c => c.id === cardId ? nextCard : c))
       touchBoardUpdatedAt(boardId)
       if (previous) await runAutomations(boardId, previous, nextCard)
+      // A new or changed due date should not wait for the scheduler's next pass.
+      if (updates.fields) await runDueDateAutomations(boardId)
     } finally {
       cardsSaving.value = false
     }
@@ -251,65 +253,6 @@ export const useKanbanStore = defineStore('kanban', () => {
     if (before && after) await runAutomations(boardId, before, after)
   }
 
-  // Applies one planned step through the backend directly so automation writes never re-enter runAutomations.
-  async function applyAutomationPlan(boardId: string, board: KanbanBoard, card: KanbanCard, plan: AutomationPlan): Promise<KanbanCard> {
-    const backend = workspaceStore.backend
-    if (!backend) return card
-    let next = card
-    if (plan.status !== undefined) {
-      const index = (cards.value.get(boardId) ?? [])
-        .filter(c => c.id !== card.id && getCardStatusValue(c, board) === plan.status).length
-      const result = await backend.kanbanMoveCard(boardId, card.id, plan.status, index)
-      cards.value.set(boardId, result)
-      next = result.find(c => c.id === card.id) ?? card
-    }
-    if (plan.addTags.length || plan.progress !== undefined) {
-      const fields = applyTagsToFields(cloneCardFields(next), plan.addTags)
-      const saved = await backend.kanbanUpdateCard(boardId, card.id, {
-        fields,
-        properties: serializeCardProperties(board, next, fields, getCardStatusValue(next, board)),
-        progress: plan.progress,
-      })
-      next = normalizeCard(board, saved)
-      cards.value.set(boardId, (cards.value.get(boardId) ?? []).map(c => c.id === card.id ? next : c))
-    }
-    touchBoardUpdatedAt(boardId)
-    return next
-  }
-
-  // The user's own change is already saved; a failing rule must never undo it.
-  async function runAutomations(boardId: string, before: KanbanCard, after: KanbanCard) {
-    const board = boards.value.get(boardId)
-    if (!board?.automations?.some(a => a.enabled)) return
-    const fired = new Set<string>()
-    const applied = new Set<string>()
-    try {
-      let previous = before
-      let current = after
-      for (let step = 0; step < 3; step++) {
-        const plan = planAutomations(board, previous, current, fired)
-        if (!plan.firedIds.length) break
-        plan.firedIds.forEach(id => fired.add(id))
-        const next = await applyAutomationPlan(boardId, board, current, plan)
-        plan.firedIds.forEach(id => applied.add(id))
-        previous = current
-        current = next
-      }
-    } catch (error) {
-      await appLogger.error({
-        source: 'frontend.kanban',
-        event: 'run_automations',
-        message: 'Failed to apply board automations',
-        error,
-      })
-    }
-    if (!applied.size) return
-    const now = new Date()
-    await persistBoardMeta(boardId, b => ({
-      automations: (b.automations ?? []).map(a => applied.has(a.id) ? bumpRunCount(a, now) : a),
-    }))
-  }
-
   async function deleteCard(boardId: string, cardId: string) {
     const backend = workspaceStore.backend
     if (!backend) return
@@ -345,6 +288,14 @@ export const useKanbanStore = defineStore('kanban', () => {
       boardsError.value = formatKanbanError(error, 'Failed to save board.')
     }
   }
+
+  const { runAutomations, runDueDateAutomations } = createAutomationRunner({
+    getBackend: () => workspaceStore.backend,
+    boards,
+    cards,
+    persistBoardMeta,
+    touchBoardUpdatedAt,
+  })
 
   function setWipCap(boardId: string, columnId: string, cap: number | null) {
     return persistBoardMeta(boardId, (board) => {
@@ -416,7 +367,7 @@ export const useKanbanStore = defineStore('kanban', () => {
     loadBoards, createBoard, updateBoard, updateBoardViewSettings, saveSchema, updateBoardColumns, deleteBoard,
     loadCards, createCard, updateCard, moveCard, deleteCard,
     openCard, closeCard,
-    setWipCap, addAutomation, updateAutomation, deleteAutomation, linkCards, unlinkCards,
+    setWipCap, runDueDateAutomations, addAutomation, updateAutomation, deleteAutomation, linkCards, unlinkCards,
   }
 })
 

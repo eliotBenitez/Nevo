@@ -3063,7 +3063,6 @@
       "insertTemplate": "Aus Vorlage einfügen",
       "runCount": "{n}× diese Woche ausgeführt",
       "triggerPrefix": "Wenn",
-      "unsupported": "noch nicht unterstützt",
       "deleteRule": "Regel löschen: {rule}",
       "form": {
         "trigger": "Wenn",
@@ -3079,18 +3078,23 @@
         "triggerSubtasksDone": "Alle Teilaufgaben sind erledigt",
         "actionMoveTo": "Karte in eine Spalte verschieben",
         "actionAddTag": "Tag hinzufügen",
-        "actionSetProgress": "Fortschritt auf 100 % setzen"
+        "actionSetProgress": "Fortschritt auf 100 % setzen",
+        "triggerDueDateNear": "Ein Fälligkeitsdatum rückt näher",
+        "actionNotify": "Benachrichtigung senden",
+        "days": "Tage im Voraus",
+        "dateField": "Datumsfeld",
+        "anyDateField": "Beliebiges Datumsfeld"
       },
       "action": {
         "moveTo": "verschieben nach {value}",
         "setProgress": "Fortschritt auf 100% setzen",
         "addTag": "taggen #{value}",
-        "notify": "Verantwortlichen benachrichtigen"
+        "notify": "Benachrichtigung senden"
       },
       "trigger": {
         "subtasksDone": "alle Unteraufgaben erledigt",
         "statusChange": "Status → {value}",
-        "dueDateNear": "Fälligkeit in 3 Tagen"
+        "dueDateNear": "fällig in ≤ {n} Tagen"
       },
       "templatesData": {
         "engineeringTicket": {

@@ -3063,7 +3063,6 @@
       "insertTemplate": "Insert from template",
       "runCount": "ran {n}× this week",
       "triggerPrefix": "When",
-      "unsupported": "not supported yet",
       "deleteRule": "Delete rule: {rule}",
       "form": {
         "trigger": "When",
@@ -3079,18 +3078,23 @@
         "triggerSubtasksDone": "All subtasks are done",
         "actionMoveTo": "Move the card to a column",
         "actionAddTag": "Add a tag",
-        "actionSetProgress": "Set progress to 100%"
+        "actionSetProgress": "Set progress to 100%",
+        "triggerDueDateNear": "A due date is near",
+        "actionNotify": "Send a notification",
+        "days": "Days ahead",
+        "dateField": "Date field",
+        "anyDateField": "Any date field"
       },
       "action": {
         "moveTo": "move to {value}",
         "setProgress": "set progress 100%",
         "addTag": "tag #{value}",
-        "notify": "notify owner"
+        "notify": "send a notification"
       },
       "trigger": {
         "subtasksDone": "all subtasks done",
         "statusChange": "status → {value}",
-        "dueDateNear": "due date in 3 days"
+        "dueDateNear": "due in ≤ {n} days"
       },
       "templatesData": {
         "engineeringTicket": {

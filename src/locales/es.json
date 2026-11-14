@@ -3063,7 +3063,6 @@
       "insertTemplate": "Insertar desde plantilla",
       "runCount": "ejecutada {n}× esta semana",
       "triggerPrefix": "Cuando",
-      "unsupported": "aún no es compatible",
       "deleteRule": "Eliminar regla: {rule}",
       "form": {
         "trigger": "Cuando",
@@ -3079,18 +3078,23 @@
         "triggerSubtasksDone": "Todas las subtareas están hechas",
         "actionMoveTo": "Mover la tarjeta a una columna",
         "actionAddTag": "Añadir una etiqueta",
-        "actionSetProgress": "Establecer el progreso al 100 %"
+        "actionSetProgress": "Establecer el progreso al 100 %",
+        "triggerDueDateNear": "Una fecha límite se acerca",
+        "actionNotify": "Enviar una notificación",
+        "days": "Días de antelación",
+        "dateField": "Campo de fecha",
+        "anyDateField": "Cualquier campo de fecha"
       },
       "action": {
         "moveTo": "mover a {value}",
         "setProgress": "fijar progreso 100%",
         "addTag": "etiquetar #{value}",
-        "notify": "notificar al responsable"
+        "notify": "enviar una notificación"
       },
       "trigger": {
         "subtasksDone": "todas las subtareas hechas",
         "statusChange": "estado → {value}",
-        "dueDateNear": "vence en 3 días"
+        "dueDateNear": "vence en ≤ {n} d"
       },
       "templatesData": {
         "engineeringTicket": {

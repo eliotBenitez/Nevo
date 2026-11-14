@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { KanbanAutomation, KanbanBoard } from '../../../types/kanban'
+import type { KanbanAutomation, KanbanBoard, KanbanCard } from '../../../types/kanban'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
-import { createKanbanId, getBoardColumns, localizeDefaultKanbanLabel } from './kanbanFields'
+import { createKanbanId, getBoardColumns, getCardFieldDescriptors, localizeDefaultKanbanLabel } from './kanbanFields'
+import { DEFAULT_DUE_DAYS, MAX_DUE_DAYS } from './kanbanDueDates'
 
-const props = defineProps<{ board: KanbanBoard }>()
+const props = defineProps<{ board: KanbanBoard; cards?: KanbanCard[] }>()
 const emit = defineEmits<{
   save: [automation: KanbanAutomation]
   cancel: []
@@ -17,11 +18,18 @@ const columns = computed(() =>
 const triggerOptions = computed(() => [
   { value: 'status_change', label: t('kanban.automations.form.triggerStatusChange') },
   { value: 'subtasks_done', label: t('kanban.automations.form.triggerSubtasksDone') },
+  { value: 'due_date_near', label: t('kanban.automations.form.triggerDueDateNear') },
+])
+const ANY_DATE_FIELD = ''
+const dateFieldOptions = computed(() => [
+  { value: ANY_DATE_FIELD, label: t('kanban.automations.form.anyDateField') },
+  ...getCardFieldDescriptors(props.cards ?? [], ['date']).map(descriptor => ({ value: descriptor.name, label: descriptor.name })),
 ])
 const actionOptions = computed(() => [
   { value: 'move_to', label: t('kanban.automations.form.actionMoveTo') },
   { value: 'add_tag', label: t('kanban.automations.form.actionAddTag') },
   { value: 'set_progress', label: t('kanban.automations.form.actionSetProgress') },
+  { value: 'notify', label: t('kanban.automations.form.actionNotify') },
 ])
 
 const trigger = ref<string>('status_change')
@@ -30,10 +38,13 @@ const action = ref<string>('move_to')
 // Default to a different column than the trigger so the first rule does something.
 const actionColumn = ref(columns.value.at(-1)?.value ?? '')
 const tag = ref('')
+const days = ref(DEFAULT_DUE_DAYS)
+const dateField = ref(ANY_DATE_FIELD)
 const firstSelect = ref<{ focus: () => void } | null>(null)
 
 const valid = computed(() =>
   (trigger.value !== 'status_change' || !!triggerColumn.value)
+  && (trigger.value !== 'due_date_near' || (Number.isInteger(days.value) && days.value >= 1 && days.value <= MAX_DUE_DAYS))
   && (action.value !== 'move_to' || !!actionColumn.value)
   && (action.value !== 'add_tag' || !!tag.value.trim()))
 
@@ -43,6 +54,7 @@ function submit() {
     id: createKanbanId(),
     trigger: trigger.value as KanbanAutomation['trigger'],
     ...(trigger.value === 'status_change' ? { triggerValue: triggerColumn.value } : {}),
+    ...(trigger.value === 'due_date_near' ? { triggerValue: String(days.value), ...(dateField.value ? { dateField: dateField.value } : {}) } : {}),
     action: action.value as KanbanAutomation['action'],
     ...(action.value === 'move_to' ? { actionValue: actionColumn.value } : {}),
     ...(action.value === 'add_tag' ? { actionValue: tag.value.trim() } : {}),
@@ -64,6 +76,16 @@ onMounted(() => firstSelect.value?.focus())
         <span class="tw:text-[10.5px] tw:font-semibold tw:text-content-muted">{{ t('kanban.automations.form.column') }}</span>
         <NvSelect v-model="triggerColumn" :options="columns" :aria-label="t('kanban.automations.form.triggerColumn')" :min-width="140" />
       </div>
+      <template v-else-if="trigger === 'due_date_near'">
+        <label class="tw:flex tw:flex-col tw:gap-1">
+          <span class="tw:text-[10.5px] tw:font-semibold tw:text-content-muted">{{ t('kanban.automations.form.days') }}</span>
+          <input v-model.number="days" type="number" :min="1" :max="MAX_DUE_DAYS" step="1" required class="ka-form__days tw:h-8 tw:w-20 tw:rounded-lg tw:border-0 tw:bg-(--input-bg) tw:px-2.5 tw:text-[12.5px] tw:text-content-primary tw:focus-visible:outline-2 tw:focus-visible:outline-focus-ring">
+        </label>
+        <div class="tw:flex tw:flex-col tw:gap-1">
+          <span class="tw:text-[10.5px] tw:font-semibold tw:text-content-muted">{{ t('kanban.automations.form.dateField') }}</span>
+          <NvSelect v-model="dateField" :options="dateFieldOptions" :aria-label="t('kanban.automations.form.dateField')" :min-width="140" />
+        </div>
+      </template>
     </div>
     <div class="tw:flex tw:flex-wrap tw:items-end tw:gap-3">
       <div class="tw:flex tw:flex-col tw:gap-1">

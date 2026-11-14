@@ -501,6 +501,7 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
     <KanbanAutomations
       v-if="showAutomations"
       :board="board"
+      :cards="boardCards"
       @close="showAutomations = false"
       @toggle-automation="(id, enabled) => kanbanStore.updateAutomation(props.boardId, id, { enabled })"
       @add-automation="automation => kanbanStore.addAutomation(props.boardId, automation)"

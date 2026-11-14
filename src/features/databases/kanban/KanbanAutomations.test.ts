@@ -3,7 +3,7 @@ import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import KanbanAutomations from './KanbanAutomations.vue'
-import type { KanbanAutomation, KanbanBoard } from '../../../types/kanban'
+import type { KanbanAutomation, KanbanBoard, KanbanCard } from '../../../types/kanban'
 import enMessages from '../../../locales/en.json'
 
 function makeBoard(enabled: boolean): KanbanBoard {
@@ -82,12 +82,40 @@ describe('KanbanAutomations', () => {
     wrapper.unmount()
   })
 
-  it('hides stale run counts and flags unsupported rules', () => {
+  it('hides stale run counts', () => {
     const board = makeBoard(true)
     board.automations = [{ ...board.automations![0], runCount: 4, runWeek: '2000-01-03' }]
     const wrapper = mountModal(board)
     expect(wrapper.find('.ka-rule__runs').exists()).toBe(false)
-    expect(wrapper.text()).toContain('not supported yet')
+    wrapper.unmount()
+  })
+
+  it('saves a due date rule with days and date field, and a notify action', async () => {
+    const board = columnBoard()
+    const cards = [{ id: 'c', fields: [{ id: 'f', name: 'Due', type: 'date', value: '2026-11-20', order: 0 }] }] as unknown as KanbanCard[]
+    const i18n = createI18n({ legacy: false, locale: 'en', messages: { en: enMessages } })
+    const wrapper = mount(KanbanAutomations, {
+      props: { board, cards },
+      attachTo: document.body,
+      global: { plugins: [i18n], stubs: { NvModal: { template: '<div><slot /></div>' } } },
+    })
+    await wrapper.get('.ka-section__action').trigger('click')
+    const form = wrapper.get('.ka-form')
+    const pick = async (index: number, label: string) => {
+      await form.findAll('.nv-select__trigger')[index].trigger('click')
+      await vi.waitFor(() => expect(document.querySelector('.nv-select__menu')).not.toBeNull())
+      Array.from(document.querySelectorAll<HTMLButtonElement>('.nv-select__option')).find(o => o.textContent?.includes(label))!.click()
+      await nextTick()
+    }
+    await pick(0, 'A due date is near')
+    await wrapper.get('.ka-form__days').setValue(5)
+    await pick(1, 'Due')
+    await pick(2, 'Send a notification')
+    await form.trigger('submit')
+
+    const [automation] = wrapper.emitted('add-automation')![0] as [KanbanAutomation]
+    expect(automation).toMatchObject({ trigger: 'due_date_near', triggerValue: '5', dateField: 'Due', action: 'notify', enabled: true })
+    expect(automation.actionValue).toBeUndefined()
     wrapper.unmount()
   })
 })

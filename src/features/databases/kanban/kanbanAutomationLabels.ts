@@ -1,6 +1,7 @@
 import type { KanbanAutomation, KanbanBoard } from '../../../types/kanban'
 import { getBoardColumns, localizeDefaultKanbanLabel } from './kanbanFields'
 import { resolveColumnId } from './kanbanAutomations'
+import { dueWindowDays } from './kanbanDueDates'
 
 type Translate = (key: string, params?: Record<string, unknown>) => string
 
@@ -13,7 +14,7 @@ function columnLabel(board: KanbanBoard, value: string | undefined, t: Translate
 export function formatAutomationTrigger(board: KanbanBoard, automation: KanbanAutomation, t: Translate): string {
   if (automation.trigger === 'subtasks_done') return t('kanban.automations.trigger.subtasksDone')
   if (automation.trigger === 'status_change') return t('kanban.automations.trigger.statusChange', { value: columnLabel(board, automation.triggerValue, t) })
-  if (automation.trigger === 'due_date_near') return t('kanban.automations.trigger.dueDateNear')
+  if (automation.trigger === 'due_date_near') return t('kanban.automations.trigger.dueDateNear', { n: dueWindowDays(automation) })
   return automation.trigger
 }
 

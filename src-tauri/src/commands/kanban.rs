@@ -982,6 +982,28 @@ mod tests {
     }
 
     #[test]
+    fn update_board_round_trips_due_date_rule_keys() {
+        let base = std::env::temp_dir().join(format!("nevo-kanban-due-{}", Uuid::new_v4()));
+        let workspace = base.join("workspace");
+        std::fs::create_dir_all(&workspace).unwrap();
+        let ws = workspace.to_string_lossy().into_owned();
+        let board = kanban_create_board_sync(ws.clone(), "B".into(), "K".into(), None).unwrap();
+
+        let automations = serde_json::json!([{
+            "id": "a1", "trigger": "due_date_near", "triggerValue": "5",
+            "dateField": "Due", "action": "notify", "enabled": true,
+            "firedFor": { "card-1": "2026-11-15" }, "runCount": 1, "runWeek": "2026-11-09"
+        }]);
+        update_board_meta(&ws, &board.id, None, Some(automations.clone())).unwrap();
+
+        let listed = kanban_list_boards_sync(ws.clone()).unwrap();
+        let stored = listed.iter().find(|b| b.id == board.id).unwrap();
+        assert_eq!(stored.automations.as_ref(), Some(&automations));
+
+        std::fs::remove_dir_all(&base).ok();
+    }
+
+    #[test]
     fn update_board_rejects_malformed_wip_and_automations() {
         let base = std::env::temp_dir().join(format!("nevo-kanban-wip-bad-{}", Uuid::new_v4()));
         let workspace = base.join("workspace");

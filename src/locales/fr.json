@@ -3063,7 +3063,6 @@
       "insertTemplate": "Insérer depuis un modèle",
       "runCount": "exécutée {n}× cette semaine",
       "triggerPrefix": "Quand",
-      "unsupported": "pas encore pris en charge",
       "deleteRule": "Supprimer la règle : {rule}",
       "form": {
         "trigger": "Quand",
@@ -3079,18 +3078,23 @@
         "triggerSubtasksDone": "Toutes les sous-tâches sont terminées",
         "actionMoveTo": "Déplacer la carte vers une colonne",
         "actionAddTag": "Ajouter une étiquette",
-        "actionSetProgress": "Définir la progression à 100 %"
+        "actionSetProgress": "Définir la progression à 100 %",
+        "triggerDueDateNear": "Une échéance approche",
+        "actionNotify": "Envoyer une notification",
+        "days": "Jours à l'avance",
+        "dateField": "Champ de date",
+        "anyDateField": "N'importe quel champ de date"
       },
       "action": {
         "moveTo": "déplacer vers {value}",
         "setProgress": "définir progression 100%",
         "addTag": "étiqueter #{value}",
-        "notify": "notifier le responsable"
+        "notify": "envoyer une notification"
       },
       "trigger": {
         "subtasksDone": "toutes les sous-tâches terminées",
         "statusChange": "statut → {value}",
-        "dueDateNear": "échéance dans 3 jours"
+        "dueDateNear": "échéance dans ≤ {n} j"
       },
       "templatesData": {
         "engineeringTicket": {

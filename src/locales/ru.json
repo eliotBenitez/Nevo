@@ -3063,7 +3063,6 @@
       "insertTemplate": "Вставить из шаблона",
       "runCount": "сработало {n}× за неделю",
       "triggerPrefix": "Когда",
-      "unsupported": "пока не поддерживается",
       "deleteRule": "Удалить правило: {rule}",
       "form": {
         "trigger": "Когда",
@@ -3079,18 +3078,23 @@
         "triggerSubtasksDone": "Все подзадачи выполнены",
         "actionMoveTo": "Переместить карточку в колонку",
         "actionAddTag": "Добавить тег",
-        "actionSetProgress": "Установить прогресс 100%"
+        "actionSetProgress": "Установить прогресс 100%",
+        "triggerDueDateNear": "Срок приближается",
+        "actionNotify": "Отправить уведомление",
+        "days": "За сколько дней",
+        "dateField": "Поле даты",
+        "anyDateField": "Любое поле даты"
       },
       "action": {
         "moveTo": "переместить в {value}",
         "setProgress": "установить прогресс 100%",
         "addTag": "добавить тег #{value}",
-        "notify": "уведомить владельца"
+        "notify": "отправить уведомление"
       },
       "trigger": {
         "subtasksDone": "все подзадачи завершены",
         "statusChange": "статус → {value}",
-        "dueDateNear": "дедлайн через 3 дня"
+        "dueDateNear": "срок через ≤ {n} дн."
       },
       "templatesData": {
         "engineeringTicket": {

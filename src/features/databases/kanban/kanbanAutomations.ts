@@ -6,10 +6,11 @@ export interface AutomationPlan {
   status?: string
   addTags: string[]
   progress?: number
+  notify: boolean
 }
 
-const SUPPORTED_TRIGGERS: ReadonlySet<string> = new Set(['status_change', 'subtasks_done'])
-const SUPPORTED_ACTIONS: ReadonlySet<string> = new Set(['move_to', 'add_tag', 'set_progress'])
+const SUPPORTED_TRIGGERS: ReadonlySet<string> = new Set(['status_change', 'subtasks_done', 'due_date_near'])
+const SUPPORTED_ACTIONS: ReadonlySet<string> = new Set(['move_to', 'add_tag', 'set_progress', 'notify'])
 
 export function isAutomationSupported(automation: Pick<KanbanAutomation, 'trigger' | 'action'>): boolean {
   return SUPPORTED_TRIGGERS.has(automation.trigger) && SUPPORTED_ACTIONS.has(automation.action)
@@ -36,7 +37,7 @@ export function planAutomations(
   after: KanbanCard,
   alreadyFired: ReadonlySet<string>,
 ): AutomationPlan {
-  const plan: AutomationPlan = { firedIds: [], addTags: [] }
+  const plan = emptyPlan()
   const beforeStatus = before ? getCardStatusValue(before, board) : ''
   const afterStatus = getCardStatusValue(after, board)
   const subtasksCompleted = progressPct(before) !== 100 && progressPct(after) === 100
@@ -46,24 +47,42 @@ export function planAutomations(
 
     const triggered = automation.trigger === 'status_change'
       ? afterStatus !== beforeStatus && afterStatus !== '' && resolveColumnId(board, automation.triggerValue) === afterStatus
-      : subtasksCompleted
-    if (!triggered) continue
-
-    if (automation.action === 'move_to') {
-      const target = resolveColumnId(board, automation.actionValue)
-      if (!target || target === afterStatus || plan.status !== undefined) continue
-      plan.status = target
-    } else if (automation.action === 'add_tag') {
-      const tag = automation.actionValue?.trim()
-      if (!tag || cardHasTag(after, tag)) continue
-      plan.addTags.push(tag)
-    } else {
-      if (after.progress === 100) continue
-      plan.progress = 100
-    }
-    plan.firedIds.push(automation.id)
+      : automation.trigger === 'subtasks_done' && subtasksCompleted
+    if (triggered) addAutomationToPlan(board, automation, after, afterStatus, plan)
   }
   return plan
+}
+
+export function emptyPlan(): AutomationPlan {
+  return { firedIds: [], addTags: [], notify: false }
+}
+
+// Adds the rule's action to the plan; returns false when it would be a no-op or conflicts with an earlier rule.
+export function addAutomationToPlan(
+  board: KanbanBoard,
+  automation: KanbanAutomation,
+  card: KanbanCard,
+  status: string,
+  plan: AutomationPlan,
+): boolean {
+  if (automation.action === 'move_to') {
+    const target = resolveColumnId(board, automation.actionValue)
+    if (!target || target === status || plan.status !== undefined) return false
+    plan.status = target
+  } else if (automation.action === 'add_tag') {
+    const tag = automation.actionValue?.trim()
+    if (!tag || cardHasTag(card, tag)) return false
+    plan.addTags.push(tag)
+  } else if (automation.action === 'set_progress') {
+    if (card.progress === 100) return false
+    plan.progress = 100
+  } else if (automation.action === 'notify') {
+    plan.notify = true
+  } else {
+    return false
+  }
+  plan.firedIds.push(automation.id)
+  return true
 }
 
 function isTagsField(field: KanbanCardField): boolean {

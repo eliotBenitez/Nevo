@@ -2,14 +2,15 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Zap, Plus, Trash2 } from '../../../ui/icons'
-import type { KanbanBoard, KanbanAutomation, KanbanTemplate } from '../../../types/kanban'
+import type { KanbanBoard, KanbanAutomation, KanbanCard, KanbanTemplate } from '../../../types/kanban'
 import NvModal from '../../../ui/primitives/NvModal.vue'
 import KanbanAutomationRuleForm from './KanbanAutomationRuleForm.vue'
 import { formatAutomationAction, formatAutomationTrigger } from './kanbanAutomationLabels'
-import { isAutomationSupported, weeklyRunCount } from './kanbanAutomations'
+import { weeklyRunCount } from './kanbanAutomations'
 
 interface Props {
   board: KanbanBoard
+  cards?: KanbanCard[]
 }
 
 const props = defineProps<Props>()
@@ -97,7 +98,7 @@ const selectedTemplate = ref<string | null>(null)
           </button>
         </div>
 
-        <KanbanAutomationRuleForm v-if="showForm" :board="board" @save="saveRule" @cancel="showForm = false" />
+        <KanbanAutomationRuleForm v-if="showForm" :board="board" :cards="cards" @save="saveRule" @cancel="showForm = false" />
 
         <div v-if="!automations.length && !showForm" class="ka-empty tw:flex tw:flex-col tw:gap-1 tw:px-4 tw:py-6 tw:text-center">
           <div class="ka-empty-title tw:text-[13px] tw:font-[550] tw:text-content-secondary">{{ t('kanban.automations.noAutomations') }}</div>
@@ -121,7 +122,6 @@ const selectedTemplate = ref<string | null>(null)
               {{ actionLabel(auto) }}
             </span>
             <span v-if="weeklyRunCount(auto, now)" class="ka-rule__runs tw:shrink-0 tw:font-nv-mono tw:text-[10.5px] tw:text-content-muted">{{ t('kanban.automations.runCount', { n: weeklyRunCount(auto, now) }) }}</span>
-            <span v-if="!isAutomationSupported(auto)" class="ka-rule__unsupported tw:shrink-0 tw:text-[10.5px] tw:text-content-muted">{{ t('kanban.automations.unsupported') }}</span>
           </div>
           <button
             type="button"

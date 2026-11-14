@@ -42,7 +42,7 @@ describe('planAutomations', () => {
   it('skips disabled, deferred and already fired rules', () => {
     const none = new Set<string>()
     expect(planAutomations(board([rule({ enabled: false })]), card('todo'), card('doing'), none).firedIds).toEqual([])
-    expect(planAutomations(board([rule({ action: 'notify' })]), card('todo'), card('doing'), none).firedIds).toEqual([])
+    expect(planAutomations(board([rule({ action: 'bogus' as never })]), card('todo'), card('doing'), none).firedIds).toEqual([])
     expect(planAutomations(board([rule({ trigger: 'due_date_near' })]), card('todo'), card('doing'), none).firedIds).toEqual([])
     expect(planAutomations(board([rule({})]), card('todo'), card('doing'), new Set(['r1'])).firedIds).toEqual([])
   })
