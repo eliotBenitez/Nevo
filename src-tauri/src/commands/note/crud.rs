@@ -384,6 +384,26 @@ pub(crate) fn save_note_impl(workspace_path: String, note: NoteDocument) -> Resu
             note_error_context(&workspace_path, "note_index", message),
         );
     }
+    // The graph update waits on `graph_lock`, which the one-time link backfill
+    // holds for a full scan; don't stall every manifest operation behind it.
+    // The note lock stays held so saves of this note index in order.
+    drop(_manifest_guard);
+    // Notebooks carry no internal links; a note missing from the manifest
+    // (trashed or deleted mid-save) must not reappear as a backlink source.
+    let indexed = if updated && format != DocumentFormat::Notebook {
+        crate::commands::graph::index_note_links(&workspace_path, &note.id, &note.content)
+    } else {
+        Ok(())
+    };
+    if let Err(message) = indexed {
+        let _ = logger.warn(
+            "tauri.note",
+            "save_note",
+            "Failed to update note graph links",
+            diagnostics_enabled,
+            note_error_context(&workspace_path, "graph", message),
+        );
+    }
 
     Ok(())
 }
@@ -412,6 +432,10 @@ pub(crate) fn delete_note_impl(workspace_path: String, note_id: String) -> Resul
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     let diagnostics_enabled = workspace::is_extended_diagnostics_enabled(&workspace_path);
 
+    // Same order as save_note_impl (note, then manifest): a trash cannot land
+    // between an in-flight save's manifest write and its graph update.
+    let note_write_lock = note_lock(&workspace_path, &note_id);
+    let _note_guard = note_write_lock.lock().map_err(|error| error.to_string())?;
     let manifest_lock = manifest_lock(&workspace_path);
     let _manifest_guard = manifest_lock.lock().map_err(|error| error.to_string())?;
     let mut manifest = load_manifest(&workspace_path).inspect_err(|message| {
@@ -468,6 +492,23 @@ pub(crate) fn delete_note_impl(workspace_path: String, note_id: String) -> Resul
             })),
         );
 
+        // Like save_note_impl: the graph update can wait on the one-time
+        // backfill, so release the manifest first. The note lock stays held.
+        drop(_manifest_guard);
+        // Best-effort: a trashed note stops being a backlink source; restoring
+        // it re-indexes its links.
+        if let Err(message) = crate::commands::graph::remove_notes_links(
+            &workspace_path,
+            std::slice::from_ref(&note_id),
+        ) {
+            let _ = logger.warn(
+                "tauri.note",
+                "delete_note",
+                "Failed to remove note graph links",
+                diagnostics_enabled,
+                note_error_context(&workspace_path, "graph", message),
+            );
+        }
         // Best-effort: trashed notes should not surface in query_notes; the
         // index is rebuildable via note_index::reindex_all if this fails.
         if let Err(message) =

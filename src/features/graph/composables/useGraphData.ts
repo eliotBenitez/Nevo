@@ -22,6 +22,7 @@ export function useGraphData(manifest: WorkspaceManifest) {
   async function load() {
     loading.value = true
     try {
+      // The backend already hides edges to or from trashed and deleted notes.
       const edges = await workspaceStore.backend?.graphGetAllEdges() ?? []
       const allNotes = collectAllNotes(manifest)
 

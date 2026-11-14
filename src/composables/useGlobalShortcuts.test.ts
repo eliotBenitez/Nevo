@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 
-const register = vi.fn()
-const unregister = vi.fn()
+const register = vi.fn(async (_shortcut: string, _handler: unknown) => {})
+const unregister = vi.fn(async (_shortcut: string) => {})
 
 vi.mock('@tauri-apps/plugin-global-shortcut', () => ({
   register,
@@ -64,5 +64,20 @@ describe('initGlobalShortcuts', () => {
     await vi.waitFor(() => {
       expect(register).toHaveBeenCalled()
     })
+  })
+
+  it('releases a stale native registration before registering a shortcut', async () => {
+    await setupStore('desktop', true)
+    const { initGlobalShortcuts } = await import('./useGlobalShortcuts')
+
+    initGlobalShortcuts()
+    await vi.waitFor(() => {
+      expect(register).toHaveBeenCalledWith('Ctrl+,', expect.any(Function))
+    })
+
+    const settingsCall = register.mock.calls.findIndex(([shortcut]) => shortcut === 'Ctrl+,')
+    expect(unregister).toHaveBeenCalledWith('Ctrl+,')
+    expect(unregister.mock.invocationCallOrder[unregister.mock.calls.findIndex(([shortcut]) => shortcut === 'Ctrl+,')])
+      .toBeLessThan(register.mock.invocationCallOrder[settingsCall])
   })
 })

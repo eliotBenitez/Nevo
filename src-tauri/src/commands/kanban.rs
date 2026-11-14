@@ -2,6 +2,9 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::Path;
+use std::sync::{Arc, Mutex, OnceLock};
+
+use dashmap::DashMap;
 use uuid::Uuid;
 
 use super::kanban_paths::{
@@ -89,6 +92,19 @@ pub(crate) fn read_listed_card(path: &Path, board_id: &str) -> Option<KanbanCard
     }
 }
 
+static BOARD_LOCKS: OnceLock<DashMap<String, Arc<Mutex<()>>>> = OnceLock::new();
+
+/// Serializes read-modify-write of one board file (metadata updates, schema
+/// saves, `updated_at` touches), which otherwise race on parallel IPC threads
+/// and drop each other's changes. Expects a normalized workspace path.
+pub(crate) fn board_lock(workspace_path: &str, board_id: &str) -> Arc<Mutex<()>> {
+    BOARD_LOCKS
+        .get_or_init(DashMap::new)
+        .entry(format!("{workspace_path}\u{0}{board_id}"))
+        .or_insert_with(|| Arc::new(Mutex::new(())))
+        .clone()
+}
+
 /// Bumps a board's `updated_at` so the workspace home "recently modified"
 /// list reflects activity on its cards, not just direct board edits.
 ///
@@ -98,6 +114,8 @@ pub(crate) fn read_listed_card(path: &Path, board_id: &str) -> Option<KanbanCard
 /// command or lose the card edit.
 pub(crate) fn touch_board_updated_at(wp: &Path, board_id: &str) -> Result<(), String> {
     let workspace_path = wp.to_string_lossy().into_owned();
+    let lock = board_lock(&workspace_path, board_id);
+    let _guard = lock.lock().map_err(|error| error.to_string())?;
     validate_card_directory(&workspace_path, board_id)?;
     let path = board_path(&workspace_path, board_id);
     validate_unlinked_file(&path)?;
@@ -241,6 +259,9 @@ pub async fn kanban_update_board(
     status_property_id: Option<String>,
     property_definitions: Option<Value>,
     view_settings: Option<Value>,
+    wip: Option<Value>,
+    automations: Option<Value>,
+    templates: Option<Value>,
 ) -> Result<KanbanBoard, String> {
     tauri::async_runtime::spawn_blocking(move || {
         kanban_update_board_sync(
@@ -251,6 +272,9 @@ pub async fn kanban_update_board(
             status_property_id,
             property_definitions,
             view_settings,
+            wip,
+            automations,
+            templates,
         )
     })
     .await
@@ -265,12 +289,26 @@ fn kanban_update_board_sync(
     status_property_id: Option<String>,
     property_definitions: Option<Value>,
     view_settings: Option<Value>,
+    wip: Option<Value>,
+    automations: Option<Value>,
+    templates: Option<Value>,
 ) -> Result<KanbanBoard, String> {
     validate_id(&board_id)?;
+    if let Some(w) = &wip {
+        validate_wip(w)?;
+    }
+    if let Some(a) = &automations {
+        validate_automations(a)?;
+    }
+    if let Some(t) = &templates {
+        validate_templates(t)?;
+    }
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
     validate_boards_directory(&workspace_path)?;
     let path = board_path(&workspace_path, &board_id);
+    let lock = board_lock(&workspace_path, &board_id);
+    let _guard = lock.lock().map_err(|error| error.to_string())?;
     validate_unlinked_file(&path)?;
     let content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
     let mut board: KanbanBoard = serde_json::from_str(&content).map_err(|e| e.to_string())?;
@@ -290,11 +328,64 @@ fn kanban_update_board_sync(
     if let Some(vs) = view_settings {
         board.view_settings = Some(vs);
     }
+    if wip.is_some() {
+        board.wip = wip;
+    }
+    if automations.is_some() {
+        board.automations = automations;
+    }
+    if templates.is_some() {
+        board.templates = templates;
+    }
     board.updated_at = Utc::now().to_rfc3339();
 
     let new_content = serde_json::to_string_pretty(&board).map_err(|e| e.to_string())?;
     write_atomic(&path, new_content.as_bytes()).map_err(|e| e.to_string())?;
     Ok(board)
+}
+
+/// WIP caps: `{ columnId: nonNegativeInteger }`.
+fn validate_wip(wip: &Value) -> Result<(), String> {
+    let caps = wip.as_object().ok_or("wip must be an object")?;
+    if caps.values().all(|cap| cap.as_u64().is_some()) {
+        Ok(())
+    } else {
+        Err("wip caps must be non-negative integers".into())
+    }
+}
+
+/// Automations: an array of `{ id, trigger, action: string, enabled: bool, .. }`.
+fn validate_automations(automations: &Value) -> Result<(), String> {
+    let list = automations
+        .as_array()
+        .ok_or("automations must be an array")?;
+    let valid = list.iter().all(|rule| {
+        ["id", "trigger", "action"]
+            .iter()
+            .all(|key| rule.get(key).is_some_and(Value::is_string))
+            && rule.get("enabled").is_some_and(Value::is_boolean)
+    });
+    if valid {
+        Ok(())
+    } else {
+        Err("each automation needs string id, trigger, action and a boolean enabled".into())
+    }
+}
+
+/// Templates: an array of `{ id: string, name: string, card?: object, .. }`.
+fn validate_templates(templates: &Value) -> Result<(), String> {
+    let list = templates.as_array().ok_or("templates must be an array")?;
+    let valid = list.iter().all(|template| {
+        ["id", "name"]
+            .iter()
+            .all(|key| template.get(key).is_some_and(Value::is_string))
+            && template.get("card").is_none_or(Value::is_object)
+    });
+    if valid {
+        Ok(())
+    } else {
+        Err("each template needs a string id and name, and an object card".into())
+    }
 }
 
 #[tauri::command]
@@ -752,10 +843,19 @@ mod tests {
 
         assert!(kanban_delete_board_sync(ws.clone(), evil.clone()).is_err());
         assert!(kanban_list_cards_sync(ws.clone(), evil.clone()).is_err());
-        assert!(
-            kanban_update_board_sync(ws.clone(), evil.clone(), None, None, None, None, None)
-                .is_err()
-        );
+        assert!(kanban_update_board_sync(
+            ws.clone(),
+            evil.clone(),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        .is_err());
         assert!(kanban_create_card_sync(
             ws.clone(),
             evil.clone(),
@@ -866,6 +966,168 @@ mod tests {
         assert!(
             read_board_updated_at(&ws, &board_id) > old_dt,
             "kanban_delete_card must bump board.updated_at"
+        );
+
+        std::fs::remove_dir_all(&base).ok();
+    }
+
+    fn update_board_meta(
+        ws: &str,
+        board_id: &str,
+        wip: Option<Value>,
+        automations: Option<Value>,
+    ) -> Result<KanbanBoard, String> {
+        kanban_update_board_sync(
+            ws.into(),
+            board_id.into(),
+            None,
+            None,
+            None,
+            None,
+            None,
+            wip,
+            automations,
+            None,
+        )
+    }
+
+    #[test]
+    fn update_board_persists_wip_and_automations() {
+        let base = std::env::temp_dir().join(format!("nevo-kanban-wip-{}", Uuid::new_v4()));
+        let workspace = base.join("workspace");
+        std::fs::create_dir_all(&workspace).unwrap();
+        let ws = workspace.to_string_lossy().into_owned();
+        let board = kanban_create_board_sync(ws.clone(), "B".into(), "K".into(), None).unwrap();
+
+        let wip = serde_json::json!({ "todo": 3 });
+        let automations = serde_json::json!([{
+            "id": "a1", "trigger": "status_change", "triggerValue": "done",
+            "action": "notify", "enabled": true
+        }]);
+        update_board_meta(&ws, &board.id, Some(wip.clone()), Some(automations.clone())).unwrap();
+        // A later update that omits them keeps them.
+        kanban_update_board_sync(
+            ws.clone(),
+            board.id.clone(),
+            Some("Renamed".into()),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+
+        let listed = kanban_list_boards_sync(ws.clone()).unwrap();
+        let stored = listed.iter().find(|b| b.id == board.id).unwrap();
+        assert_eq!(stored.title, "Renamed");
+        assert_eq!(stored.wip.as_ref(), Some(&wip));
+        assert_eq!(stored.automations.as_ref(), Some(&automations));
+
+        std::fs::remove_dir_all(&base).ok();
+    }
+
+    #[test]
+    fn update_board_round_trips_due_date_rule_keys() {
+        let base = std::env::temp_dir().join(format!("nevo-kanban-due-{}", Uuid::new_v4()));
+        let workspace = base.join("workspace");
+        std::fs::create_dir_all(&workspace).unwrap();
+        let ws = workspace.to_string_lossy().into_owned();
+        let board = kanban_create_board_sync(ws.clone(), "B".into(), "K".into(), None).unwrap();
+
+        let automations = serde_json::json!([{
+            "id": "a1", "trigger": "due_date_near", "triggerValue": "5",
+            "dateField": "Due", "action": "notify", "enabled": true,
+            "firedFor": { "card-1": "2026-11-15" }, "runCount": 1, "runWeek": "2026-11-09"
+        }]);
+        update_board_meta(&ws, &board.id, None, Some(automations.clone())).unwrap();
+
+        let listed = kanban_list_boards_sync(ws.clone()).unwrap();
+        let stored = listed.iter().find(|b| b.id == board.id).unwrap();
+        assert_eq!(stored.automations.as_ref(), Some(&automations));
+
+        std::fs::remove_dir_all(&base).ok();
+    }
+
+    #[test]
+    fn update_board_rejects_malformed_wip_and_automations() {
+        let base = std::env::temp_dir().join(format!("nevo-kanban-wip-bad-{}", Uuid::new_v4()));
+        let workspace = base.join("workspace");
+        std::fs::create_dir_all(&workspace).unwrap();
+        let ws = workspace.to_string_lossy().into_owned();
+        let board = kanban_create_board_sync(ws.clone(), "B".into(), "K".into(), None).unwrap();
+        let before = std::fs::read_to_string(board_path(&ws, &board.id)).unwrap();
+
+        for wip in [
+            serde_json::json!([3]),
+            serde_json::json!({ "todo": -1 }),
+            serde_json::json!({ "todo": "3" }),
+        ] {
+            assert!(update_board_meta(&ws, &board.id, Some(wip), None).is_err());
+        }
+        for automations in [
+            serde_json::json!({ "id": "a" }),
+            serde_json::json!([{ "id": "a", "trigger": "t", "action": "x" }]),
+            serde_json::json!([{ "id": 1, "trigger": "t", "action": "x", "enabled": true }]),
+        ] {
+            assert!(update_board_meta(&ws, &board.id, None, Some(automations)).is_err());
+        }
+        assert_eq!(
+            std::fs::read_to_string(board_path(&ws, &board.id)).unwrap(),
+            before
+        );
+
+        std::fs::remove_dir_all(&base).ok();
+    }
+
+    #[test]
+    fn update_board_persists_templates() {
+        let base = std::env::temp_dir().join(format!("nevo-kanban-tpl-{}", Uuid::new_v4()));
+        let workspace = base.join("workspace");
+        std::fs::create_dir_all(&workspace).unwrap();
+        let ws = workspace.to_string_lossy().into_owned();
+        let board = kanban_create_board_sync(ws.clone(), "B".into(), "K".into(), None).unwrap();
+
+        let templates = serde_json::json!([{
+            "id": "t1", "name": "Bug", "icon": "B",
+            "card": { "priority": "high", "fields": [] }
+        }]);
+        let update = |templates: Option<Value>, title: Option<String>| {
+            kanban_update_board_sync(
+                ws.clone(),
+                board.id.clone(),
+                title,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                templates,
+            )
+        };
+        update(Some(templates.clone()), None).unwrap();
+        // A later update that omits them keeps them.
+        update(None, Some("Renamed".into())).unwrap();
+
+        let listed = kanban_list_boards_sync(ws.clone()).unwrap();
+        let stored = listed.iter().find(|b| b.id == board.id).unwrap();
+        assert_eq!(stored.templates.as_ref(), Some(&templates));
+
+        let before = std::fs::read_to_string(board_path(&ws, &board.id)).unwrap();
+        for bad in [
+            serde_json::json!({ "id": "t" }),
+            serde_json::json!([{ "id": "t" }]),
+            serde_json::json!([{ "id": 1, "name": "n" }]),
+            serde_json::json!([{ "id": "t", "name": "n", "card": "x" }]),
+        ] {
+            assert!(update(Some(bad), None).is_err());
+        }
+        assert_eq!(
+            std::fs::read_to_string(board_path(&ws, &board.id)).unwrap(),
+            before
         );
 
         std::fs::remove_dir_all(&base).ok();

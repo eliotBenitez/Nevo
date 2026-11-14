@@ -13,7 +13,7 @@ import type { FolderMeta, NoteDocument, NoteSnapshotMeta, ImportedImageAsset, Re
 import type { TemplateDocument, TemplateFieldValues } from '../../types/template'
 import type { KanbanBoard, KanbanCard, KanbanPropertyDef, KanbanCardField, KanbanLink } from '../../types/kanban'
 import type { WorkspaceBlockSearchItem } from '../../types/search'
-import type { BacklinkRef, GraphEdge, ExtractedEdge } from '../../types/graph'
+import type { BacklinkRef, GraphEdge } from '../../types/graph'
 import type { NoteQueryRequest, NoteRow } from '../../types/note-query'
 import type { NotebookPaperKind } from '../notebook/types'
 import type { DatabaseRepository } from '../../features/database/databaseRepository'
@@ -24,6 +24,9 @@ export interface KanbanBoardUpdate {
   statusPropertyId?: string
   propertyDefinitions?: KanbanPropertyDef[]
   viewSettings?: KanbanBoard['viewSettings']
+  wip?: KanbanBoard['wip']
+  automations?: KanbanBoard['automations']
+  templates?: KanbanBoard['templates']
 }
 
 export interface KanbanCardUpdate {
@@ -158,8 +161,6 @@ export interface WorkspaceBackend {
   // --- graph ---
   graphGetBacklinks(noteId: string): Promise<BacklinkRef[]>
   graphGetOutlinks(noteId: string): Promise<GraphEdge[]>
-  graphUpdateNoteEdges(noteId: string, edges: ExtractedEdge[]): Promise<void>
-  graphRemoveNote(noteId: string): Promise<void>
   graphGetAllEdges(): Promise<GraphEdge[]>
 
   // --- cross-note query (query_block) ---

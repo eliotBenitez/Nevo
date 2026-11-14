@@ -286,7 +286,24 @@ fn write_migrated_note_content(
     note.updated_at = chrono::Utc::now().to_rfc3339();
 
     let bytes = serde_json::to_vec(&note).map_err(|error| error.to_string())?;
-    write_atomic(&target, &bytes).map_err(|error| error.to_string())
+    write_atomic(&target, &bytes).map_err(|error| error.to_string())?;
+    // Best-effort: the graph index is a rebuildable cache.
+    if let Err(message) =
+        crate::commands::graph::index_note_links(workspace, note_id, &note.content)
+    {
+        let _ = crate::logging::logger().warn(
+            "tauri.marketplace",
+            "migrate_note_content",
+            "Failed to update note graph links",
+            true,
+            crate::logging::LogContext::default().with_error(crate::logging::LogError {
+                kind: Some("graph".to_string()),
+                message,
+                details: None,
+            }),
+        );
+    }
+    Ok(())
 }
 
 fn prepare_transaction_backup(

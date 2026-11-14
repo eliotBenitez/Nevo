@@ -7,6 +7,7 @@ import { useTabsStore } from '../../../stores/tabs'
 import { useTreeStore } from '../../../stores/tree'
 import { useUiStore } from '../../../stores/ui'
 import { useWorkspaceStore } from '../../../stores/workspace'
+import { useKanbanDueDateScheduler } from '../../../features/databases/kanban/useKanbanDueDateScheduler'
 import { rememberNoteView } from '../../../features/canvas/canvasPreferences'
 import { resolveStartupTarget } from '../../../utils/workspace-startup'
 import { isSystemPath } from '../../routing/systemRoutes'
@@ -40,6 +41,8 @@ export function useWorkspaceLifecycleWatchers(options: UseWorkspaceLifecycleWatc
   const { sidebarOpen } = storeToRefs(uiStore)
   const { manifest, settings } = storeToRefs(workspaceStore)
   const restoredRouteForWorkspace = ref<string | null>(null)
+
+  useKanbanDueDateScheduler(kanbanEnabled)
 
   watch(manifest, (workspace) => {
     if (!workspace) { router.replace('/onboarding'); return }

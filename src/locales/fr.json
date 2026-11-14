@@ -955,6 +955,36 @@
         "externalImage": "Image externe (non chargée)",
         "checklistItem": "Élément de liste de contrôle"
       },
+      "emptyBlock": "{type} (vide)",
+      "blockType": {
+        "paragraph": "Paragraphe",
+        "heading": "Titre",
+        "blockquote": "Citation",
+        "code_block": "Bloc de code",
+        "bullet_list": "Liste à puces",
+        "ordered_list": "Liste numérotée",
+        "callout": "Encadré",
+        "checklist_item": "Élément de liste de tâches",
+        "toggle": "Bloc repliable",
+        "divider": "Séparateur",
+        "horizontal_rule": "Séparateur",
+        "math_block": "Bloc mathématique",
+        "image_block": "Image",
+        "file_block": "Fichier",
+        "mermaid_block": "Diagramme Mermaid",
+        "html_block": "Bloc HTML",
+        "draw_block": "Dessin",
+        "markmap_block": "Carte mentale",
+        "vega_block": "Graphique",
+        "note_embed": "Note intégrée",
+        "embed_block": "Intégration",
+        "block_embed": "Bloc intégré",
+        "media_block": "Média",
+        "database_block": "Base de données",
+        "query_block": "Requête",
+        "column_list": "Colonnes",
+        "table": "Tableau"
+      },
       "snapshotColumn": "Version",
       "currentColumn": "Actuelle",
       "noSnapshotSelected": "Sélectionnez une version pour la comparer à la note courante.",
@@ -2236,7 +2266,7 @@
         "dateFrom": "Date de début",
         "dateTo": "Date de fin",
         "folder": "Dossier",
-        "folderPlaceholder": "Chemin du dossier",
+        "folderPlaceholder": "N'importe quel dossier",
         "includeSubtree": "Inclure les sous-dossiers"
       }
     },
@@ -2882,6 +2912,7 @@
       "boardNotFound": "Tableau introuvable.",
       "boardUnavailable": "Le tableau est indisponible.",
       "moveFailed": "Échec du déplacement : {message}",
+      "saveBoardFailed": "Impossible d’enregistrer le tableau : {message}",
       "cardCount": "{cards} carte | {cards} cartes",
       "openAutomations": "Automatisations",
       "emptyTitle": "Un tableau vide.",
@@ -2889,6 +2920,9 @@
       "openTemplates": "Modèles…",
       "addColumn": "Ajouter une colonne",
       "renameColumn": "Renommer la colonne",
+      "setWipLimit": "Définir la limite WIP",
+      "wipLimitLabel": "Limite WIP",
+      "wipLimitPlaceholder": "Aucune limite",
       "deleteColumn": "Supprimer la colonne",
       "newColumn": "Nouvelle colonne",
       "columnMenu": "Menu de la colonne",
@@ -2969,7 +3003,9 @@
       "addCardTitle": "Ajouter une carte",
       "titlePlaceholder": "Titre de la carte…",
       "column": "Colonne",
-      "add": "Ajouter la carte"
+      "add": "Ajouter la carte",
+      "template": "Modèle",
+      "noTemplate": "Aucun modèle"
     },
     "toolbar": {
       "filter": "Filtrer",
@@ -3055,39 +3091,55 @@
       "depGraph": "Graphe de dépendances",
       "noDeps": "Aucune dépendance suivie",
       "noDepsHint": "Liez les cartes comme « bloque » ou « bloqué par » dans la modale pour construire un graphe de dépendances.",
-      "templates": "Modèles de carte",
-      "saveAs": "Enregistrer la courante comme…",
-      "insertTemplate": "Insérer depuis un modèle",
+      "blocks": "{from} bloque {to}",
+      "templateSection": {
+        "title": "Modèles de carte",
+        "saveAs": "Enregistrer la carte comme modèle",
+        "saveAsDisabled": "Ajoutez d'abord une carte",
+        "card": "Carte",
+        "name": "Nom du modèle",
+        "save": "Enregistrer le modèle",
+        "create": "Créer une carte",
+        "delete": "Supprimer le modèle {name}",
+        "meta": "Aucun champ | 1 champ | {n} champs",
+        "withContent": "avec contenu",
+        "empty": "Aucun modèle pour l'instant",
+        "emptyHint": "Enregistrez n'importe quelle carte comme modèle pour réutiliser son contenu, ses champs et sa priorité."
+      },
       "runCount": "exécutée {n}× cette semaine",
       "triggerPrefix": "Quand",
+      "deleteRule": "Supprimer la règle : {rule}",
+      "form": {
+        "trigger": "Quand",
+        "action": "Alors",
+        "column": "Colonne",
+        "triggerColumn": "Colonne déclencheur",
+        "actionColumn": "Colonne cible",
+        "tag": "Nom de l'étiquette",
+        "tagPlaceholder": "p. ex. urgent",
+        "save": "Ajouter la règle",
+        "cancel": "Annuler",
+        "triggerStatusChange": "Une carte entre dans une colonne",
+        "triggerSubtasksDone": "Toutes les sous-tâches sont terminées",
+        "actionMoveTo": "Déplacer la carte vers une colonne",
+        "actionAddTag": "Ajouter une étiquette",
+        "actionSetProgress": "Définir la progression à 100 %",
+        "triggerDueDateNear": "Une échéance approche",
+        "actionNotify": "Envoyer une notification",
+        "days": "Jours à l'avance",
+        "dateField": "Champ de date",
+        "anyDateField": "N'importe quel champ de date"
+      },
       "action": {
         "moveTo": "déplacer vers {value}",
         "setProgress": "définir progression 100%",
         "addTag": "étiqueter #{value}",
-        "notify": "notifier le responsable"
+        "notify": "envoyer une notification"
       },
       "trigger": {
         "subtasksDone": "toutes les sous-tâches terminées",
-        "statusChange": "statut → {value}",
-        "dueDateNear": "échéance dans 3 jours"
-      },
-      "templatesData": {
-        "engineeringTicket": {
-          "name": "Ticket d'ingénierie",
-          "description": "5 champs · sous-tâches en 3 étapes"
-        },
-        "designReview": {
-          "name": "Revue de design",
-          "description": "Couverture + checklist de critique"
-        },
-        "weeklyRetro": {
-          "name": "Rétro hebdomadaire",
-          "description": "4 questions · pré-remplies"
-        },
-        "bugReport": {
-          "name": "Rapport de bug",
-          "description": "Reproduction + env + sévérité"
-        }
+        "statusChange": "une carte entre dans {value}",
+        "dueDateNear": "échéance dans ≤ {n} j"
       }
     },
     "groups": {

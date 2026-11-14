@@ -3,7 +3,10 @@
 
 .doc-editor .nv-prosemirror .tableWrapper {
   max-width: 100%;
-  overflow-x: clip;
+  /* prosemirror-tables sets an inline min-width (cellMinWidth × columns); wide tables must scroll. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
   margin: 12px 0;
   border-radius: calc(11px * var(--radius-scale, 1));
   border: 1px solid var(--border-default);

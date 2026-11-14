@@ -25,6 +25,20 @@ pub fn load_manifest(workspace_path: &str) -> Result<WorkspaceManifest, String> 
     serde_json::from_str(&content).map_err(|e| e.to_string())
 }
 
+/// Every active note id: `rootNotes` plus every folder's notes recursively.
+/// `trash` is excluded.
+pub(crate) fn manifest_note_ids(manifest: &WorkspaceManifest) -> Vec<String> {
+    fn walk(folders: &[FolderMeta], ids: &mut Vec<String>) {
+        for folder in folders {
+            ids.extend(folder.notes.iter().map(|note| note.id.clone()));
+            walk(&folder.children, ids);
+        }
+    }
+    let mut ids: Vec<String> = manifest.root_notes.iter().map(|n| n.id.clone()).collect();
+    walk(&manifest.tree, &mut ids);
+    ids
+}
+
 pub fn save_manifest(workspace_path: &str, manifest: &WorkspaceManifest) -> Result<(), String> {
     let path = Path::new(workspace_path).join(".nevo/workspace.json");
     let content = serde_json::to_string_pretty(manifest).map_err(|e| e.to_string())?;
@@ -196,10 +210,65 @@ pub(crate) fn delete_folder_sync(
 ) -> Result<(), String> {
     let workspace_path = normalize_workspace_path(&workspace_path)?;
     let workspace_path = workspace_path.to_string_lossy().into_owned();
-    let manifest_lock = manifest_lock(&workspace_path);
-    let _manifest_guard = manifest_lock.lock().map_err(|error| error.to_string())?;
-    let mut manifest = load_manifest(&workspace_path)?;
+    // Same order as save_note_impl (note, then manifest): a cascaded trash
+    // cannot land between an in-flight save's manifest write and its graph
+    // update. Sorted, like collab's archive, so concurrent cascades agree.
+    let cascade_ids = |manifest: &WorkspaceManifest| -> Vec<String> {
+        let mut ids: Vec<String> = if recursive {
+            find_in_tree(&manifest.tree, &folder_id)
+                .map(collect_notes_meta)
+                .unwrap_or_default()
+                .into_iter()
+                .map(|meta| meta.id)
+                .collect()
+        } else {
+            Vec::new()
+        };
+        ids.sort();
+        ids
+    };
+    let mut cascaded_ids = load_manifest(&workspace_path)
+        .map(|manifest| cascade_ids(&manifest))
+        .unwrap_or_default();
+    loop {
+        let note_locks: Vec<_> = cascaded_ids
+            .iter()
+            .map(|id| super::note::note_lock(&workspace_path, id))
+            .collect();
+        let _note_guards = note_locks
+            .iter()
+            .map(|lock| lock.lock().map_err(|error| error.to_string()))
+            .collect::<Result<Vec<_>, _>>()?;
+        let manifest_lock = manifest_lock(&workspace_path);
+        let _manifest_guard = manifest_lock.lock().map_err(|error| error.to_string())?;
+        let manifest = load_manifest(&workspace_path)?;
+        let current = cascade_ids(&manifest);
+        if current != cascaded_ids {
+            // A note entered or left the folder after the unlocked read:
+            // release everything and lock the current set instead.
+            cascaded_ids = current;
+            continue;
+        }
+        let trashed_note_ids =
+            delete_folder_locked(&workspace_path, &folder_id, recursive, manifest)?;
+        // Like save_note_impl: the graph update can wait on the one-time
+        // backfill, so release the manifest first. The note locks stay held.
+        drop(_manifest_guard);
+        unindex_trashed_notes(&workspace_path, &folder_id, &trashed_note_ids);
+        return Ok(());
+    }
+}
 
+/// The body of `delete_folder_sync`, run once the cascaded notes' locks and
+/// the manifest lock are held. Returns the notes it moved to trash.
+fn delete_folder_locked(
+    workspace_path: &str,
+    folder_id: &str,
+    recursive: bool,
+    mut manifest: WorkspaceManifest,
+) -> Result<Vec<String>, String> {
+    let workspace_path = workspace_path.to_string();
+    let folder_id = folder_id.to_string();
     if !recursive {
         if let Some(folder) = find_in_tree(&manifest.tree, &folder_id) {
             if !folder_is_empty(folder) {
@@ -234,27 +303,39 @@ pub(crate) fn delete_folder_sync(
         manifest.root_order.retain(|id| id != &folder_id);
     }
     save_manifest(&workspace_path, &manifest)?;
+    Ok(trashed_note_ids)
+}
 
+fn unindex_trashed_notes(workspace_path: &str, folder_id: &str, trashed_note_ids: &[String]) {
+    // One graph write for the whole cascade.
+    if let Err(message) = super::graph::remove_notes_links(workspace_path, trashed_note_ids) {
+        let _ = crate::logging::logger().warn(
+            "tauri.folder",
+            "delete_folder",
+            "Failed to remove note graph links",
+            true,
+            note_error_context(workspace_path, "graph", message)
+                .with_payload(serde_json::json!({ "folderId": folder_id })),
+        );
+    }
     // Best-effort: notes cascaded into trash by a recursive folder delete
     // should not surface in query_notes, mirroring note::delete_note_impl
     // (the index only tracks live notes). The index is a rebuildable cache
     // (note_index::reindex_all), and restoring one of these notes later
     // already re-upserts it via note::trash::restore_from_trash, so a
     // failure here must not fail the folder delete.
-    for note_id in &trashed_note_ids {
-        if let Err(message) = note_index::remove_note(Path::new(&workspace_path), note_id) {
+    for note_id in trashed_note_ids {
+        if let Err(message) = note_index::remove_note(Path::new(workspace_path), note_id) {
             let _ = crate::logging::logger().warn(
                 "tauri.folder",
                 "delete_folder",
                 "Failed to remove note from metadata index",
                 true,
-                note_error_context(&workspace_path, "note_index", message)
+                note_error_context(workspace_path, "note_index", message)
                     .with_payload(serde_json::json!({ "noteId": note_id, "folderId": folder_id })),
             );
         }
     }
-
-    Ok(())
 }
 
 fn collect_notes_meta(folder: &FolderMeta) -> Vec<NoteMeta> {

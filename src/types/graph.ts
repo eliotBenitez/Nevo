@@ -1,12 +1,5 @@
 export type EdgeKind = 'link' | 'embed' | 'mention' | 'parent'
 
-export interface ExtractedEdge {
-  target: string
-  kind: EdgeKind
-  anchor: string | null
-  position: number
-}
-
 export interface GraphEdge {
   source: string
   target: string

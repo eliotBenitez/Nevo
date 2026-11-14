@@ -112,11 +112,13 @@ fn run_merge(
     databases::copy_database_records(temp_dir, current_root, &maps.databases)?;
     let imported_assets = assets::copy_new_assets(temp_dir, current_root)?;
     let (skipped_boards, skipped_snapshots) = extras::count_deferred(temp_dir);
-    extras::merge_graph_index(temp_dir, current_root, &maps);
     extras::copy_templates(temp_dir, current_root);
 
     let imported_folders =
         manifest_merge::merge_manifest_tree(&current_root_string, &imported_manifest, &maps)?;
+    // After the manifest merge: its `linksBackfilled` reset must not let a
+    // concurrent graph read rebuild against a manifest lacking the new notes.
+    extras::reset_graph_index(current_root);
 
     let _ = on_event.send(TransferProgress::Finished);
 

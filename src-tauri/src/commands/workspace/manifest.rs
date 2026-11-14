@@ -159,6 +159,7 @@ pub fn create_workspace_sync(
             })),
     );
 
+    crate::commands::graph::evict_cached_indexes();
     activate_workspace_root(base)?;
     Ok(manifest)
 }
@@ -288,6 +289,9 @@ pub fn open_workspace_sync(path: String) -> Result<WorkspaceManifest, String> {
         );
     })?;
 
+    // Opening a workspace drops other workspaces' parsed graph indexes, before
+    // the prune below fills this one's.
+    crate::commands::graph::evict_cached_indexes();
     // Prune trash on open; never fails opening (the manifest stays as read).
     if let Ok(settings) = read_workspace_settings(&settings_path(&workspace_path)) {
         let retention_days = settings.files.trash_retention_days;

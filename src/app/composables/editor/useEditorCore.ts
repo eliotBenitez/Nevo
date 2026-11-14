@@ -121,7 +121,6 @@ export interface EditorCoreCallbacks {
   onCloseOverlays: () => void
   onContentUpdate: (content: NoteDocument['content']) => void
   onDocDirty?: () => void
-  onDocChanged?: (doc: Node) => void
   onInternalLinkOpen: (noteId: string, anchor: string | null) => void
   /** Existence check used to mark `internal_link` marks pointing at missing
    *  notes as broken. When omitted, no broken-link decoration is applied. */
@@ -350,7 +349,6 @@ export function useEditorCore(core: EditorCore, callbacks: EditorCoreCallbacks) 
   function scheduleContentUpdate(doc: Node) {
     pendingContentDoc = doc
     callbacks.onDocDirty?.()
-    callbacks.onDocChanged?.(doc)
     contentUpdateTask.schedule()
   }
 

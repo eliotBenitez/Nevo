@@ -165,7 +165,7 @@ onBeforeUnmount(() => {
       <div
         v-if="isOpen"
         ref="popoverRef"
-        class="ndp-popover tw:fixed tw:z-[300] tw:w-60 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--menu-bg) tw:p-2.5 tw:shadow-(--menu-shadow)"
+        class="ndp-popover tw:fixed tw:z-[2000] tw:w-60 tw:rounded-[calc(12px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-(--menu-bg) tw:p-2.5 tw:shadow-(--menu-shadow)"
         :style="{ top: popoverPos.top + 'px', left: popoverPos.left + 'px' }"
       >
         <!-- Month nav -->

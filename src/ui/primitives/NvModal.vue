@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, useId, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue'
 import { X } from '../icons'
 import { useI18n } from 'vue-i18n'
-import { useFocusTrap } from '../composables/useFocusTrap'
+import { isTopmostModal, useFocusTrap } from '../composables/useFocusTrap'
 
 interface Props {
   open: boolean
@@ -47,15 +47,34 @@ const { activate, deactivate } = useFocusTrap(panelRef, open)
 
 watch(() => props.open, (isOpen) => {
   if (isOpen) {
-    void nextTick(() => activate())
+    // Captured before the content mounts and may focus a control of its own.
+    const restoreTo = document.activeElement as HTMLElement | null
+    void nextTick(() => activate(restoreTo))
   } else {
     deactivate()
   }
-})
+}, { immediate: true })
 
 function onScrimClick() {
   if (props.closeOnBackdrop) emit('close')
 }
+
+// Focus falls to <body> when the focused control is disabled or replaced (a form swapped for its
+// result), and the panel's own Escape listener never sees the key; the topmost open modal takes it.
+function onDocumentKeydown(event: KeyboardEvent) {
+  if (!props.open || event.key !== 'Escape' || event.defaultPrevented) return
+  if (document.activeElement && document.activeElement !== document.body) return
+  if (!isTopmostModal(panelRef.value)) return
+  event.preventDefault()
+  emit('close')
+}
+
+onMounted(() => document.addEventListener('keydown', onDocumentKeydown))
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onDocumentKeydown)
+  // Callers that unmount the modal with v-if never flip `open`, so focus is restored here.
+  if (props.open) deactivate()
+})
 </script>
 
 <template>

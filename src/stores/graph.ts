@@ -2,8 +2,9 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useWorkspaceStore } from './workspace'
 import { useTreeStore } from './tree'
-import type { BacklinkRef, GraphEdge, ExtractedEdge } from '../types/graph'
+import type { BacklinkRef, GraphEdge } from '../types/graph'
 import { appLogger } from '../utils/logger'
+import { internalLinkSignature } from '../utils/internalLinkSignature'
 
 export const useGraphStore = defineStore('graph', () => {
   const workspaceStore = useWorkspaceStore()
@@ -13,6 +14,12 @@ export const useGraphStore = defineStore('graph', () => {
   const outlinks = ref<GraphEdge[]>([])
   const activeNoteId = ref<string | null>(null)
   let loadGeneration = 0
+  // Per-list request counters: an older response for the same note must not
+  // overwrite a newer one that resolved first.
+  let backlinksRequest = 0
+  let outlinksRequest = 0
+  // Internal-link signature of the content each note last refreshed for.
+  const lastLinkSignature = new Map<string, string>()
 
   // The local Rust graph index stores empty title/icon for backlink sources
   // (only the cloud backend enriches them). Fill missing metadata from the
@@ -31,22 +38,35 @@ export const useGraphStore = defineStore('graph', () => {
   }
 
   async function loadNoteGraph(noteId: string) {
-    const generation = ++loadGeneration
+    ++loadGeneration
     activeNoteId.value = noteId
     backlinks.value = []
     outlinks.value = []
-    const backend = workspaceStore.backend
-    if (!backend) return
+    // A fresh load may show links a later save's content matches; never skip after it.
+    lastLinkSignature.delete(noteId)
+    await refreshActiveNote()
+  }
 
+  /** Re-reads the active note's links in place, keeping the current lists
+   *  until the new ones arrive (no empty flash). The single fetch path for
+   *  opening a note, refreshing after a delete, and re-reading after a save. */
+  async function refreshActiveNote(options: { backlinks?: boolean } = {}): Promise<boolean> {
+    const noteId = activeNoteId.value
+    const generation = loadGeneration
+    const backend = workspaceStore.backend
+    if (!backend || !noteId) return false
+    const backlinksTicket = options.backlinks === false ? null : ++backlinksRequest
+    const outlinksTicket = ++outlinksRequest
     try {
       const [bl, ol] = await Promise.all([
-        backend.graphGetBacklinks(noteId),
+        backlinksTicket === null ? null : backend.graphGetBacklinks(noteId),
         backend.graphGetOutlinks(noteId),
       ])
-      if (generation !== loadGeneration) return
-      activeNoteId.value = noteId
-      backlinks.value = enrichBacklinks(bl)
+      if (activeNoteId.value !== noteId || generation !== loadGeneration) return false
+      if (bl && backlinksTicket === backlinksRequest) backlinks.value = enrichBacklinks(bl)
+      if (outlinksTicket !== outlinksRequest) return false
       outlinks.value = ol
+      return true
     } catch (error) {
       await appLogger.error({
         source: 'frontend.graph',
@@ -54,52 +74,25 @@ export const useGraphStore = defineStore('graph', () => {
         message: 'Failed to load note graph',
         error,
       })
+      return false
     }
   }
 
-  async function updateNoteEdges(noteId: string, edges: ExtractedEdge[]) {
-    const generation = loadGeneration
-    const backend = workspaceStore.backend
-    if (!backend) return
-    try {
-      await backend.graphUpdateNoteEdges(noteId, edges)
-      if (activeNoteId.value === noteId && generation === loadGeneration) {
-        const nextOutlinks = await backend.graphGetOutlinks(noteId)
-        if (activeNoteId.value === noteId && generation === loadGeneration) {
-          outlinks.value = nextOutlinks
-        }
-      }
-    } catch (error) {
-      await appLogger.error({
-        source: 'frontend.graph',
-        event: 'update_note_edges',
-        message: 'Failed to update note edges',
-        error,
-      })
-    }
-  }
-
-  async function removeNote(noteId: string) {
-    const backend = workspaceStore.backend
-    if (!backend) return
-    try {
-      await backend.graphRemoveNote(noteId)
-      if (activeNoteId.value === noteId) {
-        backlinks.value = []
-        outlinks.value = []
-      }
-    } catch (error) {
-      await appLogger.error({
-        source: 'frontend.graph',
-        event: 'remove_note',
-        message: 'Failed to remove note from graph',
-        error,
-      })
-    }
+  /** Re-reads the active note's outlinks after a save; the backend's save
+   *  path is the only writer of the link index. With the saved `content`,
+   *  a save whose internal links match the last refresh skips the IPC. */
+  async function refreshOutlinks(noteId: string, content?: unknown) {
+    if (activeNoteId.value !== noteId) return
+    const signature = content === undefined ? null : internalLinkSignature(content)
+    if (signature !== null && lastLinkSignature.get(noteId) === signature) return
+    // Recorded only once the panel actually shows this save's links.
+    lastLinkSignature.delete(noteId)
+    if (await refreshActiveNote({ backlinks: false }) && signature !== null) lastLinkSignature.set(noteId, signature)
   }
 
   function clear() {
     loadGeneration++
+    lastLinkSignature.clear()
     backlinks.value = []
     outlinks.value = []
     activeNoteId.value = null
@@ -110,8 +103,8 @@ export const useGraphStore = defineStore('graph', () => {
     outlinks,
     activeNoteId,
     loadNoteGraph,
-    updateNoteEdges,
-    removeNote,
+    refreshOutlinks,
+    refreshActiveNote,
     clear,
   }
 })

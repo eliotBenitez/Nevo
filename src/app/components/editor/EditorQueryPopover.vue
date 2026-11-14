@@ -11,6 +11,8 @@ import NvMenuItem from '../../../ui/primitives/NvMenuItem.vue'
 import NvMenuSeparator from '../../../ui/primitives/NvMenuSeparator.vue'
 import NvMenuLabel from '../../../ui/primitives/NvMenuLabel.vue'
 import type { QueryBlockData, QueryBlockView } from '../../../features/query/queryBlockData'
+import { collectQueryFolderPaths } from '../../../features/query/queryFolderPaths'
+import { useWorkspaceStore } from '../../../stores/workspace'
 import type { NoteSortDirection, NoteSortField, NoteSortRule } from '../../../types/note-query'
 
 const props = defineProps<{
@@ -27,6 +29,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const workspaceStore = useWorkspaceStore()
 
 const NONE = ''
 const queryFieldClass = 'tw:flex tw:min-w-0 tw:flex-col tw:gap-1'
@@ -68,6 +71,16 @@ const typeOptions = computed(() => [
   { value: 'project', label: t('workspace.rightPanel.properties.types.project') },
   { value: 'research', label: t('workspace.rightPanel.properties.types.research') },
 ])
+const folderOptions = computed(() => {
+  const paths = collectQueryFolderPaths(workspaceStore.manifest?.tree ?? [])
+  const current = props.data.filters.folderPathPrefix
+  // Keep a saved path visible even if the folder was renamed or removed since.
+  if (current && !paths.includes(current)) paths.unshift(current)
+  return [
+    { value: NONE, label: t('editor.queryBlock.filters.folderPlaceholder') },
+    ...paths.map((path) => ({ value: path, label: path })),
+  ]
+})
 const viewOptions = computed(() => [
   { value: 'list', label: t('editor.queryBlock.views.list') },
   { value: 'table', label: t('editor.queryBlock.views.table') },
@@ -185,12 +198,13 @@ function setView(view: string) {
         :aria-label="t('editor.queryBlock.filters.folder')"
       >
         <span class="query-popover__field-label" :class="queryLabelClass">{{ t('editor.queryBlock.filters.folder') }}</span>
-        <NvTextInput
+        <NvSelect
           class="query-popover__control" :class="queryControlClass"
-          :model-value="data.filters.folderPathPrefix ?? ''"
+          :model-value="data.filters.folderPathPrefix ?? NONE"
+          :options="folderOptions"
+          :min-width="'100%'"
           :aria-label="t('editor.queryBlock.filters.folder')"
-          :placeholder="t('editor.queryBlock.filters.folderPlaceholder')"
-          @update:model-value="patch({ folderPathPrefix: $event || null })"
+          @update:model-value="(value) => patch({ folderPathPrefix: value || null })"
         />
       </div>
 

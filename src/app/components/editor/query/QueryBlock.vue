@@ -80,8 +80,7 @@ function onResultsClick(event: MouseEvent): void {
   if (record) props.onOpenNote(record.id)
 }
 
-// The query block never edits records in place (results are a live, read-only
-// projection), so the mutating events from the reused table view are no-ops.
+// Results are a live, read-only projection; the reused views' range paging is unused.
 function noop(): void {}
 </script>
 
@@ -142,14 +141,9 @@ function noop(): void {}
           :record-offset="0"
           :total-records="records.length"
           :style="tableStyle"
+          readonly
           @request-range="noop"
-          @update-cell="noop"
-          @update-field="noop"
-          @delete-field="noop"
-          @add-field="noop"
-          @resize-field="noop"
-          @add-record="noop"
-          @delete-record="noop"
+          @open-record="(id) => onOpenNote?.(id)"
         />
         <DatabaseCardsView
           v-else-if="data.view === 'cards'"

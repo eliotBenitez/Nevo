@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { LayoutGrid, Table2, Calendar, Layers, Filter, ArrowUpDown, Search, Plus, Settings2, Eye, Rows3 } from '../../../ui/icons'
+import { LayoutGrid, Table2, Calendar, Layers, Filter, ArrowUpDown, Search, Plus, Settings2, Eye, Rows3, Zap } from '../../../ui/icons'
 import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import NvPopupMenu from '../../../ui/primitives/NvPopupMenu.vue'
 import KanbanFilterPanel from './KanbanFilterPanel.vue'
@@ -43,6 +43,7 @@ const emit = defineEmits<{
   'update:sortRules': [rules: KanbanSortRule[]]
   'new-card': []
   'add-column': []
+  'open-automations': []
   'update:boardSettings': [settings: KanbanBoardCardViewSettings]
 }>()
 
@@ -268,6 +269,17 @@ function setDensity(density: KanbanCardDensity) {
         @input="emit('update:searchQuery', ($event.target as HTMLInputElement).value)"
       />
     </div>
+
+    <!-- Automations -->
+    <button
+      type="button"
+      class="kb-toolbar__btn tw:max-[760px]:relative tw:max-[760px]:min-h-9 tw:max-[760px]:after:absolute tw:max-[760px]:after:-inset-1 tw:max-[760px]:after:content-[''] kb-toolbar__btn--icon tw:inline-flex tw:h-[26px] tw:w-7 tw:items-center tw:justify-center tw:gap-1 tw:rounded-[calc(6px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-transparent tw:text-[11.5px] tw:text-[var(--text-muted,var(--text-secondary))] tw:whitespace-nowrap tw:transition-[background-color,color,border-color] tw:duration-100 tw:cursor-pointer tw:hover:bg-[var(--hover,var(--surface-raised))] tw:hover:text-content-primary tw:max-[760px]:w-9"
+      :title="t('kanban.automations.openButton')"
+      :aria-label="t('kanban.automations.openButton')"
+      @click="emit('open-automations')"
+    >
+      <Zap :size="13" />
+    </button>
 
     <!-- New card -->
     <button

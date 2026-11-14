@@ -951,9 +951,39 @@
         "structure": "Nested content changed"
       },
       "preview": {
-        "unsupported": "{type} block — preview not available",
+        "unsupported": "{type} — preview not available",
         "externalImage": "External image (not loaded)",
         "checklistItem": "Checklist item"
+      },
+      "emptyBlock": "{type} (empty)",
+      "blockType": {
+        "paragraph": "Paragraph",
+        "heading": "Heading",
+        "blockquote": "Quote",
+        "code_block": "Code block",
+        "bullet_list": "Bulleted list",
+        "ordered_list": "Numbered list",
+        "callout": "Callout",
+        "checklist_item": "Checklist item",
+        "toggle": "Toggle",
+        "divider": "Divider",
+        "horizontal_rule": "Divider",
+        "math_block": "Math block",
+        "image_block": "Image",
+        "file_block": "File",
+        "mermaid_block": "Mermaid diagram",
+        "html_block": "HTML block",
+        "draw_block": "Drawing",
+        "markmap_block": "Mind map",
+        "vega_block": "Chart",
+        "note_embed": "Note embed",
+        "embed_block": "Embed",
+        "block_embed": "Block embed",
+        "media_block": "Media",
+        "database_block": "Database",
+        "query_block": "Query",
+        "column_list": "Columns",
+        "table": "Table"
       },
       "snapshotColumn": "Version",
       "currentColumn": "Current",
@@ -2236,7 +2266,7 @@
         "dateFrom": "Date from",
         "dateTo": "Date to",
         "folder": "Folder",
-        "folderPlaceholder": "Folder path",
+        "folderPlaceholder": "Any folder",
         "includeSubtree": "Include subfolders"
       }
     },
@@ -2882,6 +2912,7 @@
       "boardNotFound": "Board not found.",
       "boardUnavailable": "Board is unavailable.",
       "moveFailed": "Move failed: {message}",
+      "saveBoardFailed": "Couldn’t save the board: {message}",
       "cardCount": "{cards} card | {cards} cards",
       "openAutomations": "Automations",
       "emptyTitle": "An empty board.",
@@ -2889,6 +2920,9 @@
       "openTemplates": "Templates…",
       "addColumn": "Add column",
       "renameColumn": "Rename column",
+      "setWipLimit": "Set WIP limit",
+      "wipLimitLabel": "WIP limit",
+      "wipLimitPlaceholder": "No limit",
       "deleteColumn": "Delete column",
       "newColumn": "New column",
       "columnMenu": "Column menu",
@@ -2969,7 +3003,9 @@
       "addCardTitle": "Add card",
       "titlePlaceholder": "Card title…",
       "column": "Column",
-      "add": "Add card"
+      "add": "Add card",
+      "template": "Template",
+      "noTemplate": "No template"
     },
     "toolbar": {
       "filter": "Filter",
@@ -3055,39 +3091,55 @@
       "depGraph": "Dependency graph",
       "noDeps": "No dependencies tracked yet",
       "noDepsHint": "Link cards as \"blocks\" or \"blocked-by\" in the card modal to build a dependency graph.",
-      "templates": "Card templates",
-      "saveAs": "Save current as…",
-      "insertTemplate": "Insert from template",
+      "blocks": "{from} blocks {to}",
+      "templateSection": {
+        "title": "Card templates",
+        "saveAs": "Save card as template",
+        "saveAsDisabled": "Add a card first",
+        "card": "Card",
+        "name": "Template name",
+        "save": "Save template",
+        "create": "Create card",
+        "delete": "Delete template {name}",
+        "meta": "No fields | 1 field | {n} fields",
+        "withContent": "with content",
+        "empty": "No templates yet",
+        "emptyHint": "Save any card as a template to reuse its content, fields and priority."
+      },
       "runCount": "ran {n}× this week",
       "triggerPrefix": "When",
+      "deleteRule": "Delete rule: {rule}",
+      "form": {
+        "trigger": "When",
+        "action": "Then",
+        "column": "Column",
+        "triggerColumn": "Trigger column",
+        "actionColumn": "Target column",
+        "tag": "Tag name",
+        "tagPlaceholder": "e.g. urgent",
+        "save": "Add rule",
+        "cancel": "Cancel",
+        "triggerStatusChange": "A card enters a column",
+        "triggerSubtasksDone": "All subtasks are done",
+        "actionMoveTo": "Move the card to a column",
+        "actionAddTag": "Add a tag",
+        "actionSetProgress": "Set progress to 100%",
+        "triggerDueDateNear": "A due date is near",
+        "actionNotify": "Send a notification",
+        "days": "Days ahead",
+        "dateField": "Date field",
+        "anyDateField": "Any date field"
+      },
       "action": {
         "moveTo": "move to {value}",
         "setProgress": "set progress 100%",
         "addTag": "tag #{value}",
-        "notify": "notify owner"
+        "notify": "send a notification"
       },
       "trigger": {
         "subtasksDone": "all subtasks done",
-        "statusChange": "status → {value}",
-        "dueDateNear": "due date in 3 days"
-      },
-      "templatesData": {
-        "engineeringTicket": {
-          "name": "Engineering ticket",
-          "description": "5 fields · 3-step subtasks"
-        },
-        "designReview": {
-          "name": "Design review",
-          "description": "Cover + critique checklist"
-        },
-        "weeklyRetro": {
-          "name": "Weekly retro",
-          "description": "4 questions · prefilled"
-        },
-        "bugReport": {
-          "name": "Bug report",
-          "description": "Repro + env + severity"
-        }
+        "statusChange": "a card enters {value}",
+        "dueDateNear": "due in ≤ {n} days"
       }
     },
     "groups": {

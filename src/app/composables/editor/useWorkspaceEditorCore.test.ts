@@ -66,7 +66,6 @@ function createOptions(overrides: Partial<WorkspaceEditorCoreOptions> = {}) {
     emitContentUpdate: vi.fn(),
     emitContentDirty: vi.fn(),
     onTransactionDoc: vi.fn(),
-    scheduleGraphUpdate: vi.fn(),
     markRemovedEditorAssets: vi.fn(),
     openInternalLink: vi.fn(),
     internalLinkExists: vi.fn(() => true),

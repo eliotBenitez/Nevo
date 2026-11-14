@@ -1,7 +1,8 @@
 import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { createI18n } from 'vue-i18n'
-import { describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import EditorQueryPopover from './EditorQueryPopover.vue'
 import NvCheckbox from '../../../ui/primitives/NvCheckbox.vue'
 import NvDatePicker from '../../../ui/primitives/NvDatePicker.vue'
@@ -9,6 +10,9 @@ import NvSelect from '../../../ui/primitives/NvSelect.vue'
 import NvTextInput from '../../../ui/primitives/NvTextInput.vue'
 import { emptyQueryBlockData } from '../../../features/query/queryBlockData'
 import en from '../../../locales/en.json'
+import { useWorkspaceStore } from '../../../stores/workspace'
+import type { FolderMeta } from '../../../types/note'
+import type { WorkspaceManifest } from '../../../types/workspace'
 
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } })
 
@@ -31,14 +35,22 @@ function mountPopover(
   })
 }
 
+function folder(id: string, title: string, children: FolderMeta[] = []): FolderMeta {
+  return { id, title, icon: '📁', parentId: null, order: 0, children, notes: [] }
+}
+
 describe('EditorQueryPopover', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
   it('composes the query form from shared input primitives', () => {
     const wrapper = mountPopover()
 
-    expect(wrapper.findAllComponents(NvTextInput)).toHaveLength(3)
+    expect(wrapper.findAllComponents(NvTextInput)).toHaveLength(2)
     expect(wrapper.findAllComponents(NvDatePicker)).toHaveLength(2)
     expect(wrapper.findAllComponents(NvCheckbox)).toHaveLength(1)
-    expect(wrapper.findAllComponents(NvSelect)).toHaveLength(3)
+    expect(wrapper.findAllComponents(NvSelect)).toHaveLength(4)
     expect(wrapper.find('.nv-db-filter__input').exists()).toBe(false)
     expect(wrapper.findAll('.query-popover__control')).toHaveLength(8)
   })
@@ -73,6 +85,50 @@ describe('EditorQueryPopover', () => {
 
     expect(onUpdateData).toHaveBeenCalledOnce()
     expect(onUpdateData.mock.calls[0]?.[0].filters.dateFrom).toBe('2026-08-06')
+    // The panel is an .editor-overlay (z-index 1300); the calendar must stack above it.
+    expect(calendar?.className).toContain('tw:z-[2000]')
+    wrapper.unmount()
+  })
+
+  it('adds a sort rule without submitting the popover form', async () => {
+    const onUpdateData = vi.fn()
+    const wrapper = mountPopover(onUpdateData)
+
+    await wrapper.get('.nv-menu-item').trigger('click')
+
+    expect(wrapper.emitted('apply')).toBeUndefined()
+    expect(onUpdateData.mock.calls[0]?.[0].sorts).toEqual([{ field: 'title', direction: 'asc' }])
+    wrapper.unmount()
+  })
+
+  it('picks the folder filter from the workspace folder list', async () => {
+    useWorkspaceStore().manifest = {
+      tree: [folder('w', 'Work', [folder('p', 'Projects')]), folder('h', 'Home')],
+    } as unknown as WorkspaceManifest
+    const onUpdateData = vi.fn()
+    const wrapper = mountPopover(onUpdateData)
+    const folderSelect = wrapper.findAllComponents(NvSelect)
+      .find((select) => select.props('ariaLabel') === en.editor.queryBlock.filters.folder)!
+
+    expect(folderSelect.props('options').map((option) => option.value))
+      .toEqual(['', 'Work', 'Work / Projects', 'Home'])
+    folderSelect.vm.$emit('update:modelValue', 'Work / Projects')
+    folderSelect.vm.$emit('update:modelValue', '')
+
+    expect(onUpdateData.mock.calls[0]?.[0].filters.folderPathPrefix).toBe('Work / Projects')
+    expect(onUpdateData.mock.calls[1]?.[0].filters.folderPathPrefix).toBeNull()
+    wrapper.unmount()
+  })
+
+  it('keeps a saved folder path that is no longer in the tree selectable', () => {
+    const data = emptyQueryBlockData()
+    data.filters.folderPathPrefix = 'Archive'
+    const wrapper = mountPopover(undefined, { data })
+    const folderSelect = wrapper.findAllComponents(NvSelect)
+      .find((select) => select.props('ariaLabel') === en.editor.queryBlock.filters.folder)!
+
+    expect(folderSelect.props('modelValue')).toBe('Archive')
+    expect(folderSelect.props('options').map((option) => option.value)).toEqual(['', 'Archive'])
     wrapper.unmount()
   })
 })

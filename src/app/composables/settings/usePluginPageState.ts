@@ -5,6 +5,8 @@ import type { MarketplaceCatalogItem, PluginManifest } from '../../../types/work
 import { pluginReadmeCommands } from '../../../tauri/pluginReadme'
 import { readmeFileForLocale, type PluginCatalogMessages } from '../../../core/plugins/pluginMessages'
 import { installedRemovalItem } from '../../../core/plugins/installedCatalogItem'
+import { loadSystemPluginReadme } from '../../../core/plugins/systemPluginReadmes'
+import { isSystemPluginId } from '../../../utils/system-plugins'
 import { usePluginReadme } from './usePluginReadme'
 import type { ReadmeTarget } from './usePluginReadme'
 
@@ -70,8 +72,11 @@ export function usePluginPageState(options: PluginPageStateOptions) {
     if (installed) {
       const key = `local:${id}@${installed.version}:${locale.value}`
       const path = options.workspacePath.value
-      if (installed.kind === 'system' || !path) return { key, load: async () => null }
       const current = locale.value
+      if (installed.kind === 'system') {
+        return { key, load: async () => (isSystemPluginId(id) ? loadSystemPluginReadme(id, current) : null) }
+      }
+      if (!path) return { key, load: async () => null }
       return {
         key,
         load: () => pluginReadmeCommands.readLocal(path, id, current, installed.defaultLocale ?? DEFAULT_LOCALE),

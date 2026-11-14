@@ -40,14 +40,27 @@ export interface KanbanAutomation {
   actionValue?: string
   enabled: boolean
   runCount?: number
+  /** Monday (YYYY-MM-DD, local) of the week `runCount` belongs to. */
+  runWeek?: string
+  /** due_date_near: name of the date field to watch (case-insensitive); the card's first date field when absent. */
+  dateField?: string
+  /** due_date_near: card id -> due date already notified, so each due date fires once. */
+  firedFor?: Record<string, string>
+}
+
+export interface KanbanTemplateCard {
+  icon?: string
+  content?: BlockNode
+  fields?: KanbanCardField[]
+  priority?: KanbanCardPriority
 }
 
 export interface KanbanTemplate {
   id: string
   name: string
   icon: string
-  description: string
-  shortcut?: string
+  description?: string
+  card?: KanbanTemplateCard
 }
 
 export type KanbanCardDensity = 'compact' | 'comfortable'

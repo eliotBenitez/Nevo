@@ -4,6 +4,7 @@ import type { NoteDocument, NoteProperties, NoteSnapshotMeta, RestoreNoteSnapsho
 import type { CanvasSnapshotV1 } from '../core/canvas'
 import { decodeNotebook, decodeNoteFormat, type NoteFormatResult, type NotebookSnapshotV1 } from '../core/notebook'
 import { appLogger } from '../utils/logger'
+import { useGraphStore } from './graph'
 import { useTreeStore } from './tree'
 import { useWorkspaceStore } from './workspace'
 import { workspaceHandleKey } from '../core/workspace-backend'
@@ -345,6 +346,8 @@ export const useNoteStore = defineStore('note', () => {
       if (sessionToken !== noteSessionToken || workspaceStore.backend !== backend || activeNote.value?.id !== note.id) {
         return
       }
+      // The save re-indexed this note's links on the backend.
+      void useGraphStore().refreshOutlinks(note.id, note.content)
 
       if (committedRevision >= dirtyRevision.value && isSameDraft(activeNote.value, note)) {
         activeNote.value = keepContentRaw(note)
@@ -603,6 +606,8 @@ export const useNoteStore = defineStore('note', () => {
     } finally {
       if (isActive && sessionToken === noteSessionToken && workspaceStore.backend === backend) {
         await loadNote(noteId, { force: true })
+        // The restore re-indexed the note's links on the backend.
+        void useGraphStore().refreshOutlinks(noteId)
       }
     }
   }

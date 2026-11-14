@@ -955,6 +955,36 @@
         "externalImage": "Внешнее изображение (не загружено)",
         "checklistItem": "Пункт чек-листа"
       },
+      "emptyBlock": "{type} (пусто)",
+      "blockType": {
+        "paragraph": "Абзац",
+        "heading": "Заголовок",
+        "blockquote": "Цитата",
+        "code_block": "Блок кода",
+        "bullet_list": "Маркированный список",
+        "ordered_list": "Нумерованный список",
+        "callout": "Выноска",
+        "checklist_item": "Пункт чек-листа",
+        "toggle": "Раскрывающийся блок",
+        "divider": "Разделитель",
+        "horizontal_rule": "Разделитель",
+        "math_block": "Формула",
+        "image_block": "Изображение",
+        "file_block": "Файл",
+        "mermaid_block": "Диаграмма Mermaid",
+        "html_block": "HTML-блок",
+        "draw_block": "Рисунок",
+        "markmap_block": "Ментальная карта",
+        "vega_block": "График",
+        "note_embed": "Встроенная заметка",
+        "embed_block": "Встраивание",
+        "block_embed": "Встроенный блок",
+        "media_block": "Медиа",
+        "database_block": "База данных",
+        "query_block": "Запрос",
+        "column_list": "Колонки",
+        "table": "Таблица"
+      },
       "snapshotColumn": "Версия",
       "currentColumn": "Текущая",
       "noSnapshotSelected": "Выберите версию, чтобы сравнить её с текущей заметкой.",
@@ -2236,7 +2266,7 @@
         "dateFrom": "Дата с",
         "dateTo": "Дата по",
         "folder": "Папка",
-        "folderPlaceholder": "Путь папки",
+        "folderPlaceholder": "Любая папка",
         "includeSubtree": "Включая подпапки"
       }
     },
@@ -2882,6 +2912,7 @@
       "boardNotFound": "Доска не найдена.",
       "boardUnavailable": "Доска недоступна.",
       "moveFailed": "Не удалось переместить: {message}",
+      "saveBoardFailed": "Не удалось сохранить доску: {message}",
       "cardCount": "{cards} карточка | {cards} карточки | {cards} карточек",
       "openAutomations": "Автоматизации",
       "emptyTitle": "Пустая доска.",
@@ -2889,6 +2920,9 @@
       "openTemplates": "Шаблоны…",
       "addColumn": "Добавить колонку",
       "renameColumn": "Переименовать колонку",
+      "setWipLimit": "Задать WIP-лимит",
+      "wipLimitLabel": "WIP-лимит",
+      "wipLimitPlaceholder": "Без лимита",
       "deleteColumn": "Удалить колонку",
       "newColumn": "Новая колонка",
       "columnMenu": "Меню колонки",
@@ -2969,7 +3003,9 @@
       "addCardTitle": "Добавить карточку",
       "titlePlaceholder": "Название карточки…",
       "column": "Колонка",
-      "add": "Добавить"
+      "add": "Добавить",
+      "template": "Шаблон",
+      "noTemplate": "Без шаблона"
     },
     "toolbar": {
       "filter": "Фильтр",
@@ -3055,39 +3091,55 @@
       "depGraph": "Граф зависимостей",
       "noDeps": "Зависимости не отслеживаются",
       "noDepsHint": "Свяжите карточки как «блокирует» или «заблокировано» в редакторе карточки, чтобы собрать граф зависимостей.",
-      "templates": "Шаблоны карточек",
-      "saveAs": "Сохранить текущую как…",
-      "insertTemplate": "Вставить из шаблона",
+      "blocks": "{from} блокирует {to}",
+      "templateSection": {
+        "title": "Шаблоны карточек",
+        "saveAs": "Сохранить карточку как шаблон",
+        "saveAsDisabled": "Сначала добавьте карточку",
+        "card": "Карточка",
+        "name": "Название шаблона",
+        "save": "Сохранить шаблон",
+        "create": "Создать карточку",
+        "delete": "Удалить шаблон {name}",
+        "meta": "Нет полей | 1 поле | Полей: {n}",
+        "withContent": "с содержимым",
+        "empty": "Шаблонов пока нет",
+        "emptyHint": "Сохраните любую карточку как шаблон, чтобы переиспользовать её содержимое, поля и приоритет."
+      },
       "runCount": "сработало {n}× за неделю",
       "triggerPrefix": "Когда",
+      "deleteRule": "Удалить правило: {rule}",
+      "form": {
+        "trigger": "Когда",
+        "action": "Тогда",
+        "column": "Колонка",
+        "triggerColumn": "Колонка-триггер",
+        "actionColumn": "Целевая колонка",
+        "tag": "Название тега",
+        "tagPlaceholder": "например, срочно",
+        "save": "Добавить правило",
+        "cancel": "Отмена",
+        "triggerStatusChange": "Карточка попадает в колонку",
+        "triggerSubtasksDone": "Все подзадачи выполнены",
+        "actionMoveTo": "Переместить карточку в колонку",
+        "actionAddTag": "Добавить тег",
+        "actionSetProgress": "Установить прогресс 100%",
+        "triggerDueDateNear": "Срок приближается",
+        "actionNotify": "Отправить уведомление",
+        "days": "За сколько дней",
+        "dateField": "Поле даты",
+        "anyDateField": "Любое поле даты"
+      },
       "action": {
-        "moveTo": "переместить в {value}",
+        "moveTo": "переместить в «{value}»",
         "setProgress": "установить прогресс 100%",
         "addTag": "добавить тег #{value}",
-        "notify": "уведомить владельца"
+        "notify": "отправить уведомление"
       },
       "trigger": {
         "subtasksDone": "все подзадачи завершены",
-        "statusChange": "статус → {value}",
-        "dueDateNear": "дедлайн через 3 дня"
-      },
-      "templatesData": {
-        "engineeringTicket": {
-          "name": "Инженерная задача",
-          "description": "5 полей · 3 шага подзадач"
-        },
-        "designReview": {
-          "name": "Дизайн-ревью",
-          "description": "Обложка + чеклист замечаний"
-        },
-        "weeklyRetro": {
-          "name": "Еженедельное ретро",
-          "description": "4 вопроса · предзаполнено"
-        },
-        "bugReport": {
-          "name": "Баг-репорт",
-          "description": "Шаги, среда, критичность"
-        }
+        "statusChange": "карточка попадает в «{value}»",
+        "dueDateNear": "срок через ≤ {n} дн."
       }
     },
     "groups": {

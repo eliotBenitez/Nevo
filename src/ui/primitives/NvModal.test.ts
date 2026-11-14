@@ -94,4 +94,63 @@ describe('NvModal', () => {
     expect(ids[1]).toBeTruthy()
     expect(ids[0]).not.toBe(ids[1])
   })
+
+  it('closes on Escape after focus fell to body, and only the topmost modal', async () => {
+    const TwoModals = defineComponent({
+      emits: ['under', 'top'],
+      setup(_, { emit }) {
+        return () => h('div', [
+          h(NvModal, { open: true, title: 'Under', onClose: () => emit('under') }),
+          h(NvModal, { open: true, title: 'Top', onClose: () => emit('top') }),
+        ])
+      },
+    })
+    const wrapper = mount(TwoModals, { global: { plugins: [i18n] }, attachTo: document.body })
+    await nextTick()
+    ;(document.activeElement as HTMLElement | null)?.blur()
+    expect(document.activeElement).toBe(document.body)
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+
+    expect(wrapper.emitted('top')).toHaveLength(1)
+    expect(wrapper.emitted('under')).toBeUndefined()
+  })
+
+  it('moves Tab into the topmost of two stacked modals after focus fell to body', async () => {
+    mount(defineComponent({
+      setup: () => () => h('div', [
+        h(NvModal, { open: true, title: 'Under' }),
+        h(NvModal, { open: true, title: 'Top' }),
+      ]),
+    }), { global: { plugins: [i18n] }, attachTo: document.body })
+    await nextTick()
+    ;(document.activeElement as HTMLElement | null)?.blur()
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }))
+
+    const panels = document.querySelectorAll('.nv-modal__panel')
+    expect(panels[1].contains(document.activeElement)).toBe(true)
+  })
+
+  it('moves Tab back into the modal after focus fell to body', async () => {
+    const wrapper = mountModal()
+    await nextTick()
+    ;(document.activeElement as HTMLElement | null)?.blur()
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }))
+
+    expect(wrapper.element.ownerDocument.querySelector('.nv-modal__panel')?.contains(document.activeElement)).toBe(true)
+  })
+
+  it('takes focus when mounted already open and restores it on unmount', async () => {
+    const trigger = document.createElement('button')
+    document.body.appendChild(trigger)
+    trigger.focus()
+    const wrapper = mount(NvModal, { props: { open: true, title: 'Mounted open' }, global: { plugins: [i18n] }, attachTo: document.body })
+    await nextTick()
+    await nextTick()
+    expect(document.querySelector('.nv-modal__panel')?.contains(document.activeElement)).toBe(true)
+    wrapper.unmount()
+    expect(document.activeElement).toBe(trigger)
+  })
 })

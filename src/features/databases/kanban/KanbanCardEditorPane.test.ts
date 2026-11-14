@@ -169,6 +169,30 @@ describe('KanbanCardEditorPane', () => {
     wrapper.unmount()
   })
 
+  it('adopts an automation-driven status change so the next autosave keeps it', async () => {
+    const statusBoard = { ...board, statusPropertyId: 'st' } as KanbanBoard
+    const original = { ...card, properties: { st: 'todo' } } as unknown as KanbanCard
+    const moved = { ...card, properties: { st: 'done' } } as unknown as KanbanCard
+    const wrapper = mount(KanbanCardEditorPane, {
+      props: { card: original, board: statusBoard },
+      global: {
+        plugins: [createI18n({ legacy: false, locale: 'en', messages: { en: enMessages } })],
+        stubs: { KanbanCardProperties: PropertiesStub, NvMiniEditor: EditorStub, KanbanCardLinks: LinksStub, NvButton: true },
+      },
+    })
+    updateCard.mockImplementationOnce(async () => { await wrapper.setProps({ card: moved }) })
+
+    await wrapper.get('input').setValue('First')
+    const flush = () => (wrapper.vm as unknown as { flush: () => Promise<boolean> }).flush()
+    expect(await flush()).toBe(true)
+    expect(updateCard.mock.calls[0][2].properties).toEqual({ st: 'todo' })
+
+    await wrapper.get('input').setValue('Second')
+    expect(await flush()).toBe(true)
+    expect(updateCard.mock.calls[1][2].properties).toEqual({ st: 'done' })
+    wrapper.unmount()
+  })
+
   it('closes properties on outside pointerdown but keeps them mounted for autosave', async () => {
     const wrapper = mountPane()
     document.body.append(wrapper.element)

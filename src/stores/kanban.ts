@@ -1,8 +1,12 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
-import type { KanbanBoard, KanbanCard, KanbanPropertyDef, KanbanAutomation, KanbanLink, KanbanPropertyOption, KanbanCardField, KanbanBoardCardViewSettings } from '../types/kanban'
+import { computed, ref, toRaw } from 'vue'
+import type { KanbanBoard, KanbanCard, KanbanPropertyDef, KanbanAutomation, KanbanLink, KanbanPropertyOption, KanbanCardField, KanbanBoardCardViewSettings, KanbanTemplate } from '../types/kanban'
+import type { KanbanBoardUpdate } from '../core/workspace-backend/types'
 import { useWorkspaceStore } from './workspace'
 import { getBoardColumns, getCardStatusValue, normalizeBoard, normalizeCard, normalizeViewSettings, serializeCardProperties } from '../features/databases/kanban/kanbanFields'
+import { templateCardUpdates } from '../features/databases/kanban/kanbanTemplates'
+import { dueDateChanged } from '../features/databases/kanban/kanbanDueDates'
+import { createAutomationRunner } from './kanbanAutomationRunner'
 import { appLogger } from '../utils/logger'
 
 export const useKanbanStore = defineStore('kanban', () => {
@@ -14,6 +18,7 @@ export const useKanbanStore = defineStore('kanban', () => {
   const activeCardId = ref<string | null>(null)
   const isLoading = ref(false)
   const boardsError = ref<string | null>(null)
+  const boardSaveError = ref<string | null>(null)
   const cardsError = ref<string | null>(null)
   const moveError = ref<string | null>(null)
   const cardsSaving = ref(false)
@@ -88,7 +93,7 @@ export const useKanbanStore = defineStore('kanban', () => {
     return normalized
   }
 
-  async function updateBoard(boardId: string, updates: { title?: string; icon?: string; viewSettings?: KanbanBoard['viewSettings'] }) {
+  async function updateBoard(boardId: string, updates: KanbanBoardUpdate) {
     const backend = workspaceStore.backend
     if (!backend) return
     const board = await backend.kanbanUpdateBoard(boardId, updates)
@@ -206,9 +211,13 @@ export const useKanbanStore = defineStore('kanban', () => {
     try {
       const card = await backend.kanbanUpdateCard(boardId, cardId, updates)
       const current = cards.value.get(boardId) ?? []
+      const previous = current.find(c => c.id === cardId)
       const nextCard = board ? normalizeCard(board, card) : card
       cards.value.set(boardId, current.map(c => c.id === cardId ? nextCard : c))
       touchBoardUpdatedAt(boardId)
+      if (previous) await runAutomations(boardId, previous, nextCard)
+      // A new or changed due date should not wait for the scheduler's next pass.
+      if (updates.fields && board && (!previous || dueDateChanged(board, previous, nextCard))) await runDueDateAutomations(boardId)
     } finally {
       cardsSaving.value = false
     }
@@ -240,7 +249,11 @@ export const useKanbanStore = defineStore('kanban', () => {
       // Rollback on failure
       cards.value.set(boardId, prevCards)
       moveError.value = String(err)
+      return
     }
+    const before = prevCards.find(c => c.id === cardId)
+    const after = (cards.value.get(boardId) ?? []).find(c => c.id === cardId)
+    if (before && after) await runAutomations(boardId, before, after)
   }
 
   async function deleteCard(boardId: string, cardId: string) {
@@ -261,33 +274,92 @@ export const useKanbanStore = defineStore('kanban', () => {
     activeCardId.value = null
   }
 
+  // Optimistically applies a wip/automations change, persists it, and rolls back on failure.
+  // One save at a time per board: each patch is computed from the optimistic
+  // board, so a queued save already carries every earlier change.
+  const boardMetaQueues = new Map<string, Promise<void>>()
+  const boardMetaPending = new Map<string, number>()
+
+  async function persistBoardMeta(boardId: string, patch: (board: KanbanBoard) => Pick<KanbanBoardUpdate, 'wip' | 'automations' | 'templates'>) {
+    const board = boards.value.get(boardId)
+    if (!board) return
+    const updates = patch(board)
+    boards.value.set(boardId, { ...board, ...updates })
+    const backend = workspaceStore.backend
+    if (!backend) return
+    boardMetaPending.set(boardId, (boardMetaPending.get(boardId) ?? 0) + 1)
+    const run = (boardMetaQueues.get(boardId) ?? Promise.resolve()).then(async () => {
+      try {
+        // Only the last queued save adopts the server copy; an earlier one would hide newer optimistic edits.
+        if (boardMetaPending.get(boardId) === 1) await updateBoard(boardId, updates)
+        else await backend.kanbanUpdateBoard(boardId, updates)
+        boardSaveError.value = null
+      } catch (error) {
+        // Roll back only fields this call set and no later call replaced.
+        const current = boards.value.get(boardId)
+        if (current) {
+          const reverted = { ...current }
+          if ('wip' in updates && toRaw(current.wip) === updates.wip) reverted.wip = board.wip
+          if ('automations' in updates && toRaw(current.automations) === updates.automations) reverted.automations = board.automations
+          if ('templates' in updates && toRaw(current.templates) === updates.templates) reverted.templates = board.templates
+          boards.value.set(boardId, reverted)
+        }
+        boardSaveError.value = formatKanbanError(error, 'Failed to save board.')
+      } finally {
+        boardMetaPending.set(boardId, (boardMetaPending.get(boardId) ?? 1) - 1)
+      }
+    })
+    boardMetaQueues.set(boardId, run)
+    await run
+  }
+
+  const { runAutomations, runDueDateAutomations } = createAutomationRunner({
+    getBackend: () => workspaceStore.backend,
+    boards,
+    cards,
+    persistBoardMeta,
+    touchBoardUpdatedAt,
+  })
+
   function setWipCap(boardId: string, columnId: string, cap: number | null) {
-    const board = boards.value.get(boardId)
-    if (!board) return
-    const wip = { ...(board.wip ?? {}) }
-    if (cap === null) { delete wip[columnId] } else { wip[columnId] = cap }
-    boards.value.set(boardId, { ...board, wip })
-  }
-
-  function addAutomation(boardId: string, automation: KanbanAutomation) {
-    const board = boards.value.get(boardId)
-    if (!board) return
-    boards.value.set(boardId, { ...board, automations: [...(board.automations ?? []), automation] })
-  }
-
-  function updateAutomation(boardId: string, automationId: string, patch: Partial<KanbanAutomation>) {
-    const board = boards.value.get(boardId)
-    if (!board) return
-    boards.value.set(boardId, {
-      ...board,
-      automations: (board.automations ?? []).map(a => a.id === automationId ? { ...a, ...patch } : a),
+    return persistBoardMeta(boardId, (board) => {
+      const wip = { ...(board.wip ?? {}) }
+      if (cap === null) { delete wip[columnId] } else { wip[columnId] = cap }
+      return { wip }
     })
   }
 
+  function addAutomation(boardId: string, automation: KanbanAutomation) {
+    return persistBoardMeta(boardId, board => ({ automations: [...(board.automations ?? []), automation] }))
+  }
+
+  function updateAutomation(boardId: string, automationId: string, patch: Partial<KanbanAutomation>) {
+    return persistBoardMeta(boardId, board => ({
+      automations: (board.automations ?? []).map(a => a.id === automationId ? { ...a, ...patch } : a),
+    }))
+  }
+
   function deleteAutomation(boardId: string, automationId: string) {
+    return persistBoardMeta(boardId, board => ({ automations: (board.automations ?? []).filter(a => a.id !== automationId) }))
+  }
+
+  function addTemplate(boardId: string, template: KanbanTemplate) {
+    return persistBoardMeta(boardId, board => ({ templates: [...(board.templates ?? []), template] }))
+  }
+
+  function deleteTemplate(boardId: string, templateId: string) {
+    return persistBoardMeta(boardId, board => ({ templates: (board.templates ?? []).filter(t => t.id !== templateId) }))
+  }
+
+  async function createCardFromTemplate(boardId: string, title: string, columnOptionId: string, templateId: string) {
+    const card = await createCard(boardId, title, columnOptionId)
     const board = boards.value.get(boardId)
-    if (!board) return
-    boards.value.set(boardId, { ...board, automations: (board.automations ?? []).filter(a => a.id !== automationId) })
+    const template = board?.templates?.find(t => t.id === templateId)
+    if (!card || !board || !template) return card
+    const created = cards.value.get(boardId)?.find(c => c.id === card.id) ?? card
+    const updates = templateCardUpdates(board, created, template)
+    if (Object.keys(updates).length) await updateCard(boardId, card.id, updates)
+    return cards.value.get(boardId)?.find(c => c.id === card.id) ?? card
   }
 
   async function persistCardLinks(boardId: string, cardId: string, nextLinks: KanbanLink[]) {
@@ -332,13 +404,13 @@ export const useKanbanStore = defineStore('kanban', () => {
   }
 
   return {
-    boards, cards, activeBoardId, activeCardId, isLoading, boardsError, cardsError, moveError, cardsSaving,
+    boards, cards, activeBoardId, activeCardId, isLoading, boardsError, boardSaveError, cardsError, moveError, cardsSaving,
     boardsList, activeBoard, activeCard,
     columnsForBoard, cardsForColumn,
     loadBoards, createBoard, updateBoard, updateBoardViewSettings, saveSchema, updateBoardColumns, deleteBoard,
     loadCards, createCard, updateCard, moveCard, deleteCard,
     openCard, closeCard,
-    setWipCap, addAutomation, updateAutomation, deleteAutomation, linkCards, unlinkCards,
+    setWipCap, runDueDateAutomations, addAutomation, updateAutomation, deleteAutomation, addTemplate, deleteTemplate, createCardFromTemplate, linkCards, unlinkCards,
   }
 })
 

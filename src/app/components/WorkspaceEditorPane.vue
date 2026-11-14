@@ -280,11 +280,10 @@ const {
 const {
   editorWordCount,
   updateEditorStatsNow,
-  scheduleGraphUpdate,
   onTransactionDoc,
   resetStatsTracking,
   clearTimers: clearStatsTimers,
-} = useEditorDocStats(core, () => props.settings, () => props.note?.id)
+} = useEditorDocStats(core, () => props.settings)
 
 const slashEmojiPickerOpen = ref(false)
 
@@ -441,7 +440,6 @@ const {
     outline.onTransactionDoc(doc)
     findInNote.onEditorTransaction()
   },
-  scheduleGraphUpdate,
   markRemovedEditorAssets: assetActions.markRemovedEditorAssets,
   openInternalLink: (noteId, anchor) => {
     if (!treeStore.noteById.get(noteId)) return

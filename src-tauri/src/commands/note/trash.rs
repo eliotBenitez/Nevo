@@ -76,6 +76,23 @@ pub fn restore_from_trash_sync(workspace_path: String, item_id: String) -> Resul
             })),
         );
 
+        // The graph update can wait on the one-time backfill; release the
+        // manifest first, like save_note_impl.
+        drop(_manifest_guard);
+        // Best-effort: trashing dropped the note's outgoing edges, so a
+        // restored note re-adds its own.
+        if let Err(message) =
+            crate::commands::graph::index_note_links(&workspace_path, &item_id, &note.content)
+        {
+            let _ = logger.warn(
+                "tauri.note",
+                "restore_from_trash",
+                "Failed to update note graph links",
+                true,
+                note_error_context(&workspace_path, "graph", message)
+                    .with_payload(serde_json::json!({ "itemId": item_id })),
+            );
+        }
         // Best-effort: a restored note is active again and should reappear
         // in query_notes. The index is a rebuildable cache
         // (note_index::reindex_all), so a failure here must not fail the
@@ -152,6 +169,25 @@ pub fn permanently_delete_from_trash_sync(
 
         manifest.trash.remove(pos);
         save_manifest(&workspace_path, &manifest)?;
+        drop(_manifest_guard);
+        // Best-effort, outside the manifest lock (the graph update can wait on
+        // the one-time backfill): already dropped on trashing; idempotent
+        // cleanup for a removal that failed then.
+        if item.item_type == "note" {
+            if let Err(message) = crate::commands::graph::remove_notes_links(
+                &workspace_path,
+                std::slice::from_ref(&item.id),
+            ) {
+                let _ = logger.warn(
+                    "tauri.note",
+                    "permanently_delete_from_trash",
+                    "Failed to remove note from graph index",
+                    true,
+                    note_error_context(&workspace_path, "graph", message)
+                        .with_payload(serde_json::json!({ "itemId": item.id })),
+                );
+            }
+        }
         let _ = logger.info(
             "tauri.note",
             "permanently_delete_from_trash",
@@ -183,6 +219,7 @@ pub fn empty_trash_sync(workspace_path: String) -> Result<(), String> {
 
     let mut retained = Vec::new();
     let mut errors = Vec::new();
+    let mut purged_note_ids = Vec::new();
     for item in manifest.trash.drain(..) {
         if item.item_type == "note" {
             let result = (|| -> Result<(), String> {
@@ -199,9 +236,10 @@ pub fn empty_trash_sync(workspace_path: String) -> Result<(), String> {
             if let Err(error) = result {
                 errors.push(format!("{}: {error}", item.id));
                 retained.push(item);
-            } else if let Err(message) =
-                note_index::remove_note(Path::new(&workspace_path), &item.id)
-            {
+                continue;
+            }
+            purged_note_ids.push(item.id.clone());
+            if let Err(message) = note_index::remove_note(Path::new(&workspace_path), &item.id) {
                 let _ = logger.warn(
                     "tauri.note",
                     "empty_trash",
@@ -216,6 +254,22 @@ pub fn empty_trash_sync(workspace_path: String) -> Result<(), String> {
 
     manifest.trash = retained;
     save_manifest(&workspace_path, &manifest)?;
+    drop(_manifest_guard);
+
+    // Best-effort, one graph write, outside the manifest lock (it can wait on
+    // the one-time backfill): already dropped on trashing; idempotent
+    // cleanup for a removal that failed then.
+    if let Err(message) =
+        crate::commands::graph::remove_notes_links(&workspace_path, &purged_note_ids)
+    {
+        let _ = logger.warn(
+            "tauri.note",
+            "empty_trash",
+            "Failed to remove notes from graph index",
+            true,
+            note_error_context(&workspace_path, "graph", message),
+        );
+    }
 
     if !errors.is_empty() {
         return Err(format!(

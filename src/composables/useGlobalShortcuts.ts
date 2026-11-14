@@ -60,6 +60,9 @@ async function syncGlobalShortcuts() {
 
   for (const binding of getGlobalShortcutBindings(workspaceStore.settings.hotkeys.bindings)) {
     try {
+      // Registrations live in the native process, not the page: a reload can leave this
+      // shortcut bound to a dead page's handler, which would make register() fail forever.
+      await shortcutApi.unregister(binding.shortcut).catch(() => {})
       await shortcutApi.register(binding.shortcut, (event) => {
         if (event.state !== 'Pressed') return
         dispatchHotkeyCommand(binding.commandId)

@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { diffWords } from '../../utils/text-diff'
 import type { HistoryBlockChangeKind } from '../../utils/noteHistory'
+import { useHistoryBlockType } from './historyBlockType'
 
 /**
  * One "changed" diff row rendered as a single block with an inline word-level
@@ -27,6 +28,7 @@ interface Props {
 
 const props = defineProps<Props>()
 const { t } = useI18n()
+const { typeName, placeholder } = useHistoryBlockType()
 
 const parts = computed(() => diffWords(props.before, props.after))
 
@@ -40,7 +42,7 @@ const extraChangeLines = computed(() => {
 function describeChange(kind: Exclude<HistoryBlockChangeKind, 'text'>): string {
   switch (kind) {
     case 'type':
-      return t('workspace.history.change.type', { from: props.beforeType ?? '', to: props.afterType ?? '' })
+      return t('workspace.history.change.type', { from: typeName(props.beforeType ?? ''), to: typeName(props.afterType ?? '') })
     case 'attrs':
       return t('workspace.history.change.attrs', { attrs: (props.changedAttrs ?? []).join(', ') })
     case 'marks':
@@ -53,7 +55,8 @@ function describeChange(kind: Exclude<HistoryBlockChangeKind, 'text'>): string {
 
 <template>
   <article class="history-diff-row-changed tw:min-w-0 tw:rounded-nv-md tw:border tw:border-solid tw:border-transparent tw:bg-[color-mix(in_oklab,var(--accent)_7%,var(--island-bg))] tw:px-[26px] tw:py-[22px] tw:[font-family:var(--font-serif)] tw:text-xl tw:leading-[1.55] tw:font-normal tw:text-content-secondary">
-    <p class="history-diff-row-changed__content tw:m-0 tw:whitespace-pre-wrap tw:wrap-anywhere tw:text-content-primary">
+    <p v-if="!before && !after" class="history-diff-row-changed__content history-diff-row-changed__content--empty tw:m-0 tw:font-nv-ui tw:text-sm tw:italic tw:text-content-muted">{{ placeholder(afterType ?? beforeType ?? '') }}</p>
+    <p v-else class="history-diff-row-changed__content tw:m-0 tw:whitespace-pre-wrap tw:wrap-anywhere tw:text-content-primary">
       <template v-for="(part, index) in parts" :key="index">
         <span v-if="part.kind === 'removed'" class="history-diff-row-changed__removed tw:rounded-[2px] tw:bg-(--danger-soft) tw:text-content-muted tw:line-through tw:decoration-[color-mix(in_oklab,var(--danger)_60%,transparent)]">{{ part.text }}</span>
         <span v-else-if="part.kind === 'added'" class="history-diff-row-changed__added tw:rounded-[2px] tw:bg-(--success-soft) tw:text-content-primary">{{ part.text }}</span>
@@ -65,6 +68,7 @@ function describeChange(kind: Exclude<HistoryBlockChangeKind, 'text'>): string {
     </div>
     <div class="history-diff-row-changed__footer tw:mt-3.5 tw:flex tw:items-center">
       <span class="history-diff-row-changed__badge tw:inline-flex tw:items-center tw:rounded-full tw:border tw:border-solid tw:border-transparent tw:bg-[color-mix(in_oklab,var(--accent-soft)_78%,transparent)] tw:px-[7px] tw:py-px tw:text-[10px] tw:font-semibold tw:tracking-[0.05em] tw:text-accent tw:uppercase">{{ t('workspace.history.row.changed') }}</span>
+      <span v-if="afterType ?? beforeType" class="history-diff-row-changed__type tw:ml-2 tw:font-nv-mono tw:text-[10.5px] tw:tracking-[0.06em] tw:text-content-muted tw:uppercase">· {{ typeName((afterType ?? beforeType)!) }}</span>
     </div>
   </article>
 </template>

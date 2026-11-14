@@ -46,8 +46,7 @@ export interface HistoryDiffMetadataChange {
 
 export interface HistoryComparableBlock {
   type: string
-  label: string
-  /** collected inline text ('' for atoms) */
+  /** collected inline text ('' for atoms and empty blocks) */
   text: string
   /** canonical, key-order independent */
   signature: string
@@ -76,19 +75,6 @@ export interface NotebookPageHistoryChange {
   currentIndex?: number
   snapshotIndex?: number
   moved?: boolean
-}
-
-const COMPLEX_BLOCK_LABELS: Record<string, string> = {
-  blockquote: 'Quote block',
-  bullet_list: 'Bullet list',
-  code_block: 'Code block',
-  heading: 'Heading block',
-  horizontal_rule: 'Divider block',
-  image: 'Image block',
-  math_block: 'Math block',
-  ordered_list: 'Numbered list',
-  table: 'Table block',
-  task_list: 'Task list',
 }
 
 export function pickInitialHistoryNoteId(
@@ -233,10 +219,8 @@ function toInternalBlocks(content: BlockNode): InternalDiffBlock[] {
 
 function toComparableBlock(block: BlockNode): HistoryComparableBlock {
   const text = collectInlineText(block).trim()
-  const label = text || COMPLEX_BLOCK_LABELS[block.type] || 'Changed block'
   return {
     type: block.type,
-    label,
     text,
     signature: canonicalJson(normalizeNode(block)),
     attrs: normalizeAttrsOrNull(block.attrs) ?? {},

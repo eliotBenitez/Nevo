@@ -33,7 +33,6 @@ export interface WorkspaceEditorCoreOptions {
   emitContentUpdate: EditorCoreCallbacks['onContentUpdate']
   emitContentDirty: () => void
   onTransactionDoc: (doc: Node) => void
-  scheduleGraphUpdate: RequiredCallback<'onDocChanged'>
   markRemovedEditorAssets: RequiredCallback<'onAssetSrcsRemoved'>
   openInternalLink: RequiredCallback<'onInternalLinkOpen'>
   internalLinkExists: RequiredCallback<'internalLinkExists'>
@@ -129,7 +128,6 @@ export function useWorkspaceEditorCore(options: WorkspaceEditorCoreOptions) {
       }
       options.onTransactionDoc(view.state.doc)
     },
-    onDocChanged: options.scheduleGraphUpdate,
     onAssetSrcsRemoved: options.markRemovedEditorAssets,
     onInternalLinkOpen: options.openInternalLink,
     internalLinkExists: options.internalLinkExists,

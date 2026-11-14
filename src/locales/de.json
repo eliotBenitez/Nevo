@@ -955,6 +955,36 @@
         "externalImage": "Externes Bild (nicht geladen)",
         "checklistItem": "Checklistenelement"
       },
+      "emptyBlock": "{type} (leer)",
+      "blockType": {
+        "paragraph": "Absatz",
+        "heading": "Überschrift",
+        "blockquote": "Zitat",
+        "code_block": "Codeblock",
+        "bullet_list": "Aufzählung",
+        "ordered_list": "Nummerierte Liste",
+        "callout": "Hinweisbox",
+        "checklist_item": "Checklisteneintrag",
+        "toggle": "Aufklappblock",
+        "divider": "Trennlinie",
+        "horizontal_rule": "Trennlinie",
+        "math_block": "Formelblock",
+        "image_block": "Bild",
+        "file_block": "Datei",
+        "mermaid_block": "Mermaid-Diagramm",
+        "html_block": "HTML-Block",
+        "draw_block": "Zeichnung",
+        "markmap_block": "Mindmap",
+        "vega_block": "Diagramm",
+        "note_embed": "Eingebettete Notiz",
+        "embed_block": "Einbettung",
+        "block_embed": "Eingebetteter Block",
+        "media_block": "Medien",
+        "database_block": "Datenbank",
+        "query_block": "Abfrage",
+        "column_list": "Spalten",
+        "table": "Tabelle"
+      },
       "snapshotColumn": "Version",
       "currentColumn": "Aktuell",
       "noSnapshotSelected": "Wählen Sie eine Version, um sie mit der aktuellen Notiz zu vergleichen.",
@@ -2236,7 +2266,7 @@
         "dateFrom": "Datum von",
         "dateTo": "Datum bis",
         "folder": "Ordner",
-        "folderPlaceholder": "Ordnerpfad",
+        "folderPlaceholder": "Beliebiger Ordner",
         "includeSubtree": "Unterordner einbeziehen"
       }
     },
@@ -2882,6 +2912,7 @@
       "boardNotFound": "Board nicht gefunden.",
       "boardUnavailable": "Board ist nicht verfügbar.",
       "moveFailed": "Verschieben fehlgeschlagen: {message}",
+      "saveBoardFailed": "Board konnte nicht gespeichert werden: {message}",
       "cardCount": "{cards} Karte | {cards} Karten",
       "openAutomations": "Automatisierungen",
       "emptyTitle": "Ein leeres Board.",
@@ -2889,6 +2920,9 @@
       "openTemplates": "Vorlagen…",
       "addColumn": "Spalte hinzufügen",
       "renameColumn": "Spalte umbenennen",
+      "setWipLimit": "WIP-Limit festlegen",
+      "wipLimitLabel": "WIP-Limit",
+      "wipLimitPlaceholder": "Kein Limit",
       "deleteColumn": "Spalte löschen",
       "newColumn": "Neue Spalte",
       "columnMenu": "Spaltenmenü",
@@ -2969,7 +3003,9 @@
       "addCardTitle": "Karte hinzufügen",
       "titlePlaceholder": "Kartentitel…",
       "column": "Spalte",
-      "add": "Karte hinzufügen"
+      "add": "Karte hinzufügen",
+      "template": "Vorlage",
+      "noTemplate": "Keine Vorlage"
     },
     "toolbar": {
       "filter": "Filtern",
@@ -3055,39 +3091,55 @@
       "depGraph": "Abhängigkeitsgraph",
       "noDeps": "Noch keine Abhängigkeiten erfasst",
       "noDepsHint": "Verknüpfen Sie Karten als „blockiert“ oder „blockiert durch“ im Karten-Dialog, um einen Abhängigkeitsgraphen aufzubauen.",
-      "templates": "Kartenvorlagen",
-      "saveAs": "Aktuelle speichern als…",
-      "insertTemplate": "Aus Vorlage einfügen",
+      "blocks": "{from} blockiert {to}",
+      "templateSection": {
+        "title": "Kartenvorlagen",
+        "saveAs": "Karte als Vorlage speichern",
+        "saveAsDisabled": "Zuerst eine Karte hinzufügen",
+        "card": "Karte",
+        "name": "Vorlagenname",
+        "save": "Vorlage speichern",
+        "create": "Karte erstellen",
+        "delete": "Vorlage {name} löschen",
+        "meta": "Keine Felder | 1 Feld | {n} Felder",
+        "withContent": "mit Inhalt",
+        "empty": "Noch keine Vorlagen",
+        "emptyHint": "Speichern Sie eine beliebige Karte als Vorlage, um Inhalt, Felder und Priorität wiederzuverwenden."
+      },
       "runCount": "{n}× diese Woche ausgeführt",
       "triggerPrefix": "Wenn",
+      "deleteRule": "Regel löschen: {rule}",
+      "form": {
+        "trigger": "Wenn",
+        "action": "Dann",
+        "column": "Spalte",
+        "triggerColumn": "Auslöser-Spalte",
+        "actionColumn": "Zielspalte",
+        "tag": "Tag-Name",
+        "tagPlaceholder": "z. B. dringend",
+        "save": "Regel hinzufügen",
+        "cancel": "Abbrechen",
+        "triggerStatusChange": "Eine Karte kommt in eine Spalte",
+        "triggerSubtasksDone": "Alle Teilaufgaben sind erledigt",
+        "actionMoveTo": "Karte in eine Spalte verschieben",
+        "actionAddTag": "Tag hinzufügen",
+        "actionSetProgress": "Fortschritt auf 100 % setzen",
+        "triggerDueDateNear": "Ein Fälligkeitsdatum rückt näher",
+        "actionNotify": "Benachrichtigung senden",
+        "days": "Tage im Voraus",
+        "dateField": "Datumsfeld",
+        "anyDateField": "Beliebiges Datumsfeld"
+      },
       "action": {
         "moveTo": "verschieben nach {value}",
         "setProgress": "Fortschritt auf 100% setzen",
         "addTag": "taggen #{value}",
-        "notify": "Verantwortlichen benachrichtigen"
+        "notify": "Benachrichtigung senden"
       },
       "trigger": {
         "subtasksDone": "alle Unteraufgaben erledigt",
-        "statusChange": "Status → {value}",
-        "dueDateNear": "Fälligkeit in 3 Tagen"
-      },
-      "templatesData": {
-        "engineeringTicket": {
-          "name": "Engineering-Ticket",
-          "description": "5 Felder · 3-stufige Unteraufgaben"
-        },
-        "designReview": {
-          "name": "Design-Review",
-          "description": "Cover + Kritik-Checkliste"
-        },
-        "weeklyRetro": {
-          "name": "Wöchentliche Retro",
-          "description": "4 Fragen · vorausgefüllt"
-        },
-        "bugReport": {
-          "name": "Fehlerbericht",
-          "description": "Reproduktion + Umgebung + Schweregrad"
-        }
+        "statusChange": "eine Karte in {value} gelangt",
+        "dueDateNear": "fällig in ≤ {n} Tagen"
       }
     },
     "groups": {

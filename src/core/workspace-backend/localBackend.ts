@@ -7,7 +7,7 @@ import { createNotebook as createNotebookCommand } from '../../tauri/notebook'
 import { primeNotebookSave, saveNotebookNote } from '../../tauri/notebookSave'
 import type { KanbanBoard, KanbanCard, KanbanPropertyDef } from '../../types/kanban'
 import type { WorkspaceBlockSearchItem } from '../../types/search'
-import type { BacklinkRef, GraphEdge, ExtractedEdge } from '../../types/graph'
+import type { BacklinkRef, GraphEdge } from '../../types/graph'
 import type { NoteQueryRequest, NoteRow } from '../../types/note-query'
 import type { KanbanBoardUpdate, KanbanCardUpdate } from './types'
 import type {
@@ -238,12 +238,6 @@ export class LocalBackend implements WorkspaceBackend {
   }
   graphGetOutlinks(noteId: string): Promise<GraphEdge[]> {
     return graphCommands.getOutlinks(this.path, noteId)
-  }
-  graphUpdateNoteEdges(noteId: string, edges: ExtractedEdge[]): Promise<void> {
-    return graphCommands.updateNoteEdges(this.path, noteId, edges)
-  }
-  graphRemoveNote(noteId: string): Promise<void> {
-    return graphCommands.removeNote(this.path, noteId)
   }
   graphGetAllEdges(): Promise<GraphEdge[]> {
     return graphCommands.getAllEdges(this.path)

@@ -39,7 +39,7 @@ useFirstUseHint('kanbanViews')
 
 const kanbanStore = useKanbanStore()
 const workspaceStore = useWorkspaceStore()
-const { boards, cards, activeCardId, boardsError, cardsError, moveError } = storeToRefs(kanbanStore)
+const { boards, cards, activeCardId, boardsError, boardSaveError, cardsError, moveError } = storeToRefs(kanbanStore)
 const { appConfig } = storeToRefs(workspaceStore)
 
 const board = ref<KanbanBoard | null>(null)
@@ -68,6 +68,7 @@ const loadError = ref<string | null>(null)
 const showAutomations = ref(false)
 const showAddCardModal = ref(false)
 const addCardDefaultColumnId = ref<string | undefined>(undefined)
+const addCardTemplateId = ref<string | undefined>(undefined)
 
 let loadRequestId = 0
 const COLUMN_COLORS = ['#6b7280', '#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#a855f7', '#ec4899', '#14b8a6']
@@ -164,6 +165,7 @@ function cardsForColumn(columnId: string) {
 function addCard(columnId?: string) {
   if (!board.value) return
   addCardDefaultColumnId.value = columnId ?? columns.value[0]?.id
+  addCardTemplateId.value = undefined
   showAddCardModal.value = true
 }
 
@@ -192,9 +194,16 @@ async function deleteStatusColumn(columnId: string) {
   await kanbanStore.updateBoardColumns(props.boardId, nextColumns, { [columnId]: fallbackColumnId })
 }
 
-async function confirmAddCard(title: string, columnId: string) {
+async function confirmAddCard(title: string, columnId: string, templateId?: string) {
   showAddCardModal.value = false
-  await kanbanStore.createCard(props.boardId, title, columnId)
+  if (templateId) await kanbanStore.createCardFromTemplate(props.boardId, title, columnId, templateId)
+  else await kanbanStore.createCard(props.boardId, title, columnId)
+}
+
+function useTemplate(templateId: string) {
+  showAutomations.value = false
+  addCard()
+  addCardTemplateId.value = templateId
 }
 
 async function quickAddCard(columnId: string, title: string) {
@@ -346,6 +355,13 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
       </button>
     </div>
 
+    <div v-if="boardSaveError" role="alert" class="kb-view__error-banner tw:flex tw:shrink-0 tw:items-center tw:justify-between tw:gap-2 tw:bg-surface-danger tw:px-4 tw:py-2 tw:text-xs tw:text-content-secondary">
+      {{ t('kanban.view.saveBoardFailed', { message: boardSaveError }) }}
+      <button type="button" class="nv-btn kb-view__error-close tw:grid tw:size-7 tw:shrink-0 tw:place-items-center tw:p-0" :aria-label="t('kanban.common.close')" @click="kanbanStore.boardSaveError = null">
+        <X :size="14" />
+      </button>
+    </div>
+
     <!-- Page header -->
     <div class="kb-view__header tw:flex tw:shrink-0 tw:items-center tw:gap-2 tw:px-5 tw:pt-3.5 tw:pb-2.5 tw:max-[760px]:box-border tw:max-[760px]:min-h-[calc(48px+max(var(--safe-area-top),0px))] tw:max-[760px]:pt-[calc(6px+max(var(--safe-area-top),0px))] tw:max-[760px]:pr-[calc(12px+max(var(--safe-area-right),0px))] tw:max-[760px]:pb-1 tw:max-[760px]:pl-[calc(12px+max(var(--safe-area-left),0px))]">
       <button
@@ -375,6 +391,7 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
       :card-property-options="cardPropertyOptions"
       @new-card="columns.length ? addCard(columns[0].id) : undefined"
       @add-column="addStatusColumn"
+      @open-automations="showAutomations = true"
       @update:board-settings="updateBoardDisplaySettings"
     />
 
@@ -418,6 +435,7 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
         @card-handle-pointerdown="(e, cardId, colId) => onCardHandlePointerDown(e, cardId, colId)"
         @rename-column="renameStatusColumn"
         @delete-column="deleteStatusColumn"
+        @set-wip="(colId, cap) => kanbanStore.setWipCap(props.boardId, colId, cap)"
       />
 
       <!-- Drop status change tooltip -->
@@ -491,6 +509,7 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
       v-if="showAddCardModal && board"
       :board="board"
       :default-column-id="addCardDefaultColumnId"
+      :default-template-id="addCardTemplateId"
       @confirm="confirmAddCard"
       @close="showAddCardModal = false"
     />
@@ -499,8 +518,15 @@ function retryLoad() { void resolveBoardRoute(props.boardId) }
     <KanbanAutomations
       v-if="showAutomations"
       :board="board"
+      :cards="boardCards"
+      :active-card-id="activeCardId"
       @close="showAutomations = false"
-      @update-automations="() => {}"
+      @toggle-automation="(id, enabled) => kanbanStore.updateAutomation(props.boardId, id, { enabled })"
+      @add-automation="automation => kanbanStore.addAutomation(props.boardId, automation)"
+      @delete-automation="id => kanbanStore.deleteAutomation(props.boardId, id)"
+      @save-template="template => kanbanStore.addTemplate(props.boardId, template)"
+      @delete-template="id => kanbanStore.deleteTemplate(props.boardId, id)"
+      @use-template="useTemplate"
     />
   </div>
 
