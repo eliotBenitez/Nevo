@@ -96,18 +96,33 @@ export function createAutomationRunner({ getBackend, boards, cards, persistBoard
     }))
   }
 
+  // One due-date pass per board at a time: a second pass started mid-run (scheduler vs. a
+  // card save) would plan from the same firedFor and fire the same matches again.
+  const dueDateRuns = new Map<string, Promise<void>>()
+  // ruleId|cardId|dueDate already fired this session, so a failed firedFor save
+  // (rolled back by persistBoardMeta) does not re-notify on every later pass.
+  const firedThisSession = new Set<string>()
+
+  function runDueDateAutomations(boardId: string, now = new Date()): Promise<void> {
+    const run = (dueDateRuns.get(boardId) ?? Promise.resolve()).then(() => runDueDatePass(boardId, now))
+    dueDateRuns.set(boardId, run.catch(() => undefined))
+    return run
+  }
+
   // Cards must already be in the store (callers load them first).
-  async function runDueDateAutomations(boardId: string, now = new Date()) {
+  async function runDueDatePass(boardId: string, now: Date) {
     const board = boards.value.get(boardId)
     const boardCards = cards.value.get(boardId)
     if (!board || !boardCards) return
     const matches = planDueDateAutomations(board, boardCards, now)
+      .filter(match => !firedThisSession.has(`${match.ruleId}|${match.cardId}|${match.dueDate}`))
     const firedByRule = new Map<string, Array<{ cardId: string; dueDate: string }>>()
     for (const match of matches) {
       const card = cards.value.get(boardId)?.find(c => c.id === match.cardId)
       if (!card) continue
       try {
         await applyPlan(boardId, board, card, match.plan)
+        firedThisSession.add(`${match.ruleId}|${match.cardId}|${match.dueDate}`)
         const list = firedByRule.get(match.ruleId) ?? []
         list.push({ cardId: match.cardId, dueDate: match.dueDate })
         firedByRule.set(match.ruleId, list)

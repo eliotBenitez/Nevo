@@ -42,17 +42,19 @@ export const useGraphStore = defineStore('graph', () => {
     activeNoteId.value = noteId
     backlinks.value = []
     outlinks.value = []
+    // A fresh load may show links a later save's content matches; never skip after it.
+    lastLinkSignature.delete(noteId)
     await refreshActiveNote()
   }
 
   /** Re-reads the active note's links in place, keeping the current lists
    *  until the new ones arrive (no empty flash). The single fetch path for
    *  opening a note, refreshing after a delete, and re-reading after a save. */
-  async function refreshActiveNote(options: { backlinks?: boolean } = {}) {
+  async function refreshActiveNote(options: { backlinks?: boolean } = {}): Promise<boolean> {
     const noteId = activeNoteId.value
     const generation = loadGeneration
     const backend = workspaceStore.backend
-    if (!backend || !noteId) return
+    if (!backend || !noteId) return false
     const backlinksTicket = options.backlinks === false ? null : ++backlinksRequest
     const outlinksTicket = ++outlinksRequest
     try {
@@ -60,9 +62,11 @@ export const useGraphStore = defineStore('graph', () => {
         backlinksTicket === null ? null : backend.graphGetBacklinks(noteId),
         backend.graphGetOutlinks(noteId),
       ])
-      if (activeNoteId.value !== noteId || generation !== loadGeneration) return
+      if (activeNoteId.value !== noteId || generation !== loadGeneration) return false
       if (bl && backlinksTicket === backlinksRequest) backlinks.value = enrichBacklinks(bl)
-      if (outlinksTicket === outlinksRequest) outlinks.value = ol
+      if (outlinksTicket !== outlinksRequest) return false
+      outlinks.value = ol
+      return true
     } catch (error) {
       await appLogger.error({
         source: 'frontend.graph',
@@ -70,6 +74,7 @@ export const useGraphStore = defineStore('graph', () => {
         message: 'Failed to load note graph',
         error,
       })
+      return false
     }
   }
 
@@ -78,12 +83,11 @@ export const useGraphStore = defineStore('graph', () => {
    *  a save whose internal links match the last refresh skips the IPC. */
   async function refreshOutlinks(noteId: string, content?: unknown) {
     if (activeNoteId.value !== noteId) return
-    if (content !== undefined) {
-      const signature = internalLinkSignature(content)
-      if (lastLinkSignature.get(noteId) === signature) return
-      lastLinkSignature.set(noteId, signature)
-    }
-    await refreshActiveNote({ backlinks: false })
+    const signature = content === undefined ? null : internalLinkSignature(content)
+    if (signature !== null && lastLinkSignature.get(noteId) === signature) return
+    // Recorded only once the panel actually shows this save's links.
+    lastLinkSignature.delete(noteId)
+    if (await refreshActiveNote({ backlinks: false }) && signature !== null) lastLinkSignature.set(noteId, signature)
   }
 
   function clear() {

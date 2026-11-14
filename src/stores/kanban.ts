@@ -5,6 +5,7 @@ import type { KanbanBoardUpdate } from '../core/workspace-backend/types'
 import { useWorkspaceStore } from './workspace'
 import { getBoardColumns, getCardStatusValue, normalizeBoard, normalizeCard, normalizeViewSettings, serializeCardProperties } from '../features/databases/kanban/kanbanFields'
 import { templateCardUpdates } from '../features/databases/kanban/kanbanTemplates'
+import { dueDateChanged } from '../features/databases/kanban/kanbanDueDates'
 import { createAutomationRunner } from './kanbanAutomationRunner'
 import { appLogger } from '../utils/logger'
 
@@ -216,7 +217,7 @@ export const useKanbanStore = defineStore('kanban', () => {
       touchBoardUpdatedAt(boardId)
       if (previous) await runAutomations(boardId, previous, nextCard)
       // A new or changed due date should not wait for the scheduler's next pass.
-      if (updates.fields) await runDueDateAutomations(boardId)
+      if (updates.fields && board && (!previous || dueDateChanged(board, previous, nextCard))) await runDueDateAutomations(boardId)
     } finally {
       cardsSaving.value = false
     }

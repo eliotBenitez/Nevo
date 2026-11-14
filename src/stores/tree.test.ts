@@ -136,7 +136,7 @@ describe('useTreeStore computeds', () => {
     workspaceStore.activeHandle = { kind: 'local', path: '/workspace' }
     workspaceStore.manifest = buildManifest()
     const graphStore = useGraphStore()
-    const refresh = vi.spyOn(graphStore, 'refreshActiveNote').mockResolvedValue()
+    const refresh = vi.spyOn(graphStore, 'refreshActiveNote').mockResolvedValue(true)
     const treeStore = useTreeStore()
 
     graphStore.activeNoteId = 'n-child'

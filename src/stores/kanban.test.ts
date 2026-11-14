@@ -202,6 +202,25 @@ describe('kanban store automations execution', () => {
       expect(store.boards.get('b1')!.automations![0].firedFor).toEqual({ c1: due })
     })
 
+    it('fires once when passes overlap or the firedFor save fails', async () => {
+      const store = setup([dueRule({ action: 'notify', actionValue: undefined })])
+      withDue(store, '2026-11-15')
+      backend.kanbanUpdateBoard.mockRejectedValue(new Error('read-only'))
+
+      await Promise.all([store.runDueDateAutomations('b1', now), store.runDueDateAutomations('b1', now)])
+      await store.runDueDateAutomations('b1', now)
+
+      expect(notifications.sendSystemNotification).toHaveBeenCalledTimes(1)
+    })
+
+    it('skips the due date pass after a card edit that keeps its due date', async () => {
+      const store = setup([dueRule({ action: 'notify', actionValue: undefined })])
+      withDue(store, '2026-11-15')
+      await store.updateCard('b1', 'c1', { title: 'Renamed', fields: server[0].fields })
+
+      expect(notifications.sendSystemNotification).not.toHaveBeenCalled()
+    })
+
     it('notifies from event triggers and prunes deleted cards', async () => {
       const store = setup([
         { id: 'n1', trigger: 'status_change', triggerValue: 'doing', action: 'notify', enabled: true },

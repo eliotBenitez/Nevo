@@ -216,4 +216,16 @@ describe('useGraphStore.loadNoteGraph backlink enrichment', () => {
     await graphStore.refreshOutlinks('a', content('two'))
     expect(mockBackend.graphGetOutlinks).toHaveBeenCalledOnce()
   })
+  it('refreshes again after a reload even when the saved links match an earlier save', async () => {
+    openLocalWorkspace([])
+    const graphStore = useGraphStore()
+    const linked = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'x', marks: [{ type: 'internal_link', attrs: { noteId: 'x', anchor: null } }] }] }] }
+    graphStore.activeNoteId = 'a'
+    await graphStore.refreshOutlinks('a', linked)
+    await graphStore.loadNoteGraph('a')
+    mockBackend.graphGetOutlinks.mockClear()
+
+    await graphStore.refreshOutlinks('a', linked)
+    expect(mockBackend.graphGetOutlinks).toHaveBeenCalledOnce()
+  })
 })

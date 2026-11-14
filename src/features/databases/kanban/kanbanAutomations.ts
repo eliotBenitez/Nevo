@@ -121,11 +121,16 @@ export function applyTagsToFields(fields: KanbanCardField[], tagNames: string[])
   return next
 }
 
+/** Local calendar day as YYYY-MM-DD. */
+export function localDay(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
 export function weekStart(now: Date): string {
   const day = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   day.setDate(day.getDate() - ((day.getDay() + 6) % 7))
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`
+  return localDay(day)
 }
 
 export function bumpRunCount(automation: KanbanAutomation, now: Date): KanbanAutomation {

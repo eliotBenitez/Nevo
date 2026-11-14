@@ -1,6 +1,6 @@
 import type { KanbanAutomation, KanbanBoard, KanbanCard } from '../../../types/kanban'
 import { getCardStatusValue } from './kanbanFields'
-import { addAutomationToPlan, emptyPlan, isAutomationSupported, type AutomationPlan } from './kanbanAutomations'
+import { addAutomationToPlan, emptyPlan, isAutomationSupported, localDay, type AutomationPlan } from './kanbanAutomations'
 
 export const DEFAULT_DUE_DAYS = 3
 export const MAX_DUE_DAYS = 30
@@ -15,11 +15,6 @@ export interface DueDateMatch {
 export function dueWindowDays(automation: Pick<KanbanAutomation, 'triggerValue'>): number {
   const days = Number.parseInt(automation.triggerValue ?? '', 10)
   return Number.isInteger(days) && days >= 1 && days <= MAX_DUE_DAYS ? days : DEFAULT_DUE_DAYS
-}
-
-function localDay(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
 export function cardDueDate(card: Pick<KanbanCard, 'fields'>, dateField?: string): string | null {
@@ -51,6 +46,13 @@ export function planDueDateAutomations(board: KanbanBoard, cards: KanbanCard[], 
     }
   }
   return matches
+}
+
+/** Whether an enabled due-date rule watches a date that differs between the two versions of a card. */
+export function dueDateChanged(board: KanbanBoard, before: KanbanCard, after: KanbanCard): boolean {
+  return (board.automations ?? []).some(automation =>
+    automation.enabled && automation.trigger === 'due_date_near'
+    && cardDueDate(before, automation.dateField) !== cardDueDate(after, automation.dateField))
 }
 
 /** Drops entries for cards that no longer exist; returns the same object when nothing changed. */
