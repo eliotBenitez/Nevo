@@ -144,7 +144,7 @@ function onNotesClick(event: MouseEvent) {
     <template v-else-if="status !== 'upToDate'">
       <div v-if="notesHtml" class="updater-modal__notes-section tw:flex tw:flex-col tw:gap-2">
         <div class="updater-modal__notes-label tw:text-[11px] tw:font-semibold tw:uppercase tw:tracking-[0.05em] tw:text-content-muted">{{ t('updater.whatsNew') }}</div>
-        <div class="updater-modal__notes-scroll tw:relative tw:max-h-[240px] tw:overflow-auto tw:rounded-[calc(11px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle">
+        <div class="updater-modal__notes-scroll tw:relative tw:max-h-[240px] tw:overflow-auto tw:[scrollbar-width:thin] tw:[scrollbar-color:var(--border-default)_transparent] tw:rounded-[calc(11px*var(--radius-scale,1))] tw:border tw:border-solid tw:border-transparent tw:bg-surface-subtle">
           <!-- notesHtml is escaped + restricted to our own generated markup -->
           <div class="updater-modal__notes tw:p-3.5 tw:text-[12.5px] tw:leading-[1.55] tw:text-content-secondary tw:break-words" @click="onNotesClick" v-html="notesHtml" />
         </div>
@@ -261,6 +261,8 @@ function onNotesClick(event: MouseEvent) {
   border: 1px solid transparent;
   background: var(--surface-subtle);
   color: var(--text-primary);
+  /* Identifiers like `katex-sizing` must not split across lines at the hyphen. */
+  white-space: nowrap;
 }
 
 .updater-modal__notes :deep(a) {
