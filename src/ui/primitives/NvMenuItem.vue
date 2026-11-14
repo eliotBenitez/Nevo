@@ -183,8 +183,8 @@ function resolveProps(item: NvMenuItemDef) {
     class="nv-menu-item tw:group tw:flex tw:h-8 tw:w-full tw:shrink-0 tw:cursor-pointer tw:items-center tw:gap-[7px] tw:whitespace-nowrap tw:rounded-[calc(8px*var(--radius-scale,1))] tw:border-0 tw:bg-transparent tw:px-2 tw:text-left tw:font-nv-ui tw:text-[12.5px] tw:font-medium tw:tracking-normal tw:transition-[background-color,color] tw:duration-[80ms] tw:focus:outline-none tw:disabled:cursor-not-allowed tw:disabled:pointer-events-none tw:disabled:opacity-45"
     :class="[
       danger
-        ? 'is-danger tw:text-danger tw:hover:bg-(--surface-danger) tw:focus:bg-(--surface-danger)'
-        : 'tw:text-content-primary tw:hover:bg-surface-subtle tw:focus:bg-surface-subtle',
+        ? 'is-danger tw:text-danger tw:hover:bg-(--surface-danger) tw:focus-visible:bg-(--surface-danger)'
+        : 'tw:text-content-primary tw:hover:bg-surface-subtle tw:focus-visible:bg-surface-subtle',
       disabled && 'is-disabled',
     ]"
     :disabled="disabled || undefined"
