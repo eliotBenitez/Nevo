@@ -3,6 +3,8 @@ export const POINTER_DRAG_THRESHOLD = 4
 
 /** Swallows the click the browser fires after a drag ends on the pressed element. */
 export function swallowNextClick() {
+  // Held so the timer still has its window if the global is gone by then (test environment teardown).
+  const target = window
   const swallow = (event: Event) => {
     event.stopPropagation()
     event.preventDefault()
@@ -11,9 +13,9 @@ export function swallowNextClick() {
   const timer = setTimeout(cleanup, 120)
   function cleanup() {
     clearTimeout(timer)
-    window.removeEventListener('click', swallow, true)
+    target.removeEventListener('click', swallow, true)
   }
-  window.addEventListener('click', swallow, true)
+  target.addEventListener('click', swallow, true)
 }
 
 export interface PointerDragHandlers {
